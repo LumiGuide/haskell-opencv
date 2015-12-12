@@ -1,0 +1,77 @@
+name:                thea
+version:             0.0.0
+homepage:            lumiguide.eu
+license:             AllRightsReserved
+author:              Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
+maintainer:          Roel van Dijk <roel@lambdacube.nl>
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs: src-lib
+  include-dirs: include
+  c-sources: src-lib/OpenCV/Internal.cpp
+
+           , src-lib/OpenCV/ImgProc.cpp
+           , src-lib/OpenCV/ImgCodecs.cpp
+           , src-lib/OpenCV/HighGui.cpp
+
+  cc-options: -Wall -O2 -std=c++11
+  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+
+  build-depends: base >=4.8 && <5
+               , bindings-DSL
+               , bytestring
+               , containers
+               , inline-c
+               , inline-c-cpp
+               , lumi-hackage-extended
+               , primitive
+               , template-haskell
+               , text
+               , vector
+
+  exposed-modules: OpenCV
+                 , OpenCV.Core
+                 , OpenCV.Unsafe
+                 , OpenCV.ImgProc
+                 , OpenCV.ImgCodecs
+                 , OpenCV.HighGui
+  other-modules:   OpenCV.Internal
+
+  default-extensions: ScopedTypeVariables
+                    , PackageImports
+                    , OverloadedStrings
+                    , OverloadedLists
+                    , NoImplicitPrelude
+                    , BangPatterns
+                    , LambdaCase
+  default-language:   Haskell2010
+  pkgconfig-depends:  opencv
+
+executable thea
+  main-is: thea.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+
+  build-depends: attoparsec
+               , base >=4.8 && <4.9
+               , bytestring
+               , conduit
+               , conduit-extra
+               , exceptions
+               , http-conduit
+               , lumi-hackage-extended
+               , optparse-applicative
+               , resourcet
+               , thea
+               , transformers
+               , vector
+
+  default-extensions: ScopedTypeVariables
+                    , PackageImports
+                    , OverloadedStrings
+                    , OverloadedLists
+                    , NoImplicitPrelude
+                    , BangPatterns
+  default-language:   Haskell2010
