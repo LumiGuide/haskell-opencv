@@ -37,6 +37,7 @@ library
                  , OpenCV.ImgProc
                  , OpenCV.ImgCodecs
                  , OpenCV.HighGui
+                 , OpenCV.Video
   other-modules:   OpenCV.Internal
 
   default-extensions: ScopedTypeVariables

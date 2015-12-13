@@ -4,11 +4,14 @@
 
 module OpenCV.Internal where
 
+import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.Concurrent ( newForeignPtr )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
-import "base" Foreign.Ptr ( Ptr, nullPtr )
-import "base" Foreign.C.String ( peekCString )
+import "base" Foreign.Marshal.Alloc ( allocaBytes )
+import "base" Foreign.Marshal.Array ( allocaArray )
 import "base" Foreign.Marshal.Utils ( toBool )
+import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
+import "base" Foreign.Storable ( sizeOf, poke )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -16,6 +19,7 @@ import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
 import "this" Language.C.Inline.OpenCV
+import qualified "vector" Data.Vector as V
 
 
 --------------------------------------------------------------------------------
@@ -29,7 +33,9 @@ C.using "namespace cv"
 #include "opencv2/core.hpp"
 
 #include "namespace.hpp"
+#include "macros.hpp"
 
+#sizeof Point2i
 
 --------------------------------------------------------------------------------
 -- Exceptions
@@ -186,6 +192,32 @@ mkPoint3d x y z = unsafePerformIO $ point3dFromPtr $
     c'x = realToFrac x
     c'y = realToFrac y
     c'z = realToFrac z
+
+withPolygons :: forall a. V.Vector (V.Vector Point2i) -> (Ptr (Ptr C'Point2i) -> IO a) -> IO a
+withPolygons polygons act =
+    allocaArray (V.length polygons) $ \polygonsPtr -> do
+      let go :: Ptr (Ptr C'Point2i) -> Int -> IO a
+          go !acc !ix
+            | ix < V.length polygons =
+                withPoints (V.unsafeIndex polygons ix) $ \ptsPtr -> do
+                  poke acc ptsPtr
+                  go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr C'Point2i))) (ix + 1)
+            | otherwise = act polygonsPtr
+      go polygonsPtr 0
+
+withPoints :: V.Vector Point2i -> (Ptr C'Point2i -> IO a) -> IO a
+withPoints points act =
+    allocaBytes (c'sizeof_Point2i * V.length points) $ \ptsPtr -> do
+      V.foldM'_ copyNext ptsPtr points
+      act ptsPtr
+  where
+    copyNext :: Ptr C'Point2i -> Point2i -> IO (Ptr C'Point2i)
+    copyNext !ptr point = copyPoint2i ptr point $> plusPtr ptr c'sizeof_Point2i
+
+    copyPoint2i :: Ptr C'Point2i -> Point2i -> IO ()
+    copyPoint2i destPtr src =
+      withPoint2iPtr src $ \srcPtr ->
+        [C.exp| void { new($(Point2i * destPtr)) Point2i(*$(Point2i * srcPtr)) }|]
 
 
 --------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ module OpenCV.ImgProc
     ( -- * Image Filtering
       medianBlur
       -- * Geometric Image Transformations
+    , warpAffine
       -- * Miscellaneous Image Transformations
       -- * Drawing Functions
     , LineType(..)
@@ -27,13 +28,15 @@ module OpenCV.ImgProc
       -- * Object Detection
     , MatchTemplateMethod(..)
     , matchTemplate
+      -- * Types
+    , InterpolationMethod(..)
+    , BorderMode(..)
     ) where
 
-import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
-import "base" Foreign.Marshal.Array ( allocaArray )
+import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
-import "base" Foreign.Storable ( sizeOf, peek, poke )
+import "base" Foreign.Ptr ( Ptr )
+import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
@@ -41,7 +44,7 @@ import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToP
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
-import "this" Language.C.Inline.OpenCV ( openCvCtx, C'Point2i )
+import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
@@ -61,23 +64,14 @@ C.using "namespace cv"
 #include "namespace.hpp"
 #include "macros.hpp"
 
-#sizeof Point2i
-
-#num CV_TM_SQDIFF
-#num CV_TM_SQDIFF_NORMED
-#num CV_TM_CCORR
-#num CV_TM_CCORR_NORMED
-#num CV_TM_CCOEFF
-#num CV_TM_CCOEFF_NORMED
-
 
 --------------------------------------------------------------------------------
+-- Image Filtering
+--------------------------------------------------------------------------------
 
--- | <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc>
+-- | Blurs an image using the median filter.
 --
--- Blurs an image using the median filter.
---
---
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc>
 medianBlur
     :: Mat
        -- ^ Input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the
@@ -96,6 +90,59 @@ medianBlur matIn ksize = unsafePerformIO $ c'medianBlur $ fromIntegral ksize
         withMatPtr matOut $ \matOutPtr ->
         withMatPtr matIn $ \matInPtr ->
           [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int c'ksize)); |]
+
+
+--------------------------------------------------------------------------------
+-- Geometric Image Transformations
+--------------------------------------------------------------------------------
+
+#num WARP_FILL_OUTLIERS
+#num WARP_INVERSE_MAP
+
+-- | Applies an affine transformation to an image
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
+warpAffine
+    :: Mat -- ^ Source image.
+    -> Mat -- ^ Affine transformation matrix.
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> Either CvException Mat -- ^ Transformed source image.
+warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafePerformIO $ do
+      dst <- newEmptyMat
+      handleCvException dst $
+        withMatPtr src $ \srcPtr ->
+        withMatPtr dst $ \dstPtr ->
+        withMatPtr transform $ \transformPtr ->
+        withScalarPtr borderValue $ \borderValuePtr ->
+          [cvExcept|
+            Mat * src = $(Mat * srcPtr);
+            cv::warpAffine( *src
+                          , *$(Mat * dstPtr)
+                          , *$(Mat * transformPtr)
+                          , src->size()
+                          , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
+                          , $(int c'borderMode)
+                          , *$(Scalar * borderValuePtr)
+                          );
+          |]
+  where
+    c'interpolationMethod = marshallInterpolationMethod interpolationMethod
+    c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
+    c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
+    (c'borderMode, borderValue) = marshallBorderMode borderMode
+
+--------------------------------------------------------------------------------
+-- Miscellaneous Image Transformations
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Drawing Functions
+--------------------------------------------------------------------------------
 
 data LineType
    = LineType_8  -- ^ 8-connected line.
@@ -346,32 +393,6 @@ fillPoly img polygons color lineType shift =
     npts :: VS.Vector C.CInt
     npts = VS.convert $ V.map (fromIntegral . V.length) polygons
 
-withPolygons :: forall a. V.Vector (V.Vector Point2i) -> (Ptr (Ptr C'Point2i) -> IO a) -> IO a
-withPolygons polygons act =
-    allocaArray (V.length polygons) $ \polygonsPtr -> do
-      let go :: Ptr (Ptr C'Point2i) -> Int -> IO a
-          go !acc !ix
-            | ix < V.length polygons =
-                withPoints (V.unsafeIndex polygons ix) $ \ptsPtr -> do
-                  poke acc ptsPtr
-                  go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr C'Point2i))) (ix + 1)
-            | otherwise = act polygonsPtr
-      go polygonsPtr 0
-
-withPoints :: V.Vector Point2i -> (Ptr C'Point2i -> IO a) -> IO a
-withPoints points act =
-    allocaBytes (c'sizeof_Point2i * V.length points) $ \ptsPtr -> do
-      V.foldM'_ copyNext ptsPtr points
-      act ptsPtr
-  where
-    copyNext :: Ptr C'Point2i -> Point2i -> IO (Ptr C'Point2i)
-    copyNext !ptr point = copyPoint2i ptr point $> plusPtr ptr c'sizeof_Point2i
-
-    copyPoint2i :: Ptr C'Point2i -> Point2i -> IO ()
-    copyPoint2i destPtr src =
-      withPoint2iPtr src $ \srcPtr ->
-        [C.exp| void { new($(Point2i * destPtr)) Point2i(*$(Point2i * srcPtr)) }|]
-
 -- | Calculates the width and height of a text string.
 --
 --  Calculates and returns the size of a box that contains the specified text.
@@ -514,6 +535,36 @@ rectangle img rect color thickness lineType shift =
     c'lineType  = marshallLineType lineType
     c'shift     = fromIntegral shift
 
+
+--------------------------------------------------------------------------------
+-- Color Maps
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Histograms
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Structural Analysis and Shape Descriptors
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Motion Analysis and Object Tracking
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Feature Detection
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+-- Object Detection
+--------------------------------------------------------------------------------
+
 -- | <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/object_detection.html#matchtemplate OpenCV Sphinx doc>
 data MatchTemplateMethod
    = MatchTemplateSqDiff
@@ -528,6 +579,13 @@ data MatchTemplateMethod
        --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/235e42ec68d2d773899efcf0a4a9d35a7afedb64.png>>
      deriving Show
 
+#num CV_TM_SQDIFF
+#num CV_TM_SQDIFF_NORMED
+#num CV_TM_CCORR
+#num CV_TM_CCORR_NORMED
+#num CV_TM_CCOEFF
+#num CV_TM_CCOEFF_NORMED
+
 marshallMatchTemplateMethod :: MatchTemplateMethod -> Bool -> C.CInt
 marshallMatchTemplateMethod m n =
     case (m, n) of
@@ -537,7 +595,6 @@ marshallMatchTemplateMethod m n =
       (MatchTemplateCCorr , True ) -> c'CV_TM_CCORR_NORMED
       (MatchTemplateCCoeff, False) -> c'CV_TM_CCOEFF
       (MatchTemplateCCoeff, True ) -> c'CV_TM_CCOEFF_NORMED
-
 
 -- | <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/object_detection.html#matchtemplate OpenCV Sphinx doc>
 --
@@ -586,3 +643,64 @@ matchTemplate image templ method normed = unsafePerformIO $ do
         |]
   where
     c'method = marshallMatchTemplateMethod method normed
+
+
+--------------------------------------------------------------------------------
+-- Types
+--------------------------------------------------------------------------------
+
+data InterpolationMethod
+   = InterNearest -- ^ Nearest neighbor interpolation.
+   | InterLinear -- ^ Bilinear interpolation.
+   | InterCubic -- ^ Bicubic interpolation.
+   | InterArea
+     -- ^ Resampling using pixel area relation. It may be a preferred method for
+     -- image decimation, as it gives moire'-free results. But when the image is
+     -- zoomed, it is similar to the 'InterNearest' method.
+   | InterLanczos4 -- ^ Lanczos interpolation over 8x8 neighborhood
+     deriving Show
+
+#num INTER_NEAREST
+#num INTER_LINEAR
+#num INTER_CUBIC
+#num INTER_AREA
+#num INTER_LANCZOS4
+
+marshallInterpolationMethod :: InterpolationMethod -> C.CInt
+marshallInterpolationMethod = \case
+   InterNearest  -> c'INTER_NEAREST
+   InterLinear   -> c'INTER_LINEAR
+   InterCubic    -> c'INTER_CUBIC
+   InterArea     -> c'INTER_AREA
+   InterLanczos4 -> c'INTER_LANCZOS4
+
+-- TODO (RvD): Show instance
+-- Needs a Show instance for Scalar
+data BorderMode
+   = BorderConstant Scalar -- ^ 1D example: @iiiiii|abcdefgh|iiiiiii@  with some specified @i@
+   | BorderReplicate   -- ^ 1D example: @aaaaaa|abcdefgh|hhhhhhh@
+   | BorderReflect     -- ^ 1D example: @fedcba|abcdefgh|hgfedcb@
+   | BorderWrap        -- ^ 1D example: @cdefgh|abcdefgh|abcdefg@
+   | BorderReflect101  -- ^ 1D example: @gfedcb|abcdefgh|gfedcba@
+   | BorderTransparent -- ^ 1D example: @uvwxyz|absdefgh|ijklmno@
+   | BorderIsolated    -- ^ do not look outside of ROI
+
+#num BORDER_CONSTANT
+#num BORDER_REPLICATE
+#num BORDER_REFLECT
+#num BORDER_WRAP
+#num BORDER_REFLECT_101
+#num BORDER_TRANSPARENT
+#num BORDER_ISOLATED
+
+marshallBorderMode :: BorderMode -> (C.CInt, Scalar)
+marshallBorderMode = \case
+    BorderConstant scalar -> (c'BORDER_CONSTANT    , scalar    )
+    BorderReplicate       -> (c'BORDER_REPLICATE   , zeroScalar)
+    BorderReflect         -> (c'BORDER_REFLECT     , zeroScalar)
+    BorderWrap            -> (c'BORDER_WRAP        , zeroScalar)
+    BorderReflect101      -> (c'BORDER_REFLECT_101 , zeroScalar)
+    BorderTransparent     -> (c'BORDER_TRANSPARENT , zeroScalar)
+    BorderIsolated        -> (c'BORDER_ISOLATED    , zeroScalar)
+  where
+    zeroScalar = mkScalar 0 0 0 0
