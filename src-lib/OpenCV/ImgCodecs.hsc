@@ -26,6 +26,7 @@ import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Internal
+import "this" OpenCV.Unsafe
 import qualified "vector" Data.Vector.Storable as VS
 
 

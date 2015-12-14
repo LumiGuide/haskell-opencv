@@ -12,6 +12,7 @@ library
   include-dirs: include
   c-sources: src-lib/OpenCV/Internal.cpp
 
+           , src-lib/OpenCV/Core.cpp
            , src-lib/OpenCV/ImgProc.cpp
            , src-lib/OpenCV/ImgCodecs.cpp
            , src-lib/OpenCV/HighGui.cpp

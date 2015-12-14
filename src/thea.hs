@@ -26,7 +26,7 @@ type Jpeg = ByteString
 --------------------------------------------------------------------------------
 
 axisUrl :: String
-axisUrl = "http://192.168.42.4/axis-cgi/mjpg/video.cgi?resolution=1280x800&compression=15&fps=30&rotation=0&source=1"
+axisUrl = "http://192.168.42.4/axis-cgi/mjpg/video.cgi?resolution=1280x800&compression=5&fps=30&rotation=0&source=1"
 
 axisUsername :: ByteString
 axisUsername = "root"
@@ -77,7 +77,6 @@ stopMarker  = "\xff\xd9"
 
 --------------------------------------------------------------------------------
 
-
 main :: IO ()
 main = O.execParser opts >>= thea
   where
@@ -114,34 +113,14 @@ withRequest req = do
 
 jpegSink :: Sink Jpeg (ResourceT IO) ()
 jpegSink = do
-    mousePosRef <- liftIO $ newIORef (0, 0)
-    circleSizeRef <- liftIO $ newIORef initCircleSize
-    liftIO $ setMouseCallback window $ \_event x y _flags -> writeIORef mousePosRef (x, y)
-    liftIO $ createTrackbar "circle size" window initCircleSize 200 $ writeIORef circleSizeRef
     fix $ \go -> do
       mbJpeg <- await
       forM_ mbJpeg $ \jpeg -> do
-        continue <- liftIO $ handleJpeg mousePosRef circleSizeRef jpeg
+        continue <- liftIO $ handleJpeg jpeg
         when continue go
-  where
-    initCircleSize = 30
 
-handleJpeg :: IORef (Int, Int) -> IORef Int -> Jpeg -> IO Bool
-handleJpeg mousePosRef circleSizeRef jpeg =
-    case medianBlur (imdecode jpeg ImreadColor) 3 of
-      Left err -> throwIO err
-      Right blur -> do
-        (mouseX, mouseY) <- readIORef mousePosRef
-        circleSize <- readIORef circleSizeRef
-        let img = runST $ do
-                    imgM <- thaw blur
-                    circle imgM
-                           (mkPoint2i mouseX mouseY)
-                           circleSize
-                           (mkScalar 0 0 255.0 0)
-                           2
-                           LineType_AA
-                           0
-                    freeze imgM
-        imshow window img
-        (/= 27) <$> waitKey 5
+handleJpeg :: Jpeg -> IO Bool
+handleJpeg jpeg = do
+    let img = createMat $ imdecodeM jpeg ImreadColor
+    imshow window img
+    (/= 27) <$> waitKey 5

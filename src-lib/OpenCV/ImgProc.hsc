@@ -6,6 +6,8 @@ module OpenCV.ImgProc
       medianBlur
       -- * Geometric Image Transformations
     , warpAffine
+    , warpPerspective
+    , invertAffineTransform
       -- * Miscellaneous Image Transformations
       -- * Drawing Functions
     , LineType(..)
@@ -45,6 +47,7 @@ import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Core
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
@@ -120,20 +123,72 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
         withScalarPtr borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
-            cv::warpAffine( *src
-                          , *$(Mat * dstPtr)
-                          , *$(Mat * transformPtr)
-                          , src->size()
-                          , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
-                          , $(int c'borderMode)
-                          , *$(Scalar * borderValuePtr)
-                          );
+            cv::warpAffine
+              ( *src
+              , *$(Mat * dstPtr)
+              , *$(Mat * transformPtr)
+              , src->size()
+              , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
+              , $(int c'borderMode)
+              , *$(Scalar * borderValuePtr)
+              );
           |]
   where
     c'interpolationMethod = marshallInterpolationMethod interpolationMethod
     c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshallBorderMode borderMode
+
+-- | Applies a perspective transformation to an image
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
+warpPerspective
+    :: Mat -- ^ Source image.
+    -> Mat -- ^ Perspective transformation matrix.
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> Either CvException Mat -- ^ Transformed source image.
+warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafePerformIO $ do
+      dst <- newEmptyMat
+      handleCvException dst $
+        withMatPtr src $ \srcPtr ->
+        withMatPtr dst $ \dstPtr ->
+        withMatPtr transform $ \transformPtr ->
+        withScalarPtr borderValue $ \borderValuePtr ->
+          [cvExcept|
+            Mat * src = $(Mat * srcPtr);
+            cv::warpPerspective
+              ( *src
+              , *$(Mat * dstPtr)
+              , *$(Mat * transformPtr)
+              , src->size()
+              , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
+              , $(int c'borderMode)
+              , *$(Scalar * borderValuePtr)
+              );
+          |]
+  where
+    c'interpolationMethod = marshallInterpolationMethod interpolationMethod
+    c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
+    c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
+    (c'borderMode, borderValue) = marshallBorderMode borderMode
+
+-- | Inverts an affine transformation
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#invertaffinetransform OpenCV Sphinx doc>
+invertAffineTransform :: Mat -> Either CvException Mat
+invertAffineTransform matIn = unsafePerformIO $ do
+    matOut <- newEmptyMat
+    handleCvException matOut $
+      withMatPtr matIn  $ \matInPtr ->
+      withMatPtr matOut $ \matOutPtr ->
+        [cvExcept|
+           cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
+        |]
+
 
 --------------------------------------------------------------------------------
 -- Miscellaneous Image Transformations
