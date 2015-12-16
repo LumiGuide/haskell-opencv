@@ -5,17 +5,20 @@ import "bytestring" Data.ByteString ( ByteString )
 import qualified "bytestring" Data.ByteString as B
 import qualified "bytestring" Data.ByteString.Unsafe as B ( unsafeHead  )
 import "conduit" Data.Conduit
-    ( Conduit, Sink, ResumableSource
+    ( Conduit, Sink, Source
+    , unwrapResumable, addCleanup
     , ($=+), ($$+-), await
     , mapOutput
+    , ZipSource(..), getZipSource
     )
+import "conduit" Data.Conduit.Internal ( ResumableSource(ResumableSource), Pipe(Done), unConduitM )
 import "conduit-extra" Data.Conduit.Attoparsec ( conduitParser )
 import "exceptions" Control.Monad.Catch ( MonadThrow )
 import qualified "http-conduit" Network.HTTP.Conduit as Http
 import "lumi-hackage-extended" Lumi.Prelude hiding ( yield )
 import qualified "optparse-applicative" Options.Applicative as O
 import "resourcet" Control.Monad.Trans.Resource ( ResourceT, runResourceT )
-import "transformers" Control.Monad.IO.Class ( liftIO )
+import "transformers" Control.Monad.IO.Class ( MonadIO, liftIO )
 
 import "thea" OpenCV
 
@@ -25,8 +28,11 @@ type Jpeg = ByteString
 
 --------------------------------------------------------------------------------
 
-axisUrl :: String
-axisUrl = "http://192.168.42.4/axis-cgi/mjpg/video.cgi?resolution=1280x800&compression=5&fps=30&rotation=0&source=1"
+axisUrlL :: String
+axisUrlL = "http://192.168.42.4/axis-cgi/mjpg/video.cgi?resolution=1280x800&compression=15&fps=30&rotation=0&source=1"
+
+axisUrlR :: String
+axisUrlR = "http://192.168.42.70/axis-cgi/mjpg/video.cgi?resolution=1280x800&compression=15&fps=30&rotation=0&source=1"
 
 axisUsername :: ByteString
 axisUsername = "root"
@@ -91,36 +97,54 @@ main = O.execParser opts >>= thea
 data Options = Options
 
 thea :: Options -> IO ()
-thea _opts =
-    case Http.parseUrl axisUrl of
-      Nothing -> putStrLn "invalid URL"
-      Just req -> withRequest $ Http.applyBasicAuth axisUsername axisPassword req
+thea _opts = do
+  let mbReqs =
+        (,) <$> (Http.applyBasicAuth axisUsername axisPassword <$> Http.parseUrl axisUrlL)
+            <*> (Http.applyBasicAuth axisUsername axisPassword <$> Http.parseUrl axisUrlR)
+  case mbReqs of
+    Just (reqL, reqR) -> withRequest reqL reqR
+    Nothing -> error "wrong request"
 
-window :: WindowName
-window = "output"
-
-withRequest :: Http.Request -> IO ()
-withRequest req = do
+withRequest :: Http.Request -> Http.Request -> IO ()
+withRequest reqL reqR = do
     manager <- Http.newManager Http.tlsManagerSettings
     runResourceT $ do
-      resp <- Http.http req manager
-      let bytesSource :: ResumableSource (ResourceT IO) ByteString
-          bytesSource = Http.responseBody resp
-      liftIO $ do
-        makeWindow window
-        void $ waitKey 20
-      bytesSource $=+ mjpegConduit $$+- jpegSink
+      respL <- Http.http reqL manager
+      respR <- Http.http reqR manager
+      rSrc <- zipResumableSources (Http.responseBody respL $=+ mjpegConduit)
+                                  (Http.responseBody respR $=+ mjpegConduit)
+      window <- liftIO $ makeWindow "output" <* threadDelay 20000
+      rSrc $$+- jpegSink window
+      liftIO $ destroyWindow window >> threadDelay 10000
 
-jpegSink :: Sink Jpeg (ResourceT IO) ()
-jpegSink = do
+jpegSink :: Window -> Sink (Jpeg, Jpeg) (ResourceT IO) ()
+jpegSink window = do
     fix $ \go -> do
-      mbJpeg <- await
-      forM_ mbJpeg $ \jpeg -> do
-        continue <- liftIO $ handleJpeg jpeg
+      mbJpegs <- await
+      forM_ mbJpegs $ \jpegs -> do
+        continue <- liftIO $ handleJpeg window jpegs
         when continue go
 
-handleJpeg :: Jpeg -> IO Bool
-handleJpeg jpeg = do
-    let img = createMat $ imdecodeM jpeg ImreadColor
-    imshow window img
+handleJpeg :: Window -> (Jpeg, Jpeg) -> IO Bool
+handleJpeg window (jpegL, jpegR) = do
+    let imgL = createMat $ imdecodeM jpegL ImreadColor
+        imgR = createMat $ imdecodeM jpegR ImreadColor
+        blend = either throw id $ addWeighted imgL 0.5 imgR 0.5 0.0
+    imshow window blend
     (/= 27) <$> waitKey 5
+
+zipResumableSources :: forall m a b. (MonadIO m) => ResumableSource m a -> ResumableSource m b -> m (ResumableSource m (a,b))
+zipResumableSources rSrc1 rSrc2 = do
+    (src1, finalize1) <- unwrapResumable rSrc1
+    (src2, finalize2) <- unwrapResumable rSrc2
+
+    let src :: Source m (a, b)
+        src = getZipSource $ (,) <$> ZipSource src1 <*> ZipSource src2
+
+        finalize :: m ()
+        finalize = finalize1 *> finalize2
+
+        rSrc :: ResumableSource m (a, b)
+        rSrc = ResumableSource (flip unConduitM Done $ addCleanup (\_isCompleted -> finalize) src) finalize
+
+    pure rSrc
