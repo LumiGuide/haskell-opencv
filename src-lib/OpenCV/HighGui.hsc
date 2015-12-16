@@ -3,8 +3,10 @@
 
 module OpenCV.HighGui
     ( -- * Window management
-      WindowName
+      Window
+    , WindowTitle
     , makeWindow
+    , destroyWindow
 
       -- * Event handling
 
@@ -25,10 +27,12 @@ module OpenCV.HighGui
     , EventFlagsRec(..)
     , flagsToRec
 
+    , MouseCallback
     , setMouseCallback
 
       -- * Trackbars
     , TrackbarName
+    , TrackbarCallback
     , createTrackbar
 
       -- * Drawing
@@ -36,6 +40,11 @@ module OpenCV.HighGui
     ) where
 
 import qualified "base" Foreign.C.String as C
+import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
+import "base" Foreign.Marshal.Alloc ( free )
+import "base" Foreign.Marshal.Utils ( new )
+import "containers" Data.Map ( Map )
+import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude
@@ -60,14 +69,60 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 -- Window management
 
-type WindowName = String
+type WindowTitle = String
+type WindowName  = String
 
-makeWindow :: WindowName -> IO ()
-makeWindow windowName =
-    C.withCString windowName $ \c'wn ->
-      [C.exp| void {
-        cv::namedWindow($(char * c'wn), cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
-      }|]
+type TrackbarState = (FunPtr C'TrackbarCallback, Ptr C.CInt)
+
+data Window
+   = Window
+     { windowName          :: WindowName
+     , windowMouseCallback :: MVar (Maybe (FunPtr C'MouseCallback))
+     , windowTrackbars     :: MVar (Map TrackbarName TrackbarState)
+     }
+
+freeTrackbar :: TrackbarState -> IO ()
+freeTrackbar (callback, value) = do
+    freeHaskellFunPtr callback
+    free value
+
+-- #num WINDOW_NORMAL
+-- #num WINDOW_AUTOSIZE
+-- #num WINDOW_OPENGL
+-- #num WINDOW_FREERATIO
+-- #num WINDOW_KEEPRATIO
+
+-- marshallWindowFlags :: WindowFlags -> C.CInt
+-- marshallWindowFlags WindowFlags{..} =
+
+makeWindow :: WindowTitle -> IO Window
+makeWindow title = do
+    name <- show . hashUnique <$> newUnique
+    mouseCallback <- newMVar Nothing
+    trackbars <- newMVar M.empty
+    C.withCString name $ \c'name ->
+      C.withCString title $ \c'title ->
+        [C.block| void {
+          char * cname = $(char * c'name);
+          cv::namedWindow(cname, cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
+          cv::setWindowTitle(cname, $(char * c'title));
+        }|]
+    pure Window
+         { windowName          = name
+         , windowMouseCallback = mouseCallback
+         , windowTrackbars     = trackbars
+         }
+
+destroyWindow :: Window -> IO ()
+destroyWindow window = mask_ $ do
+  C.withCString (windowName window) $ \c'name ->
+    [C.exp| void { cv::destroyWindow($(char * c'name)); }|]
+  modifyMVar_ (windowMouseCallback window) $ \mbMouseCallback -> do
+    mapM_ freeHaskellFunPtr mbMouseCallback
+    pure Nothing
+  modifyMVar_ (windowTrackbars window) $ \trackbars -> do
+    mapM_ freeTrackbar trackbars
+    pure M.empty
 
 --------------------------------------------------------------------------------
 -- Keyboard
@@ -174,16 +229,16 @@ unmarshallEvent event
    | event == c'EVENT_MOUSEHWHEEL   = EventMouseHWheel
    | otherwise = error $ "unmarshallEvent - unknown event " <> show event
 
+type MouseCallback = Event -> Int -> Int -> EventFlags -> IO ()
 
--- TODO (RvD): memory leak, fix with freeHaskellFunPtr
-setMouseCallback
-    :: WindowName
-    -> (Event -> Int -> Int -> EventFlags -> IO ())
-    -> IO ()
-setMouseCallback windowName callback =
-    C.withCString windowName $ \c'wn -> do
-      callbackPtr <- $(C.mkFunPtr [t| C'MouseCallback |]) c'callback
-      [C.exp| void { cv::setMouseCallback($(char * c'wn), $(MouseCallback callbackPtr)) }|]
+setMouseCallback :: Window -> MouseCallback -> IO ()
+setMouseCallback window callback =
+    modifyMVar_ (windowMouseCallback window) $ \mbPrevCallback ->
+      C.withCString (windowName window) $ \c'name -> mask_ $ do
+        callbackPtr <- $(C.mkFunPtr [t| C'MouseCallback |]) c'callback
+        [C.exp| void { cv::setMouseCallback($(char * c'name), $(MouseCallback callbackPtr)) }|]
+        mapM_ freeHaskellFunPtr mbPrevCallback
+        pure $ Just callbackPtr
   where
     c'callback :: C'MouseCallback
     c'callback c'event c'x c'y c'flags _c'userDataPtr = callback event x y flags
@@ -197,26 +252,37 @@ setMouseCallback windowName callback =
 -- Trackbars
 
 type TrackbarName = String
+type TrackbarCallback = Int -> IO ()
 
 createTrackbar
-    :: TrackbarName
-    -> WindowName
+    :: Window
+    -> TrackbarName
     -> Int -- ^ Initial value
     -> Int -- ^ Maximum value
-    -> (Int -> IO ())
+    -> TrackbarCallback
     -> IO ()
-createTrackbar trackbarName windowName value count callback =
+createTrackbar window trackbarName value count callback =
+    modifyMVar_ (windowTrackbars window) $ \trackbars ->
     C.withCString trackbarName $ \c'tn ->
-      C.withCString windowName $ \c'wn -> do
-        callbackPtr <- $(C.mkFunPtr [t| C'TrackbarCallback |]) c'callback
-        [C.exp| void {
-          cv::createTrackbar( $(char * c'tn)
-                            , $(char * c'wn)
-                            , &$(int c'value)
-                            , $(int c'count)
-                            , $(TrackbarCallback callbackPtr)
-                            )
-        }|]
+    C.withCString (windowName window) $ \c'wn -> mask_ $ do
+      valuePtr <- new c'value
+      callbackPtr <- $(C.mkFunPtr [t| C'TrackbarCallback |]) c'callback
+      [C.exp| void {
+        (void)cv::createTrackbar
+          ( $(char * c'tn)
+          , $(char * c'wn)
+          , $(int * valuePtr)
+          , $(int c'count)
+          , $(TrackbarCallback callbackPtr)
+          )
+      }|]
+
+      let (mbPrevCallback, trackbars') =
+              M.updateLookupWithKey (\_k _v -> Just (callbackPtr, valuePtr))
+                                    trackbarName
+                                    trackbars
+      mapM_ freeTrackbar mbPrevCallback
+      pure trackbars'
   where
     c'value = fromIntegral value
     c'count = fromIntegral count
@@ -230,8 +296,8 @@ createTrackbar trackbarName windowName value count callback =
 --------------------------------------------------------------------------------
 -- Drawing
 
-imshow :: WindowName -> Mat -> IO ()
-imshow windowName mat =
-    C.withCString windowName $ \c'wn ->
+imshow :: Window -> Mat -> IO ()
+imshow window mat =
+    C.withCString (windowName window) $ \c'name ->
       withMatPtr mat $ \matPtr ->
-        [C.exp| void { cv::imshow($(char * c'wn), *$(Mat * matPtr)); }|]
+        [C.exp| void { cv::imshow($(char * c'name), *$(Mat * matPtr)); }|]
