@@ -65,6 +65,8 @@ module OpenCV.Core
     , createMat
       -- * Exception
     , CvException
+      -- * Operations on Arrays
+    , addWeighted
     ) where
 
 import "base" Foreign.Marshal.Utils ( toBool )
@@ -387,3 +389,36 @@ thaw = fmap MutMat . cloneMatM
 
 createMat :: (forall s. ST s (MutMat s)) -> Mat
 createMat mk = runST $ unsafeFreeze =<< mk
+
+
+--------------------------------------------------------------------------------
+-- Operations on Arrays
+--------------------------------------------------------------------------------
+
+addWeighted
+    :: Mat    -- ^ src1
+    -> Double -- ^ alpha
+    -> Mat    -- ^ src2
+    -> Double -- ^ beta
+    -> Double -- ^ gamma
+    -> Either CvException Mat
+addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException dst $
+      withMatPtr src1 $ \src1Ptr ->
+      withMatPtr src2 $ \src2Ptr ->
+      withMatPtr dst $ \dstPtr ->
+      [cvExcept|
+        cv::addWeighted
+          ( *$(Mat * src1Ptr)
+          , $(double c'alpha)
+          , *$(Mat * src2Ptr)
+          , $(double c'beta)
+          , $(double c'gamma)
+          , *$(Mat * dstPtr)
+          );
+      |]
+  where
+    c'alpha = realToFrac alpha
+    c'beta  = realToFrac beta
+    c'gamma = realToFrac gamma
