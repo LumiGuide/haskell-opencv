@@ -89,7 +89,7 @@ medianBlur matIn ksize = unsafePerformIO $ c'medianBlur $ fromIntegral ksize
     c'medianBlur :: C.CInt -> IO (Either CvException Mat)
     c'medianBlur c'ksize = do
       matOut <- newEmptyMat
-      handleCvException matOut $
+      handleCvException (pure matOut) $
         withMatPtr matOut $ \matOutPtr ->
         withMatPtr matIn $ \matInPtr ->
           [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int c'ksize)); |]
@@ -116,7 +116,7 @@ warpAffine
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
       dst <- newEmptyMat
-      handleCvException dst $
+      handleCvException (pure dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
         withMatPtr transform $ \transformPtr ->
@@ -153,7 +153,7 @@ warpPerspective
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
       dst <- newEmptyMat
-      handleCvException dst $
+      handleCvException (pure dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
         withMatPtr transform $ \transformPtr ->
@@ -182,7 +182,7 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
 invertAffineTransform :: Mat -> Either CvException Mat
 invertAffineTransform matIn = unsafePerformIO $ do
     matOut <- newEmptyMat
-    handleCvException matOut $
+    handleCvException (pure matOut) $
       withMatPtr matIn  $ \matInPtr ->
       withMatPtr matOut $ \matOutPtr ->
         [cvExcept|
@@ -685,7 +685,7 @@ matchTemplate
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
 matchTemplate image templ method normed = unsafePerformIO $ do
     result <- newEmptyMat
-    handleCvException result $
+    handleCvException (pure result) $
       withMatPtr result $ \resultPtr ->
       withMatPtr image $ \imagePtr ->
       withMatPtr templ $ \templPtr ->

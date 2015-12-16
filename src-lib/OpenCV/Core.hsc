@@ -67,9 +67,12 @@ module OpenCV.Core
     , CvException
       -- * Operations on Arrays
     , addWeighted
+    , minMaxLoc
     ) where
 
+import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( toBool )
+import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -96,12 +99,15 @@ C.using "namespace cv"
 -- Point
 --------------------------------------------------------------------------------
 
-mkPoint2i :: Int -> Int -> Point2i
-mkPoint2i x y = unsafePerformIO $ point2iFromPtr $
+newPoint2i :: Int -> Int -> IO Point2i
+newPoint2i x y = point2iFromPtr $
     [CU.exp|Point2i * { new cv::Point2i($(int c'x), $(int c'y)) }|]
   where
     c'x = fromIntegral x
     c'y = fromIntegral y
+
+mkPoint2i :: Int -> Int -> Point2i
+mkPoint2i x y = unsafePerformIO $ newPoint2i x y
 
 mkPoint :: Int -> Int -> Point
 mkPoint = mkPoint2i
@@ -362,7 +368,7 @@ cloneMatM mat = unsafePrimToPrim $ matFromPtr $ withMatPtr mat $ \matPtr ->
 matSubRect :: Mat -> Rect -> Either CvException Mat
 matSubRect matIn rect = unsafePerformIO $ do
     matOut <- newEmptyMat
-    handleCvException matOut $
+    handleCvException (pure matOut) $
       withMatPtr matIn $ \matInPtr ->
       withMatPtr matOut $ \matOutPtr ->
       withRectPtr rect $ \rectPtr ->
@@ -395,6 +401,9 @@ createMat mk = runST $ unsafeFreeze =<< mk
 -- Operations on Arrays
 --------------------------------------------------------------------------------
 
+-- | Calculates the weighted sum of two arrays
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
 addWeighted
     :: Mat    -- ^ src1
     -> Double -- ^ alpha
@@ -404,7 +413,7 @@ addWeighted
     -> Either CvException Mat
 addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException dst $
+    handleCvException (pure dst) $
       withMatPtr src1 $ \src1Ptr ->
       withMatPtr src2 $ \src2Ptr ->
       withMatPtr dst $ \dstPtr ->
@@ -422,3 +431,31 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     c'alpha = realToFrac alpha
     c'beta  = realToFrac beta
     c'gamma = realToFrac gamma
+
+-- | Finds the global minimum and maximum in an array
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
+
+-- TODO (RvD): implement mask
+minMaxLoc :: Mat -> Either CvException (Double, Double, Point2i, Point2i)
+minMaxLoc src = unsafePerformIO $ do
+    minLoc <- newPoint2i 0 0
+    maxLoc <- newPoint2i 0 0
+    withMatPtr src $ \srcPtr ->
+      withPoint2iPtr minLoc $ \minLocPtr ->
+      withPoint2iPtr maxLoc $ \maxLocPtr ->
+      alloca $ \minValPtr ->
+      alloca $ \maxValPtr -> do
+        handleCvException
+          ( (,, minLoc, maxLoc)
+            <$> (realToFrac <$> peek minValPtr)
+            <*> (realToFrac <$> peek maxValPtr)
+          )
+          [cvExcept|
+            cv::minMaxLoc( *$(Mat * srcPtr)
+                         , $(double * minValPtr)
+                         , $(double * maxValPtr)
+                         , $(Point2i * minLocPtr)
+                         , $(Point2i * maxLocPtr)
+                         );
+          |]

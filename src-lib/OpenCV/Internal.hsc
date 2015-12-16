@@ -55,12 +55,12 @@ withCvExceptionPtr = withForeignPtr . unCvException
 cvExceptionFromPtr :: IO (Ptr C'Exception) -> IO CvException
 cvExceptionFromPtr = objFromPtr CvException $ \ptr -> [CU.exp| void { delete $(Exception * ptr) }|]
 
-handleCvException :: a -> IO (Ptr C'Exception) -> IO (Either CvException a)
-handleCvException okResult act = mask_ $ do
+handleCvException :: IO a -> IO (Ptr C'Exception) -> IO (Either CvException a)
+handleCvException okAct act = mask_ $ do
     exceptionPtr <- act
     if exceptionPtr /= nullPtr
       then Left <$> cvExceptionFromPtr (pure exceptionPtr)
-      else pure $ Right okResult
+      else Right <$> okAct
 
 cvExcept :: QuasiQuoter
 cvExcept = C.block {quoteExp = \s -> quoteExp C.block $ cvExceptWrap s}
