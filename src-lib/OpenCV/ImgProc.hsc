@@ -1,5 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
 
 module OpenCV.ImgProc
     ( -- * Image Filtering
@@ -9,7 +12,8 @@ module OpenCV.ImgProc
     , warpPerspective
     , invertAffineTransform
       -- * Miscellaneous Image Transformations
-    , ColorConversion(..)
+    , ColorCode(..)
+    , ColorConversion
     , cvtColor
       -- * Drawing Functions
     , LineType(..)
@@ -196,212 +200,111 @@ invertAffineTransform matIn = unsafePerformIO $ do
 -- Miscellaneous Image Transformations
 --------------------------------------------------------------------------------
 
+data ColorCode
+    = BayerBG
+    | BayerGB
+    | BayerGR
+    | BayerRG
 
--- | Color space conversions
-data ColorConversion
-   = ColorConvBGR2BGRA -- ^ Add alpha channel to BGR image.
-   | ColorConvRGB2RGBA -- ^ Add alpha channel to RGB image.
-   | ColorConvBGRA2BGR -- ^ Remove alpha channel from BGR image.
-   | ColorConvRGBA2RGB -- ^ Remove alpha channel from RGB image.
-   | ColorConvBGR2RGBA
-   | ColorConvRGB2BGRA
-   | ColorConvRGBA2BGR
-   | ColorConvBGRA2RGB
-   | ColorConvBGR2RGB
-   | ColorConvRGB2BGR
-   | ColorConvBGRA2RGBA
-   | ColorConvRGBA2BGRA
-   | ColorConvBGR2GRAY
-   | ColorConvRGB2GRAY
-   | ColorConvGRAY2BGR
-   | ColorConvGRAY2RGB
-   | ColorConvGRAY2BGRA
-   | ColorConvGRAY2RGBA
-   | ColorConvBGRA2GRAY
-   | ColorConvRGBA2GRAY
-   | ColorConvBGR2BGR565
-   | ColorConvRGB2BGR565
-   | ColorConvBGR5652BGR
-   | ColorConvBGR5652RGB
-   | ColorConvBGRA2BGR565
-   | ColorConvRGBA2BGR565
-   | ColorConvBGR5652BGRA
-   | ColorConvBGR5652RGBA
-   | ColorConvGRAY2BGR565
-   | ColorConvBGR5652GRAY
-   | ColorConvBGR2BGR555
-   | ColorConvRGB2BGR555
-   | ColorConvBGR5552BGR
-   | ColorConvBGR5552RGB
-   | ColorConvBGRA2BGR555
-   | ColorConvRGBA2BGR555
-   | ColorConvBGR5552BGRA
-   | ColorConvBGR5552RGBA
-   | ColorConvGRAY2BGR555
-   | ColorConvBGR5552GRAY
-   | ColorConvBGR2XYZ
-   | ColorConvRGB2XYZ
-   | ColorConvXYZ2BGR
-   | ColorConvXYZ2RGB
-   | ColorConvBGR2YCrCb
-   | ColorConvRGB2YCrCb
-   | ColorConvYCrCb2BGR
-   | ColorConvYCrCb2RGB
-   | ColorConvBGR2HSV
-   | ColorConvRGB2HSV
-   | ColorConvBGR2Lab
-   | ColorConvRGB2Lab
-   | ColorConvBGR2Luv
-   | ColorConvRGB2Luv
-   | ColorConvBGR2HLS
-   | ColorConvRGB2HLS
-   | ColorConvHSV2BGR
-   | ColorConvHSV2RGB
-   | ColorConvLab2BGR
-   | ColorConvLab2RGB
-   | ColorConvLuv2BGR
-   | ColorConvLuv2RGB
-   | ColorConvHLS2BGR
-   | ColorConvHLS2RGB
-   | ColorConvBGR2HSV_FULL
-   | ColorConvRGB2HSV_FULL
-   | ColorConvBGR2HLS_FULL
-   | ColorConvRGB2HLS_FULL
-   | ColorConvHSV2BGR_FULL
-   | ColorConvHSV2RGB_FULL
-   | ColorConvHLS2BGR_FULL
-   | ColorConvHLS2RGB_FULL
-   | ColorConvLBGR2Lab
-   | ColorConvLRGB2Lab
-   | ColorConvLBGR2Luv
-   | ColorConvLRGB2Luv
-   | ColorConvLab2LBGR
-   | ColorConvLab2LRGB
-   | ColorConvLuv2LBGR
-   | ColorConvLuv2LRGB
-   | ColorConvBGR2YUV
-   | ColorConvRGB2YUV
-   | ColorConvYUV2BGR
-   | ColorConvYUV2RGB
-   | ColorConvYUV2RGB_NV12
-   | ColorConvYUV2BGR_NV12
-   | ColorConvYUV2RGB_NV21
-   | ColorConvYUV2BGR_NV21
-   | ColorConvYUV420sp2RGB
-   | ColorConvYUV420sp2BGR
-   | ColorConvYUV2RGBA_NV12
-   | ColorConvYUV2BGRA_NV12
-   | ColorConvYUV2RGBA_NV21
-   | ColorConvYUV2BGRA_NV21
-   | ColorConvYUV420sp2RGBA
-   | ColorConvYUV420sp2BGRA
-   | ColorConvYUV2RGB_YV12
-   | ColorConvYUV2BGR_YV12
-   | ColorConvYUV2RGB_IYUV
-   | ColorConvYUV2BGR_IYUV
-   | ColorConvYUV2RGB_I420
-   | ColorConvYUV2BGR_I420
-   | ColorConvYUV420p2RGB
-   | ColorConvYUV420p2BGR
-   | ColorConvYUV2RGBA_YV12
-   | ColorConvYUV2BGRA_YV12
-   | ColorConvYUV2RGBA_IYUV
-   | ColorConvYUV2BGRA_IYUV
-   | ColorConvYUV2RGBA_I420
-   | ColorConvYUV2BGRA_I420
-   | ColorConvYUV420p2RGBA
-   | ColorConvYUV420p2BGRA
-   | ColorConvYUV2GRAY_420
-   | ColorConvYUV2GRAY_NV21
-   | ColorConvYUV2GRAY_NV12
-   | ColorConvYUV2GRAY_YV12
-   | ColorConvYUV2GRAY_IYUV
-   | ColorConvYUV2GRAY_I420
-   | ColorConvYUV420sp2GRAY
-   | ColorConvYUV420p2GRAY
-   | ColorConvYUV2RGB_UYVY
-   | ColorConvYUV2BGR_UYVY
---   ColorConvYUV2RGB_VYUY
---   ColorConvYUV2BGR_VYUY
-   | ColorConvYUV2RGB_Y422
-   | ColorConvYUV2BGR_Y422
-   | ColorConvYUV2RGB_UYNV
-   | ColorConvYUV2BGR_UYNV
-   | ColorConvYUV2RGBA_UYVY
-   | ColorConvYUV2BGRA_UYVY
---   ColorConvYUV2RGBA_VYUY
---   ColorConvYUV2BGRA_VYUY
-   | ColorConvYUV2RGBA_Y422
-   | ColorConvYUV2BGRA_Y422
-   | ColorConvYUV2RGBA_UYNV
-   | ColorConvYUV2BGRA_UYNV
-   | ColorConvYUV2RGB_YUY2
-   | ColorConvYUV2BGR_YUY2
-   | ColorConvYUV2RGB_YVYU
-   | ColorConvYUV2BGR_YVYU
-   | ColorConvYUV2RGB_YUYV
-   | ColorConvYUV2BGR_YUYV
-   | ColorConvYUV2RGB_YUNV
-   | ColorConvYUV2BGR_YUNV
-   | ColorConvYUV2RGBA_YUY2
-   | ColorConvYUV2BGRA_YUY2
-   | ColorConvYUV2RGBA_YVYU
-   | ColorConvYUV2BGRA_YVYU
-   | ColorConvYUV2RGBA_YUYV
-   | ColorConvYUV2BGRA_YUYV
-   | ColorConvYUV2RGBA_YUNV
-   | ColorConvYUV2BGRA_YUNV
-   | ColorConvYUV2GRAY_UYVY
-   | ColorConvYUV2GRAY_YUY2
---   ColorConvYUV2GRAY_VYUY
-   | ColorConvYUV2GRAY_Y422
-   | ColorConvYUV2GRAY_UYNV
-   | ColorConvYUV2GRAY_YVYU
-   | ColorConvYUV2GRAY_YUYV
-   | ColorConvYUV2GRAY_YUNV
-   | ColorConvRGBA2mRGBA
-   | ColorConvmRGBA2RGBA
-   | ColorConvRGB2YUV_I420
-   | ColorConvBGR2YUV_I420
-   | ColorConvRGB2YUV_IYUV
-   | ColorConvBGR2YUV_IYUV
-   | ColorConvRGBA2YUV_I420
-   | ColorConvBGRA2YUV_I420
-   | ColorConvRGBA2YUV_IYUV
-   | ColorConvBGRA2YUV_IYUV
-   | ColorConvRGB2YUV_YV12
-   | ColorConvBGR2YUV_YV12
-   | ColorConvRGBA2YUV_YV12
-   | ColorConvBGRA2YUV_YV12
-   | ColorConvBayerBG2BGR
-   | ColorConvBayerGB2BGR
-   | ColorConvBayerRG2BGR
-   | ColorConvBayerGR2BGR
-   | ColorConvBayerBG2RGB
-   | ColorConvBayerGB2RGB
-   | ColorConvBayerRG2RGB
-   | ColorConvBayerGR2RGB
-   | ColorConvBayerBG2GRAY
-   | ColorConvBayerGB2GRAY
-   | ColorConvBayerRG2GRAY
-   | ColorConvBayerGR2GRAY
-   | ColorConvBayerBG2BGR_VNG
-   | ColorConvBayerGB2BGR_VNG
-   | ColorConvBayerRG2BGR_VNG
-   | ColorConvBayerGR2BGR_VNG
-   | ColorConvBayerBG2RGB_VNG
-   | ColorConvBayerGB2RGB_VNG
-   | ColorConvBayerRG2RGB_VNG
-   | ColorConvBayerGR2RGB_VNG
-   | ColorConvBayerBG2BGR_EA
-   | ColorConvBayerGB2BGR_EA
-   | ColorConvBayerRG2BGR_EA
-   | ColorConvBayerGR2BGR_EA
-   | ColorConvBayerBG2RGB_EA
-   | ColorConvBayerGB2RGB_EA
-   | ColorConvBayerRG2RGB_EA
-   | ColorConvBayerGR2RGB_EA
-     deriving Show
+    | BGR
+    | BGR555
+    | BGR565
+
+    | BGRA
+    | BGRA_I420
+    | BGRA_IYUV
+    | BGRA_NV12
+    | BGRA_NV21
+    | BGRA_UYNV
+    | BGRA_UYVY
+    | BGRA_Y422
+    | BGRA_YUNV
+    | BGRA_YUY2
+    | BGRA_YUYV
+    | BGRA_YV12
+    | BGRA_YVYU
+
+    | BGR_EA
+    | BGR_FULL
+    | BGR_I420
+    | BGR_IYUV
+    | BGR_NV12
+    | BGR_NV21
+    | BGR_UYNV
+    | BGR_UYVY
+    | BGR_VNG
+    | BGR_Y422
+    | BGR_YUNV
+    | BGR_YUY2
+    | BGR_YUYV
+    | BGR_YV12
+    | BGR_YVYU
+
+    | GRAY
+    | GRAY_420
+    | GRAY_I420
+    | GRAY_IYUV
+    | GRAY_NV12
+    | GRAY_NV21
+    | GRAY_UYNV
+    | GRAY_UYVY
+    | GRAY_Y422
+    | GRAY_YUNV
+    | GRAY_YUY2
+    | GRAY_YUYV
+    | GRAY_YV12
+    | GRAY_YVYU
+
+    | HLS
+    | HLS_FULL
+    | HSV
+    | HSV_FULL
+    | Lab
+    | LBGR
+    | LRGB
+    | Luv
+    | MRGBA
+    | RGB
+
+    | RGBA
+    | RGBA_I420
+    | RGBA_IYUV
+    | RGBA_NV12
+    | RGBA_NV21
+    | RGBA_UYNV
+    | RGBA_UYVY
+    | RGBA_Y422
+    | RGBA_YUNV
+    | RGBA_YUY2
+    | RGBA_YUYV
+    | RGBA_YV12
+    | RGBA_YVYU
+
+    | RGB_EA
+    | RGB_FULL
+    | RGB_I420
+    | RGB_IYUV
+    | RGB_NV12
+    | RGB_NV21
+    | RGB_UYNV
+    | RGB_UYVY
+    | RGB_VNG
+    | RGB_Y422
+    | RGB_YUNV
+    | RGB_YUY2
+    | RGB_YUYV
+    | RGB_YV12
+    | RGB_YVYU
+
+    | XYZ
+    | YCrCb
+
+    | YUV
+    | YUV420p
+    | YUV420sp
+    | YUV_I420
+    | YUV_IYUV
+    | YUV_YV12
 
 #num COLOR_BGR2BGRA
 #num COLOR_RGB2RGBA
@@ -606,210 +509,206 @@ data ColorConversion
 #num COLOR_BayerRG2RGB_EA
 #num COLOR_BayerGR2RGB_EA
 
-marshallColorConversion :: ColorConversion -> C.CInt
-marshallColorConversion = \case
-    ColorConvBGR2BGRA        -> c'COLOR_BGR2BGRA
-    ColorConvRGB2RGBA        -> c'COLOR_RGB2RGBA
-    ColorConvBGRA2BGR        -> c'COLOR_BGRA2BGR
-    ColorConvRGBA2RGB        -> c'COLOR_RGBA2RGB
-    ColorConvBGR2RGBA        -> c'COLOR_BGR2RGBA
-    ColorConvRGB2BGRA        -> c'COLOR_RGB2BGRA
-    ColorConvRGBA2BGR        -> c'COLOR_RGBA2BGR
-    ColorConvBGRA2RGB        -> c'COLOR_BGRA2RGB
-    ColorConvBGR2RGB         -> c'COLOR_BGR2RGB
-    ColorConvRGB2BGR         -> c'COLOR_RGB2BGR
-    ColorConvBGRA2RGBA       -> c'COLOR_BGRA2RGBA
-    ColorConvRGBA2BGRA       -> c'COLOR_RGBA2BGRA
-    ColorConvBGR2GRAY        -> c'COLOR_BGR2GRAY
-    ColorConvRGB2GRAY        -> c'COLOR_RGB2GRAY
-    ColorConvGRAY2BGR        -> c'COLOR_GRAY2BGR
-    ColorConvGRAY2RGB        -> c'COLOR_GRAY2RGB
-    ColorConvGRAY2BGRA       -> c'COLOR_GRAY2BGRA
-    ColorConvGRAY2RGBA       -> c'COLOR_GRAY2RGBA
-    ColorConvBGRA2GRAY       -> c'COLOR_BGRA2GRAY
-    ColorConvRGBA2GRAY       -> c'COLOR_RGBA2GRAY
-    ColorConvBGR2BGR565      -> c'COLOR_BGR2BGR565
-    ColorConvRGB2BGR565      -> c'COLOR_RGB2BGR565
-    ColorConvBGR5652BGR      -> c'COLOR_BGR5652BGR
-    ColorConvBGR5652RGB      -> c'COLOR_BGR5652RGB
-    ColorConvBGRA2BGR565     -> c'COLOR_BGRA2BGR565
-    ColorConvRGBA2BGR565     -> c'COLOR_RGBA2BGR565
-    ColorConvBGR5652BGRA     -> c'COLOR_BGR5652BGRA
-    ColorConvBGR5652RGBA     -> c'COLOR_BGR5652RGBA
-    ColorConvGRAY2BGR565     -> c'COLOR_GRAY2BGR565
-    ColorConvBGR5652GRAY     -> c'COLOR_BGR5652GRAY
-    ColorConvBGR2BGR555      -> c'COLOR_BGR2BGR555
-    ColorConvRGB2BGR555      -> c'COLOR_RGB2BGR555
-    ColorConvBGR5552BGR      -> c'COLOR_BGR5552BGR
-    ColorConvBGR5552RGB      -> c'COLOR_BGR5552RGB
-    ColorConvBGRA2BGR555     -> c'COLOR_BGRA2BGR555
-    ColorConvRGBA2BGR555     -> c'COLOR_RGBA2BGR555
-    ColorConvBGR5552BGRA     -> c'COLOR_BGR5552BGRA
-    ColorConvBGR5552RGBA     -> c'COLOR_BGR5552RGBA
-    ColorConvGRAY2BGR555     -> c'COLOR_GRAY2BGR555
-    ColorConvBGR5552GRAY     -> c'COLOR_BGR5552GRAY
-    ColorConvBGR2XYZ         -> c'COLOR_BGR2XYZ
-    ColorConvRGB2XYZ         -> c'COLOR_RGB2XYZ
-    ColorConvXYZ2BGR         -> c'COLOR_XYZ2BGR
-    ColorConvXYZ2RGB         -> c'COLOR_XYZ2RGB
-    ColorConvBGR2YCrCb       -> c'COLOR_BGR2YCrCb
-    ColorConvRGB2YCrCb       -> c'COLOR_RGB2YCrCb
-    ColorConvYCrCb2BGR       -> c'COLOR_YCrCb2BGR
-    ColorConvYCrCb2RGB       -> c'COLOR_YCrCb2RGB
-    ColorConvBGR2HSV         -> c'COLOR_BGR2HSV
-    ColorConvRGB2HSV         -> c'COLOR_RGB2HSV
-    ColorConvBGR2Lab         -> c'COLOR_BGR2Lab
-    ColorConvRGB2Lab         -> c'COLOR_RGB2Lab
-    ColorConvBGR2Luv         -> c'COLOR_BGR2Luv
-    ColorConvRGB2Luv         -> c'COLOR_RGB2Luv
-    ColorConvBGR2HLS         -> c'COLOR_BGR2HLS
-    ColorConvRGB2HLS         -> c'COLOR_RGB2HLS
-    ColorConvHSV2BGR         -> c'COLOR_HSV2BGR
-    ColorConvHSV2RGB         -> c'COLOR_HSV2RGB
-    ColorConvLab2BGR         -> c'COLOR_Lab2BGR
-    ColorConvLab2RGB         -> c'COLOR_Lab2RGB
-    ColorConvLuv2BGR         -> c'COLOR_Luv2BGR
-    ColorConvLuv2RGB         -> c'COLOR_Luv2RGB
-    ColorConvHLS2BGR         -> c'COLOR_HLS2BGR
-    ColorConvHLS2RGB         -> c'COLOR_HLS2RGB
-    ColorConvBGR2HSV_FULL    -> c'COLOR_BGR2HSV_FULL
-    ColorConvRGB2HSV_FULL    -> c'COLOR_RGB2HSV_FULL
-    ColorConvBGR2HLS_FULL    -> c'COLOR_BGR2HLS_FULL
-    ColorConvRGB2HLS_FULL    -> c'COLOR_RGB2HLS_FULL
-    ColorConvHSV2BGR_FULL    -> c'COLOR_HSV2BGR_FULL
-    ColorConvHSV2RGB_FULL    -> c'COLOR_HSV2RGB_FULL
-    ColorConvHLS2BGR_FULL    -> c'COLOR_HLS2BGR_FULL
-    ColorConvHLS2RGB_FULL    -> c'COLOR_HLS2RGB_FULL
-    ColorConvLBGR2Lab        -> c'COLOR_LBGR2Lab
-    ColorConvLRGB2Lab        -> c'COLOR_LRGB2Lab
-    ColorConvLBGR2Luv        -> c'COLOR_LBGR2Luv
-    ColorConvLRGB2Luv        -> c'COLOR_LRGB2Luv
-    ColorConvLab2LBGR        -> c'COLOR_Lab2LBGR
-    ColorConvLab2LRGB        -> c'COLOR_Lab2LRGB
-    ColorConvLuv2LBGR        -> c'COLOR_Luv2LBGR
-    ColorConvLuv2LRGB        -> c'COLOR_Luv2LRGB
-    ColorConvBGR2YUV         -> c'COLOR_BGR2YUV
-    ColorConvRGB2YUV         -> c'COLOR_RGB2YUV
-    ColorConvYUV2BGR         -> c'COLOR_YUV2BGR
-    ColorConvYUV2RGB         -> c'COLOR_YUV2RGB
-    ColorConvYUV2RGB_NV12    -> c'COLOR_YUV2RGB_NV12
-    ColorConvYUV2BGR_NV12    -> c'COLOR_YUV2BGR_NV12
-    ColorConvYUV2RGB_NV21    -> c'COLOR_YUV2RGB_NV21
-    ColorConvYUV2BGR_NV21    -> c'COLOR_YUV2BGR_NV21
-    ColorConvYUV420sp2RGB    -> c'COLOR_YUV420sp2RGB
-    ColorConvYUV420sp2BGR    -> c'COLOR_YUV420sp2BGR
-    ColorConvYUV2RGBA_NV12   -> c'COLOR_YUV2RGBA_NV12
-    ColorConvYUV2BGRA_NV12   -> c'COLOR_YUV2BGRA_NV12
-    ColorConvYUV2RGBA_NV21   -> c'COLOR_YUV2RGBA_NV21
-    ColorConvYUV2BGRA_NV21   -> c'COLOR_YUV2BGRA_NV21
-    ColorConvYUV420sp2RGBA   -> c'COLOR_YUV420sp2RGBA
-    ColorConvYUV420sp2BGRA   -> c'COLOR_YUV420sp2BGRA
-    ColorConvYUV2RGB_YV12    -> c'COLOR_YUV2RGB_YV12
-    ColorConvYUV2BGR_YV12    -> c'COLOR_YUV2BGR_YV12
-    ColorConvYUV2RGB_IYUV    -> c'COLOR_YUV2RGB_IYUV
-    ColorConvYUV2BGR_IYUV    -> c'COLOR_YUV2BGR_IYUV
-    ColorConvYUV2RGB_I420    -> c'COLOR_YUV2RGB_I420
-    ColorConvYUV2BGR_I420    -> c'COLOR_YUV2BGR_I420
-    ColorConvYUV420p2RGB     -> c'COLOR_YUV420p2RGB
-    ColorConvYUV420p2BGR     -> c'COLOR_YUV420p2BGR
-    ColorConvYUV2RGBA_YV12   -> c'COLOR_YUV2RGBA_YV12
-    ColorConvYUV2BGRA_YV12   -> c'COLOR_YUV2BGRA_YV12
-    ColorConvYUV2RGBA_IYUV   -> c'COLOR_YUV2RGBA_IYUV
-    ColorConvYUV2BGRA_IYUV   -> c'COLOR_YUV2BGRA_IYUV
-    ColorConvYUV2RGBA_I420   -> c'COLOR_YUV2RGBA_I420
-    ColorConvYUV2BGRA_I420   -> c'COLOR_YUV2BGRA_I420
-    ColorConvYUV420p2RGBA    -> c'COLOR_YUV420p2RGBA
-    ColorConvYUV420p2BGRA    -> c'COLOR_YUV420p2BGRA
-    ColorConvYUV2GRAY_420    -> c'COLOR_YUV2GRAY_420
-    ColorConvYUV2GRAY_NV21   -> c'COLOR_YUV2GRAY_NV21
-    ColorConvYUV2GRAY_NV12   -> c'COLOR_YUV2GRAY_NV12
-    ColorConvYUV2GRAY_YV12   -> c'COLOR_YUV2GRAY_YV12
-    ColorConvYUV2GRAY_IYUV   -> c'COLOR_YUV2GRAY_IYUV
-    ColorConvYUV2GRAY_I420   -> c'COLOR_YUV2GRAY_I420
-    ColorConvYUV420sp2GRAY   -> c'COLOR_YUV420sp2GRAY
-    ColorConvYUV420p2GRAY    -> c'COLOR_YUV420p2GRAY
-    ColorConvYUV2RGB_UYVY    -> c'COLOR_YUV2RGB_UYVY
-    ColorConvYUV2BGR_UYVY    -> c'COLOR_YUV2BGR_UYVY
---  ColorConvYUV2RGB_VYUY    -> c'COLOR_YUV2RGB_VYUY
---  ColorConvYUV2BGR_VYUY    -> c'COLOR_YUV2BGR_VYUY
-    ColorConvYUV2RGB_Y422    -> c'COLOR_YUV2RGB_Y422
-    ColorConvYUV2BGR_Y422    -> c'COLOR_YUV2BGR_Y422
-    ColorConvYUV2RGB_UYNV    -> c'COLOR_YUV2RGB_UYNV
-    ColorConvYUV2BGR_UYNV    -> c'COLOR_YUV2BGR_UYNV
-    ColorConvYUV2RGBA_UYVY   -> c'COLOR_YUV2RGBA_UYVY
-    ColorConvYUV2BGRA_UYVY   -> c'COLOR_YUV2BGRA_UYVY
---  ColorConvYUV2RGBA_VYUY   -> c'COLOR_YUV2RGBA_VYUY
---  ColorConvYUV2BGRA_VYUY   -> c'COLOR_YUV2BGRA_VYUY
-    ColorConvYUV2RGBA_Y422   -> c'COLOR_YUV2RGBA_Y422
-    ColorConvYUV2BGRA_Y422   -> c'COLOR_YUV2BGRA_Y422
-    ColorConvYUV2RGBA_UYNV   -> c'COLOR_YUV2RGBA_UYNV
-    ColorConvYUV2BGRA_UYNV   -> c'COLOR_YUV2BGRA_UYNV
-    ColorConvYUV2RGB_YUY2    -> c'COLOR_YUV2RGB_YUY2
-    ColorConvYUV2BGR_YUY2    -> c'COLOR_YUV2BGR_YUY2
-    ColorConvYUV2RGB_YVYU    -> c'COLOR_YUV2RGB_YVYU
-    ColorConvYUV2BGR_YVYU    -> c'COLOR_YUV2BGR_YVYU
-    ColorConvYUV2RGB_YUYV    -> c'COLOR_YUV2RGB_YUYV
-    ColorConvYUV2BGR_YUYV    -> c'COLOR_YUV2BGR_YUYV
-    ColorConvYUV2RGB_YUNV    -> c'COLOR_YUV2RGB_YUNV
-    ColorConvYUV2BGR_YUNV    -> c'COLOR_YUV2BGR_YUNV
-    ColorConvYUV2RGBA_YUY2   -> c'COLOR_YUV2RGBA_YUY2
-    ColorConvYUV2BGRA_YUY2   -> c'COLOR_YUV2BGRA_YUY2
-    ColorConvYUV2RGBA_YVYU   -> c'COLOR_YUV2RGBA_YVYU
-    ColorConvYUV2BGRA_YVYU   -> c'COLOR_YUV2BGRA_YVYU
-    ColorConvYUV2RGBA_YUYV   -> c'COLOR_YUV2RGBA_YUYV
-    ColorConvYUV2BGRA_YUYV   -> c'COLOR_YUV2BGRA_YUYV
-    ColorConvYUV2RGBA_YUNV   -> c'COLOR_YUV2RGBA_YUNV
-    ColorConvYUV2BGRA_YUNV   -> c'COLOR_YUV2BGRA_YUNV
-    ColorConvYUV2GRAY_UYVY   -> c'COLOR_YUV2GRAY_UYVY
-    ColorConvYUV2GRAY_YUY2   -> c'COLOR_YUV2GRAY_YUY2
---  ColorConvYUV2GRAY_VYUY   -> c'CV_YUV2GRAY_VYUY
-    ColorConvYUV2GRAY_Y422   -> c'COLOR_YUV2GRAY_Y422
-    ColorConvYUV2GRAY_UYNV   -> c'COLOR_YUV2GRAY_UYNV
-    ColorConvYUV2GRAY_YVYU   -> c'COLOR_YUV2GRAY_YVYU
-    ColorConvYUV2GRAY_YUYV   -> c'COLOR_YUV2GRAY_YUYV
-    ColorConvYUV2GRAY_YUNV   -> c'COLOR_YUV2GRAY_YUNV
-    ColorConvRGBA2mRGBA      -> c'COLOR_RGBA2mRGBA
-    ColorConvmRGBA2RGBA      -> c'COLOR_mRGBA2RGBA
-    ColorConvRGB2YUV_I420    -> c'COLOR_RGB2YUV_I420
-    ColorConvBGR2YUV_I420    -> c'COLOR_BGR2YUV_I420
-    ColorConvRGB2YUV_IYUV    -> c'COLOR_RGB2YUV_IYUV
-    ColorConvBGR2YUV_IYUV    -> c'COLOR_BGR2YUV_IYUV
-    ColorConvRGBA2YUV_I420   -> c'COLOR_RGBA2YUV_I420
-    ColorConvBGRA2YUV_I420   -> c'COLOR_BGRA2YUV_I420
-    ColorConvRGBA2YUV_IYUV   -> c'COLOR_RGBA2YUV_IYUV
-    ColorConvBGRA2YUV_IYUV   -> c'COLOR_BGRA2YUV_IYUV
-    ColorConvRGB2YUV_YV12    -> c'COLOR_RGB2YUV_YV12
-    ColorConvBGR2YUV_YV12    -> c'COLOR_BGR2YUV_YV12
-    ColorConvRGBA2YUV_YV12   -> c'COLOR_RGBA2YUV_YV12
-    ColorConvBGRA2YUV_YV12   -> c'COLOR_BGRA2YUV_YV12
-    ColorConvBayerBG2BGR     -> c'COLOR_BayerBG2BGR
-    ColorConvBayerGB2BGR     -> c'COLOR_BayerGB2BGR
-    ColorConvBayerRG2BGR     -> c'COLOR_BayerRG2BGR
-    ColorConvBayerGR2BGR     -> c'COLOR_BayerGR2BGR
-    ColorConvBayerBG2RGB     -> c'COLOR_BayerBG2RGB
-    ColorConvBayerGB2RGB     -> c'COLOR_BayerGB2RGB
-    ColorConvBayerRG2RGB     -> c'COLOR_BayerRG2RGB
-    ColorConvBayerGR2RGB     -> c'COLOR_BayerGR2RGB
-    ColorConvBayerBG2GRAY    -> c'COLOR_BayerBG2GRAY
-    ColorConvBayerGB2GRAY    -> c'COLOR_BayerGB2GRAY
-    ColorConvBayerRG2GRAY    -> c'COLOR_BayerRG2GRAY
-    ColorConvBayerGR2GRAY    -> c'COLOR_BayerGR2GRAY
-    ColorConvBayerBG2BGR_VNG -> c'COLOR_BayerBG2BGR_VNG
-    ColorConvBayerGB2BGR_VNG -> c'COLOR_BayerGB2BGR_VNG
-    ColorConvBayerRG2BGR_VNG -> c'COLOR_BayerRG2BGR_VNG
-    ColorConvBayerGR2BGR_VNG -> c'COLOR_BayerGR2BGR_VNG
-    ColorConvBayerBG2RGB_VNG -> c'COLOR_BayerBG2RGB_VNG
-    ColorConvBayerGB2RGB_VNG -> c'COLOR_BayerGB2RGB_VNG
-    ColorConvBayerRG2RGB_VNG -> c'COLOR_BayerRG2RGB_VNG
-    ColorConvBayerGR2RGB_VNG -> c'COLOR_BayerGR2RGB_VNG
-    ColorConvBayerBG2BGR_EA  -> c'COLOR_BayerBG2BGR_EA
-    ColorConvBayerGB2BGR_EA  -> c'COLOR_BayerGB2BGR_EA
-    ColorConvBayerRG2BGR_EA  -> c'COLOR_BayerRG2BGR_EA
-    ColorConvBayerGR2BGR_EA  -> c'COLOR_BayerGR2BGR_EA
-    ColorConvBayerBG2RGB_EA  -> c'COLOR_BayerBG2RGB_EA
-    ColorConvBayerGB2RGB_EA  -> c'COLOR_BayerGB2RGB_EA
-    ColorConvBayerRG2RGB_EA  -> c'COLOR_BayerRG2RGB_EA
-    ColorConvBayerGR2RGB_EA  -> c'COLOR_BayerGR2RGB_EA
+class ColorConversion (fromColor :: ColorCode) (toColor :: ColorCode) where
+    colorCode :: Proxy fromColor -> Proxy toColor -> C.CInt
+
+instance ColorConversion 'BGR      'BGRA      where colorCode _ _ = c'COLOR_BGR2BGRA
+instance ColorConversion 'RGB      'RGBA      where colorCode _ _ = c'COLOR_RGB2RGBA
+instance ColorConversion 'BGRA     'BGR       where colorCode _ _ = c'COLOR_BGRA2BGR
+instance ColorConversion 'RGBA     'RGB       where colorCode _ _ = c'COLOR_RGBA2RGB
+instance ColorConversion 'BGR      'RGBA      where colorCode _ _ = c'COLOR_BGR2RGBA
+instance ColorConversion 'RGB      'BGRA      where colorCode _ _ = c'COLOR_RGB2BGRA
+instance ColorConversion 'RGBA     'BGR       where colorCode _ _ = c'COLOR_RGBA2BGR
+instance ColorConversion 'BGRA     'RGB       where colorCode _ _ = c'COLOR_BGRA2RGB
+instance ColorConversion 'BGR      'RGB       where colorCode _ _ = c'COLOR_BGR2RGB
+instance ColorConversion 'RGB      'BGR       where colorCode _ _ = c'COLOR_RGB2BGR
+instance ColorConversion 'BGRA     'RGBA      where colorCode _ _ = c'COLOR_BGRA2RGBA
+instance ColorConversion 'RGBA     'BGRA      where colorCode _ _ = c'COLOR_RGBA2BGRA
+instance ColorConversion 'BGR      'GRAY      where colorCode _ _ = c'COLOR_BGR2GRAY
+instance ColorConversion 'RGB      'GRAY      where colorCode _ _ = c'COLOR_RGB2GRAY
+instance ColorConversion 'GRAY     'BGR       where colorCode _ _ = c'COLOR_GRAY2BGR
+instance ColorConversion 'GRAY     'RGB       where colorCode _ _ = c'COLOR_GRAY2RGB
+instance ColorConversion 'GRAY     'BGRA      where colorCode _ _ = c'COLOR_GRAY2BGRA
+instance ColorConversion 'GRAY     'RGBA      where colorCode _ _ = c'COLOR_GRAY2RGBA
+instance ColorConversion 'BGRA     'GRAY      where colorCode _ _ = c'COLOR_BGRA2GRAY
+instance ColorConversion 'RGBA     'GRAY      where colorCode _ _ = c'COLOR_RGBA2GRAY
+instance ColorConversion 'BGR      'BGR565    where colorCode _ _ = c'COLOR_BGR2BGR565
+instance ColorConversion 'RGB      'BGR565    where colorCode _ _ = c'COLOR_RGB2BGR565
+instance ColorConversion 'BGR565   'BGR       where colorCode _ _ = c'COLOR_BGR5652BGR
+instance ColorConversion 'BGR565   'RGB       where colorCode _ _ = c'COLOR_BGR5652RGB
+instance ColorConversion 'BGRA     'BGR565    where colorCode _ _ = c'COLOR_BGRA2BGR565
+instance ColorConversion 'RGBA     'BGR565    where colorCode _ _ = c'COLOR_RGBA2BGR565
+instance ColorConversion 'BGR565   'BGRA      where colorCode _ _ = c'COLOR_BGR5652BGRA
+instance ColorConversion 'BGR565   'RGBA      where colorCode _ _ = c'COLOR_BGR5652RGBA
+instance ColorConversion 'GRAY     'BGR565    where colorCode _ _ = c'COLOR_GRAY2BGR565
+instance ColorConversion 'BGR565   'GRAY      where colorCode _ _ = c'COLOR_BGR5652GRAY
+instance ColorConversion 'BGR      'BGR555    where colorCode _ _ = c'COLOR_BGR2BGR555
+instance ColorConversion 'RGB      'BGR555    where colorCode _ _ = c'COLOR_RGB2BGR555
+instance ColorConversion 'BGR555   'BGR       where colorCode _ _ = c'COLOR_BGR5552BGR
+instance ColorConversion 'BGR555   'RGB       where colorCode _ _ = c'COLOR_BGR5552RGB
+instance ColorConversion 'BGRA     'BGR555    where colorCode _ _ = c'COLOR_BGRA2BGR555
+instance ColorConversion 'RGBA     'BGR555    where colorCode _ _ = c'COLOR_RGBA2BGR555
+instance ColorConversion 'BGR555   'BGRA      where colorCode _ _ = c'COLOR_BGR5552BGRA
+instance ColorConversion 'BGR555   'RGBA      where colorCode _ _ = c'COLOR_BGR5552RGBA
+instance ColorConversion 'GRAY     'BGR555    where colorCode _ _ = c'COLOR_GRAY2BGR555
+instance ColorConversion 'BGR555   'GRAY      where colorCode _ _ = c'COLOR_BGR5552GRAY
+instance ColorConversion 'BGR      'XYZ       where colorCode _ _ = c'COLOR_BGR2XYZ
+instance ColorConversion 'RGB      'XYZ       where colorCode _ _ = c'COLOR_RGB2XYZ
+instance ColorConversion 'XYZ      'BGR       where colorCode _ _ = c'COLOR_XYZ2BGR
+instance ColorConversion 'XYZ      'RGB       where colorCode _ _ = c'COLOR_XYZ2RGB
+instance ColorConversion 'BGR      'YCrCb     where colorCode _ _ = c'COLOR_BGR2YCrCb
+instance ColorConversion 'RGB      'YCrCb     where colorCode _ _ = c'COLOR_RGB2YCrCb
+instance ColorConversion 'YCrCb    'BGR       where colorCode _ _ = c'COLOR_YCrCb2BGR
+instance ColorConversion 'YCrCb    'RGB       where colorCode _ _ = c'COLOR_YCrCb2RGB
+instance ColorConversion 'BGR      'HSV       where colorCode _ _ = c'COLOR_BGR2HSV
+instance ColorConversion 'RGB      'HSV       where colorCode _ _ = c'COLOR_RGB2HSV
+instance ColorConversion 'BGR      'Lab       where colorCode _ _ = c'COLOR_BGR2Lab
+instance ColorConversion 'RGB      'Lab       where colorCode _ _ = c'COLOR_RGB2Lab
+instance ColorConversion 'BGR      'Luv       where colorCode _ _ = c'COLOR_BGR2Luv
+instance ColorConversion 'RGB      'Luv       where colorCode _ _ = c'COLOR_RGB2Luv
+instance ColorConversion 'BGR      'HLS       where colorCode _ _ = c'COLOR_BGR2HLS
+instance ColorConversion 'RGB      'HLS       where colorCode _ _ = c'COLOR_RGB2HLS
+instance ColorConversion 'HSV      'BGR       where colorCode _ _ = c'COLOR_HSV2BGR
+instance ColorConversion 'HSV      'RGB       where colorCode _ _ = c'COLOR_HSV2RGB
+instance ColorConversion 'Lab      'BGR       where colorCode _ _ = c'COLOR_Lab2BGR
+instance ColorConversion 'Lab      'RGB       where colorCode _ _ = c'COLOR_Lab2RGB
+instance ColorConversion 'Luv      'BGR       where colorCode _ _ = c'COLOR_Luv2BGR
+instance ColorConversion 'Luv      'RGB       where colorCode _ _ = c'COLOR_Luv2RGB
+instance ColorConversion 'HLS      'BGR       where colorCode _ _ = c'COLOR_HLS2BGR
+instance ColorConversion 'HLS      'RGB       where colorCode _ _ = c'COLOR_HLS2RGB
+instance ColorConversion 'BGR      'HSV_FULL  where colorCode _ _ = c'COLOR_BGR2HSV_FULL
+instance ColorConversion 'RGB      'HSV_FULL  where colorCode _ _ = c'COLOR_RGB2HSV_FULL
+instance ColorConversion 'BGR      'HLS_FULL  where colorCode _ _ = c'COLOR_BGR2HLS_FULL
+instance ColorConversion 'RGB      'HLS_FULL  where colorCode _ _ = c'COLOR_RGB2HLS_FULL
+instance ColorConversion 'HSV      'BGR_FULL  where colorCode _ _ = c'COLOR_HSV2BGR_FULL
+instance ColorConversion 'HSV      'RGB_FULL  where colorCode _ _ = c'COLOR_HSV2RGB_FULL
+instance ColorConversion 'HLS      'BGR_FULL  where colorCode _ _ = c'COLOR_HLS2BGR_FULL
+instance ColorConversion 'HLS      'RGB_FULL  where colorCode _ _ = c'COLOR_HLS2RGB_FULL
+instance ColorConversion 'LBGR     'Lab       where colorCode _ _ = c'COLOR_LBGR2Lab
+instance ColorConversion 'LRGB     'Lab       where colorCode _ _ = c'COLOR_LRGB2Lab
+instance ColorConversion 'LBGR     'Luv       where colorCode _ _ = c'COLOR_LBGR2Luv
+instance ColorConversion 'LRGB     'Luv       where colorCode _ _ = c'COLOR_LRGB2Luv
+instance ColorConversion 'Lab      'LBGR      where colorCode _ _ = c'COLOR_Lab2LBGR
+instance ColorConversion 'Lab      'LRGB      where colorCode _ _ = c'COLOR_Lab2LRGB
+instance ColorConversion 'Luv      'LBGR      where colorCode _ _ = c'COLOR_Luv2LBGR
+instance ColorConversion 'Luv      'LRGB      where colorCode _ _ = c'COLOR_Luv2LRGB
+instance ColorConversion 'BGR      'YUV       where colorCode _ _ = c'COLOR_BGR2YUV
+instance ColorConversion 'RGB      'YUV       where colorCode _ _ = c'COLOR_RGB2YUV
+instance ColorConversion 'YUV      'BGR       where colorCode _ _ = c'COLOR_YUV2BGR
+instance ColorConversion 'YUV      'RGB       where colorCode _ _ = c'COLOR_YUV2RGB
+instance ColorConversion 'YUV      'RGB_NV12  where colorCode _ _ = c'COLOR_YUV2RGB_NV12
+instance ColorConversion 'YUV      'BGR_NV12  where colorCode _ _ = c'COLOR_YUV2BGR_NV12
+instance ColorConversion 'YUV      'RGB_NV21  where colorCode _ _ = c'COLOR_YUV2RGB_NV21
+instance ColorConversion 'YUV      'BGR_NV21  where colorCode _ _ = c'COLOR_YUV2BGR_NV21
+instance ColorConversion 'YUV420sp 'RGB       where colorCode _ _ = c'COLOR_YUV420sp2RGB
+instance ColorConversion 'YUV420sp 'BGR       where colorCode _ _ = c'COLOR_YUV420sp2BGR
+instance ColorConversion 'YUV      'RGBA_NV12 where colorCode _ _ = c'COLOR_YUV2RGBA_NV12
+instance ColorConversion 'YUV      'BGRA_NV12 where colorCode _ _ = c'COLOR_YUV2BGRA_NV12
+instance ColorConversion 'YUV      'RGBA_NV21 where colorCode _ _ = c'COLOR_YUV2RGBA_NV21
+instance ColorConversion 'YUV      'BGRA_NV21 where colorCode _ _ = c'COLOR_YUV2BGRA_NV21
+instance ColorConversion 'YUV420sp 'RGBA      where colorCode _ _ = c'COLOR_YUV420sp2RGBA
+instance ColorConversion 'YUV420sp 'BGRA      where colorCode _ _ = c'COLOR_YUV420sp2BGRA
+instance ColorConversion 'YUV      'RGB_YV12  where colorCode _ _ = c'COLOR_YUV2RGB_YV12
+instance ColorConversion 'YUV      'BGR_YV12  where colorCode _ _ = c'COLOR_YUV2BGR_YV12
+instance ColorConversion 'YUV      'RGB_IYUV  where colorCode _ _ = c'COLOR_YUV2RGB_IYUV
+instance ColorConversion 'YUV      'BGR_IYUV  where colorCode _ _ = c'COLOR_YUV2BGR_IYUV
+instance ColorConversion 'YUV      'RGB_I420  where colorCode _ _ = c'COLOR_YUV2RGB_I420
+instance ColorConversion 'YUV      'BGR_I420  where colorCode _ _ = c'COLOR_YUV2BGR_I420
+instance ColorConversion 'YUV420p  'RGB       where colorCode _ _ = c'COLOR_YUV420p2RGB
+instance ColorConversion 'YUV420p  'BGR       where colorCode _ _ = c'COLOR_YUV420p2BGR
+instance ColorConversion 'YUV      'RGBA_YV12 where colorCode _ _ = c'COLOR_YUV2RGBA_YV12
+instance ColorConversion 'YUV      'BGRA_YV12 where colorCode _ _ = c'COLOR_YUV2BGRA_YV12
+instance ColorConversion 'YUV      'RGBA_IYUV where colorCode _ _ = c'COLOR_YUV2RGBA_IYUV
+instance ColorConversion 'YUV      'BGRA_IYUV where colorCode _ _ = c'COLOR_YUV2BGRA_IYUV
+instance ColorConversion 'YUV      'RGBA_I420 where colorCode _ _ = c'COLOR_YUV2RGBA_I420
+instance ColorConversion 'YUV      'BGRA_I420 where colorCode _ _ = c'COLOR_YUV2BGRA_I420
+instance ColorConversion 'YUV420p  'RGBA      where colorCode _ _ = c'COLOR_YUV420p2RGBA
+instance ColorConversion 'YUV420p  'BGRA      where colorCode _ _ = c'COLOR_YUV420p2BGRA
+instance ColorConversion 'YUV      'GRAY_420  where colorCode _ _ = c'COLOR_YUV2GRAY_420
+instance ColorConversion 'YUV      'GRAY_NV21 where colorCode _ _ = c'COLOR_YUV2GRAY_NV21
+instance ColorConversion 'YUV      'GRAY_NV12 where colorCode _ _ = c'COLOR_YUV2GRAY_NV12
+instance ColorConversion 'YUV      'GRAY_YV12 where colorCode _ _ = c'COLOR_YUV2GRAY_YV12
+instance ColorConversion 'YUV      'GRAY_IYUV where colorCode _ _ = c'COLOR_YUV2GRAY_IYUV
+instance ColorConversion 'YUV      'GRAY_I420 where colorCode _ _ = c'COLOR_YUV2GRAY_I420
+instance ColorConversion 'YUV420sp 'GRAY      where colorCode _ _ = c'COLOR_YUV420sp2GRAY
+instance ColorConversion 'YUV420p  'GRAY      where colorCode _ _ = c'COLOR_YUV420p2GRAY
+instance ColorConversion 'YUV      'RGB_UYVY  where colorCode _ _ = c'COLOR_YUV2RGB_UYVY
+instance ColorConversion 'YUV      'BGR_UYVY  where colorCode _ _ = c'COLOR_YUV2BGR_UYVY
+instance ColorConversion 'YUV      'RGB_Y422  where colorCode _ _ = c'COLOR_YUV2RGB_Y422
+instance ColorConversion 'YUV      'BGR_Y422  where colorCode _ _ = c'COLOR_YUV2BGR_Y422
+instance ColorConversion 'YUV      'RGB_UYNV  where colorCode _ _ = c'COLOR_YUV2RGB_UYNV
+instance ColorConversion 'YUV      'BGR_UYNV  where colorCode _ _ = c'COLOR_YUV2BGR_UYNV
+instance ColorConversion 'YUV      'RGBA_UYVY where colorCode _ _ = c'COLOR_YUV2RGBA_UYVY
+instance ColorConversion 'YUV      'BGRA_UYVY where colorCode _ _ = c'COLOR_YUV2BGRA_UYVY
+instance ColorConversion 'YUV      'RGBA_Y422 where colorCode _ _ = c'COLOR_YUV2RGBA_Y422
+instance ColorConversion 'YUV      'BGRA_Y422 where colorCode _ _ = c'COLOR_YUV2BGRA_Y422
+instance ColorConversion 'YUV      'RGBA_UYNV where colorCode _ _ = c'COLOR_YUV2RGBA_UYNV
+instance ColorConversion 'YUV      'BGRA_UYNV where colorCode _ _ = c'COLOR_YUV2BGRA_UYNV
+instance ColorConversion 'YUV      'RGB_YUY2  where colorCode _ _ = c'COLOR_YUV2RGB_YUY2
+instance ColorConversion 'YUV      'BGR_YUY2  where colorCode _ _ = c'COLOR_YUV2BGR_YUY2
+instance ColorConversion 'YUV      'RGB_YVYU  where colorCode _ _ = c'COLOR_YUV2RGB_YVYU
+instance ColorConversion 'YUV      'BGR_YVYU  where colorCode _ _ = c'COLOR_YUV2BGR_YVYU
+instance ColorConversion 'YUV      'RGB_YUYV  where colorCode _ _ = c'COLOR_YUV2RGB_YUYV
+instance ColorConversion 'YUV      'BGR_YUYV  where colorCode _ _ = c'COLOR_YUV2BGR_YUYV
+instance ColorConversion 'YUV      'RGB_YUNV  where colorCode _ _ = c'COLOR_YUV2RGB_YUNV
+instance ColorConversion 'YUV      'BGR_YUNV  where colorCode _ _ = c'COLOR_YUV2BGR_YUNV
+instance ColorConversion 'YUV      'RGBA_YUY2 where colorCode _ _ = c'COLOR_YUV2RGBA_YUY2
+instance ColorConversion 'YUV      'BGRA_YUY2 where colorCode _ _ = c'COLOR_YUV2BGRA_YUY2
+instance ColorConversion 'YUV      'RGBA_YVYU where colorCode _ _ = c'COLOR_YUV2RGBA_YVYU
+instance ColorConversion 'YUV      'BGRA_YVYU where colorCode _ _ = c'COLOR_YUV2BGRA_YVYU
+instance ColorConversion 'YUV      'RGBA_YUYV where colorCode _ _ = c'COLOR_YUV2RGBA_YUYV
+instance ColorConversion 'YUV      'BGRA_YUYV where colorCode _ _ = c'COLOR_YUV2BGRA_YUYV
+instance ColorConversion 'YUV      'RGBA_YUNV where colorCode _ _ = c'COLOR_YUV2RGBA_YUNV
+instance ColorConversion 'YUV      'BGRA_YUNV where colorCode _ _ = c'COLOR_YUV2BGRA_YUNV
+instance ColorConversion 'YUV      'GRAY_UYVY where colorCode _ _ = c'COLOR_YUV2GRAY_UYVY
+instance ColorConversion 'YUV      'GRAY_YUY2 where colorCode _ _ = c'COLOR_YUV2GRAY_YUY2
+instance ColorConversion 'YUV      'GRAY_Y422 where colorCode _ _ = c'COLOR_YUV2GRAY_Y422
+instance ColorConversion 'YUV      'GRAY_UYNV where colorCode _ _ = c'COLOR_YUV2GRAY_UYNV
+instance ColorConversion 'YUV      'GRAY_YVYU where colorCode _ _ = c'COLOR_YUV2GRAY_YVYU
+instance ColorConversion 'YUV      'GRAY_YUYV where colorCode _ _ = c'COLOR_YUV2GRAY_YUYV
+instance ColorConversion 'YUV      'GRAY_YUNV where colorCode _ _ = c'COLOR_YUV2GRAY_YUNV
+instance ColorConversion 'RGBA     'MRGBA     where colorCode _ _ = c'COLOR_RGBA2mRGBA
+instance ColorConversion 'MRGBA    'RGBA      where colorCode _ _ = c'COLOR_mRGBA2RGBA
+instance ColorConversion 'RGB      'YUV_I420  where colorCode _ _ = c'COLOR_RGB2YUV_I420
+instance ColorConversion 'BGR      'YUV_I420  where colorCode _ _ = c'COLOR_BGR2YUV_I420
+instance ColorConversion 'RGB      'YUV_IYUV  where colorCode _ _ = c'COLOR_RGB2YUV_IYUV
+instance ColorConversion 'BGR      'YUV_IYUV  where colorCode _ _ = c'COLOR_BGR2YUV_IYUV
+instance ColorConversion 'RGBA     'YUV_I420  where colorCode _ _ = c'COLOR_RGBA2YUV_I420
+instance ColorConversion 'BGRA     'YUV_I420  where colorCode _ _ = c'COLOR_BGRA2YUV_I420
+instance ColorConversion 'RGBA     'YUV_IYUV  where colorCode _ _ = c'COLOR_RGBA2YUV_IYUV
+instance ColorConversion 'BGRA     'YUV_IYUV  where colorCode _ _ = c'COLOR_BGRA2YUV_IYUV
+instance ColorConversion 'RGB      'YUV_YV12  where colorCode _ _ = c'COLOR_RGB2YUV_YV12
+instance ColorConversion 'BGR      'YUV_YV12  where colorCode _ _ = c'COLOR_BGR2YUV_YV12
+instance ColorConversion 'RGBA     'YUV_YV12  where colorCode _ _ = c'COLOR_RGBA2YUV_YV12
+instance ColorConversion 'BGRA     'YUV_YV12  where colorCode _ _ = c'COLOR_BGRA2YUV_YV12
+instance ColorConversion 'BayerBG  'BGR       where colorCode _ _ = c'COLOR_BayerBG2BGR
+instance ColorConversion 'BayerGB  'BGR       where colorCode _ _ = c'COLOR_BayerGB2BGR
+instance ColorConversion 'BayerRG  'BGR       where colorCode _ _ = c'COLOR_BayerRG2BGR
+instance ColorConversion 'BayerGR  'BGR       where colorCode _ _ = c'COLOR_BayerGR2BGR
+instance ColorConversion 'BayerBG  'RGB       where colorCode _ _ = c'COLOR_BayerBG2RGB
+instance ColorConversion 'BayerGB  'RGB       where colorCode _ _ = c'COLOR_BayerGB2RGB
+instance ColorConversion 'BayerRG  'RGB       where colorCode _ _ = c'COLOR_BayerRG2RGB
+instance ColorConversion 'BayerGR  'RGB       where colorCode _ _ = c'COLOR_BayerGR2RGB
+instance ColorConversion 'BayerBG  'GRAY      where colorCode _ _ = c'COLOR_BayerBG2GRAY
+instance ColorConversion 'BayerGB  'GRAY      where colorCode _ _ = c'COLOR_BayerGB2GRAY
+instance ColorConversion 'BayerRG  'GRAY      where colorCode _ _ = c'COLOR_BayerRG2GRAY
+instance ColorConversion 'BayerGR  'GRAY      where colorCode _ _ = c'COLOR_BayerGR2GRAY
+instance ColorConversion 'BayerBG  'BGR_VNG   where colorCode _ _ = c'COLOR_BayerBG2BGR_VNG
+instance ColorConversion 'BayerGB  'BGR_VNG   where colorCode _ _ = c'COLOR_BayerGB2BGR_VNG
+instance ColorConversion 'BayerRG  'BGR_VNG   where colorCode _ _ = c'COLOR_BayerRG2BGR_VNG
+instance ColorConversion 'BayerGR  'BGR_VNG   where colorCode _ _ = c'COLOR_BayerGR2BGR_VNG
+instance ColorConversion 'BayerBG  'RGB_VNG   where colorCode _ _ = c'COLOR_BayerBG2RGB_VNG
+instance ColorConversion 'BayerGB  'RGB_VNG   where colorCode _ _ = c'COLOR_BayerGB2RGB_VNG
+instance ColorConversion 'BayerRG  'RGB_VNG   where colorCode _ _ = c'COLOR_BayerRG2RGB_VNG
+instance ColorConversion 'BayerGR  'RGB_VNG   where colorCode _ _ = c'COLOR_BayerGR2RGB_VNG
+instance ColorConversion 'BayerBG  'BGR_EA    where colorCode _ _ = c'COLOR_BayerBG2BGR_EA
+instance ColorConversion 'BayerGB  'BGR_EA    where colorCode _ _ = c'COLOR_BayerGB2BGR_EA
+instance ColorConversion 'BayerRG  'BGR_EA    where colorCode _ _ = c'COLOR_BayerRG2BGR_EA
+instance ColorConversion 'BayerGR  'BGR_EA    where colorCode _ _ = c'COLOR_BayerGR2BGR_EA
+instance ColorConversion 'BayerBG  'RGB_EA    where colorCode _ _ = c'COLOR_BayerBG2RGB_EA
+instance ColorConversion 'BayerGB  'RGB_EA    where colorCode _ _ = c'COLOR_BayerGB2RGB_EA
+instance ColorConversion 'BayerRG  'RGB_EA    where colorCode _ _ = c'COLOR_BayerRG2RGB_EA
+instance ColorConversion 'BayerGR  'RGB_EA    where colorCode _ _ = c'COLOR_BayerGR2RGB_EA
 
 -- | Converts an image from one color space to another
 --
@@ -854,8 +753,13 @@ marshallColorConversion = \case
 -- CV_16U, 1 for CV_32F.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
-cvtColor :: ColorConversion -> Mat -> Either CvException Mat
-cvtColor colorConv src = unsafePerformIO $ do
+cvtColor :: forall (fromColor :: ColorCode) (toColor :: ColorCode)
+         . (ColorConversion fromColor toColor)
+         => Proxy fromColor
+         -> Proxy toColor
+         -> Mat
+         -> Either CvException Mat
+cvtColor fromColor toColor src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure dst) $
       withMatPtr src $ \srcPtr ->
@@ -867,7 +771,7 @@ cvtColor colorConv src = unsafePerformIO $ do
                       );
         |]
   where
-    c'code = marshallColorConversion colorConv
+    c'code = colorCode fromColor toColor
 
 
 --------------------------------------------------------------------------------
