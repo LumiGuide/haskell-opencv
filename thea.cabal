@@ -26,6 +26,8 @@ library
                , containers
                , inline-c
                , inline-c-cpp
+               , lens
+               , linear
                , lumi-hackage-extended
                , primitive
                , template-haskell
@@ -64,6 +66,8 @@ executable thea
                , conduit-extra
                , exceptions
                , http-conduit
+               , lens
+               , linear
                , lumi-hackage-extended
                , optparse-applicative
                , resourcet

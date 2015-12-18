@@ -13,7 +13,7 @@ module OpenCV.ImgCodecs
     ) where
 
 import "base" Foreign.C.String ( withCString )
-import "base" Foreign.C.Types ( CInt )
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr, nullPtr, castPtr )
@@ -80,10 +80,10 @@ marshallImreadMode = \case
 -- empty matrix/image is returned.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgcodecs/doc/reading_and_writing_images.html#imdecode OpenCV Sphinx doc>
-imdecode :: ByteString
-         -> ImreadMode
+imdecode :: ImreadMode
+         -> ByteString
          -> Mat
-imdecode hbuf imreadMode = unsafePerformIO $ matFromPtr
+imdecode imreadMode hbuf = unsafePerformIO $ matFromPtr
     [C.block|Mat * {
       cv::_InputArray cbuf = cv::_InputArray($bs-ptr:hbuf, $bs-len:hbuf);
       return new cv::Mat(cv::imdecode(cbuf, $(int c'imreadMode)));
@@ -91,8 +91,8 @@ imdecode hbuf imreadMode = unsafePerformIO $ matFromPtr
   where
     c'imreadMode = marshallImreadMode imreadMode
 
-imdecodeM :: (PrimMonad m) => ByteString -> ImreadMode -> m (MutMat (PrimState m))
-imdecodeM hbuf imreadMode = unsafeThaw $ imdecode hbuf imreadMode
+imdecodeM :: (PrimMonad m) => ImreadMode -> ByteString -> m (MutMat (PrimState m))
+imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
 
 --------------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ defaultJpegParams =
 #num IMWRITE_JPEG_LUMA_QUALITY
 #num IMWRITE_JPEG_CHROMA_QUALITY
 
-marshallJpegParams :: JpegParams -> VS.Vector C.CInt
+marshallJpegParams :: JpegParams -> VS.Vector CInt
 marshallJpegParams params =
     [ c'IMWRITE_JPEG_QUALITY       , fromIntegral $ jpegParamQuality         params
     , c'IMWRITE_JPEG_PROGRESSIVE   , fromBool     $ jpegParamProgressive     params
@@ -148,7 +148,7 @@ data PngStrategy
 #num IMWRITE_PNG_STRATEGY_RLE
 #num IMWRITE_PNG_STRATEGY_FIXED
 
-marshallPngStrategy :: PngStrategy -> C.CInt
+marshallPngStrategy :: PngStrategy -> CInt
 marshallPngStrategy = \case
    PngStrategyDefault     -> c'IMWRITE_PNG_STRATEGY_DEFAULT
    PngStrategyFiltered    -> c'IMWRITE_PNG_STRATEGY_FILTERED
@@ -175,7 +175,7 @@ defaultPngParams =
 #num IMWRITE_PNG_STRATEGY
 #num IMWRITE_PNG_BILEVEL
 
-marshallPngParams :: PngParams -> VS.Vector C.CInt
+marshallPngParams :: PngParams -> VS.Vector CInt
 marshallPngParams params =
     [ c'IMWRITE_PNG_COMPRESSION, fromIntegral        $ pngParamCompression params
     , c'IMWRITE_PNG_STRATEGY   , marshallPngStrategy $ pngParamStrategy    params
@@ -199,7 +199,7 @@ data OutputFormat
 #num IMWRITE_PXM_BINARY
 #num IMWRITE_WEBP_QUALITY
 
-marshallOutputFormat :: OutputFormat -> (String, VS.Vector C.CInt)
+marshallOutputFormat :: OutputFormat -> (String, VS.Vector CInt)
 marshallOutputFormat = \case
     OutputBmp          -> (".bmp" , [])
     OutputExr          -> (".exr" , [])
@@ -217,15 +217,15 @@ marshallOutputFormat = \case
 -- __WARNING:__ This function is not thread safe!
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgcodecs/doc/reading_and_writing_images.html#imencode OpenCV Sphinx doc>
-imencode :: Mat
-         -> OutputFormat
+imencode :: OutputFormat
+         -> Mat
          -> Either CvException ByteString
-imencode mat format = unsafePerformIO $
+imencode format mat = unsafePerformIO $
     withMatPtr mat $ \matPtr ->
     withCString ext $ \extPtr ->
-    alloca $ \(bufPtrPtr :: Ptr (Ptr C.CUChar)) ->
+    alloca $ \(bufPtrPtr :: Ptr (Ptr CUChar)) ->
     alloca $ \(vecPtrPtr :: Ptr (Ptr ())) ->
-    alloca $ \(c'bufSizePtr :: Ptr C.CInt) -> mask_ $ do
+    alloca $ \(c'bufSizePtr :: Ptr CInt) -> mask_ $ do
       ptrException <- [cvExcept|
         const int * const paramsPtr = $vec-ptr:(int * params);
         std::vector<uchar> * vec = new std::vector<uchar>();

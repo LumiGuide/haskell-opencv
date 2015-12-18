@@ -6,29 +6,26 @@ module OpenCV.Core
     ( -- * Point
       -- ** 2D types
       Point2i
-    , Point
     , Point2f
     , Point2d
       -- ** 3D types
     , Point3i
     , Point3f
     , Point3d
-      -- ** 2D point construction
-    , mkPoint2i
-    , mkPoint
-    , mkPoint2f
-    , mkPoint2d
-      -- ** 3D point construction
-    , mkPoint3i
-    , mkPoint3f
-    , mkPoint3d
+      -- ** 2D point conversion
+    , isoPoint2iV2
+    , isoPoint2fV2
+    , isoPoint2dV2
+      -- ** 3D point conversion
+    , isoPoint3iV3
+    , isoPoint3fV3
+    , isoPoint3dV3
       -- * Size
     , Size2i
-    , Size
     , Size2f
-    , mkSize2i
-    , mkSize
-    , mkSize2f
+      -- ** Size conversion
+    , isoSize2iV2
+    , isoSize2fV2
       -- * Rect
     , Rect
     , mkRect
@@ -70,12 +67,16 @@ module OpenCV.Core
     , minMaxLoc
     ) where
 
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "lens" Control.Lens
+import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V3 ( V3(..) )
 import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" Language.C.Inline.OpenCV
@@ -99,80 +100,233 @@ C.using "namespace cv"
 -- Point
 --------------------------------------------------------------------------------
 
-newPoint2i :: Int -> Int -> IO Point2i
-newPoint2i x y = point2iFromPtr $
+{-# SPECIALIZE newPoint2i :: V2 Int  -> IO Point2i #-}
+{-# SPECIALIZE newPoint2i :: V2 CInt -> IO Point2i #-}
+newPoint2i :: (Integral a) => V2 a -> IO Point2i
+newPoint2i (V2 x y) = point2iFromPtr $
     [CU.exp|Point2i * { new cv::Point2i($(int c'x), $(int c'y)) }|]
   where
     c'x = fromIntegral x
     c'y = fromIntegral y
 
-mkPoint2i :: Int -> Int -> Point2i
-mkPoint2i x y = unsafePerformIO $ newPoint2i x y
-
-mkPoint :: Int -> Int -> Point
-mkPoint = mkPoint2i
-
-mkPoint2f :: Float -> Float -> Point2f
-mkPoint2f x y = unsafePerformIO $ newPoint2f x y
-
-newPoint2f :: Float -> Float -> IO Point2f
-newPoint2f x y = point2fFromPtr $
+{-# SPECIALIZE newPoint2f :: V2 Float  -> IO Point2f #-}
+{-# SPECIALIZE newPoint2f :: V2 CFloat -> IO Point2f #-}
+newPoint2f :: (Real a) => V2 a -> IO Point2f
+newPoint2f (V2 x y) = point2fFromPtr $
     [CU.exp|Point2f * { new cv::Point2f($(float c'x), $(float c'y)) }|]
   where
     c'x = realToFrac x
     c'y = realToFrac y
 
-mkPoint2d :: Double -> Double -> Point2d
-mkPoint2d x y = unsafePerformIO $ point2dFromPtr $
+{-# SPECIALIZE newPoint2d :: V2 Double  -> IO Point2d #-}
+{-# SPECIALIZE newPoint2d :: V2 CDouble -> IO Point2d #-}
+newPoint2d :: (Real a) => V2 a -> IO Point2d
+newPoint2d (V2 x y) = point2dFromPtr $
     [CU.exp|Point2d * { new cv::Point2d($(double c'x), $(double c'y)) }|]
   where
     c'x = realToFrac x
     c'y = realToFrac y
 
-mkPoint3i :: Int -> Int -> Int -> Point3i
-mkPoint3i x y z = unsafePerformIO $ point3iFromPtr $
+{-# SPECIALIZE newPoint3i :: V3 Int  -> IO Point3i #-}
+{-# SPECIALIZE newPoint3i :: V3 CInt -> IO Point3i #-}
+newPoint3i :: (Integral a) => V3 a -> IO Point3i
+newPoint3i (V3 x y z) = point3iFromPtr $
     [CU.exp|Point3i * { new cv::Point3i($(int c'x), $(int c'y), $(int c'z)) }|]
   where
     c'x = fromIntegral x
     c'y = fromIntegral y
     c'z = fromIntegral z
 
-mkPoint3f :: Float -> Float -> Float -> Point3f
-mkPoint3f x y z = unsafePerformIO $ point3fFromPtr $
+{-# SPECIALIZE newPoint3f :: V3 Float  -> IO Point3f #-}
+{-# SPECIALIZE newPoint3f :: V3 CFloat -> IO Point3f #-}
+newPoint3f :: (Real a) => V3 a -> IO Point3f
+newPoint3f (V3 x y z) = point3fFromPtr $
     [CU.exp|Point3f * { new cv::Point3f($(float c'x), $(float c'y), $(float c'z)) }|]
   where
     c'x = realToFrac x
     c'y = realToFrac y
     c'z = realToFrac z
 
-mkPoint3d :: Double -> Double -> Double -> Point3d
-mkPoint3d x y z = unsafePerformIO $ point3dFromPtr $
+{-# SPECIALIZE newPoint3d :: V3 Double  -> IO Point3d #-}
+{-# SPECIALIZE newPoint3d :: V3 CDouble -> IO Point3d #-}
+newPoint3d :: (Real a) => V3 a -> IO Point3d
+newPoint3d (V3 x y z) = point3dFromPtr $
     [CU.exp|Point3d * { new cv::Point3d($(double c'x), $(double c'y), $(double c'z)) }|]
   where
     c'x = realToFrac x
     c'y = realToFrac y
     c'z = realToFrac z
 
+{-# SPECIALIZE isoPoint2iV2 :: Iso' Point2i (V2 Int ) #-}
+{-# SPECIALIZE isoPoint2iV2 :: Iso' Point2i (V2 CInt) #-}
+isoPoint2iV2 :: forall a. (Integral a) => Iso' Point2i (V2 a)
+isoPoint2iV2 = iso mkV2 (unsafePerformIO . newPoint2i)
+  where
+    mkV2 :: Point2i -> V2 a
+    mkV2 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      withPoint2iPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point2i * p = $(Point2i * ptPtr);
+          *$(int * xPtr) = p->x;
+          *$(int * yPtr) = p->y;
+        }|]
+        V2 <$> (fromIntegral <$> peek xPtr)
+           <*> (fromIntegral <$> peek yPtr)
+
+{-# SPECIALIZE isoPoint2fV2 :: Iso' Point2f (V2 Float ) #-}
+{-# SPECIALIZE isoPoint2fV2 :: Iso' Point2f (V2 CFloat) #-}
+isoPoint2fV2 :: forall a. (Real a, Fractional a) => Iso' Point2f (V2 a)
+isoPoint2fV2 = iso mkV2 (unsafePerformIO . newPoint2f)
+  where
+    mkV2 :: Point2f -> V2 a
+    mkV2 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      withPoint2fPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point2f * p = $(Point2f * ptPtr);
+          *$(float * xPtr) = p->x;
+          *$(float * yPtr) = p->y;
+        }|]
+        V2 <$> (realToFrac <$> peek xPtr)
+           <*> (realToFrac <$> peek yPtr)
+
+{-# SPECIALIZE isoPoint2dV2 :: Iso' Point2d (V2 Double ) #-}
+{-# SPECIALIZE isoPoint2dV2 :: Iso' Point2d (V2 CDouble) #-}
+isoPoint2dV2 :: forall a. (Real a, Fractional a) => Iso' Point2d (V2 a)
+isoPoint2dV2 = iso mkV2 (unsafePerformIO . newPoint2d)
+  where
+    mkV2 :: Point2d -> V2 a
+    mkV2 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      withPoint2dPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point2d * p = $(Point2d * ptPtr);
+          *$(double * xPtr) = p->x;
+          *$(double * yPtr) = p->y;
+        }|]
+        V2 <$> (realToFrac <$> peek xPtr)
+           <*> (realToFrac <$> peek yPtr)
+
+{-# SPECIALIZE isoPoint3iV3 :: Iso' Point3i (V3 Int ) #-}
+{-# SPECIALIZE isoPoint3iV3 :: Iso' Point3i (V3 CInt) #-}
+isoPoint3iV3 :: forall a. (Integral a) => Iso' Point3i (V3 a)
+isoPoint3iV3 = iso mkV3 (unsafePerformIO . newPoint3i)
+  where
+    mkV3 :: Point3i -> V3 a
+    mkV3 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      withPoint3iPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point3i * p = $(Point3i * ptPtr);
+          *$(int * xPtr) = p->x;
+          *$(int * yPtr) = p->y;
+          *$(int * zPtr) = p->z;
+        }|]
+        V3 <$> (fromIntegral <$> peek xPtr)
+           <*> (fromIntegral <$> peek yPtr)
+           <*> (fromIntegral <$> peek zPtr)
+
+{-# SPECIALIZE isoPoint3fV3 :: Iso' Point3f (V3 Float ) #-}
+{-# SPECIALIZE isoPoint3fV3 :: Iso' Point3f (V3 CFloat) #-}
+isoPoint3fV3 :: forall a. (Real a, Fractional a) => Iso' Point3f (V3 a)
+isoPoint3fV3 = iso mkV3 (unsafePerformIO . newPoint3f)
+  where
+    mkV3 :: Point3f -> V3 a
+    mkV3 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      withPoint3fPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point3f * p = $(Point3f * ptPtr);
+          *$(float * xPtr) = p->x;
+          *$(float * yPtr) = p->y;
+          *$(float * zPtr) = p->z;
+        }|]
+        V3 <$> (realToFrac <$> peek xPtr)
+           <*> (realToFrac <$> peek yPtr)
+           <*> (realToFrac <$> peek zPtr)
+
+{-# SPECIALIZE isoPoint3dV3 :: Iso' Point3d (V3 Double ) #-}
+{-# SPECIALIZE isoPoint3dV3 :: Iso' Point3d (V3 CDouble) #-}
+isoPoint3dV3 :: forall a. (Real a, Fractional a) => Iso' Point3d (V3 a)
+isoPoint3dV3 = iso mkV3 (unsafePerformIO . newPoint3d)
+  where
+    mkV3 :: Point3d -> V3 a
+    mkV3 pt = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      withPoint3dPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Point3d * p = $(Point3d * ptPtr);
+          *$(double * xPtr) = p->x;
+          *$(double * yPtr) = p->y;
+          *$(double * zPtr) = p->z;
+        }|]
+        V3 <$> (realToFrac <$> peek xPtr)
+           <*> (realToFrac <$> peek yPtr)
+           <*> (realToFrac <$> peek zPtr)
+
 --------------------------------------------------------------------------------
 -- Size
 --------------------------------------------------------------------------------
 
-mkSize2i :: Int -> Int -> Size2i
-mkSize2i x y = unsafePerformIO $ size2iFromPtr $
+newSize2i :: (Integral a) => V2 a -> IO Size2i
+newSize2i (V2 x y) = size2iFromPtr $
     [CU.exp|Size2i * { new cv::Size2i($(int c'x), $(int c'y)) }|]
   where
     c'x = fromIntegral x
     c'y = fromIntegral y
 
-mkSize :: Int -> Int -> Size
-mkSize = mkSize2i
-
-mkSize2f :: Float -> Float -> Size2f
-mkSize2f x y = unsafePerformIO $ size2fFromPtr $
+newSize2f :: (Real a) => V2 a -> IO Size2f
+newSize2f (V2 x y) = size2fFromPtr $
     [CU.exp|Size2f * { new cv::Size2f($(float c'x), $(float c'y)) }|]
   where
     c'x = realToFrac x
     c'y = realToFrac y
+
+{-# SPECIALIZE isoSize2iV2 :: Iso' Size2i (V2 Int ) #-}
+{-# SPECIALIZE isoSize2iV2 :: Iso' Size2i (V2 CInt) #-}
+isoSize2iV2 :: forall a. (Integral a) => Iso' Size2i (V2 a)
+isoSize2iV2 = iso mkV2 (unsafePerformIO . newSize2i)
+  where
+    mkV2 :: Size2i -> V2 a
+    mkV2 pt = unsafePerformIO $
+      alloca $ \wPtr ->
+      alloca $ \hPtr ->
+      withSize2iPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Size2i * p = $(Size2i * ptPtr);
+          *$(int * wPtr) = p->width;
+          *$(int * hPtr) = p->height;
+        }|]
+        V2 <$> (fromIntegral <$> peek wPtr)
+           <*> (fromIntegral <$> peek hPtr)
+
+{-# SPECIALIZE isoSize2fV2 :: Iso' Size2f (V2 Float ) #-}
+{-# SPECIALIZE isoSize2fV2 :: Iso' Size2f (V2 CFloat) #-}
+isoSize2fV2 :: forall a. (Real a, Fractional a) => Iso' Size2f (V2 a)
+isoSize2fV2 = iso mkV2 (unsafePerformIO . newSize2f)
+  where
+    mkV2 :: Size2f -> V2 a
+    mkV2 pt = unsafePerformIO $
+      alloca $ \wPtr ->
+      alloca $ \hPtr ->
+      withSize2fPtr pt $ \ptPtr -> do
+        [CU.block| void {
+          Size2f * p = $(Size2f * ptPtr);
+          *$(float * wPtr) = p->width;
+          *$(float * hPtr) = p->height;
+        }|]
+        V2 <$> (realToFrac <$> peek wPtr)
+           <*> (realToFrac <$> peek hPtr)
 
 
 --------------------------------------------------------------------------------
@@ -226,7 +380,7 @@ rectContains point rect =
       unsafePerformIO $
         withPoint2iPtr point $ \pointPtr ->
           withRectPtr rect $ \rectPtr ->
-            [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point * pointPtr)) }|]
+            [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point2i * pointPtr)) }|]
 
 
 --------------------------------------------------------------------------------
@@ -286,10 +440,11 @@ rotatedRectBoundingRect rotRect =
 
 rotatedRectPoints :: RotatedRect -> (Point2f, Point2f, Point2f, Point2f)
 rotatedRectPoints rotRect = unsafePerformIO $ do
-    p1 <- newPoint2f 0 0
-    p2 <- newPoint2f 0 0
-    p3 <- newPoint2f 0 0
-    p4 <- newPoint2f 0 0
+    let v0 = V2 0 0 :: V2 CFloat
+    p1 <- newPoint2f v0
+    p2 <- newPoint2f v0
+    p3 <- newPoint2f v0
+    p4 <- newPoint2f v0
     withRotatedRectPtr rotRect $ \rotRectPtr ->
       withPoint2fPtr p1 $ \p1Ptr ->
       withPoint2fPtr p2 $ \p2Ptr ->
@@ -439,8 +594,9 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
 -- TODO (RvD): implement mask
 minMaxLoc :: Mat -> Either CvException (Double, Double, Point2i, Point2i)
 minMaxLoc src = unsafePerformIO $ do
-    minLoc <- newPoint2i 0 0
-    maxLoc <- newPoint2i 0 0
+    let v0 = V2 0 0 :: V2 CInt
+    minLoc <- newPoint2i v0
+    maxLoc <- newPoint2i v0
     withMatPtr src $ \srcPtr ->
       withPoint2iPtr minLoc $ \minLocPtr ->
       withPoint2iPtr maxLoc $ \maxLocPtr ->

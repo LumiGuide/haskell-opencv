@@ -14,6 +14,8 @@
 , http-conduit
 , inline-c
 , inline-c-cpp
+, lens
+, linear
 , lumi-hackage-extended
 , optparse-applicative
 , primitive
@@ -41,6 +43,8 @@ mkDerivation {
       http-conduit
       inline-c
       inline-c-cpp
+      lens
+      linear
       lumi-hackage-extended
       optparse-applicative
       primitive

@@ -81,6 +81,7 @@ cvExceptWrap s =
     \  }\n\
     \}"
 
+
 --------------------------------------------------------------------------------
 --  Point
 --------------------------------------------------------------------------------
@@ -89,10 +90,6 @@ cvExceptWrap s =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV doc>
 newtype Point2i = Point2i {unPoint2i :: ForeignPtr C'Point2i}
--- | 2D point with 'Int'eger coördinates
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV doc>
-type Point = Point2i
 -- | 2D point with 'Float' coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV doc>
@@ -184,10 +181,6 @@ withPoints points act =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV doc>
 newtype Size2i = Size2i {unSize2i :: ForeignPtr C'Size2i}
--- | Size of an image or rectangle.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV doc>
-type Size = Size2i
 -- | Size of an image or rectangle.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV doc>

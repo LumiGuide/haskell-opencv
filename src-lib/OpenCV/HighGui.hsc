@@ -39,6 +39,7 @@ module OpenCV.HighGui
     , imshow
     ) where
 
+import "base" Foreign.C.Types
 import qualified "base" Foreign.C.String as C
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
 import "base" Foreign.Marshal.Alloc ( free )
@@ -72,7 +73,7 @@ C.using "namespace cv"
 type WindowTitle = String
 type WindowName  = String
 
-type TrackbarState = (FunPtr C'TrackbarCallback, Ptr C.CInt)
+type TrackbarState = (FunPtr C'TrackbarCallback, Ptr CInt)
 
 data Window
    = Window
@@ -92,7 +93,7 @@ freeTrackbar (callback, value) = do
 -- #num WINDOW_FREERATIO
 -- #num WINDOW_KEEPRATIO
 
--- marshallWindowFlags :: WindowFlags -> C.CInt
+-- marshallWindowFlags :: WindowFlags -> CInt
 -- marshallWindowFlags WindowFlags{..} =
 
 makeWindow :: WindowTitle -> IO Window
@@ -130,7 +131,7 @@ destroyWindow window = mask_ $ do
 waitKey :: Int -> IO Int
 waitKey delay = fromIntegral <$> f (fromIntegral delay)
   where
-    f :: C.CInt -> IO C.CInt
+    f :: CInt -> IO CInt
     f c'delay = [C.exp| int { cv::waitKey($(int c'delay)) }|]
 
 
@@ -172,9 +173,9 @@ data Event
 #num EVENT_FLAG_SHIFTKEY
 #num EVENT_FLAG_ALTKEY
 
-newtype EventFlags = EventFlags C.CInt
+newtype EventFlags = EventFlags CInt
 
-matchEventFlag :: C.CInt -> EventFlags -> Bool
+matchEventFlag :: CInt -> EventFlags -> Bool
 matchEventFlag flag = \(EventFlags flags) -> flags .&. flag /= 0
 
 hasLButton  :: EventFlags -> Bool
@@ -213,7 +214,7 @@ flagsToRec flags =
     }
 
 
-unmarshallEvent :: C.CInt -> Event
+unmarshallEvent :: CInt -> Event
 unmarshallEvent event
    | event == c'EVENT_MOUSEMOVE     = EventMouseMove
    | event == c'EVENT_LBUTTONDOWN   = EventLButtonDown

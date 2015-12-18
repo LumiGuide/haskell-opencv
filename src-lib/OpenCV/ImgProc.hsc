@@ -41,6 +41,7 @@ module OpenCV.ImgProc
     , BorderMode(..)
     ) where
 
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
@@ -92,7 +93,7 @@ medianBlur
     -> Either CvException Mat
 medianBlur matIn ksize = unsafePerformIO $ c'medianBlur $ fromIntegral ksize
   where
-    c'medianBlur :: C.CInt -> IO (Either CvException Mat)
+    c'medianBlur :: CInt -> IO (Either CvException Mat)
     c'medianBlur c'ksize = do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
@@ -788,7 +789,7 @@ data LineType
 #num LINE_4
 #num LINE_AA
 
-marshallLineType :: LineType -> C.CInt
+marshallLineType :: LineType -> CInt
 marshallLineType = \case
   LineType_8  -> c'LINE_8
   LineType_4  -> c'LINE_4
@@ -824,7 +825,7 @@ data FontFace
 #num FONT_HERSHEY_SCRIPT_COMPLEX
 #num FONT_ITALIC
 
-marshallFontFace :: FontFace -> C.CInt
+marshallFontFace :: FontFace -> CInt
 marshallFontFace = \case
    FontHersheySimplex       -> c'FONT_HERSHEY_SIMPLEX
    FontHersheyPlain         -> c'FONT_HERSHEY_PLAIN
@@ -1024,7 +1025,7 @@ fillPoly img polygons color lineType shift =
     c'lineType    = marshallLineType lineType
     c'shift       = fromIntegral shift
 
-    npts :: VS.Vector C.CInt
+    npts :: VS.Vector CInt
     npts = VS.convert $ V.map (fromIntegral . V.length) polygons
 
 -- | Calculates the width and height of a text string.
@@ -1040,7 +1041,7 @@ getTextSize
     -> (Size2i, Int)
 getTextSize text fontFace fontScale thickness = unsafePerformIO $
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    alloca $ \(c'baseLinePtr :: Ptr C.CInt) -> do
+    alloca $ \(c'baseLinePtr :: Ptr CInt) -> do
       size <- size2iFromPtr $
         [C.block|Size2i * {
           Size size = cv::getTextSize( $(char * c'text)
@@ -1220,7 +1221,7 @@ data MatchTemplateMethod
 #num CV_TM_CCOEFF
 #num CV_TM_CCOEFF_NORMED
 
-marshallMatchTemplateMethod :: MatchTemplateMethod -> Bool -> C.CInt
+marshallMatchTemplateMethod :: MatchTemplateMethod -> Bool -> CInt
 marshallMatchTemplateMethod m n =
     case (m, n) of
       (MatchTemplateSqDiff, False) -> c'CV_TM_SQDIFF
@@ -1300,7 +1301,7 @@ data InterpolationMethod
 #num INTER_AREA
 #num INTER_LANCZOS4
 
-marshallInterpolationMethod :: InterpolationMethod -> C.CInt
+marshallInterpolationMethod :: InterpolationMethod -> CInt
 marshallInterpolationMethod = \case
    InterNearest  -> c'INTER_NEAREST
    InterLinear   -> c'INTER_LINEAR
@@ -1327,7 +1328,7 @@ data BorderMode
 #num BORDER_TRANSPARENT
 #num BORDER_ISOLATED
 
-marshallBorderMode :: BorderMode -> (C.CInt, Scalar)
+marshallBorderMode :: BorderMode -> (CInt, Scalar)
 marshallBorderMode = \case
     BorderConstant scalar -> (c'BORDER_CONSTANT    , scalar    )
     BorderReplicate       -> (c'BORDER_REPLICATE   , zeroScalar)
