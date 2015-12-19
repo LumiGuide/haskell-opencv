@@ -513,11 +513,13 @@ newEmptyMat :: IO Mat
 newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
 
 cloneMat :: Mat -> Mat
-cloneMat mat = unsafePerformIO $ matFromPtr $ withMatPtr mat $ \matPtr ->
-    [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
+cloneMat = unsafePerformIO . cloneMatIO
 
 cloneMatM :: (PrimMonad m) => Mat -> m Mat
-cloneMatM mat = unsafePrimToPrim $ matFromPtr $ withMatPtr mat $ \matPtr ->
+cloneMatM = unsafePrimToPrim . cloneMatIO
+
+cloneMatIO :: Mat -> IO Mat
+cloneMatIO mat = matFromPtr $ withMatPtr mat $ \matPtr ->
     [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
 
 matSubRect :: Mat -> Rect -> Either CvException Mat
