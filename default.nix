@@ -1,7 +1,7 @@
 { mkDerivation
 , stdenv
 
-, opencv
+, opencv-HEAD
 
 , base
 , bindings-DSL
@@ -38,7 +38,7 @@ mkDerivation {
       text
       vector
     ];
-  libraryPkgconfigDepends = [ opencv ];
+  libraryPkgconfigDepends = [ opencv-HEAD ];
   configureFlags =
     [ "--with-gcc=g++"
       "--with-ld=g++"
