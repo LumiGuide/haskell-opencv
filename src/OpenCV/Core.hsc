@@ -545,30 +545,40 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
--- | Representation tag for Repa @'Repa.Array's@ for OpenCV @`Mat`s@.
+-- | Representation tag for Repa @'Repa.Array's@ for OpenCV @'Mat's@.
 data M
 
--- | Converts an OpenCV @`Mat`rix@ into a Repa array. Returns `Nothing` if the
--- desired `Repa.Shape` @sh@ doesn't match the shape of the given matrix.
+-- | Converts an OpenCV @'Mat'rix@ into a Repa array. Returns 'Nothing' if the
+-- desired 'Repa.Shape' @sh@ doesn't match the shape of the given matrix.
 toRepa
     :: forall sh e
      . (Repa.Shape sh, Storable e)
     => Mat
     -> Maybe (Repa.Array M sh e)
-toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr -> do
-    (dims :: Int) <- fromIntegral <$> [CU.exp| int { $(Mat * matPtr)->dims } |]
-    if dims /= Repa.rank (Repa.zeroDim :: sh)
-      then pure Nothing
-      else do
-        (elemSize :: CSize) <- [CU.exp| size_t {$(Mat * matPtr)->elemSize()} |]
-        if fromIntegral elemSize /= sizeOf (undefined :: e)
-          then pure Nothing
-          else Just <$> do
-            (step :: Ptr CSize) <- [CU.exp| size_t * { $(Mat * matPtr)->step.p } |]
-            sh <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
-            dataPtr <- [CU.exp| unsigned char * {$(Mat * matPtr)->data} |]
-            pure $ Array mat dataPtr sh
-
+toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
+    alloca $ \(dimsPtr     :: Ptr CInt) ->
+    alloca $ \(elemSizePtr :: Ptr CSize) ->
+    alloca $ \(stepPtr     :: Ptr (Ptr CSize)) ->
+    alloca $ \(dataPtrPtr  :: Ptr (Ptr CUChar)) -> do
+      [CU.block| void {
+        Mat * mat = $(Mat * matPtr);
+        *$(int * dimsPtr)                = mat->dims;
+        *$(size_t * elemSizePtr)         = mat->elemSize();
+        *$(size_t * * stepPtr)           = mat->step.p;
+        *$(unsigned char * * dataPtrPtr) = mat->data;
+      }|]
+      dims <- fromIntegral <$> peek dimsPtr
+      if dims /= Repa.rank (Repa.zeroDim :: sh)
+        then pure Nothing
+        else do
+          (elemSize :: CSize) <- peek elemSizePtr
+          if fromIntegral elemSize /= sizeOf (undefined :: e)
+            then pure Nothing
+            else do
+              (step :: Ptr CSize) <- peek stepPtr
+              (sh :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
+              (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
+              pure $ Just $ Array mat dataPtr sh
 
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
