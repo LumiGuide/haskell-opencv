@@ -57,8 +57,10 @@ module OpenCV.Core
     , newEmptyMat
     , cloneMat
     , matSubRect
+      -- ** Repa
     , M
     , toRepa
+    , fromRepa
       -- * Mutable Matrix
     , MutMat
     , IOMat
@@ -545,11 +547,18 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
+
+--------------------------------------------------------------------------------
+--  Repa
+--------------------------------------------------------------------------------
+
 -- | Representation tag for Repa @'Repa.Array's@ for OpenCV @'Mat's@.
 data M
 
 -- | Converts an OpenCV @'Mat'rix@ into a Repa array. Returns 'Nothing' if the
 -- desired 'Repa.Shape' @sh@ doesn't match the shape of the given matrix.
+--
+-- This is a zero-copy operation.
 toRepa
     :: forall sh e
      . (Repa.Shape sh, Storable e)
@@ -567,7 +576,7 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
         *$(size_t * * stepPtr)           = mat->step.p;
         *$(unsigned char * * dataPtrPtr) = mat->data;
       }|]
-      dims <- fromIntegral <$> peek dimsPtr
+      (dims :: Int) <- fromIntegral <$> peek dimsPtr
       if dims /= Repa.rank (Repa.zeroDim :: sh)
         then pure Nothing
         else do
@@ -580,9 +589,19 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
               (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
               pure $ Just $ Array mat dataPtr sh
 
+-- | Converts a Repa array back into an OpenCV @'Mat'rix@.
+--
+-- This is a zero-copy operation.
+fromRepa :: Repa.Array M sh e -> Mat
+fromRepa (Array mat _ _) = mat
+
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
-    data Array M sh e = Array !Mat !(Ptr CUChar) !sh
+
+    data Array M sh e =
+         Array !Mat -- The Mat is kept around so that the data doesn't get garbage collected.
+               !(Ptr CUChar) -- Pointer to the data.
+               !sh -- The shape of the data which is determined by mat->dims and mat->step.p.
 
     extent :: (Repa.Shape sh) => Repa.Array M sh e -> sh
     extent (Array _ _ sh) = sh
@@ -623,7 +642,29 @@ instance (Storable e) => Repa.Source M e where
           sh = Repa.fromIndex (Repa.extent a) ix
 
     deepSeqArray :: (Repa.Shape sh) => Repa.Array M sh e -> b -> b
-    deepSeqArray (Array _mat _dataPtr sh) x = sh `Repa.deepSeq` x
+    deepSeqArray (Array _mat _dataPtr sh) = Repa.deepSeq sh
+
+-- TODO (BvD): Is it possible to define something like the following?
+--
+-- instance (Storable e) => Repa.Target M e where
+--
+--     newtype MVec M e = MVec IOMat
+--
+--     newMVec :: Int -> IO (MVec M e)
+--     newMVec size = _todo_newMVec
+--
+--     unsafeWriteMVec :: MVec M e -> Int -> e -> IO ()
+--     unsafeWriteMVec = _todo_unsafeWriteMVec
+--
+--     unsafeFreezeMVec :: sh  -> MVec M e -> IO (Array M sh e)
+--     unsafeFreezeMVec = _todo_unsafeFreezeMVec
+--
+--     deepSeqMVec :: MVec M e -> a -> a
+--     deepSeqMVec = _todo_deepSeqMVec
+--
+--     touchMVec :: MVec M e -> IO ()
+--     touchMVec = _todo_touchMVec
+
 
 
 --------------------------------------------------------------------------------
