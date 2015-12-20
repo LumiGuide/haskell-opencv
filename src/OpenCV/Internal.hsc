@@ -5,7 +5,7 @@ module OpenCV.Internal where
 
 import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.Concurrent ( newForeignPtr )
-import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
 import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
@@ -273,6 +273,15 @@ matFromPtr = objFromPtr Mat $ \ptr -> [CU.exp| void { delete $(Mat * ptr) }|]
 
 withMatPtr :: Mat -> (Ptr C'Mat -> IO a) -> IO a
 withMatPtr = withForeignPtr . unMat
+
+-- | Similar to 'withMatPtr' in that it keeps the 'ForeignPtr' alive
+-- during the execution of the given action but it doesn't extract the 'Ptr'
+-- from the 'ForeignPtr'.
+keepMatAliveDuring :: Mat -> IO a -> IO a
+keepMatAliveDuring mat m = do
+    x <- m
+    touchForeignPtr $ unMat mat
+    pure x
 
 
 --------------------------------------------------------------------------------

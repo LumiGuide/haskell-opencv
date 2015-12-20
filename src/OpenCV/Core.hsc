@@ -578,7 +578,8 @@ instance (Storable e) => Repa.Source M e where
     extent (Array _ _ sh) = sh
 
     index :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
-    index (Array mat dataPtr sh) ix = unsafePerformIO $ withMatPtr mat $ \_matPtr -> peek elemPtr
+    index (Array mat dataPtr sh) ix =
+        unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
         elemPtr = dataPtr `plusPtr` offset
@@ -591,7 +592,8 @@ instance (Storable e) => Repa.Source M e where
                    | otherwise = error "Index out of range!"
 
     unsafeIndex :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
-    unsafeIndex (Array mat dataPtr sh) ix = unsafePerformIO $ withMatPtr mat $ \_matPtr -> peek elemPtr
+    unsafeIndex (Array mat dataPtr sh) ix =
+        unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
         elemPtr = dataPtr `plusPtr` offset
