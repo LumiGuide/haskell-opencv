@@ -1,6 +1,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module OpenCV.Core
     ( -- * Point
@@ -53,6 +57,8 @@ module OpenCV.Core
     , newEmptyMat
     , cloneMat
     , matSubRect
+    , M
+    , toRepa
       -- * Mutable Matrix
     , MutMat
     , IOMat
@@ -69,16 +75,19 @@ module OpenCV.Core
 
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( toBool )
-import "base" Foreign.Storable ( peek )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Storable ( peek, sizeOf )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lens" Control.Lens
+import "lens" Control.Lens hiding (ix)
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+import qualified "repa" Data.Array.Repa as Repa
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import "this" OpenCV.Unsafe
@@ -535,6 +544,74 @@ matSubRect matIn rect = unsafePerformIO $ do
                , *$(Rect * rectPtr)
                );
         |]
+
+-- | Representation tag for Repa @'Repa.Array's@ for OpenCV @`Mat`s@.
+data M
+
+-- | Converts an OpenCV @`Mat`rix@ into a Repa array. Returns `Nothing` if the
+-- desired `Repa.Shape` @sh@ doesn't match the shape of the given matrix.
+toRepa
+    :: forall sh e
+     . (Repa.Shape sh, Storable e)
+    => Mat
+    -> Maybe (Repa.Array M sh e)
+toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr -> do
+    (dims :: Int) <- fromIntegral <$> [CU.exp| int { $(Mat * matPtr)->dims } |]
+    if dims /= Repa.rank (Repa.zeroDim :: sh)
+      then pure Nothing
+      else do
+        (elemSize :: CSize) <- [CU.exp| size_t {$(Mat * matPtr)->elemSize()} |]
+        if fromIntegral elemSize /= sizeOf (undefined :: e)
+          then pure Nothing
+          else Just <$> do
+            (step :: Ptr CSize) <- [CU.exp| size_t * { $(Mat * matPtr)->step.p } |]
+            sh <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
+            dataPtr <- [CU.exp| unsigned char * {$(Mat * matPtr)->data} |]
+            pure $ Array mat dataPtr sh
+
+
+instance (Storable e) => Repa.Source M e where
+    -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
+    data Array M sh e = Array !Mat !(Ptr CUChar) !sh
+
+    extent :: (Repa.Shape sh) => Repa.Array M sh e -> sh
+    extent (Array _ _ sh) = sh
+
+    index :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
+    index (Array mat dataPtr sh) ix = unsafePerformIO $ withMatPtr mat $ \_matPtr -> peek elemPtr
+      where
+        elemPtr :: Ptr e
+        elemPtr = dataPtr `plusPtr` offset
+
+        offset :: Int
+        offset = sum $ zipWith mul (Repa.listOfShape sh)
+                                   (Repa.listOfShape ix)
+
+        mul size n | n < size  = size * n
+                   | otherwise = error "Index out of range!"
+
+    unsafeIndex :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
+    unsafeIndex (Array mat dataPtr sh) ix = unsafePerformIO $ withMatPtr mat $ \_matPtr -> peek elemPtr
+      where
+        elemPtr :: Ptr e
+        elemPtr = dataPtr `plusPtr` offset
+
+        offset :: Int
+        offset = sum $ zipWith (*) (Repa.listOfShape sh)
+                                   (Repa.listOfShape ix)
+
+    linearIndex :: (Repa.Shape sh) => Repa.Array M sh e -> Int -> e
+    linearIndex a ix = Repa.index a sh
+        where
+          sh = Repa.fromIndex (Repa.extent a) ix
+
+    unsafeLinearIndex :: (Repa.Shape sh) => Repa.Array M sh e -> Int -> e
+    unsafeLinearIndex a ix = Repa.unsafeIndex a sh
+        where
+          sh = Repa.fromIndex (Repa.extent a) ix
+
+    deepSeqArray :: (Repa.Shape sh) => Repa.Array M sh e -> b -> b
+    deepSeqArray (Array _mat _dataPtr sh) x = sh `Repa.deepSeq` x
 
 
 --------------------------------------------------------------------------------

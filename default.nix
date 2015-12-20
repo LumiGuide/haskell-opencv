@@ -13,6 +13,7 @@
 , linear
 , lumi-hackage-extended
 , primitive
+, repa
 , template-haskell
 , text
 , vector
@@ -32,6 +33,7 @@ mkDerivation {
       linear
       lumi-hackage-extended
       primitive
+      repa
       template-haskell
       text
       vector
