@@ -48,6 +48,8 @@ import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "lens" Control.Lens ( (^.), from )
+import "linear" Linear.V4 ( V4(..) )
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "text" Data.Text ( Text )
@@ -1338,4 +1340,5 @@ marshallBorderMode = \case
     BorderTransparent     -> (c'BORDER_TRANSPARENT , zeroScalar)
     BorderIsolated        -> (c'BORDER_ISOLATED    , zeroScalar)
   where
-    zeroScalar = mkScalar 0 0 0 0
+    zeroScalar :: Scalar
+    zeroScalar = (V4 0 0 0 0 :: V4 Double) ^. from isoScalarV4

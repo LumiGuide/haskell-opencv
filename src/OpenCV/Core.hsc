@@ -53,7 +53,7 @@ module OpenCV.Core
     , mkTermCriteria
       -- * Scalar
     , Scalar
-    , mkScalar
+    , isoScalarV4
       -- * Matrix
     , Mat
     , newEmptyMat
@@ -90,6 +90,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lens" Control.Lens hiding (ix)
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
+import "linear" Linear.V4 ( V4(..) )
 import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import qualified "repa" Data.Array.Repa as Repa
@@ -521,8 +522,12 @@ mkTermCriteria mbMaxCount mbEpsilon = unsafePerformIO $ termCriteriaFromPtr $
 --  Scalar
 --------------------------------------------------------------------------------
 
-mkScalar :: Double -> Double -> Double -> Double -> Scalar
-mkScalar x y z w = unsafePerformIO $ scalarFromPtr $
+{-# SPECIALIZE newScalar :: V4 Float   -> IO Scalar #-}
+{-# SPECIALIZE newScalar :: V4 CFloat  -> IO Scalar #-}
+{-# SPECIALIZE newScalar :: V4 Double  -> IO Scalar #-}
+{-# SPECIALIZE newScalar :: V4 CDouble -> IO Scalar #-}
+newScalar :: (Real a) => V4 a -> IO Scalar
+newScalar (V4 x y z w) = scalarFromPtr $
     [CU.exp|Scalar * { new cv::Scalar( $(double c'x)
                                      , $(double c'y)
                                      , $(double c'z)
@@ -534,6 +539,32 @@ mkScalar x y z w = unsafePerformIO $ scalarFromPtr $
     c'y = realToFrac y
     c'z = realToFrac z
     c'w = realToFrac w
+
+{-# SPECIALIZE isoScalarV4 :: Iso' Scalar (V4 Float  ) #-}
+{-# SPECIALIZE isoScalarV4 :: Iso' Scalar (V4 CFloat ) #-}
+{-# SPECIALIZE isoScalarV4 :: Iso' Scalar (V4 Double ) #-}
+{-# SPECIALIZE isoScalarV4 :: Iso' Scalar (V4 CDouble) #-}
+isoScalarV4 :: forall a. (Real a, Fractional a) => Iso' Scalar (V4 a)
+isoScalarV4 = iso mkV4 (unsafePerformIO . newScalar)
+  where
+    mkV4 :: Scalar -> V4 a
+    mkV4 s = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      alloca $ \wPtr ->
+      withScalarPtr s $ \sPtr -> do
+        [CU.block| void {
+          const Scalar & s = *$(Scalar * sPtr);
+          *$(double * xPtr) = s[0];
+          *$(double * yPtr) = s[1];
+          *$(double * zPtr) = s[2];
+          *$(double * wPtr) = s[3];
+        }|]
+        V4 <$> (realToFrac <$> peek xPtr)
+           <*> (realToFrac <$> peek yPtr)
+           <*> (realToFrac <$> peek zPtr)
+           <*> (realToFrac <$> peek wPtr)
 
 
 --------------------------------------------------------------------------------
