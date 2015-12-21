@@ -43,6 +43,9 @@ mkDerivation {
     [ "--with-gcc=g++"
       "--with-ld=g++"
     ];
+  preConfigure = ''
+    rm -rf dist
+  '';
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.unfree;
 }
