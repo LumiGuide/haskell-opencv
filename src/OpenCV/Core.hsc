@@ -6,6 +6,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE InstanceSigs #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-} -- For Show instances
+
 module OpenCV.Core
     ( -- * Point
       -- ** 2D types
@@ -61,6 +63,7 @@ module OpenCV.Core
     , M
     , toRepa
     , fromRepa
+    , repaPrism
       -- * Mutable Matrix
     , MutMat
     , IOMat
@@ -110,6 +113,11 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 -- Point
 --------------------------------------------------------------------------------
+
+instance Show Point2i where
+    showsPrec prec point = showParen (prec >= 10) $
+                               shows (point ^. isoPoint2iV2 :: V2 Int)
+                             . showString " ^. from isoPoint2iV2"
 
 {-# SPECIALIZE newPoint2i :: V2 Int  -> IO Point2i #-}
 {-# SPECIALIZE newPoint2i :: V2 CInt -> IO Point2i #-}
@@ -343,6 +351,18 @@ isoSize2fV2 = iso mkV2 (unsafePerformIO . newSize2f)
 --------------------------------------------------------------------------------
 --  Rect
 --------------------------------------------------------------------------------
+
+instance Show Rect where
+    showsPrec prec rect = showParen (prec >= 10) $
+                              showString "mkRect "
+                            . shows x . showString " "
+                            . shows y . showString " "
+                            . shows w . showString " "
+                            . shows h
+      where
+        x, y, w, h :: Int
+        V2 x y = rectTopLeft rect ^. isoPoint2iV2
+        V2 w h = rectSize    rect ^. isoSize2iV2
 
 mkRect
     :: Int -- ^ x
@@ -594,6 +614,9 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
 -- This is a zero-copy operation.
 fromRepa :: Repa.Array M sh e -> Mat
 fromRepa (Array mat _ _) = mat
+
+repaPrism :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
+repaPrism = prism' fromRepa toRepa
 
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
