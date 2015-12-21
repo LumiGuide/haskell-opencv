@@ -37,6 +37,7 @@ module OpenCV.HighGui
 
       -- * Drawing
     , imshow
+    , imshowM
     ) where
 
 import "base" Foreign.C.Types
@@ -49,8 +50,10 @@ import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude
+import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
+import "this" OpenCV.Unsafe ( unsafeFreeze )
 
 --------------------------------------------------------------------------------
 
@@ -302,3 +305,6 @@ imshow window mat =
     C.withCString (windowName window) $ \c'name ->
       withMatPtr mat $ \matPtr ->
         [C.exp| void { cv::imshow($(char * c'name), *$(Mat * matPtr)); }|]
+
+imshowM :: Window -> MutMat (PrimState IO) -> IO ()
+imshowM window mat = imshow window =<< unsafeFreeze mat
