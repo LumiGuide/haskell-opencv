@@ -1,19 +1,24 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Main where
 
-import           "lens"             Control.Lens
-import           "linear"           Linear.V2 ( V2(..) )
-import           "linear"           Linear.V3 ( V3(..) )
-import           "linear"           Linear.V4 ( V4(..) )
-import           "tasty"            Test.Tasty
---import           "tasty-hunit"      Test.Tasty.HUnit      as HU
-import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
-import qualified "QuickCheck"       Test.QuickCheck       as QC
-import           "thea"             OpenCV
+import           "lumi-hackage-extended" Lumi.Prelude
+import qualified "bytestring"            Data.ByteString as B
+import           "lens"                  Control.Lens
+import           "linear"                Linear.V2 ( V2(..) )
+import           "linear"                Linear.V3 ( V3(..) )
+import           "linear"                Linear.V4 ( V4(..) )
+import qualified "repa"                  Data.Array.Repa as Repa
+import           "tasty"                 Test.Tasty
+import           "tasty-hunit"           Test.Tasty.HUnit      as HU
+import qualified "tasty-quickcheck"      Test.Tasty.QuickCheck as QC (testProperty)
+import qualified "QuickCheck"            Test.QuickCheck       as QC
+import           "thea"                  OpenCV
+import           "this"                  Paths_thea ( getDataFileName )
 
 -- import            "base"            Debug.Trace
 
@@ -45,6 +50,12 @@ main = defaultMain $ testGroup "thea"
         [
           testGroup "Repa"
           [
+            -- FIXME (BvD): Finish this test case!
+            HU.testCase "toRepa" $ do
+              emptyMat <- newEmptyMat
+              case emptyMat ^? repa :: Maybe (Repa.Array M Repa.DIM0 Int) of
+                Nothing -> assertFailure "failure"
+                Just _repaArray -> pure ()
           ]
         ]
       ]
@@ -52,7 +63,18 @@ main = defaultMain $ testGroup "thea"
       [
       ]
     , testGroup "ImgCodecs"
-      [
+      [ testGroup "imencode . imdecode"
+        [ HU.testCase "OutputBmp"      $ encodeDecode OutputBmp
+        , HU.testCase "OutputExr"      $ encodeDecode OutputExr
+        , HU.testCase "OutputHdr"      $ encodeDecode (OutputHdr True)
+        , HU.testCase "OutputJpeg"     $ encodeDecode (OutputJpeg defaultJpegParams)
+        , HU.testCase "OutputJpeg2000" $ encodeDecode OutputJpeg2000
+        , HU.testCase "OutputPng"      $ encodeDecode (OutputPng defaultPngParams)
+        , HU.testCase "OutputPxm"      $ encodeDecode (OutputPxm True)
+        , HU.testCase "OutputSunras"   $ encodeDecode OutputSunras
+        , HU.testCase "OutputTiff"     $ encodeDecode OutputTiff
+        , HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)
+        ]
       ]
     , testGroup "HighGui"
       [
@@ -61,6 +83,10 @@ main = defaultMain $ testGroup "thea"
       [
       ]
     ]
+
+
+testIso :: (QC.Arbitrary b, Eq b, Show b) => String -> Iso' a b -> TestTree
+testIso name myIso = QC.testProperty name $ \b -> b QC.=== (b ^. from myIso . myIso)
 
 rectBasicProperties
     :: Int -- ^ x
@@ -101,8 +127,20 @@ myRectContains point rect =
     w, h :: Int
     V2 w h = rectSize rect ^. isoSize2iV2
 
-testIso :: (QC.Arbitrary b, Eq b, Show b) => String -> Iso' a b -> TestTree
-testIso name myIso = QC.testProperty name $ \b -> b QC.=== (b ^. from myIso . myIso)
+encodeDecode :: OutputFormat -> HU.Assertion
+encodeDecode outputFormat = do
+    lennaFp <- getDataFileName "Lenna.png"
+    bs1 <- B.readFile lennaFp
+
+    let mat1 = imdecode ImreadUnchanged bs1
+
+        bs2  = either throw id $ imencode outputFormat mat1
+        mat2 = imdecode ImreadUnchanged bs2
+
+        bs3  = either throw id $ imencode outputFormat mat2
+
+    assertBool "imencode . imdecode failure"
+               (bs2 == bs3)
 
 
 --------------------------------------------------------------------------------

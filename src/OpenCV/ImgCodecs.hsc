@@ -8,6 +8,7 @@ module OpenCV.ImgCodecs
 
     , OutputFormat(..)
     , JpegParams(..), defaultJpegParams
+    , PngStrategy(..)
     , PngParams(..), defaultPngParams
     , imencode
     ) where

@@ -3,6 +3,7 @@
 
 , opencv-HEAD
 
+# library dependencies
 , base
 , bindings-DSL
 , bytestring
@@ -18,10 +19,14 @@
 , text
 , vector
 
+# test dependencies
 , QuickCheck
 , tasty
 , tasty-hunit
 , tasty-quickcheck
+
+# benchmark dependencies
+, criterion
 }:
 mkDerivation {
   pname = "thea";
@@ -49,6 +54,8 @@ mkDerivation {
     tasty
     tasty-hunit
     tasty-quickcheck
+
+    criterion
   ];
   libraryPkgconfigDepends = [ opencv-HEAD ];
   configureFlags =

@@ -63,7 +63,7 @@ module OpenCV.Core
     , M
     , toRepa
     , fromRepa
-    , repaPrism
+    , repa
       -- * Mutable Matrix
     , MutMat
     , IOMat
@@ -646,8 +646,8 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
 fromRepa :: Repa.Array M sh e -> Mat
 fromRepa (Array mat _ _) = mat
 
-repaPrism :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
-repaPrism = prism' fromRepa toRepa
+repa :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
+repa = prism' fromRepa toRepa
 
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
