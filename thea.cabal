@@ -6,7 +6,9 @@ author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Simple
 cabal-version: >=1.10
-data-files:    data/*.png
+
+extra-source-files: data/*.png
+                    data/*.jpg
 
 library
   hs-source-dirs: src
@@ -46,7 +48,6 @@ library
                  , OpenCV.Video
   other-modules:   OpenCV.Internal
                  , Language.C.Inline.OpenCV
-                 , Paths_thea
 
   default-extensions: ScopedTypeVariables
                     , PackageImports
