@@ -15,7 +15,7 @@ import           "linear"                Linear.V2 ( V2(..) )
 import           "linear"                Linear.V3 ( V3(..) )
 import           "linear"                Linear.V4 ( V4(..) )
 import qualified "repa"                  Data.Array.Repa as Repa
--- import           "repa"                  Data.Array.Repa.Index (Z(Z),(:.)((:.)))
+import           "repa"                  Data.Array.Repa.Index (Z(Z),(:.)((:.)))
 import           "tasty"                 Test.Tasty
 import           "tasty-hunit"           Test.Tasty.HUnit      as HU
 import qualified "tasty-quickcheck"      Test.Tasty.QuickCheck as QC (testProperty)
@@ -166,9 +166,8 @@ imgToRepa = do
     mat <- loadImg "kikker.jpg"
     case mat ^? repa :: Maybe (Repa.Array M Repa.DIM2 BGRElem) of
       Nothing -> assertFailure "Repa conversion failure"
-      Just _repaArray -> do
-        -- assertEqual "extent" (Z :. 512 :. 512) (Repa.extent repaArray)
-        pure ()
+      Just repaArray -> do
+        assertEqual "extent" (Z :. 500 :. 390) (Repa.extent repaArray)
 
 data BGRElem = BGRElem Word8 Word8 Word8
 

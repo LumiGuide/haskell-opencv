@@ -633,12 +633,14 @@ toRepa
 toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
     alloca $ \(dimsPtr     :: Ptr CInt) ->
     alloca $ \(elemSizePtr :: Ptr CSize) ->
+    alloca $ \(sizePtr     :: Ptr (Ptr CInt)) ->
     alloca $ \(stepPtr     :: Ptr (Ptr CSize)) ->
     alloca $ \(dataPtrPtr  :: Ptr (Ptr CUChar)) -> do
       [CU.block| void {
         Mat * mat = $(Mat * matPtr);
-        *$(int * dimsPtr)                = mat->dims;
-        *$(size_t * elemSizePtr)         = mat->elemSize();
+        *$(int      * dimsPtr)           = mat->dims;
+        *$(size_t   * elemSizePtr)       = mat->elemSize();
+        *$(int    * * sizePtr)           = mat->size.p;
         *$(size_t * * stepPtr)           = mat->step.p;
         *$(unsigned char * * dataPtrPtr) = mat->data;
       }|]
@@ -650,16 +652,20 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
           if fromIntegral elemSize /= sizeOf (undefined :: e)
             then pure Nothing
             else do
+              (size :: Ptr CInt) <- peek sizePtr
+              (sizeShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims size
+
               (step :: Ptr CSize) <- peek stepPtr
-              (sh :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
+              (stepShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
+
               (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
-              pure $ Just $ Array mat dataPtr sh
+              pure $ Just $ Array mat dataPtr sizeShape stepShape
 
 -- | Converts a Repa array back into an OpenCV @'Mat'rix@.
 --
 -- This is a zero-copy operation.
 fromRepa :: Repa.Array M sh e -> Mat
-fromRepa (Array mat _ _) = mat
+fromRepa (Array mat _ _ _) = mat
 
 repa :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
 repa = prism' fromRepa toRepa
@@ -670,34 +676,35 @@ instance (Storable e) => Repa.Source M e where
     data Array M sh e =
          Array !Mat -- The Mat is kept around so that the data doesn't get garbage collected.
                !(Ptr CUChar) -- Pointer to the data.
+               !sh -- The shape of the extent.
                !sh -- The shape of the data which is determined by mat->dims and mat->step.p.
 
     extent :: (Repa.Shape sh) => Repa.Array M sh e -> sh
-    extent (Array _ _ sh) = sh
+    extent (Array _ _ sizeShape _) = sizeShape
 
     index :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
-    index (Array mat dataPtr sh) ix =
+    index (Array mat dataPtr _ stepShape) ix =
         unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
         elemPtr = dataPtr `plusPtr` offset
 
         offset :: Int
-        offset = sum $ zipWith mul (Repa.listOfShape sh)
+        offset = sum $ zipWith mul (Repa.listOfShape stepShape)
                                    (Repa.listOfShape ix)
 
         mul size n | n < size  = size * n
                    | otherwise = error "Index out of range!"
 
     unsafeIndex :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
-    unsafeIndex (Array mat dataPtr sh) ix =
+    unsafeIndex (Array mat dataPtr _ stepShape) ix =
         unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
         elemPtr = dataPtr `plusPtr` offset
 
         offset :: Int
-        offset = sum $ zipWith (*) (Repa.listOfShape sh)
+        offset = sum $ zipWith (*) (Repa.listOfShape stepShape)
                                    (Repa.listOfShape ix)
 
     linearIndex :: (Repa.Shape sh) => Repa.Array M sh e -> Int -> e
@@ -711,7 +718,8 @@ instance (Storable e) => Repa.Source M e where
           sh = Repa.fromIndex (Repa.extent a) ix
 
     deepSeqArray :: (Repa.Shape sh) => Repa.Array M sh e -> b -> b
-    deepSeqArray (Array _mat _dataPtr sh) = Repa.deepSeq sh
+    deepSeqArray (Array _mat _dataPtr sizeShape stepShape) =
+        Repa.deepSeq stepShape . Repa.deepSeq sizeShape
 
 -- TODO (BvD): Is it possible to define something like the following?
 --
