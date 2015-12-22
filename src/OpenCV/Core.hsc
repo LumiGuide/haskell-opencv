@@ -59,6 +59,7 @@ module OpenCV.Core
     , newEmptyMat
     , cloneMat
     , matSubRect
+    , matShape
       -- ** Repa
     , M
     , toRepa
@@ -597,6 +598,20 @@ matSubRect matIn rect = unsafePerformIO $ do
                , *$(Rect * rectPtr)
                );
         |]
+
+matShape :: Mat -> [Int]
+matShape mat = unsafePerformIO $
+    withMatPtr mat $ \matPtr ->
+    alloca $ \(dimsPtr :: Ptr CInt) ->
+    alloca $ \(sizePtr :: Ptr (Ptr CInt)) -> do
+      [CU.block|void {
+        Mat * mat = $(Mat * matPtr);
+        *$(int * dimsPtr)   = mat->dims;
+        *$(int * * sizePtr) = mat->size.p;
+      }|]
+      (dims :: Int) <- fromIntegral <$> peek dimsPtr
+      (size :: Ptr CInt) <- peek sizePtr
+      map fromIntegral <$> peekArray dims size
 
 
 --------------------------------------------------------------------------------

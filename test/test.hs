@@ -49,8 +49,11 @@ main = defaultMain $ testGroup "thea"
         [
         ]
       , testGroup "Mat"
-        [
-          testGroup "Repa"
+        [ testGroup "matShape"
+          [ HU.testCase "Lenna.png"  $ matHasShape "Lenna.png"  [512, 512]
+          , HU.testCase "kikker.jpg" $ matHasShape "kikker.jpg" [390, 500]
+          ]
+        , testGroup "Repa"
           [ HU.testCase "emptyToRepa" emptyToRepa
           , HU.testCase "imgToRepa"   imgToRepa
           ]
@@ -123,6 +126,11 @@ myRectContains point rect =
 
     w, h :: Int
     V2 w h = rectSize rect ^. isoSize2iV2
+
+matHasShape :: FilePath -> [Int] -> HU.Assertion
+matHasShape fp expectedShape = do
+  mat <- loadImg fp
+  assertEqual "" expectedShape (matShape mat)
 
 encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
