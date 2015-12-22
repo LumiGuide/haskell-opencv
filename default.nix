@@ -1,5 +1,6 @@
 { mkDerivation
 , stdenv
+, lib
 
 , opencv-HEAD
 
@@ -66,8 +67,10 @@ mkDerivation {
     rm -rf dist
   '';
 
-  # TODO (BvD): Enable this when the test suite passes.
-  doCheck = false;
+  # TODO (BvD): We disable the test-suite for now when installing the package
+  # since it fails because it can't find the data-files. We do enable the
+  # test-suite when inside nix-shell.
+  doCheck = lib.inNixShell;
 
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.unfree;

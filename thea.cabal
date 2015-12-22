@@ -46,6 +46,7 @@ library
                  , OpenCV.Video
   other-modules:   OpenCV.Internal
                  , Language.C.Inline.OpenCV
+                 , Paths_thea
 
   default-extensions: ScopedTypeVariables
                     , PackageImports
