@@ -25,8 +25,6 @@ import qualified "QuickCheck"            Test.QuickCheck       as QC
 import           "thea"                  OpenCV
 import qualified "vector"                Data.Vector as V
 
--- import            "base"            Debug.Trace
-
 main :: IO ()
 main = defaultMain $ testGroup "thea"
     [ testGroup "Core"
@@ -60,12 +58,11 @@ main = defaultMain $ testGroup "thea"
           [ HU.testCase "emptyToRepa" emptyToRepa
           , HU.testCase "imgToRepa"   imgToRepa
           , testGroup "matToRepa"
-            [ matToRepa [2,3]    MatDepth_8U  1 zero (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)
-            , matToRepa []       MatDepth_8U  1 zero (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem)
-            , matToRepa [2,3,10] MatDepth_64F 1 zero (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double)
-            ]
-          , testGroup "Indexing"
-            [
+            [ --        Size     Elem type    Channels Elem value Repa dimensions            Repa elem type          Expected elem at index
+              matToRepa [2,3]    MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)  (Just (Z :. 0 :. 1,      0))
+            , matToRepa []       MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem) Nothing
+            , matToRepa [2,3,10] MatDepth_64F 1        zero       (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double) (Just (Z :. 2 :. 1 :. 0, 0))
+    -- !?!?!, matToRepa [3]      MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM1) (Proxy :: Proxy Word8)  (Just (Z :. 2,           0))
             ]
           ]
         ]
@@ -76,15 +73,15 @@ main = defaultMain $ testGroup "thea"
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
         [ HU.testCase "OutputBmp"      $ encodeDecode OutputBmp
-      --, HU.testCase "OutputExr"      $ encodeDecode OutputExr
+-- !?!?!, HU.testCase "OutputExr"      $ encodeDecode OutputExr
         , HU.testCase "OutputHdr"      $ encodeDecode (OutputHdr True)
-      --, HU.testCase "OutputJpeg"     $ encodeDecode (OutputJpeg defaultJpegParams)
+-- !?!?!, HU.testCase "OutputJpeg"     $ encodeDecode (OutputJpeg defaultJpegParams)
         , HU.testCase "OutputJpeg2000" $ encodeDecode OutputJpeg2000
         , HU.testCase "OutputPng"      $ encodeDecode (OutputPng defaultPngParams)
         , HU.testCase "OutputPxm"      $ encodeDecode (OutputPxm True)
         , HU.testCase "OutputSunras"   $ encodeDecode OutputSunras
         , HU.testCase "OutputTiff"     $ encodeDecode OutputTiff
-      --, HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)
+-- !?!?!, HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)
         ]
       ]
     , testGroup "HighGui"
@@ -164,7 +161,7 @@ emptyToRepa = do
     assertBool "Repa conversion failure" $
       isJust (emptyMat ^? repa :: Maybe (Repa.Array M Repa.DIM0 NoElem))
 
-data NoElem
+data NoElem = NoElem deriving (Show, Eq)
 
 instance Storable NoElem where
     sizeOf    _ = 0
@@ -195,20 +192,37 @@ instance Storable BGRElem where
 
 matToRepa
     :: forall sh e
-     . (Repa.Shape sh, Typeable sh, Show sh, Typeable e, Storable e)
-    => [Int]
+     . ( Typeable sh, Show sh, Repa.Shape sh
+       , Typeable e,  Show e, Storable e, Eq e
+       )
+    => [Int]         -- ^ Sizes
     -> MatDepth
-    -> Int -- ^ Number of channels
-    -> V4 Double
+    -> Int           -- ^ Number of channels
+    -> V4 Double     -- ^ Default element value
     -> Proxy sh
     -> Proxy e
+    -> Maybe (sh, e) -- ^ Optional index and expected value at that index
     -> TestTree
-matToRepa sz depth numChannels defValue shapeProxy elemProxy = HU.testCase name $ do
+matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
     mat <- newMat (V.fromList sz) depth numChannels (defValue ^. from isoScalarV4)
-    case mat ^? repa :: Maybe (Repa.Array M sh e) of
-      Nothing -> assertFailure "Repa conversion failure"
-      Just repaArray -> do
-        assertEqual "extent" sh (Repa.extent repaArray)
+    case toRepa mat :: Either String (Repa.Array M sh e) of
+      Left err -> assertFailure $ "Repa conversion failure: " <> err
+      Right a -> do
+        let size :: sh
+            size = Repa.extent a
+
+        assertEqual "size" sh size
+
+        forM_ mbIndex $ \(i, expected) -> do
+          assertEqual "index"  expected (Repa.unsafeIndex a i)
+
+          let outOfRange :: sh
+              outOfRange = Repa.shapeOfList $ zipWith (+) (Repa.listOfShape i) sz
+
+          r <- try (evaluate (Repa.index a outOfRange))
+          case r of
+            Left (_err :: ErrorCall) -> pure ()
+            Right _x -> assertFailure $ "Indexing on " <> show outOfRange <> " should throw an error."
   where
     sh :: sh
     sh = Repa.shapeOfList sz
@@ -221,6 +235,7 @@ matToRepa sz depth numChannels defValue shapeProxy elemProxy = HU.testCase name 
            , defValue
            , typeRep shapeProxy
            , typeRep elemProxy
+           , mbIndex
            )
 
 

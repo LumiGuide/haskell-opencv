@@ -710,7 +710,7 @@ toRepa
     :: forall sh e
      . (Repa.Shape sh, Storable e)
     => Mat
-    -> Maybe (Repa.Array M sh e)
+    -> Either String (Repa.Array M sh e)
 toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
     alloca $ \(dimsPtr     :: Ptr CInt) ->
     alloca $ \(elemSizePtr :: Ptr CSize) ->
@@ -726,12 +726,19 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
         *$(unsigned char * * dataPtrPtr) = mat->data;
       }|]
       (dims :: Int) <- fromIntegral <$> peek dimsPtr
-      if dims /= Repa.rank (Repa.zeroDim :: sh)
-        then pure Nothing
+      let expectedRank :: Int
+          expectedRank = Repa.rank (Repa.zeroDim :: sh)
+      if dims /= expectedRank
+        then pure $ Left $
+               "The expected rank of " <> show expectedRank <>
+               " doesn't equal the actual number of dimensions " <> show dims <> "!"
         else do
-          (elemSize :: CSize) <- peek elemSizePtr
-          if fromIntegral elemSize /= sizeOf (undefined :: e)
-            then pure Nothing
+          (elemSize :: Int) <- fromIntegral <$> peek elemSizePtr
+          let expectedElemSize = sizeOf (undefined :: e)
+          if elemSize /= expectedElemSize
+            then pure $ Left $
+                   "The expected element size of " <> show expectedElemSize <>
+                   " doesn't equal the actual element size of " <> show elemSize <> "!"
             else do
               (size :: Ptr CInt) <- peek sizePtr
               (sizeShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims size
@@ -740,7 +747,7 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
               (stepShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
 
               (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
-              pure $ Just $ Array mat dataPtr sizeShape stepShape
+              pure $ Right $ Array mat dataPtr sizeShape stepShape
 
 -- | Converts a Repa array back into an OpenCV @'Mat'rix@.
 --
@@ -749,7 +756,7 @@ fromRepa :: Repa.Array M sh e -> Mat
 fromRepa (Array mat _ _ _) = mat
 
 repa :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
-repa = prism' fromRepa toRepa
+repa = prism' fromRepa (either (const Nothing) Just . toRepa)
 
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
