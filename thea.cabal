@@ -28,6 +28,7 @@ library
                , bindings-DSL
                , bytestring
                , containers
+               , deepseq
                , inline-c
                , inline-c-cpp
                , lens
@@ -84,7 +85,10 @@ benchmark bench-thea
   hs-source-dirs:   bench
   main-is:          bench.hs
   default-language: Haskell2010
-  ghc-options:      -O2
+  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
   build-depends:    thea
-                  , base >= 4.8   && < 5
+                  , base >= 4.8 && < 5
+                  , bytestring
                   , criterion
+                  , repa
+                  , lumi-hackage-extended

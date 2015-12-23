@@ -87,6 +87,7 @@ import "base" Foreign.Marshal.Array ( peekArray, allocaArray )
 import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( peek, sizeOf, pokeElemOff )
+import "deepseq" Control.DeepSeq (NFData, rnf)
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -757,6 +758,9 @@ fromRepa (Array mat _ _ _) = mat
 
 repa :: (Repa.Shape sh, Storable e) => Prism' Mat (Repa.Array M sh e)
 repa = prism' fromRepa (either (const Nothing) Just . toRepa)
+
+instance (Repa.Shape sh, Storable e) => NFData (Repa.Array M sh e) where
+    rnf a = Repa.deepSeqArray a ()
 
 instance (Storable e) => Repa.Source M e where
     -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.

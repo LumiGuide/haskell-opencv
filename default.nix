@@ -8,6 +8,7 @@
 , bindings-DSL
 , bytestring
 , containers
+, deepseq
 , inline-c
 , inline-c-cpp
 , lens
@@ -37,6 +38,7 @@ mkDerivation {
     bindings-DSL
     bytestring
     containers
+    deepseq
     inline-c
     inline-c-cpp
     lens
