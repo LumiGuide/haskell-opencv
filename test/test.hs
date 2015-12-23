@@ -1,6 +1,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -11,6 +12,7 @@ import           "base"                  Foreign.Ptr (castPtr)
 import           "lumi-hackage-extended" Lumi.Prelude
 import qualified "bytestring"            Data.ByteString as B
 import           "lens"                  Control.Lens
+import           "linear"                Linear.Vector ( zero )
 import           "linear"                Linear.V2 ( V2(..) )
 import           "linear"                Linear.V3 ( V3(..) )
 import           "linear"                Linear.V4 ( V4(..) )
@@ -21,6 +23,7 @@ import           "tasty-hunit"           Test.Tasty.HUnit      as HU
 import qualified "tasty-quickcheck"      Test.Tasty.QuickCheck as QC (testProperty)
 import qualified "QuickCheck"            Test.QuickCheck       as QC
 import           "thea"                  OpenCV
+import qualified "vector"                Data.Vector as V
 
 -- import            "base"            Debug.Trace
 
@@ -56,6 +59,14 @@ main = defaultMain $ testGroup "thea"
         , testGroup "Repa"
           [ HU.testCase "emptyToRepa" emptyToRepa
           , HU.testCase "imgToRepa"   imgToRepa
+          , testGroup "matToRepa"
+            [ matToRepa [2,3]    MatDepth_8U  1 zero (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)
+            , matToRepa []       MatDepth_8U  1 zero (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem)
+            , matToRepa [2,3,10] MatDepth_64F 1 zero (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double)
+            ]
+          , testGroup "Indexing"
+            [
+            ]
           ]
         ]
       ]
@@ -181,6 +192,36 @@ instance Storable BGRElem where
       pokeElemOff (castPtr ptr) 0 b
       pokeElemOff (castPtr ptr) 1 g
       pokeElemOff (castPtr ptr) 2 r
+
+matToRepa
+    :: forall sh e
+     . (Repa.Shape sh, Typeable sh, Show sh, Typeable e, Storable e)
+    => [Int]
+    -> MatDepth
+    -> Int -- ^ Number of channels
+    -> V4 Double
+    -> Proxy sh
+    -> Proxy e
+    -> TestTree
+matToRepa sz depth numChannels defValue shapeProxy elemProxy = HU.testCase name $ do
+    mat <- newMat (V.fromList sz) depth numChannels (defValue ^. from isoScalarV4)
+    case mat ^? repa :: Maybe (Repa.Array M sh e) of
+      Nothing -> assertFailure "Repa conversion failure"
+      Just repaArray -> do
+        assertEqual "extent" sh (Repa.extent repaArray)
+  where
+    sh :: sh
+    sh = Repa.shapeOfList sz
+
+    name :: String
+    name = show
+           ( sz
+           , depth
+           , numChannels
+           , defValue
+           , typeRep shapeProxy
+           , typeRep elemProxy
+           )
 
 
 --------------------------------------------------------------------------------

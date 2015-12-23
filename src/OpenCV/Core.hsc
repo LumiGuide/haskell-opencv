@@ -57,6 +57,8 @@ module OpenCV.Core
       -- * Matrix
     , Mat
     , newEmptyMat
+    , MatDepth(..)
+    , newMat
     , cloneMat
     , matSubRect
     , matShape
@@ -81,10 +83,10 @@ module OpenCV.Core
 
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Array ( peekArray )
+import "base" Foreign.Marshal.Array ( peekArray, allocaArray )
 import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
-import "base" Foreign.Storable ( peek, sizeOf )
+import "base" Foreign.Storable ( peek, sizeOf, pokeElemOff )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -98,6 +100,8 @@ import qualified "repa" Data.Array.Repa as Repa
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import "this" OpenCV.Unsafe
+import qualified "vector" Data.Vector.Generic as VG
+import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
@@ -575,6 +579,83 @@ isoScalarV4 = iso mkV4 (unsafePerformIO . newScalar)
 newEmptyMat :: IO Mat
 newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
 
+#num CV_8U
+#num CV_8S
+#num CV_16U
+#num CV_16S
+#num CV_32S
+#num CV_32F
+#num CV_64F
+#num CV_USRTYPE1
+
+data MatDepth =
+     MatDepth_8U
+   | MatDepth_8S
+   | MatDepth_16U
+   | MatDepth_16S
+   | MatDepth_32S
+   | MatDepth_32F
+   | MatDepth_64F
+   | MatDepth_USRTYPE1
+     deriving (Show, Eq)
+
+marshalMatDepth :: MatDepth -> CInt
+marshalMatDepth = \case
+    MatDepth_8U       -> c'CV_8U
+    MatDepth_8S       -> c'CV_8S
+    MatDepth_16U      -> c'CV_16U
+    MatDepth_16S      -> c'CV_16S
+    MatDepth_32S      -> c'CV_32S
+    MatDepth_32F      -> c'CV_32F
+    MatDepth_64F      -> c'CV_64F
+    MatDepth_USRTYPE1 -> c'CV_USRTYPE1
+
+marshalType :: MatDepth -> Int -> CInt
+marshalType depth numChannels =
+    marshalMatDepth depth
+      .|. ((fromIntegral numChannels - 1) `unsafeShiftL` c'CV_CN_SHIFT)
+
+#num CV_CN_SHIFT
+
+newMat
+    :: V.Vector Int -- ^ Vector of sizes
+    -> MatDepth
+    -> Int          -- ^ Number of channels
+    -> Scalar       -- ^ Default element value
+    -> IO Mat
+newMat sizes matDepth numChannels defValue =
+    withVector c'sizes $ \sizesPtr ->
+    withScalarPtr defValue $ \scalarPtr ->
+      matFromPtr [CU.exp|
+        Mat * { new Mat( $(int   c'ndims)
+                       , $(int * sizesPtr)
+                       , $(int   c'type)
+                       , *$(Scalar * scalarPtr)
+                       )
+              }
+      |]
+  where
+    c'ndims = fromIntegral $ VG.length sizes
+    c'sizes = fmap fromIntegral sizes
+    c'type  = marshalType matDepth numChannels
+
+-- TODO (BvD): Move to some Utility module.
+withVector
+    :: (VG.Vector v a, Storable a)
+    => v a
+    -> (Ptr a -> IO b)
+    -> IO b
+withVector v f =
+    allocaArray n $ \ptr ->
+      let go !ix
+              | ix < n = do
+                  pokeElemOff ptr ix (VG.unsafeIndex v ix)
+                  go (ix+1)
+              | otherwise = f ptr
+      in go 0
+  where
+    n = VG.length v
+
 cloneMat :: Mat -> Mat
 cloneMat = unsafePerformIO . cloneMatIO
 
@@ -676,25 +757,28 @@ instance (Storable e) => Repa.Source M e where
     data Array M sh e =
          Array !Mat -- The Mat is kept around so that the data doesn't get garbage collected.
                !(Ptr CUChar) -- Pointer to the data.
-               !sh -- The shape of the extent.
+               !sh -- The shape of the extent which is determined by mat->dims and mat->size.p.
                !sh -- The shape of the data which is determined by mat->dims and mat->step.p.
 
     extent :: (Repa.Shape sh) => Repa.Array M sh e -> sh
     extent (Array _ _ sizeShape _) = sizeShape
 
     index :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
-    index (Array mat dataPtr _ stepShape) ix =
+    index (Array mat dataPtr sizeShape stepShape) ix =
         unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
         elemPtr = dataPtr `plusPtr` offset
 
         offset :: Int
-        offset = sum $ zipWith mul (Repa.listOfShape stepShape)
-                                   (Repa.listOfShape ix)
+        offset = sum $ zipWith3 mul (Repa.listOfShape sizeShape)
+                                    (Repa.listOfShape stepShape)
+                                    (Repa.listOfShape ix)
 
-        mul size n | n < size  = size * n
-                   | otherwise = error "Index out of range!"
+        mul size step i
+            | i < size  = step * i
+            | otherwise = error $
+                "Index " <> show i <> " >= size: " <> show size
 
     unsafeIndex :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
     unsafeIndex (Array mat dataPtr _ stepShape) ix =
