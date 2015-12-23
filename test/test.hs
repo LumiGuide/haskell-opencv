@@ -12,7 +12,7 @@ import           "base"                  Foreign.Ptr (castPtr)
 import           "lumi-hackage-extended" Lumi.Prelude
 import qualified "bytestring"            Data.ByteString as B
 import           "lens"                  Control.Lens
-import           "linear"                Linear.Vector ( zero )
+import           "linear"                Linear.Vector ( (^+^), zero  )
 import           "linear"                Linear.V2 ( V2(..) )
 import           "linear"                Linear.V3 ( V3(..) )
 import           "linear"                Linear.V4 ( V4(..) )
@@ -97,19 +97,17 @@ testIso :: (QC.Arbitrary b, Eq b, Show b) => String -> Iso' a b -> TestTree
 testIso name myIso = QC.testProperty name $ \b -> b QC.=== (b ^. from myIso . myIso)
 
 rectBasicProperties
-    :: Int -- ^ x
-    -> Int -- ^ y
-    -> Int -- ^ width
-    -> Int -- ^ height
+    :: V2 Int -- ^ tl
+    -> V2 Int -- ^ size
     -> Bool
-rectBasicProperties x y w h = and
-      [ (rectTopLeft     rect ^. isoPoint2iV2) == V2  x     y
-      , (rectBottomRight rect ^. isoPoint2iV2) == V2 (x+w) (y+h)
-      , (rectSize        rect ^. isoSize2iV2)  == V2    w     h
-      ,  rectArea        rect                  ==      (w  *  h)
+rectBasicProperties tl size@(V2 w h) = and
+      [ (rectTopLeft     rect ^. isoPoint2iV2) == tl
+      , (rectBottomRight rect ^. isoPoint2iV2) == tl ^+^ size
+      , (rectSize        rect ^. isoSize2iV2)  == size
+      ,  rectArea        rect                  == (w  *  h)
       ]
     where
-      rect = mkRect x y w h
+      rect = mkRect tl size
 
 rectContainsProperty :: Point2i -> Rect -> Bool
 rectContainsProperty point rect = rectContains point rect == myRectContains point rect
@@ -253,7 +251,7 @@ instance (QC.Arbitrary a) => QC.Arbitrary (V4 a) where
     arbitrary = V4 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Rect where
-    arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
+    arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where
     arbitrary = view (from isoPoint2iV2) <$> (QC.arbitrary :: QC.Gen (V2 Int))

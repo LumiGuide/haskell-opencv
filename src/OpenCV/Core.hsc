@@ -372,12 +372,10 @@ instance Show Rect where
         V2 w h = rectSize    rect ^. isoSize2iV2
 
 mkRect
-    :: Int -- ^ x
-    -> Int -- ^ y
-    -> Int -- ^ width
-    -> Int -- ^ height
+    :: V2 Int -- ^ top left
+    -> V2 Int -- ^ size
     -> Rect
-mkRect x y width height = unsafePerformIO $ rectFromPtr $
+mkRect (V2 x y) (V2 width height) = unsafePerformIO $ rectFromPtr $
     [CU.exp|Rect * { new cv::Rect( $(int c'x)
                                  , $(int c'y)
                                  , $(int c'width)
