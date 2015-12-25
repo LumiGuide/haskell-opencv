@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedLists #-}
 
 module OpenCV.ImgCodecs
     ( ImreadMode(..)

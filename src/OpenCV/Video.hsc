@@ -36,22 +36,29 @@ estimateRigidTransform
     :: V.Vector Point2i -- ^ Source
     -> V.Vector Point2i -- ^ Destination
     -> Bool -- ^ Full affine
-    -> Either CvException Mat
-estimateRigidTransform src dst fullAffine = unsafePerformIO $ do
-    matOut <- newEmptyMat
-    handleCvException (pure matOut) $
-      withPoints src $ \srcPtr ->
-      withPoints dst $ \dstPtr ->
-      withMatPtr matOut $ \matOutPtr ->
-        [cvExcept|
-          *$(Mat * matOutPtr) =
-             cv::estimateRigidTransform
-             ( _InputArray($(Point2i * srcPtr), $(int c'srcLen))
-             , _InputArray($(Point2i * dstPtr), $(int c'dstLen))
-             , $(bool c'fullAffine)
-             );
-        |]
+    -> Either CvException (Maybe Mat)
+estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTransform
   where
+    c'estimateRigidTransform = unsafePerformIO $ do
+      matOut <- newEmptyMat
+      handleCvException (pure matOut) $
+        withPoints src $ \srcPtr ->
+        withPoints dst $ \dstPtr ->
+        withMatPtr matOut $ \matOutPtr ->
+          [cvExcept|
+            Mat * matOutPtr = $(Mat * matOutPtr);
+            *matOutPtr =
+               cv::estimateRigidTransform
+               ( cv::_InputArray($(Point2i * srcPtr), $(int c'srcLen))
+               , cv::_InputArray($(Point2i * dstPtr), $(int c'dstLen))
+               , $(bool c'fullAffine)
+               );
+          |]
+
     c'srcLen     = fromIntegral $ V.length src
     c'dstLen     = fromIntegral $ V.length dst
     c'fullAffine = fromBool fullAffine
+
+    checkResult m
+        | miShape (matInfo m) == [2, 3] = Just m
+        | otherwise = Nothing

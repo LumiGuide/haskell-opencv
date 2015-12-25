@@ -59,9 +59,17 @@ module OpenCV.Core
     , newEmptyMat
     , MatDepth(..)
     , newMat
+    , eyeMat
     , cloneMat
     , matSubRect
-    , matShape
+    , MatInfo(..)
+    , matInfo
+    -- , serialiseMat
+    -- , deserialiseMat
+    , HMat(..)
+    , HElems(..)
+    , hElemsLength
+    , mkHMat
       -- ** Repa
     , M
     , toRepa
@@ -86,7 +94,8 @@ import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray, allocaArray )
 import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
-import "base" Foreign.Storable ( peek, sizeOf, pokeElemOff )
+import "base" Foreign.Storable ( peek, sizeOf, peekElemOff, pokeElemOff )
+import qualified "bytestring" Data.ByteString as B
 import "deepseq" Control.DeepSeq (NFData, rnf)
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -101,8 +110,10 @@ import qualified "repa" Data.Array.Repa as Repa
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import "this" OpenCV.Unsafe
-import qualified "vector" Data.Vector.Generic as VG
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Generic as VG
+import qualified "vector" Data.Vector.Unboxed as VU
+import qualified "vector" Data.Vector.Unboxed.Mutable as VUM
 
 --------------------------------------------------------------------------------
 
@@ -575,18 +586,6 @@ isoScalarV4 = iso mkV4 (unsafePerformIO . newScalar)
 --  Matrix
 --------------------------------------------------------------------------------
 
-newEmptyMat :: IO Mat
-newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
-
-#num CV_8U
-#num CV_8S
-#num CV_16U
-#num CV_16S
-#num CV_32S
-#num CV_32F
-#num CV_64F
-#num CV_USRTYPE1
-
 data MatDepth =
      MatDepth_8U
    | MatDepth_8S
@@ -598,7 +597,21 @@ data MatDepth =
    | MatDepth_USRTYPE1
      deriving (Show, Eq)
 
-marshalMatDepth :: MatDepth -> CInt
+#num CV_CN_MAX
+#num CV_CN_SHIFT
+
+#num CV_8U
+#num CV_8S
+#num CV_16U
+#num CV_16S
+#num CV_32S
+#num CV_32F
+#num CV_64F
+#num CV_USRTYPE1
+
+#num CV_MAT_DEPTH_MASK
+
+marshalMatDepth :: MatDepth -> Int32
 marshalMatDepth = \case
     MatDepth_8U       -> c'CV_8U
     MatDepth_8S       -> c'CV_8S
@@ -609,12 +622,31 @@ marshalMatDepth = \case
     MatDepth_64F      -> c'CV_64F
     MatDepth_USRTYPE1 -> c'CV_USRTYPE1
 
-marshalType :: MatDepth -> Int -> CInt
-marshalType depth numChannels =
+marshalFlags :: MatDepth -> Int -> Int32
+marshalFlags depth numChannels =
     marshalMatDepth depth
       .|. ((fromIntegral numChannels - 1) `unsafeShiftL` c'CV_CN_SHIFT)
 
-#num CV_CN_SHIFT
+unmarshalDepth :: Int32 -> MatDepth
+unmarshalDepth n
+    | n == c'CV_8U       = MatDepth_8U
+    | n == c'CV_8S       = MatDepth_8S
+    | n == c'CV_16U      = MatDepth_16U
+    | n == c'CV_16S      = MatDepth_16S
+    | n == c'CV_32S      = MatDepth_32S
+    | n == c'CV_32F      = MatDepth_32F
+    | n == c'CV_64F      = MatDepth_64F
+    | n == c'CV_USRTYPE1 = MatDepth_USRTYPE1
+    | otherwise          = error $ "unknown depth " <> show n
+
+unmarshalFlags :: Int32 -> (MatDepth, Int)
+unmarshalFlags n =
+    ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
+    , 1 + (fromIntegral $ (n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
+    )
+
+newEmptyMat :: IO Mat
+newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
 
 newMat
     :: V.Vector Int -- ^ Vector of sizes
@@ -625,18 +657,33 @@ newMat
 newMat sizes matDepth numChannels defValue =
     withVector c'sizes $ \sizesPtr ->
     withScalarPtr defValue $ \scalarPtr ->
-      matFromPtr [CU.exp|
-        Mat * { new Mat( $(int   c'ndims)
-                       , $(int * sizesPtr)
-                       , $(int   c'type)
-                       , *$(Scalar * scalarPtr)
-                       )
-              }
-      |]
+      matFromPtr [CU.exp|Mat * {
+        new Mat( $(int     c'ndims)
+               , $(int *   sizesPtr)
+               , $(int32_t c'type)
+               , *$(Scalar * scalarPtr)
+               )
+      }|]
   where
     c'ndims = fromIntegral $ VG.length sizes
     c'sizes = fmap fromIntegral sizes
-    c'type  = marshalType matDepth numChannels
+    c'type  = marshalFlags matDepth numChannels
+
+-- | Identity matrix
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
+eyeMat :: Int -> Int -> MatDepth -> Int -> Mat
+eyeMat rows cols depth channels = unsafePerformIO $
+    matFromPtr [CU.exp|Mat * {
+      new Mat(Mat::eye( $(int     c'rows)
+                      , $(int     c'cols)
+                      , $(int32_t c'type)
+                      ))
+    }|]
+  where
+    c'rows = fromIntegral rows
+    c'cols = fromIntegral cols
+    c'type = marshalFlags depth channels
 
 -- TODO (BvD): Move to some Utility module.
 withVector
@@ -679,19 +726,146 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
-matShape :: Mat -> [Int]
-matShape mat = unsafePerformIO $
+data MatInfo
+   = MatInfo
+     { miShape    :: ![Int]
+     , miDepth    :: !MatDepth
+     , miChannels :: !Int
+     }
+     deriving (Show, Eq)
+
+matInfo :: Mat -> MatInfo
+matInfo mat = unsafePerformIO $
     withMatPtr mat $ \matPtr ->
-    alloca $ \(dimsPtr :: Ptr CInt) ->
-    alloca $ \(sizePtr :: Ptr (Ptr CInt)) -> do
+    alloca $ \(flagsPtr :: Ptr Int32) ->
+    alloca $ \(dimsPtr  :: Ptr CInt) ->
+    alloca $ \(sizePtr  :: Ptr (Ptr CInt)) -> do
       [CU.block|void {
-        Mat * mat = $(Mat * matPtr);
-        *$(int * dimsPtr)   = mat->dims;
-        *$(int * * sizePtr) = mat->size.p;
+        const Mat * const matPtr = $(Mat * matPtr);
+        *$(int32_t * const flagsPtr) = matPtr->flags;
+        *$(int *     const dimsPtr ) = matPtr->dims;
+        *$(int * *   const sizePtr ) = matPtr->size.p;
       }|]
+      (depth, channels) <- unmarshalFlags <$> peek flagsPtr
       (dims :: Int) <- fromIntegral <$> peek dimsPtr
       (size :: Ptr CInt) <- peek sizePtr
-      map fromIntegral <$> peekArray dims size
+      shape <- map fromIntegral <$> peekArray dims size
+      pure MatInfo
+           { miShape    = shape
+           , miDepth    = depth
+           , miChannels = channels
+           }
+
+-- serialiseMat :: Mat -> B.ByteString
+-- serialiseMat mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
+--     alloca $ \(elemSizePtr :: Ptr CSize) ->
+--     alloca $ \(totalPtr :: Ptr CSize) -> do
+--       [CU.block|void {
+--         Mat * matPtr = $(Mat * matPtr);
+--         *$(size_t * elemSizePtr) = mat->elemSize();
+--         *$(size_t * totalPtr   ) = mat->total();
+--       }|]
+--       (elemSize :: Int) <- fromIntegral <$> peek elemSizePtr
+--       (total    :: Int) <- fromIntegral <$> peek totalPtr
+--       -- Number of bytes necessary to serialise the entire matrix.
+--       let totalBytes = elemSize * total
+
+-- deserialiseMat :: B.ByteString -> Either String Mat
+-- deserialiseMat bs = Left "todo"
+
+data HMat
+   = HMat
+     { hmShape    :: ![Int]
+     , hmChannels :: !Int
+     , hmElems    :: !HElems
+     }
+
+data HElems
+   = HElems_8U       !(VU.Vector Word8)
+   | HElems_8S       !(VU.Vector Int8)
+   | HElems_16U      !(VU.Vector Word16)
+   | HElems_16S      !(VU.Vector Int16)
+   | HElems_32S      !(VU.Vector Int32)
+   | HElems_32F      !(VU.Vector Float)
+   | HElems_64F      !(VU.Vector Double)
+   | HElems_USRTYPE1 !(V.Vector B.ByteString)
+     deriving Show
+
+hElemsLength :: HElems -> Int
+hElemsLength = \case
+    HElems_8U       v -> VG.length v
+    HElems_8S       v -> VG.length v
+    HElems_16U      v -> VG.length v
+    HElems_16S      v -> VG.length v
+    HElems_32S      v -> VG.length v
+    HElems_32F      v -> VG.length v
+    HElems_64F      v -> VG.length v
+    HElems_USRTYPE1 v -> VG.length v
+
+
+mkHMat :: Mat -> HMat
+mkHMat mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
+    alloca $ \(dimsPtr     :: Ptr Int32      ) ->
+    alloca $ \(totalPtr    :: Ptr CSize      ) ->
+    alloca $ \(stepPtr2    :: Ptr (Ptr CSize)) ->
+    alloca $ \(dataPtr2    :: Ptr (Ptr Word8)) -> do
+      [CU.block|void {
+        const Mat * const matPtr = $(Mat * matPtr);
+        *$(int32_t *   const dimsPtr    ) = matPtr->dims;
+        *$(size_t  *   const totalPtr   ) = matPtr->total();
+        *$(size_t  * * const stepPtr2   ) = matPtr->step.p;
+        *$(uint8_t * * const dataPtr2   ) = matPtr->data;
+      }|]
+      (dims     :: Int) <- fromIntegral   <$> peek dimsPtr
+      (total    :: Int) <- fromIntegral   <$> peek totalPtr
+      (stepPtr :: Ptr CSize) <- peek stepPtr2
+      (dataPtr :: Ptr Word8) <- peek dataPtr2
+      (step :: [Int]) <- map fromIntegral <$> peekArray dims stepPtr
+
+      let info = matInfo mat
+      elems <- copyElems info total step dataPtr
+      pure HMat
+           { hmShape    = miShape    info
+           , hmChannels = miChannels info
+           , hmElems    = elems
+           }
+  where
+    copyElems
+        :: MatInfo
+        -> Int       -- ^ total
+        -> [Int]     -- ^ step
+        -> Ptr Word8 -- ^ data
+        -> IO HElems
+    copyElems (MatInfo shape depth channels) total step dataPtr =
+        case depth of
+          MatDepth_8U  -> HElems_8U  <$> copyToVec
+          MatDepth_8S  -> HElems_8S  <$> copyToVec
+          MatDepth_16U -> HElems_16U <$> copyToVec
+          MatDepth_16S -> HElems_16S <$> copyToVec
+          MatDepth_32S -> HElems_32S <$> copyToVec
+          MatDepth_32F -> HElems_32F <$> copyToVec
+          MatDepth_64F -> HElems_64F <$> copyToVec
+          MatDepth_USRTYPE1 -> HElems_USRTYPE1 <$> error "todo"
+      where
+        copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
+        copyToVec = do
+            v <- VUM.unsafeNew $ total * channels
+            forM_ (zip [0..] $ positions shape) $ \(posIx, pos) -> do
+                let elemPtr = elemAddress dataPtr step pos
+                forM_ [0..channels] $ \channelIx -> do
+                  e <- peekElemOff elemPtr channelIx
+                  VUM.unsafeWrite v posIx e
+            VU.unsafeFreeze v
+
+    -- | All possible positions (indexes) for a given shape (list of
+    -- sizes per dimension).
+    positions :: [Int] -> [[Int]]
+    positions shape = sequence $ map (enumFromTo 0) $ map pred shape
+
+    elemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
+    elemAddress dataPtr step pos = dataPtr `plusPtr` offset
+        where
+          offset = sum $ zipWith (*) step pos
 
 
 --------------------------------------------------------------------------------
@@ -717,12 +891,12 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
     alloca $ \(stepPtr     :: Ptr (Ptr CSize)) ->
     alloca $ \(dataPtrPtr  :: Ptr (Ptr CUChar)) -> do
       [CU.block| void {
-        Mat * mat = $(Mat * matPtr);
-        *$(int      * dimsPtr)           = mat->dims;
-        *$(size_t   * elemSizePtr)       = mat->elemSize();
-        *$(int    * * sizePtr)           = mat->size.p;
-        *$(size_t * * stepPtr)           = mat->step.p;
-        *$(unsigned char * * dataPtrPtr) = mat->data;
+        const Mat * const mat = $(Mat * matPtr);
+        *$(int    * const dimsPtr)             = mat->dims;
+        *$(size_t * const elemSizePtr)         = mat->elemSize();
+        *$(int    * * const sizePtr)           = mat->size.p;
+        *$(size_t * * const stepPtr)           = mat->step.p;
+        *$(unsigned char * * const dataPtrPtr) = mat->data;
       }|]
       (dims :: Int) <- fromIntegral <$> peek dimsPtr
       let expectedRank :: Int

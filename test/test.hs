@@ -50,9 +50,12 @@ main = defaultMain $ testGroup "thea"
         [
         ]
       , testGroup "Mat"
-        [ testGroup "matShape"
-          [ HU.testCase "Lenna.png"  $ matHasShape "Lenna.png"  [512, 512]
-          , HU.testCase "kikker.jpg" $ matHasShape "kikker.jpg" [390, 500]
+        [ testGroup "matInfo"
+          [ matHasInfo "Lenna.png"  $ MatInfo [512, 512] MatDepth_8U 3
+          , matHasInfo "kikker.jpg" $ MatInfo [390, 500] MatDepth_8U 3
+          ]
+        , testGroup "HMat"
+          [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
           ]
         , testGroup "Repa"
           [ HU.testCase "emptyToRepa" emptyToRepa
@@ -133,14 +136,19 @@ myRectContains point rect =
     w, h :: Int
     V2 w h = rectSize rect ^. isoSize2iV2
 
-matHasShape :: FilePath -> [Int] -> HU.Assertion
-matHasShape fp expectedShape = do
-  mat <- loadImg fp
-  assertEqual "" expectedShape (matShape mat)
+matHasInfo :: FilePath -> MatInfo -> TestTree
+matHasInfo fp expectedInfo = HU.testCase fp $ do
+  mat <- loadImg ImreadUnchanged fp
+  assertEqual "" expectedInfo (matInfo mat)
+
+hmatElemSize :: FilePath -> Int -> HU.Assertion
+hmatElemSize fp expectedElemSize = do
+  mat <- loadImg ImreadUnchanged fp
+  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ mkHMat mat
 
 encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
-    mat1 <- loadImg "Lenna.png"
+    mat1 <- loadImg ImreadUnchanged "Lenna.png"
 
     let bs2  = either throw id $ imencode outputFormat mat1
         mat2 = imdecode ImreadUnchanged bs2
@@ -150,8 +158,8 @@ encodeDecode outputFormat = do
     assertBool "imencode . imdecode failure"
                (bs2 == bs3)
 
-loadImg :: FilePath -> IO Mat
-loadImg fp = imdecode ImreadUnchanged <$> B.readFile ("data/" <> fp)
+loadImg :: ImreadMode -> FilePath -> IO Mat
+loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
 
 emptyToRepa :: HU.Assertion
 emptyToRepa = do
@@ -169,7 +177,7 @@ instance Storable NoElem where
 
 imgToRepa :: HU.Assertion
 imgToRepa = do
-    mat <- loadImg "kikker.jpg"
+    mat <- loadImg ImreadUnchanged "kikker.jpg"
     case mat ^? repa :: Maybe (Repa.Array M Repa.DIM2 BGRElem) of
       Nothing -> assertFailure "Repa conversion failure"
       Just repaArray -> do
@@ -203,6 +211,7 @@ matToRepa
     -> TestTree
 matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
     mat <- newMat (V.fromList sz) depth numChannels (defValue ^. from isoScalarV4)
+    assertEqual "info" (MatInfo sz depth numChannels) $ matInfo mat
     case toRepa mat :: Either String (Repa.Array M sh e) of
       Left err -> assertFailure $ "Repa conversion failure: " <> err
       Right a -> do
