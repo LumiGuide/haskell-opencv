@@ -4,7 +4,9 @@
 , opencv-HEAD
 
 # library dependencies
+, aeson
 , base
+, base64-bytestring
 , bindings-DSL
 , bytestring
 , containers
@@ -34,7 +36,9 @@ mkDerivation {
   version = "0.0.0";
   src = ./.;
   libraryHaskellDepends = [
+    aeson
     base
+    base64-bytestring
     bindings-DSL
     bytestring
     containers

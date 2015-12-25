@@ -24,7 +24,9 @@ library
   cc-options: -Wall -O2 -std=c++11
   ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
 
-  build-depends: base >=4.8 && <5
+  build-depends: aeson
+               , base >=4.8 && <5
+               , base64-bytestring
                , bindings-DSL
                , bytestring
                , containers
@@ -47,6 +49,7 @@ library
                  , OpenCV.ImgCodecs
                  , OpenCV.HighGui
                  , OpenCV.Video
+                 , OpenCV.JSON
   other-modules:   OpenCV.Internal
                  , Language.C.Inline.OpenCV
 

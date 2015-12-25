@@ -1,5 +1,5 @@
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -24,6 +24,7 @@ import qualified "tasty-quickcheck"      Test.Tasty.QuickCheck as QC (testProper
 import qualified "QuickCheck"            Test.QuickCheck       as QC
 import           "thea"                  OpenCV
 import qualified "vector"                Data.Vector as V
+-- import qualified "vector"                Data.Vector.Unboxed as VU
 
 main :: IO ()
 main = defaultMain $ testGroup "thea"
@@ -51,11 +52,18 @@ main = defaultMain $ testGroup "thea"
         ]
       , testGroup "Mat"
         [ testGroup "matInfo"
-          [ matHasInfo "Lenna.png"  $ MatInfo [512, 512] MatDepth_8U 3
-          , matHasInfo "kikker.jpg" $ MatInfo [390, 500] MatDepth_8U 3
+          [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] MatDepth_8U 3
+          , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] MatDepth_8U 3
           ]
         , testGroup "HMat"
           [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
+          -- , HU.testCase "eye 3x3" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye3x3_c1 ^. hmat
+          , testGroup "mat -> hmat -> mat -> hmat"
+            [ HU.testCase "eye 3x3 - 1 channel"  $ hMatEncodeDecode eye3x3_c1
+            , HU.testCase "eye 2x2 - 3 channels" $ hMatEncodeDecode eye2x2_c3
+            , hMatEncodeDecodeFP "Lenna.png"
+            , hMatEncodeDecodeFP "kikker.jpg"
+            ]
           ]
         , testGroup "Repa"
           [ HU.testCase "emptyToRepa" emptyToRepa
@@ -136,15 +144,29 @@ myRectContains point rect =
     w, h :: Int
     V2 w h = rectSize rect ^. isoSize2iV2
 
-matHasInfo :: FilePath -> MatInfo -> TestTree
-matHasInfo fp expectedInfo = HU.testCase fp $ do
-  mat <- loadImg ImreadUnchanged fp
-  assertEqual "" expectedInfo (matInfo mat)
+matHasInfoFP :: FilePath -> MatInfo -> TestTree
+matHasInfoFP fp expectedInfo = HU.testCase fp $ do
+    mat <- loadImg ImreadUnchanged fp
+    assertEqual "" expectedInfo (matInfo mat)
+
+hMatEncodeDecodeFP :: FilePath -> TestTree
+hMatEncodeDecodeFP fp = HU.testCase fp $ do
+    mat <- loadImg ImreadUnchanged fp
+    hMatEncodeDecode mat
+
+hMatEncodeDecode :: Mat -> HU.Assertion
+hMatEncodeDecode m1 =
+    assertEqual "" h1 h2
+    -- assertBool "mat hmat conversion failure" (h1 == h2)
+  where
+    h1 = m1 ^. hmat
+    m2 = h1 ^. from hmat
+    h2 = m2 ^. hmat
 
 hmatElemSize :: FilePath -> Int -> HU.Assertion
 hmatElemSize fp expectedElemSize = do
   mat <- loadImg ImreadUnchanged fp
-  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ mkHMat mat
+  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ mat ^. hmat
 
 encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
@@ -245,6 +267,13 @@ matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCa
            , mbIndex
            )
 
+--------------------------------------------------------------------------------
+
+eye3x3_c1 :: Mat
+eye3x3_c1 = eyeMat 3 3 MatDepth_8U 1
+
+eye2x2_c3 :: Mat
+eye2x2_c3 = eyeMat 2 2 MatDepth_8U 3
 
 --------------------------------------------------------------------------------
 -- QuikcCheck Arbitrary Instances

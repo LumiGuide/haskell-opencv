@@ -64,12 +64,15 @@ module OpenCV.Core
     , matSubRect
     , MatInfo(..)
     , matInfo
-    -- , serialiseMat
-    -- , deserialiseMat
-    , HMat(..)
+      -- ** Simple matrix representation
+    , HMat
+    , hmShape
+    , hmChannels
+    , hmElems
     , HElems(..)
+    , hElemsDepth
     , hElemsLength
-    , mkHMat
+    , hmat
       -- ** Repa
     , M
     , toRepa
@@ -100,7 +103,8 @@ import "deepseq" Control.DeepSeq (NFData, rnf)
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lens" Control.Lens hiding (ix)
+import "lens" Control.Lens hiding ( ix )
+import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
@@ -726,6 +730,23 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
+withMatData :: Mat -> ([Int] -> Ptr Word8 -> IO a) -> IO a
+withMatData mat f = withMatPtr mat $ \matPtr ->
+    alloca $ \(dimsPtr     :: Ptr Int32      ) ->
+    alloca $ \(stepPtr2    :: Ptr (Ptr CSize)) ->
+    alloca $ \(dataPtr2    :: Ptr (Ptr Word8)) -> do
+      [CU.block|void {
+        const Mat * const matPtr = $(Mat * matPtr);
+        *$(int32_t *   const dimsPtr ) = matPtr->dims;
+        *$(size_t  * * const stepPtr2) = matPtr->step.p;
+        *$(uint8_t * * const dataPtr2) = matPtr->data;
+      }|]
+      (dims  :: Int) <- fromIntegral <$> peek dimsPtr
+      (stepPtr :: Ptr CSize) <- peek stepPtr2
+      (dataPtr :: Ptr Word8) <- peek dataPtr2
+      (step :: [Int]) <- map fromIntegral <$> peekArray dims stepPtr
+      f step dataPtr
+
 data MatInfo
    = MatInfo
      { miShape    :: ![Int]
@@ -756,29 +777,12 @@ matInfo mat = unsafePerformIO $
            , miChannels = channels
            }
 
--- serialiseMat :: Mat -> B.ByteString
--- serialiseMat mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
---     alloca $ \(elemSizePtr :: Ptr CSize) ->
---     alloca $ \(totalPtr :: Ptr CSize) -> do
---       [CU.block|void {
---         Mat * matPtr = $(Mat * matPtr);
---         *$(size_t * elemSizePtr) = mat->elemSize();
---         *$(size_t * totalPtr   ) = mat->total();
---       }|]
---       (elemSize :: Int) <- fromIntegral <$> peek elemSizePtr
---       (total    :: Int) <- fromIntegral <$> peek totalPtr
---       -- Number of bytes necessary to serialise the entire matrix.
---       let totalBytes = elemSize * total
-
--- deserialiseMat :: B.ByteString -> Either String Mat
--- deserialiseMat bs = Left "todo"
-
 data HMat
    = HMat
      { hmShape    :: ![Int]
      , hmChannels :: !Int
      , hmElems    :: !HElems
-     }
+     } deriving (Show, Eq)
 
 data HElems
    = HElems_8U       !(VU.Vector Word8)
@@ -789,7 +793,18 @@ data HElems
    | HElems_32F      !(VU.Vector Float)
    | HElems_64F      !(VU.Vector Double)
    | HElems_USRTYPE1 !(V.Vector B.ByteString)
-     deriving Show
+     deriving (Show, Eq)
+
+hElemsDepth :: HElems -> MatDepth
+hElemsDepth = \case
+    HElems_8U       _v -> MatDepth_8U
+    HElems_8S       _v -> MatDepth_8S
+    HElems_16U      _v -> MatDepth_16U
+    HElems_16S      _v -> MatDepth_16S
+    HElems_32S      _v -> MatDepth_32S
+    HElems_32F      _v -> MatDepth_32F
+    HElems_64F      _v -> MatDepth_64F
+    HElems_USRTYPE1 _v -> MatDepth_USRTYPE1
 
 hElemsLength :: HElems -> Int
 hElemsLength = \case
@@ -802,41 +817,26 @@ hElemsLength = \case
     HElems_64F      v -> VG.length v
     HElems_USRTYPE1 v -> VG.length v
 
+hmat :: Iso' Mat HMat
+hmat = iso matToHMat hMatToMat
 
-mkHMat :: Mat -> HMat
-mkHMat mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
-    alloca $ \(dimsPtr     :: Ptr Int32      ) ->
-    alloca $ \(totalPtr    :: Ptr CSize      ) ->
-    alloca $ \(stepPtr2    :: Ptr (Ptr CSize)) ->
-    alloca $ \(dataPtr2    :: Ptr (Ptr Word8)) -> do
-      [CU.block|void {
-        const Mat * const matPtr = $(Mat * matPtr);
-        *$(int32_t *   const dimsPtr    ) = matPtr->dims;
-        *$(size_t  *   const totalPtr   ) = matPtr->total();
-        *$(size_t  * * const stepPtr2   ) = matPtr->step.p;
-        *$(uint8_t * * const dataPtr2   ) = matPtr->data;
-      }|]
-      (dims     :: Int) <- fromIntegral   <$> peek dimsPtr
-      (total    :: Int) <- fromIntegral   <$> peek totalPtr
-      (stepPtr :: Ptr CSize) <- peek stepPtr2
-      (dataPtr :: Ptr Word8) <- peek dataPtr2
-      (step :: [Int]) <- map fromIntegral <$> peekArray dims stepPtr
-
-      let info = matInfo mat
-      elems <- copyElems info total step dataPtr
-      pure HMat
-           { hmShape    = miShape    info
-           , hmChannels = miChannels info
-           , hmElems    = elems
-           }
+matToHMat :: Mat -> HMat
+matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
+    elems <- copyElems info step dataPtr
+    pure HMat
+         { hmShape    = miShape    info
+         , hmChannels = miChannels info
+         , hmElems    = elems
+         }
   where
+    info = matInfo mat
+
     copyElems
         :: MatInfo
-        -> Int       -- ^ total
         -> [Int]     -- ^ step
         -> Ptr Word8 -- ^ data
         -> IO HElems
-    copyElems (MatInfo shape depth channels) total step dataPtr =
+    copyElems (MatInfo shape depth channels) step dataPtr =
         case depth of
           MatDepth_8U  -> HElems_8U  <$> copyToVec
           MatDepth_8S  -> HElems_8S  <$> copyToVec
@@ -849,23 +849,51 @@ mkHMat mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
       where
         copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
         copyToVec = do
-            v <- VUM.unsafeNew $ total * channels
-            forM_ (zip [0..] $ positions shape) $ \(posIx, pos) -> do
-                let elemPtr = elemAddress dataPtr step pos
-                forM_ [0..channels] $ \channelIx -> do
+            v <- VUM.unsafeNew $ product0 shape * channels
+            forM_ (zip [0,channels..] $ dimPositions shape) $ \(posIx, pos) -> do
+                let elemPtr = matElemAddress dataPtr step pos
+                forM_ [0 .. channels - 1] $ \channelIx -> do
                   e <- peekElemOff elemPtr channelIx
-                  VUM.unsafeWrite v posIx e
+                  VUM.unsafeWrite v (posIx + channelIx) e
             VU.unsafeFreeze v
 
-    -- | All possible positions (indexes) for a given shape (list of
-    -- sizes per dimension).
-    positions :: [Int] -> [[Int]]
-    positions shape = sequence $ map (enumFromTo 0) $ map pred shape
+hMatToMat :: HMat -> Mat
+hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
+    mat <- newMat sizes depth channels scalar
+    withMatData mat copyElems
+    pure mat
+  where
+    sizes = V.fromList shape
+    depth = hElemsDepth elems
+    scalar = (zero :: V4 Double) ^. from isoScalarV4
 
-    elemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
-    elemAddress dataPtr step pos = dataPtr `plusPtr` offset
-        where
-          offset = sum $ zipWith (*) step pos
+    copyElems :: [Int] -> Ptr Word8 -> IO ()
+    copyElems step dataPtr = case elems of
+        HElems_8U       v -> copyFromVec v
+        HElems_8S       v -> copyFromVec v
+        HElems_16U      v -> copyFromVec v
+        HElems_16S      v -> copyFromVec v
+        HElems_32S      v -> copyFromVec v
+        HElems_32F      v -> copyFromVec v
+        HElems_64F      v -> copyFromVec v
+        HElems_USRTYPE1 _v -> error "todo"
+      where
+        copyFromVec :: (Storable a, VU.Unbox a) => VU.Vector a -> IO ()
+        copyFromVec v =
+            forM_ (zip [0,channels..] $ dimPositions shape) $ \(posIx, pos) -> do
+              let elemPtr = matElemAddress dataPtr step pos
+              forM_ [0 .. channels - 1] $ \channelIx ->
+                pokeElemOff elemPtr channelIx $ VU.unsafeIndex v (posIx + channelIx)
+
+-- | All possible positions (indexes) for a given shape (list of
+-- sizes per dimension).
+dimPositions :: [Int] -> [[Int]]
+dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape
+
+matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
+matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
+    where
+      offset = sum $ zipWith (*) step pos
 
 
 --------------------------------------------------------------------------------
@@ -1091,3 +1119,9 @@ minMaxLoc src = unsafePerformIO $ do
                          , $(Point2i * maxLocPtr)
                          );
           |]
+
+--------------------------------------------------------------------------------
+
+product0 :: (Num a) => [a] -> a
+product0 [] = 0
+product0 xs = product xs
