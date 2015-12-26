@@ -12,6 +12,7 @@ import           "base"                  Foreign.Ptr (castPtr)
 import           "lumi-hackage-extended" Lumi.Prelude
 import qualified "bytestring"            Data.ByteString as B
 import           "lens"                  Control.Lens
+import           "linear"                Linear.Matrix ( M23, M33 )
 import           "linear"                Linear.Vector ( (^+^), zero  )
 import           "linear"                Linear.V2 ( V2(..) )
 import           "linear"                Linear.V3 ( V3(..) )
@@ -57,10 +58,10 @@ main = defaultMain $ testGroup "thea"
           ]
         , testGroup "HMat"
           [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
-          -- , HU.testCase "eye 3x3" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye3x3_c1 ^. hmat
+          -- , HU.testCase "eye 33" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
           , testGroup "mat -> hmat -> mat -> hmat"
-            [ HU.testCase "eye 3x3 - 1 channel"  $ hMatEncodeDecode eye3x3_c1
-            , HU.testCase "eye 2x2 - 3 channels" $ hMatEncodeDecode eye2x2_c3
+            [ HU.testCase "eye 33 - 1 channel"  $ hMatEncodeDecode eye33_8u_1c
+            , HU.testCase "eye 22 - 3 channels" $ hMatEncodeDecode eye22_8u_3c
             , hMatEncodeDecodeFP "Lenna.png"
             , hMatEncodeDecodeFP "kikker.jpg"
             ]
@@ -75,6 +76,10 @@ main = defaultMain $ testGroup "thea"
             , matToRepa [2,3,10] MatDepth_64F 1        zero       (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double) (Just (Z :. 2 :. 1 :. 0, 0))
     -- !?!?!, matToRepa [3]      MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM1) (Proxy :: Proxy Word8)  (Just (Z :. 2,           0))
             ]
+          ]
+        , testGroup "fixed size matrices"
+          [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
+          , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
           ]
         ]
       ]
@@ -267,13 +272,27 @@ matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCa
            , mbIndex
            )
 
+testMatToM23 :: (Storable e, Eq e, Show e) => Mat -> V2 (V3 e) -> HU.Assertion
+testMatToM23 m v = assertEqual "" (Right v) $ matToM23 m
+
+testMatToM33 :: (Storable e, Eq e, Show e) => Mat -> V3 (V3 e) -> HU.Assertion
+testMatToM33 m v = assertEqual "" (Right v) $ matToM33 m
+
 --------------------------------------------------------------------------------
 
-eye3x3_c1 :: Mat
-eye3x3_c1 = eyeMat 3 3 MatDepth_8U 1
+eye23_8u_1c :: Mat
+eye33_8u_1c :: Mat
+eye22_8u_3c :: Mat
 
-eye2x2_c3 :: Mat
-eye2x2_c3 = eyeMat 2 2 MatDepth_8U 3
+eye23_8u_1c = eyeMat 2 3 MatDepth_8U 1
+eye33_8u_1c = eyeMat 3 3 MatDepth_8U 1
+eye22_8u_3c = eyeMat 2 2 MatDepth_8U 3
+
+eye_m23 :: (Num e) => M23 e
+eye_m33 :: (Num e) => M33 e
+
+eye_m23 = V2 (V3 1 0 0) (V3 0 1 0)
+eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 
 --------------------------------------------------------------------------------
 -- QuikcCheck Arbitrary Instances

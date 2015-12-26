@@ -64,7 +64,8 @@ module OpenCV.Core
     , matSubRect
     , MatInfo(..)
     , matInfo
-      -- ** Simple matrix representation
+      -- ** Matrix conversions
+      -- *** Simple matrix representation
     , HMat
     , hmShape
     , hmChannels
@@ -73,7 +74,10 @@ module OpenCV.Core
     , hElemsDepth
     , hElemsLength
     , hmat
-      -- ** Repa
+      -- *** Vectors of Vectors
+    , matToM23
+    , matToM33
+      -- *** Repa
     , M
     , toRepa
     , fromRepa
@@ -104,6 +108,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lens" Control.Lens hiding ( ix )
+import "linear" Linear.Matrix ( M23, M33 )
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
@@ -111,6 +116,7 @@ import "linear" Linear.V4 ( V4(..) )
 import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import qualified "repa" Data.Array.Repa as Repa
+import "repa" Data.Array.Repa.Index ( Z(Z), (:.)((:.)) )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import "this" OpenCV.Unsafe
@@ -895,6 +901,28 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
       offset = sum $ zipWith (*) step pos
 
+--------------------------------------------------------------------------------
+
+matToM23 :: (Storable e) => Mat -> Either String (M23 e)
+matToM23 = fmap repaToM23 . toRepa
+
+matToM33 :: (Storable e) => Mat -> Either String (M33 e)
+matToM33 = fmap repaToM33 . toRepa
+
+repaToM23 :: (Storable e) => Repa.Array M Repa.DIM2 e -> M23 e
+repaToM23 a =
+    V2 (V3 (i 0 0) (i 1 0) (i 2 0))
+       (V3 (i 0 1) (i 1 1) (i 2 1))
+  where
+    i row col = Repa.unsafeIndex a $ Z :. row :. col
+
+repaToM33 :: (Storable e) => Repa.Array M Repa.DIM2 e -> M33 e
+repaToM33 a =
+    V3 (V3 (i 0 0) (i 1 0) (i 2 0))
+       (V3 (i 0 1) (i 1 1) (i 2 1))
+       (V3 (i 0 2) (i 1 2) (i 2 2))
+  where
+    i row col = Repa.unsafeIndex a $ Z :. row :. col
 
 --------------------------------------------------------------------------------
 --  Repa
