@@ -31,24 +31,58 @@ import qualified "inline-c" Language.C.Inline.Context as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( yield )
 
+-- | Haskell representation of an OpenCV exception
 data C'Exception
+-- | Haskell representation of an OpenCV @cv::Point_\<int>@ object
 data C'Point2i
+-- | Haskell representation of an OpenCV @cv::Point_\<float>@ object
 data C'Point2f
+-- | Haskell representation of an OpenCV @cv::Point_\<double>@ object
 data C'Point2d
+-- | Haskell representation of an OpenCV @cv::Point3_\<int>@ object
 data C'Point3i
+-- | Haskell representation of an OpenCV @cv::Point3_\<float>@ object
 data C'Point3f
+-- | Haskell representation of an OpenCV @cv::Point3_\<double>@ object
 data C'Point3d
+-- | Haskell representation of an OpenCV @cv::Size_\<int>@ object
 data C'Size2i
+-- | Haskell representation of an OpenCV @cv::Size_\<float>@ object
 data C'Size2f
+-- | Haskell representation of an OpenCV @cv::Rect_\<int>@ object
 data C'Rect
+-- | Haskell representation of an OpenCV @cv::RotatedRect@ object
 data C'RotatedRect
+-- | Haskell representation of an OpenCV @cv::TermCriteria@ object
 data C'TermCriteria
+-- | Haskell representation of an OpenCV @cv::Scalar_\<double>@ object
 data C'Scalar
+-- | Haskell representation of an OpenCV @cv::Mat@ object
 data C'Mat
 
-type C'MouseCallback = C.CInt -> C.CInt -> C.CInt -> C.CInt -> Ptr () -> IO ()
-type C'TrackbarCallback = C.CInt -> Ptr () -> IO ()
+-- | Callback function for mouse events
+type C'MouseCallback
+   =  C.CInt -- ^ One of the @cv::MouseEvenTypes@ constants.
+   -> C.CInt -- ^ The x-coordinate of the mouse event.
+   -> C.CInt -- ^ The y-coordinate of the mouse event.
+   -> C.CInt -- ^ One of the @cv::MouseEventFlags@ constants.
+   -> Ptr () -- ^ Optional pointer to user data.
+   -> IO ()
 
+-- | Callback function for Trackbar
+type C'TrackbarCallback
+   =  C.CInt -- ^ Current position of the specified trackbar.
+   -> Ptr () -- ^ Optional pointer to user data.
+   -> IO ()
+
+-- | Context useful to work with the OpenCV library
+--
+-- Based on 'C.cppCtx', 'C.bsCtx' and 'C.vecCtx'.
+--
+-- 'C.ctxTypesTable': converts OpenCV basic types to their counterparts in
+-- "Language.C.Inline.OpenCV".
+--
+-- No 'C.ctxAntiQuoters'.
 openCvCtx :: C.Context
 openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
   where

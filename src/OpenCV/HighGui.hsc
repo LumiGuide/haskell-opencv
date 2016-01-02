@@ -233,7 +233,12 @@ unmarshallEvent event
    | event == c'EVENT_MOUSEHWHEEL   = EventMouseHWheel
    | otherwise = error $ "unmarshallEvent - unknown event " <> show event
 
-type MouseCallback = Event -> Int -> Int -> EventFlags -> IO ()
+type MouseCallback
+   =  Event
+   -> Int
+   -> Int
+   -> EventFlags
+   -> IO ()
 
 setMouseCallback :: Window -> MouseCallback -> IO ()
 setMouseCallback window callback =

@@ -17,6 +17,10 @@ library
 
            , src/OpenCV/Core.cpp
            , src/OpenCV/ImgProc.cpp
+           , src/OpenCV/ImgProc/ImgFiltering.cpp
+           , src/OpenCV/ImgProc/GeometricImgTransform.cpp
+           , src/OpenCV/ImgProc/MiscImgTransform.cpp
+           , src/OpenCV/ImgProc/Drawing.cpp
            , src/OpenCV/ImgCodecs.cpp
            , src/OpenCV/HighGui.cpp
            , src/OpenCV/Video.cpp
@@ -46,11 +50,17 @@ library
                  , OpenCV.Core
                  , OpenCV.Unsafe
                  , OpenCV.ImgProc
+                 , OpenCV.ImgProc.ImgFiltering
+                 , OpenCV.ImgProc.GeometricImgTransform
+                 , OpenCV.ImgProc.MiscImgTransform
+                 , OpenCV.ImgProc.Drawing
+                 , OpenCV.ImgProc.Types
                  , OpenCV.ImgCodecs
                  , OpenCV.HighGui
                  , OpenCV.Video
                  , OpenCV.JSON
   other-modules:   OpenCV.Internal
+                 , OpenCV.ImgProc.Types.Internal
                  , Language.C.Inline.OpenCV
 
   default-extensions: ScopedTypeVariables
