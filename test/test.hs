@@ -2,13 +2,14 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Main where
 
 import           "base"                  Foreign.Storable (Storable(..))
-import           "base"                  Foreign.Ptr (castPtr)
 import           "lumi-hackage-extended" Lumi.Prelude
 import qualified "bytestring"            Data.ByteString as B
 import           "lens"                  Control.Lens
@@ -70,11 +71,12 @@ main = defaultMain $ testGroup "thea"
           [ HU.testCase "emptyToRepa" emptyToRepa
           , HU.testCase "imgToRepa"   imgToRepa
           , testGroup "matToRepa"
-            [ --        Size     Elem type    Channels Elem value Repa dimensions            Repa elem type          Expected elem at index
-              matToRepa [2,3]    MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)  (Just (Z :. 0 :. 1,      0))
-            , matToRepa []       MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem) Nothing
-            , matToRepa [2,3,10] MatDepth_64F 1        zero       (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double) (Just (Z :. 2 :. 1 :. 0, 0))
-    -- !?!?!, matToRepa [3]      MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM1) (Proxy :: Proxy Word8)  (Just (Z :. 2,           0))
+            [ --        Size     Elem type    Channels Elem value Repa dimensions            Repa elem type                 Expected elem at index
+              matToRepa [2,3]    MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)         (Just (Z :. 0 :. 1,      0))
+            , matToRepa [2,3]    MatDepth_16S 3        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy (3 :* Int16))  (Just (Z :. 0 :. 1,      (0 ::: 0 ::: 0)))
+            , matToRepa []       MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem)        Nothing
+            , matToRepa [2,3,10] MatDepth_64F 1        zero       (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double)        (Just (Z :. 2 :. 1 :. 0, 0))
+    -- !?!?!, matToRepa [3]      MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM1) (Proxy :: Proxy Word8)         (Just (Z :. 2,           0))
             ]
           ]
         , testGroup "fixed size matrices"
@@ -202,31 +204,25 @@ instance Storable NoElem where
     peek        = undefined
     poke        = undefined
 
+instance ToMatDepth NoElem where
+    toMatDepth = const MatDepth_8U
+
+instance NumChannels NoElem where
+    numChannels = const 1
+
 imgToRepa :: HU.Assertion
 imgToRepa = do
     mat <- loadImg ImreadUnchanged "kikker.jpg"
-    case mat ^? repa :: Maybe (Repa.Array M Repa.DIM2 BGRElem) of
+    case mat ^? repa :: Maybe (Repa.Array M Repa.DIM2 (3 :* Word8)) of
       Nothing -> assertFailure "Repa conversion failure"
       Just repaArray -> do
         assertEqual "extent" (Z :. 500 :. 390) (Repa.extent repaArray)
 
-data BGRElem = BGRElem Word8 Word8 Word8
-
-instance Storable BGRElem where
-    sizeOf    _ = 3
-    alignment _ = 0
-    peek ptr = BGRElem <$> peekElemOff (castPtr ptr) 0
-                       <*> peekElemOff (castPtr ptr) 1
-                       <*> peekElemOff (castPtr ptr) 2
-    poke ptr (BGRElem b g r) = do
-      pokeElemOff (castPtr ptr) 0 b
-      pokeElemOff (castPtr ptr) 1 g
-      pokeElemOff (castPtr ptr) 2 r
-
 matToRepa
     :: forall sh e
      . ( Typeable sh, Show sh, Repa.Shape sh
-       , Typeable e,  Show e, Storable e, Eq e
+       , Typeable e,  Show e, Eq e
+       , MatElem e
        )
     => [Int]         -- ^ Sizes
     -> MatDepth
@@ -236,9 +232,9 @@ matToRepa
     -> Proxy e
     -> Maybe (sh, e) -- ^ Optional index and expected value at that index
     -> TestTree
-matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
-    mat <- newMat (V.fromList sz) depth numChannels (defValue ^. from isoScalarV4)
-    assertEqual "info" (MatInfo sz depth numChannels) $ matInfo mat
+matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
+    mat <- newMat (V.fromList sz) depth cn (defValue ^. from isoScalarV4)
+    assertEqual "info" (MatInfo sz depth cn) $ matInfo mat
     case toRepa mat :: Either String (Repa.Array M sh e) of
       Left err -> assertFailure $ "Repa conversion failure: " <> err
       Right a -> do
@@ -265,17 +261,25 @@ matToRepa sz depth numChannels defValue shapeProxy elemProxy mbIndex = HU.testCa
     name = show
            ( sz
            , depth
-           , numChannels
+           , cn
            , defValue
            , typeRep shapeProxy
            , typeRep elemProxy
            , mbIndex
            )
 
-testMatToM23 :: (Storable e, Eq e, Show e) => Mat -> V2 (V3 e) -> HU.Assertion
+testMatToM23
+    :: (Eq e, Show e, MatElem e)
+    => Mat
+    -> V2 (V3 e)
+    -> HU.Assertion
 testMatToM23 m v = assertEqual "" (Right v) $ matToM23 m
 
-testMatToM33 :: (Storable e, Eq e, Show e) => Mat -> V3 (V3 e) -> HU.Assertion
+testMatToM33
+    :: (Eq e, Show e, MatElem e)
+    => Mat
+    -> V3 (V3 e)
+    -> HU.Assertion
 testMatToM33 m v = assertEqual "" (Right v) $ matToM33 m
 
 --------------------------------------------------------------------------------
