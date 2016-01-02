@@ -62,6 +62,9 @@ module OpenCV.Core
     , eyeMat
     , cloneMat
     , matSubRect
+    , matCopyTo
+    , matCopyToM
+    , matConvertTo
     , MatInfo(..)
     , matInfo
       -- ** Matrix conversions
@@ -94,6 +97,12 @@ module OpenCV.Core
       -- * Operations on Arrays
     , addWeighted
     , minMaxLoc
+    , NormType(..)
+    , NormAbsRel(..)
+    , norm
+    , normDiff
+    , normalize
+    , matSum
     ) where
 
 import "base" Foreign.C.Types
@@ -736,6 +745,72 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
+matCopyTo :: Mat -> V2 Int -> Mat -> Either CvException Mat
+matCopyTo dst topLeft src = runST $ do
+    dstMut <- thaw dst
+    eResult <- matCopyToM dstMut topLeft src
+    case eResult of
+      Left err -> pure $ Left err
+      Right () -> Right <$> unsafeFreeze dstMut
+
+matCopyToM
+    :: (PrimMonad m)
+    => MutMat (PrimState m)
+    -> V2 Int
+    -> Mat
+    -> m (Either CvException ())
+matCopyToM dstMut (V2 x y) src =
+    unsafePrimToPrim $ handleCvException (pure ()) $
+    withMatPtr (unMutMat dstMut) $ \dstPtr ->
+    withMatPtr src $ \srcPtr ->
+      [cvExcept|
+        const Mat * const srcPtr = $(const Mat * const srcPtr);
+        const int x = $(int c'x);
+        const int y = $(int c'y);
+        srcPtr->copyTo( $(Mat * dstPtr)
+                      ->rowRange(y, y + srcPtr->rows)
+                       .colRange(x, x + srcPtr->cols)
+                      );
+      |]
+  where
+    c'x = fromIntegral x
+    c'y = fromIntegral y
+
+          -- Mat * srcPtr = $(Mat * srcPtr);
+          -- Mat dstRoi = Mat( *$(Mat * matOutPtr)
+          --                 , Rect( *$(Point2i * topLeftPtr)
+          --                       , srcPtr->size()
+          --                       )
+          --                 );
+          -- srcPtr->copyTo(dstRoi);
+
+-- | Converts an array to another data type with optional scaling
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html?highlight=convertto#mat-convertto OpenCV Sphinx doc>
+matConvertTo
+    :: Maybe MatDepth
+    -> Maybe Double -- ^ Optional scale factor.
+    -> Maybe Double -- ^ Optional delta added to the scaled values.
+    -> Mat
+    -> Either CvException Mat
+matConvertTo rtype alpha beta src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr src $ \srcPtr ->
+      withMatPtr dst $ \dstPtr ->
+        [cvExcept|
+          $(Mat * srcPtr)->
+            convertTo( *$(Mat * dstPtr)
+                     , $(int32_t c'rtype)
+                     , $(double c'alpha)
+                     , $(double c'beta)
+                     );
+        |]
+  where
+    c'rtype = maybe (-1) marshalMatDepth rtype
+    c'alpha = maybe 1 realToFrac alpha
+    c'beta  = maybe 0 realToFrac beta
+
 withMatData :: Mat -> ([Int] -> Ptr Word8 -> IO a) -> IO a
 withMatData mat f = withMatPtr mat $ \matPtr ->
     alloca $ \(dimsPtr     :: Ptr Int32      ) ->
@@ -1147,6 +1222,156 @@ minMaxLoc src = unsafePerformIO $ do
                          , $(Point2i * maxLocPtr)
                          );
           |]
+
+-- | Normalization type
+data NormType
+   = Norm_Inf
+   | Norm_L1
+   | Norm_L2
+   | Norm_L2SQR
+   | Norm_Hamming
+   | Norm_Hamming2
+   | Norm_MinMax
+     deriving (Show, Eq)
+
+data NormAbsRel
+   = NormRelative
+   | NormAbsolute
+     deriving (Show, Eq)
+
+#num NORM_INF
+#num NORM_L1
+#num NORM_L2
+#num NORM_L2SQR
+#num NORM_HAMMING
+#num NORM_HAMMING2
+#num NORM_MINMAX
+
+#num NORM_RELATIVE
+
+marshalNormType :: NormAbsRel -> NormType -> Int32
+marshalNormType absRel normType =
+    case absRel of
+      NormRelative -> c'normType .|. c'NORM_RELATIVE
+      NormAbsolute -> c'normType
+  where
+    c'normType = case normType of
+        Norm_Inf      -> c'NORM_INF
+        Norm_L1       -> c'NORM_L1
+        Norm_L2       -> c'NORM_L2
+        Norm_L2SQR    -> c'NORM_L2SQR
+        Norm_Hamming  -> c'NORM_HAMMING
+        Norm_Hamming2 -> c'NORM_HAMMING2
+        Norm_MinMax   -> c'NORM_MINMAX
+
+-- | Calculates an absolute array norm
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+norm
+    :: NormType
+    -> Maybe Mat
+       -- ^ Optional operation mask; it must have the same size as the input
+       -- array, depth 'MatDepth_8U' and 1 channel.
+    -> Mat -- ^ Input array.
+    -> Either CvException Double  -- ^ Calculated norm.
+norm normType mbMask src = unsafePerformIO $
+    withMatPtr   src    $ \srcPtr  ->
+    withMbMatPtr mbMask $ \mskPtr  ->
+    alloca              $ \normPtr ->
+    handleCvException (realToFrac <$> peek normPtr) $
+      [cvExcept|
+        Mat * mskPtr = $(Mat * mskPtr);
+        *$(double * normPtr) =
+          cv::norm( *$(Mat * srcPtr)
+                  , $(int32_t c'normType)
+                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                  );
+      |]
+  where
+    c'normType = marshalNormType NormAbsolute normType
+
+-- | Calculates an absolute difference norm, or a relative difference norm
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+normDiff
+    :: NormAbsRel -- ^ Absolute or relative norm.
+    -> NormType
+    -> Maybe Mat
+       -- ^ Optional operation mask; it must have the same size as the input
+       -- array, depth 'MatDepth_8U' and 1 channel.
+    -> Mat -- ^ First input array.
+    -> Mat -- ^ Second input array of the same size and type as the first.
+    -> Either CvException Double -- ^ Calculated norm.
+normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
+    withMatPtr   src1   $ \src1Ptr ->
+    withMatPtr   src2   $ \src2Ptr ->
+    withMbMatPtr mbMask $ \mskPtr  ->
+    alloca              $ \normPtr ->
+    handleCvException (realToFrac <$> peek normPtr) $
+      [cvExcept|
+        Mat * mskPtr = $(Mat * mskPtr);
+        *$(double * normPtr) =
+          cv::norm( *$(Mat * src1Ptr)
+                  , *$(Mat * src2Ptr)
+                  , $(int32_t c'normType)
+                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                  );
+      |]
+  where
+    c'normType = marshalNormType absRel normType
+
+-- | Normalizes the norm or value range of an array
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc>
+normalize
+    :: Double
+       -- ^ Norm value to normalize to or the lower range boundary in case of
+       -- the range normalization.
+    -> Double
+       -- ^ Upper range boundary in case of the range normalization; it is not
+       -- used for the norm normalization.
+    -> NormType
+    -> Maybe MatDepth
+    -> Maybe Mat -- ^ Optional operation mask.
+    -> Mat -- ^ Input array.
+    -> Either CvException Mat
+normalize alpha beta normType dtype mbMask src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr src      $ \srcPtr ->
+      withMatPtr dst      $ \dstPtr ->
+      withMbMatPtr mbMask $ \mskPtr ->
+        [cvExcept|
+          Mat * mskPtr = $(Mat * mskPtr);
+          cv::normalize( *$(Mat * srcPtr)
+                       , *$(Mat * dstPtr)
+                       , $(double c'alpha)
+                       , $(double c'beta)
+                       , $(int32_t c'normType)
+                       , $(int32_t c'dtype)
+                       , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                       );
+        |]
+  where
+    c'alpha    = realToFrac alpha
+    c'beta     = realToFrac beta
+    c'normType = marshalNormType NormAbsolute normType
+    c'dtype    = maybe (-1) marshalMatDepth dtype
+
+-- | Calculates the sum of array elements
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum OpenCV Sphinx doc>
+matSum
+    :: Mat -- ^ Input array that must have from 1 to 4 channels.
+    -> Either CvException Scalar
+matSum src = unsafePerformIO $ do
+    s <- newScalar $ pure (0 :: Double)
+    handleCvException (pure s) $
+      withMatPtr src $ \srcPtr ->
+      withScalarPtr s $ \sPtr ->
+        [cvExcept|
+          *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
+        |]
 
 --------------------------------------------------------------------------------
 

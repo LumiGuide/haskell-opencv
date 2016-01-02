@@ -33,6 +33,7 @@ C.using "namespace cv"
 #include "macros.hpp"
 
 #sizeof Point2i
+#sizeof Point2f
 
 
 --------------------------------------------------------------------------------
@@ -149,17 +150,17 @@ withPolygons polygons act =
       let go :: Ptr (Ptr C'Point2i) -> Int -> IO a
           go !acc !ix
             | ix < V.length polygons =
-                withPoints (V.unsafeIndex polygons ix) $ \ptsPtr -> do
+                withPoint2is (V.unsafeIndex polygons ix) $ \ptsPtr -> do
                   poke acc ptsPtr
                   go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr C'Point2i))) (ix + 1)
             | otherwise = act polygonsPtr
       go polygonsPtr 0
 
-withPoints
+withPoint2is
     :: V.Vector Point2i
     -> (Ptr C'Point2i -> IO a)
     -> IO a
-withPoints points act =
+withPoint2is points act =
     allocaBytes (c'sizeof_Point2i * V.length points) $ \ptsPtr -> do
       V.foldM'_ copyNext ptsPtr points
       act ptsPtr
@@ -171,6 +172,23 @@ withPoints points act =
     copyPoint2i destPtr src =
       withPoint2iPtr src $ \srcPtr ->
         [C.exp| void { new($(Point2i * destPtr)) Point2i(*$(Point2i * srcPtr)) }|]
+
+withPoint2fs
+    :: V.Vector Point2f
+    -> (Ptr C'Point2f -> IO a)
+    -> IO a
+withPoint2fs points act =
+    allocaBytes (c'sizeof_Point2f * V.length points) $ \ptsPtr -> do
+      V.foldM'_ copyNext ptsPtr points
+      act ptsPtr
+  where
+    copyNext :: Ptr C'Point2f -> Point2f -> IO (Ptr C'Point2f)
+    copyNext !ptr point = copyPoint2f ptr point $> plusPtr ptr c'sizeof_Point2f
+
+    copyPoint2f :: Ptr C'Point2f -> Point2f -> IO ()
+    copyPoint2f destPtr src =
+      withPoint2fPtr src $ \srcPtr ->
+        [C.exp| void { new($(Point2f * destPtr)) Point2f(*$(Point2f * srcPtr)) }|]
 
 
 --------------------------------------------------------------------------------
@@ -273,6 +291,12 @@ matFromPtr = objFromPtr Mat $ \ptr -> [CU.exp| void { delete $(Mat * ptr) }|]
 
 withMatPtr :: Mat -> (Ptr C'Mat -> IO a) -> IO a
 withMatPtr = withForeignPtr . unMat
+
+withMbMatPtr :: Maybe Mat -> (Ptr C'Mat -> IO a) -> IO a
+withMbMatPtr mbMat f =
+    case mbMat of
+      Just mat -> withMatPtr mat f
+      Nothing  -> f nullPtr
 
 -- | Similar to 'withMatPtr' in that it keeps the 'ForeignPtr' alive
 -- during the execution of the given action but it doesn't extract the 'Ptr'

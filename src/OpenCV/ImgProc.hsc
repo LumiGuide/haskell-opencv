@@ -15,6 +15,9 @@ module OpenCV.ImgProc
     , ColorCode(..)
     , ColorConversion
     , cvtColor
+    , ThreshType(..)
+    , ThreshValue(..)
+    , threshold
       -- * Drawing Functions
     , LineType(..)
     , FontFace(..)
@@ -31,6 +34,7 @@ module OpenCV.ImgProc
       -- * Color Maps
       -- * Histograms
       -- * Structural Analysis and Shape Descriptors
+    , pointPolygonTest
       -- * Motion Analysis and Object Tracking
       -- * Feature Detection
       -- * Object Detection
@@ -776,6 +780,75 @@ cvtColor fromColor toColor src = unsafePerformIO $ do
   where
     c'code = colorCode fromColor toColor
 
+data ThreshType
+   = Thresh_Binary    !Double
+   | Thresh_BinaryInv !Double
+   | Thresh_Truncate
+   | Thresh_ToZero
+   | Thresh_ToZeroInv
+     deriving (Show, Eq)
+
+#num THRESH_BINARY
+#num THRESH_BINARY_INV
+#num THRESH_TRUNC
+#num THRESH_TOZERO
+#num THRESH_TOZERO_INV
+
+marshalThreshType :: ThreshType -> (Int32, CDouble)
+marshalThreshType = \case
+    Thresh_Binary    maxVal -> (c'THRESH_BINARY    , realToFrac maxVal)
+    Thresh_BinaryInv maxVal -> (c'THRESH_BINARY_INV, realToFrac maxVal)
+    Thresh_Truncate         -> (c'THRESH_TRUNC     , 0)
+    Thresh_ToZero           -> (c'THRESH_TOZERO    , 0)
+    Thresh_ToZeroInv        -> (c'THRESH_TOZERO_INV, 0)
+
+data ThreshValue
+   = ThreshVal_Abs !Double
+   | ThreshVal_Otsu
+   | ThreshVal_Triangle
+     deriving (Show, Eq)
+
+#num THRESH_OTSU
+#num THRESH_TRIANGLE
+
+marshalThreshValue :: ThreshValue -> (Int32, CDouble)
+marshalThreshValue = \case
+    ThreshVal_Abs val  -> (0                , realToFrac val)
+    ThreshVal_Otsu     -> (c'THRESH_OTSU    , 0)
+    ThreshVal_Triangle -> (c'THRESH_TRIANGLE, 0)
+
+-- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
+
+-- | Applies a fixed-level threshold to each array element
+--
+-- The function applies fixed-level thresholding to a single-channel array. The
+-- function is typically used to get a bi-level (binary) image out of a
+-- grayscale image or for removing a noise, that is, filtering out pixels with
+-- too small or too large values. There are several types of thresholding
+-- supported by the function.
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc>
+threshold :: ThreshValue -> ThreshType -> Mat -> Either CvException (Mat, Double)
+threshold threshVal threshType src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    alloca $ \calcThreshPtr ->
+      handleCvException ((dst, ) . realToFrac <$> peek calcThreshPtr) $
+      withMatPtr src $ \srcPtr ->
+      withMatPtr dst $ \dstPtr ->
+        [cvExcept|
+          *$(double * calcThreshPtr) =
+            cv::threshold( *$(Mat * srcPtr)
+                         , *$(Mat * dstPtr)
+                         , $(double c'threshVal)
+                         , $(double c'maxVal)
+                         , $(int32_t c'type)
+                         );
+        |]
+  where
+    c'type = c'threshType .|. c'threshValMode
+    (c'threshType, c'maxVal) = marshalThreshType threshType
+    (c'threshValMode, c'threshVal) = marshalThreshValue threshVal
+
 
 --------------------------------------------------------------------------------
 -- Drawing Functions
@@ -979,8 +1052,8 @@ fillConvexPoly
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoints points $ \pointsPtr ->
-    withScalarPtr color $ \colorPtr -> do
+    withPoint2is points $ \pointsPtr ->
+    withScalarPtr color $ \colorPtr ->
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
                           , $(Point2i * pointsPtr)
@@ -1011,7 +1084,7 @@ fillPoly img polygons color lineType shift =
     withMatPtr (unMutMat img) $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
-    withScalarPtr color $ \colorPtr -> do
+    withScalarPtr color $ \colorPtr ->
       [C.exp|void {
         cv::fillPoly( *$(Mat * matPtr)
                     , $(const Point2i * * polygonsPtr)
@@ -1186,6 +1259,44 @@ rectangle img rect color thickness lineType shift =
 --------------------------------------------------------------------------------
 -- Structural Analysis and Shape Descriptors
 --------------------------------------------------------------------------------
+
+-- | Performs a point-in-contour test.
+--
+-- The function determines whether the point is inside a contour, outside, or
+-- lies on an edge (or coincides with a vertex). It returns positive (inside),
+-- negative (outside), or zero (on an edge) value, correspondingly. When
+-- measureDist=false , the return value is +1, -1, and 0,
+-- respectively. Otherwise, the return value is a signed distance between the
+-- point and the nearest contour edge.
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
+pointPolygonTest
+    :: V.Vector Point2f -- ^ Contour.
+    -> Point2f -- ^ Point tested against the contour.
+    -> Bool
+       -- ^ If true, the function estimates the signed distance from the point
+       -- to the nearest contour edge. Otherwise, the function only checks if
+       -- the point is inside a contour or not.
+    -> Either CvException Double
+pointPolygonTest contour pt measureDist = unsafePerformIO $
+    withPoint2fs contour $ \contourPtr ->
+    withPoint2fPtr pt $ \ptPtr ->
+    alloca $ \(c'resultPtr) ->
+    handleCvException (realToFrac <$> peek c'resultPtr) $
+      [cvExcept|
+        cv::_InputArray contour =
+          cv::_InputArray( $(Point2f * contourPtr)
+                         , $(int c'numPoints)
+                         );
+        *$(double * c'resultPtr) =
+          cv::pointPolygonTest( contour
+                              , *$(Point2f * ptPtr)
+                              , $(bool c'measureDist)
+                              );
+      |]
+  where
+    c'numPoints = fromIntegral $ V.length contour
+    c'measureDist = fromBool measureDist
 
 
 --------------------------------------------------------------------------------

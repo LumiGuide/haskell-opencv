@@ -42,8 +42,8 @@ estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTrans
     c'estimateRigidTransform = unsafePerformIO $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withPoints src $ \srcPtr ->
-        withPoints dst $ \dstPtr ->
+        withPoint2is src $ \srcPtr ->
+        withPoint2is dst $ \dstPtr ->
         withMatPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);
