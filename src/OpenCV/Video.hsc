@@ -11,7 +11,8 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
-import "this" OpenCV.Core
+import "this" OpenCV.Core.Types ( newEmptyMat )
+import "this" OpenCV.Core.Types.Mat ( matInfo, miShape )
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 

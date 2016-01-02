@@ -1,6 +1,21 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{- |
+While OpenCV was designed for use in full-scale applications and can be used
+within functionally rich UI frameworks (such as Qt*, WinForms*, or Cocoa*) or
+without any UI at all, sometimes there it is required to try functionality
+quickly and visualize the results. This is what the "OpenCV.HighGUI" module has
+been designed for.
+
+It provides easy interface to:
+
+ * Create and manipulate windows that can display images and “remember” their
+   content (no need to handle repaint events from OS).
+
+ * Add trackbars to the windows, handle simple mouse events as well as keyboard
+   commands.
+-}
 module OpenCV.HighGui
     ( -- * Window management
       Window
@@ -141,19 +156,6 @@ waitKey delay = fromIntegral <$> f (fromIntegral delay)
 --------------------------------------------------------------------------------
 -- Mouse
 
-#num EVENT_MOUSEMOVE
-#num EVENT_LBUTTONDOWN
-#num EVENT_RBUTTONDOWN
-#num EVENT_MBUTTONDOWN
-#num EVENT_LBUTTONUP
-#num EVENT_RBUTTONUP
-#num EVENT_MBUTTONUP
-#num EVENT_LBUTTONDBLCLK
-#num EVENT_RBUTTONDBLCLK
-#num EVENT_MBUTTONDBLCLK
-#num EVENT_MOUSEWHEEL
-#num EVENT_MOUSEHWHEEL
-
 data Event
    = EventMouseMove
    | EventLButtonDown
@@ -169,13 +171,10 @@ data Event
    | EventMouseHWheel
      deriving Show
 
-#num EVENT_FLAG_LBUTTON
-#num EVENT_FLAG_RBUTTON
-#num EVENT_FLAG_MBUTTON
-#num EVENT_FLAG_CTRLKEY
-#num EVENT_FLAG_SHIFTKEY
-#num EVENT_FLAG_ALTKEY
-
+-- | Context for a mouse 'Event'
+--
+-- Information about which buttons and modifier keys where pressed during the
+-- event.
 newtype EventFlags = EventFlags CInt
 
 matchEventFlag :: CInt -> EventFlags -> Bool
@@ -188,6 +187,13 @@ hasCtrlKey  :: EventFlags -> Bool
 hasShiftKey :: EventFlags -> Bool
 hasAltKey   :: EventFlags -> Bool
 
+#num EVENT_FLAG_LBUTTON
+#num EVENT_FLAG_RBUTTON
+#num EVENT_FLAG_MBUTTON
+#num EVENT_FLAG_CTRLKEY
+#num EVENT_FLAG_SHIFTKEY
+#num EVENT_FLAG_ALTKEY
+
 hasLButton  = matchEventFlag c'EVENT_FLAG_LBUTTON
 hasRButton  = matchEventFlag c'EVENT_FLAG_RBUTTON
 hasMButton  = matchEventFlag c'EVENT_FLAG_MBUTTON
@@ -195,6 +201,7 @@ hasCtrlKey  = matchEventFlag c'EVENT_FLAG_CTRLKEY
 hasShiftKey = matchEventFlag c'EVENT_FLAG_SHIFTKEY
 hasAltKey   = matchEventFlag c'EVENT_FLAG_ALTKEY
 
+-- | More convenient representation of 'EventFlags'
 data EventFlagsRec
    = EventFlagsRec
      { flagsLButton  :: !Bool
@@ -216,6 +223,18 @@ flagsToRec flags =
     , flagsAltKey   = hasAltKey   flags
     }
 
+#num EVENT_MOUSEMOVE
+#num EVENT_LBUTTONDOWN
+#num EVENT_RBUTTONDOWN
+#num EVENT_MBUTTONDOWN
+#num EVENT_LBUTTONUP
+#num EVENT_RBUTTONUP
+#num EVENT_MBUTTONUP
+#num EVENT_LBUTTONDBLCLK
+#num EVENT_RBUTTONDBLCLK
+#num EVENT_MBUTTONDBLCLK
+#num EVENT_MOUSEWHEEL
+#num EVENT_MOUSEHWHEEL
 
 unmarshallEvent :: CInt -> Event
 unmarshallEvent event
@@ -233,11 +252,14 @@ unmarshallEvent event
    | event == c'EVENT_MOUSEHWHEEL   = EventMouseHWheel
    | otherwise = error $ "unmarshallEvent - unknown event " <> show event
 
+-- | Callback function for mouse events
 type MouseCallback
-   =  Event
-   -> Int
-   -> Int
+   =  Event -- ^ What happened to cause the callback to be fired.
+   -> Int -- ^ The x-coordinate of the mouse event.
+   -> Int -- ^ The y-coordinate of the mouse event.
    -> EventFlags
+      -- ^ Context for the event, such as buttons and modifier keys pressed
+      -- during the event.
    -> IO ()
 
 setMouseCallback :: Window -> MouseCallback -> IO ()
@@ -261,7 +283,11 @@ setMouseCallback window callback =
 -- Trackbars
 
 type TrackbarName = String
-type TrackbarCallback = Int -> IO ()
+
+-- | Callback function for trackbars
+type TrackbarCallback
+   =  Int -- ^ Current position of the specified trackbar.
+   -> IO ()
 
 createTrackbar
     :: Window

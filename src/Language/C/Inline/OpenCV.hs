@@ -1,6 +1,7 @@
 {-# LANGUAGE QuasiQuotes     #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+-- | Interface between OpenCV and inline-c(pp) (Haskell)
 module Language.C.Inline.OpenCV
     ( C'Exception
     , C'Point2i
@@ -69,7 +70,7 @@ type C'MouseCallback
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 
--- | Callback function for Trackbar
+-- | Callback function for trackbars
 type C'TrackbarCallback
    =  C.CInt -- ^ Current position of the specified trackbar.
    -> Ptr () -- ^ Optional pointer to user data.

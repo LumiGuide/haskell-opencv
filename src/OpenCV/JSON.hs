@@ -18,7 +18,8 @@ import "lumi-hackage-extended" Data.Aeson.Extended ( lumiJsonOptions, delPrefix 
 import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
-import "this" OpenCV.Core
+import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Mat.HMat
 
 --------------------------------------------------------------------------------
 

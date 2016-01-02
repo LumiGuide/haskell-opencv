@@ -29,7 +29,7 @@ import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
-import "this" OpenCV.Core
+import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS

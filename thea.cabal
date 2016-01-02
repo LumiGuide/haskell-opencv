@@ -16,11 +16,18 @@ library
   c-sources: src/OpenCV/Internal.cpp
 
            , src/OpenCV/Core.cpp
-           , src/OpenCV/ImgProc.cpp
+           , src/OpenCV/Core/Types.cpp
+           , src/OpenCV/Core/Types/Internal.cpp
+           , src/OpenCV/Core/Types/Mat.cpp
+           , src/OpenCV/Core/Types/Mat/Internal.cpp
+           , src/OpenCV/Core/Types/Mat/Repa.cpp
+           , src/OpenCV/Core/ArrayOps.cpp
            , src/OpenCV/ImgProc/ImgFiltering.cpp
            , src/OpenCV/ImgProc/GeometricImgTransform.cpp
            , src/OpenCV/ImgProc/MiscImgTransform.cpp
            , src/OpenCV/ImgProc/Drawing.cpp
+           , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+           , src/OpenCV/ImgProc/ObjectDetection.cpp
            , src/OpenCV/ImgCodecs.cpp
            , src/OpenCV/HighGui.cpp
            , src/OpenCV/Video.cpp
@@ -48,18 +55,26 @@ library
 
   exposed-modules: OpenCV
                  , OpenCV.Core
+                 , OpenCV.Core.Types
+                 , OpenCV.Core.Types.Mat
+                 , OpenCV.Core.Types.Mat.HMat
+                 , OpenCV.Core.Types.Mat.Repa
+                 , OpenCV.Core.ArrayOps
                  , OpenCV.Unsafe
-                 , OpenCV.ImgProc
                  , OpenCV.ImgProc.ImgFiltering
                  , OpenCV.ImgProc.GeometricImgTransform
                  , OpenCV.ImgProc.MiscImgTransform
                  , OpenCV.ImgProc.Drawing
+                 , OpenCV.ImgProc.StructuralAnalysis
+                 , OpenCV.ImgProc.ObjectDetection
                  , OpenCV.ImgProc.Types
                  , OpenCV.ImgCodecs
                  , OpenCV.HighGui
                  , OpenCV.Video
                  , OpenCV.JSON
   other-modules:   OpenCV.Internal
+                 , OpenCV.Core.Types.Internal
+                 , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.ImgProc.Types.Internal
                  , Language.C.Inline.OpenCV
 
