@@ -15,7 +15,6 @@ library
   include-dirs: include
   c-sources: src/OpenCV/Internal.cpp
 
-           , src/OpenCV/Core.cpp
            , src/OpenCV/Core/Types.cpp
            , src/OpenCV/Core/Types/Internal.cpp
            , src/OpenCV/Core/Types/Mat.cpp
