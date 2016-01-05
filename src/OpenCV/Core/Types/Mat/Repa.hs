@@ -241,10 +241,10 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
                        " doesn't equal the actual number of dimensions " <> show dims <> "!"
                 else do
                   (size :: Ptr CInt) <- peek sizePtr
-                  (sizeShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims size
+                  sizeShape <- map fromIntegral <$> peekArray dims size
 
                   (step :: Ptr CSize) <- peek stepPtr
-                  (stepShape :: sh) <- Repa.shapeOfList . map fromIntegral <$> peekArray dims step
+                  stepShape <- map fromIntegral <$> peekArray dims step
 
                   (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
                   pure $ Right $ Array mat dataPtr sizeShape stepShape
@@ -267,11 +267,11 @@ instance (Storable e) => Repa.Source M e where
     data Array M sh e =
          Array !Mat -- The Mat is kept around so that the data doesn't get garbage collected.
                !(Ptr CUChar) -- Pointer to the data.
-               !sh -- The shape of the extent which is determined by mat->dims and mat->size.p.
-               !sh -- The shape of the data which is determined by mat->dims and mat->step.p.
+               ![Int] -- The shape of the extent which is determined by mat->dims and mat->size.p.
+               ![Int] -- The shape of the data which is determined by mat->dims and mat->step.p.
 
     extent :: (Repa.Shape sh) => Repa.Array M sh e -> sh
-    extent (Array _ _ sizeShape _) = sizeShape
+    extent (Array _ _ sizeShape _) = Repa.shapeOfList sizeShape
 
     index :: (Repa.Shape sh) => Repa.Array M sh e -> sh -> e
     index (Array mat dataPtr sizeShape stepShape) ix =
@@ -281,9 +281,7 @@ instance (Storable e) => Repa.Source M e where
         elemPtr = dataPtr `plusPtr` offset
 
         offset :: Int
-        offset = sum $ zipWith3 mul (Repa.listOfShape sizeShape)
-                                    (Repa.listOfShape stepShape)
-                                    (Repa.listOfShape ix)
+        offset = sum $ zipWith3 mul sizeShape stepShape (Repa.listOfShape ix)
 
         mul size step i
             | i < size  = step * i
@@ -298,8 +296,7 @@ instance (Storable e) => Repa.Source M e where
         elemPtr = dataPtr `plusPtr` offset
 
         offset :: Int
-        offset = sum $ zipWith (*) (Repa.listOfShape stepShape)
-                                   (Repa.listOfShape ix)
+        offset = sum $ zipWith (*) stepShape (Repa.listOfShape ix)
 
     linearIndex :: (Repa.Shape sh) => Repa.Array M sh e -> Int -> e
     linearIndex a ix = Repa.index a sh
@@ -312,8 +309,7 @@ instance (Storable e) => Repa.Source M e where
           sh = Repa.fromIndex (Repa.extent a) ix
 
     deepSeqArray :: (Repa.Shape sh) => Repa.Array M sh e -> b -> b
-    deepSeqArray (Array _mat _dataPtr sizeShape stepShape) =
-        Repa.deepSeq stepShape . Repa.deepSeq sizeShape
+    deepSeqArray = seq
 
 -- TODO (BvD): Is it possible to define something like the following?
 --
