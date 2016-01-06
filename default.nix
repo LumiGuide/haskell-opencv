@@ -1,5 +1,6 @@
 { mkDerivation
 , stdenv
+, lib
 
 , opencv3_1
 
@@ -73,4 +74,5 @@ mkDerivation {
   '';
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.unfree;
+  maintainers = [ lib.engineeringAtLumiGuide ];
 }
