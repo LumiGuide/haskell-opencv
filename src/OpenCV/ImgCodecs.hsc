@@ -12,6 +12,7 @@ module OpenCV.ImgCodecs
     , PngStrategy(..)
     , PngParams(..), defaultPngParams
     , imencode
+    , imencodeM
     ) where
 
 import "base" Foreign.C.String ( withCString )
@@ -259,3 +260,13 @@ imencode format mat = unsafePerformIO $
 
     freeVec :: Ptr () -> IO ()
     freeVec vecPtr = [C.exp|void { delete reinterpret_cast< std::vector<uchar> * >($(void * vecPtr)) }|]
+
+-- | Encodes an image into a memory buffer.
+--
+-- See 'imencode'
+imencodeM
+    :: (PrimMonad m)
+    => OutputFormat
+    -> MutMat (PrimState m)
+    -> m (Either CvException ByteString)
+imencodeM format matM =  imencode format <$> unsafeFreeze matM
