@@ -9,6 +9,7 @@ cabal-version: >=1.10
 
 extra-source-files: data/*.png
                     data/*.jpg
+extra-doc-files: doc/*.jpg
 
 library
   hs-source-dirs: src
@@ -25,6 +26,7 @@ library
            , src/OpenCV/ImgProc/GeometricImgTransform.cpp
            , src/OpenCV/ImgProc/MiscImgTransform.cpp
            , src/OpenCV/ImgProc/Drawing.cpp
+           , src/OpenCV/ImgProc/ColorMaps.cpp
            , src/OpenCV/ImgProc/StructuralAnalysis.cpp
            , src/OpenCV/ImgProc/ObjectDetection.cpp
            , src/OpenCV/ImgCodecs.cpp
@@ -64,6 +66,7 @@ library
                  , OpenCV.ImgProc.GeometricImgTransform
                  , OpenCV.ImgProc.MiscImgTransform
                  , OpenCV.ImgProc.Drawing
+                 , OpenCV.ImgProc.ColorMaps
                  , OpenCV.ImgProc.StructuralAnalysis
                  , OpenCV.ImgProc.ObjectDetection
                  , OpenCV.ImgProc.Types
