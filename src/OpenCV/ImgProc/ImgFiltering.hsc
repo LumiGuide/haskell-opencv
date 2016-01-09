@@ -26,16 +26,27 @@ extrapolation method), or assume that all the non-existing pixels are zeros
 specify the extrapolation method.
 -}
 module OpenCV.ImgProc.ImgFiltering
-    ( medianBlur
+    ( MorphShape(..)
+    , MorphOperation(..)
+
+    , medianBlur
+    , erode
+    , dilate
+    , morphologyEx
+    , getStructuringElement
     ) where
 
 import "base" Foreign.C.Types
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
+import "lens" Control.Lens ( (^.), from )
+import "linear" Linear.V2 ( V2(..) )
+import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
+import "this" OpenCV.ImgProc.Types ( BorderMode )
+import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
 
 --------------------------------------------------------------------------------
 
@@ -54,10 +65,61 @@ C.using "namespace cv"
 
 
 --------------------------------------------------------------------------------
+-- Constants
+--------------------------------------------------------------------------------
+
+defaultAnchor :: Point2i
+defaultAnchor = pure (-1 :: Int) ^. from isoPoint2iV2
+
+
+--------------------------------------------------------------------------------
+-- Types
+--------------------------------------------------------------------------------
+
+data MorphShape
+   = MorphRect -- ^ A rectangular structuring element.
+   | MorphEllipse
+     -- ^ An elliptic structuring element, that is, a filled ellipse inscribed
+     -- into the rectangle Rect(0, 0, esize.width, 0.esize.height).
+   | MorphCross !(V2 Int) -- ^ A cross-shaped structuring element.
+
+#num MORPH_RECT
+#num MORPH_ELLIPSE
+#num MORPH_CROSS
+
+marshalMorphShape :: MorphShape -> (Int32, Point2i)
+marshalMorphShape = \case
+    MorphRect         -> (c'MORPH_RECT   , defaultAnchor)
+    MorphEllipse      -> (c'MORPH_ELLIPSE, defaultAnchor)
+    MorphCross anchor -> (c'MORPH_CROSS  , anchor ^. from isoPoint2iV2)
+
+data MorphOperation
+   = MorphOpen     -- ^ An opening operation: dilate . erode
+   | MorphClose    -- ^ A closing operation: erode . dilate
+   | MorphGradient -- ^ A morphological gradient: dilate - erode
+   | MorphTopHat   -- ^ "top hat": src - open
+   | MorphBlackHat -- ^ "black hat": close - src
+
+#num MORPH_OPEN
+#num MORPH_CLOSE
+#num MORPH_GRADIENT
+#num MORPH_TOPHAT
+#num MORPH_BLACKHAT
+
+marshalMorphOperation :: MorphOperation -> Int32
+marshalMorphOperation = \case
+    MorphOpen     -> c'MORPH_OPEN
+    MorphClose    -> c'MORPH_CLOSE
+    MorphGradient -> c'MORPH_GRADIENT
+    MorphTopHat   -> c'MORPH_TOPHAT
+    MorphBlackHat -> c'MORPH_BLACKHAT
+
+
+--------------------------------------------------------------------------------
 -- Image Filtering
 --------------------------------------------------------------------------------
 
--- | Blurs an image using the median filter.
+-- | Blurs an image using the median filter
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc>
 medianBlur
@@ -78,3 +140,131 @@ medianBlur matIn ksize = unsafePerformIO $ c'medianBlur $ fromIntegral ksize
         withMatPtr matOut $ \matOutPtr ->
         withMatPtr matIn $ \matInPtr ->
           [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int c'ksize)); |]
+
+-- | Erodes an image by using a specific structuring element
+erode
+    :: Mat
+    -> Mat
+    -> Maybe Point2i
+    -> Int
+    -> BorderMode
+    -> Either CvException Mat
+erode src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr     src         $ \srcPtr         ->
+      withMatPtr     dst         $ \dstPtr         ->
+      withMatPtr     kernel      $ \kernelPtr      ->
+      withPoint2iPtr anchor      $ \anchorPtr      ->
+      withScalarPtr  borderValue $ \borderValuePtr ->
+        [cvExcept|
+          cv::erode
+          ( *$(Mat     * srcPtr        )
+          , *$(Mat     * dstPtr        )
+          , *$(Mat     * kernelPtr     )
+          , *$(Point2i * anchorPtr     )
+          ,  $(int32_t   c'iterations  )
+          ,  $(int32_t   c'borderType  )
+          , *$(Scalar  * borderValuePtr)
+          );
+        |]
+  where
+    anchor = fromMaybe defaultAnchor mbAnchor
+    c'iterations = fromIntegral iterations
+    (c'borderType, borderValue) = marshalBorderMode borderMode
+
+-- | Dilates an image by using a specific structuring element
+dilate
+    :: Mat
+    -> Mat
+    -> Maybe Point2i
+    -> Int
+    -> BorderMode
+    -> Either CvException Mat
+dilate src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr     src         $ \srcPtr         ->
+      withMatPtr     dst         $ \dstPtr         ->
+      withMatPtr     kernel      $ \kernelPtr      ->
+      withPoint2iPtr anchor      $ \anchorPtr      ->
+      withScalarPtr  borderValue $ \borderValuePtr ->
+        [cvExcept|
+          cv::dilate
+          ( *$(Mat     * srcPtr        )
+          , *$(Mat     * dstPtr        )
+          , *$(Mat     * kernelPtr     )
+          , *$(Point2i * anchorPtr     )
+          ,  $(int32_t   c'iterations  )
+          ,  $(int32_t   c'borderType  )
+          , *$(Scalar  * borderValuePtr)
+          );
+        |]
+  where
+    anchor = fromMaybe defaultAnchor mbAnchor
+    c'iterations = fromIntegral iterations
+    (c'borderType, borderValue) = marshalBorderMode borderMode
+
+morphologyEx
+    :: Mat
+       -- ^ Source image. The number of channels can be arbitrary. The depth
+       -- should be one of 'MatDepth_8U', 'MatDepth_16U', 'MatDepth_16S',
+       -- 'MatDepth_32F' or 'MatDepth_64F'.
+    -> MorphOperation -- ^ Type of a morphological operation.
+    -> Mat            -- ^ Structuring element.
+    -> Maybe Point2i  -- ^ Anchor position with the kernel.
+    -> Int            -- ^ Number of times erosion and dilation are applied.
+    -> BorderMode
+    -> Either CvException Mat
+morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr     src         $ \srcPtr         ->
+      withMatPtr     dst         $ \dstPtr         ->
+      withMatPtr     kernel      $ \kernelPtr      ->
+      withPoint2iPtr anchor      $ \anchorPtr      ->
+      withScalarPtr  borderValue $ \borderValuePtr ->
+        [cvExcept|
+          cv::morphologyEx
+          ( *$(Mat     * srcPtr        )
+          , *$(Mat     * dstPtr        )
+          ,  $(int32_t   c'op          )
+          , *$(Mat     * kernelPtr     )
+          , *$(Point2i * anchorPtr     )
+          ,  $(int32_t   c'iterations  )
+          ,  $(int32_t   c'borderType  )
+          , *$(Scalar  * borderValuePtr)
+          );
+        |]
+
+  where
+    c'op = marshalMorphOperation op
+    anchor = fromMaybe defaultAnchor mbAnchor
+    c'iterations = fromIntegral iterations
+    (c'borderType, borderValue) = marshalBorderMode borderMode
+
+
+-- | Returns a structuring element of the specified size and shape for
+-- morphological operations
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
+getStructuringElement
+    :: MorphShape
+    -> Size2i
+    -> Either CvException Mat
+getStructuringElement morphShape ksize = unsafePerformIO $ do
+    element <- newEmptyMat
+    handleCvException (pure element) $
+      withSize2iPtr  ksize   $ \ksizePtr   ->
+      withPoint2iPtr anchor  $ \anchorPtr  ->
+      withMatPtr     element $ \elementPtr ->
+       [cvExcept|
+         *$(Mat * elementPtr) =
+           cv::getStructuringElement
+           ( $(int32_t c'morphShape)
+           , *$(Size2i * ksizePtr)
+           , *$(Point2i * anchorPtr)
+           );
+       |]
+  where
+    (c'morphShape, anchor) = marshalMorphShape morphShape

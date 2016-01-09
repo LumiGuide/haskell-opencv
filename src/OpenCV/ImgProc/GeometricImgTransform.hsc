@@ -104,8 +104,8 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
               , src->size()
-              , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
-              , $(int c'borderMode)
+              , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
+              , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
               );
           |]
@@ -141,8 +141,8 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
               , src->size()
-              , $(int c'interpolationMethod) | $(int c'inverse) | $(int c'fillOutliers)
-              , $(int c'borderMode)
+              , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
+              , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
               );
           |]

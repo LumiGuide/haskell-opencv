@@ -1,9 +1,8 @@
 module OpenCV.ImgProc.Types.Internal where
 
-import "base" Foreign.C.Types
 import "lens" Control.Lens ( (^.), from )
 import "linear" Linear.V4 ( V4(..) )
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
+import "lumi-hackage-extended" Lumi.Prelude
 import "this" OpenCV.Core.Types ( Scalar, isoScalarV4 )
 import "this" OpenCV.ImgProc.Types
 
@@ -23,7 +22,7 @@ import "this" OpenCV.ImgProc.Types
 #num INTER_AREA
 #num INTER_LANCZOS4
 
-marshalInterpolationMethod :: InterpolationMethod -> CInt
+marshalInterpolationMethod :: InterpolationMethod -> Int32
 marshalInterpolationMethod = \case
    InterNearest  -> c'INTER_NEAREST
    InterLinear   -> c'INTER_LINEAR
@@ -39,7 +38,7 @@ marshalInterpolationMethod = \case
 #num BORDER_TRANSPARENT
 #num BORDER_ISOLATED
 
-marshalBorderMode :: BorderMode -> (CInt, Scalar)
+marshalBorderMode :: BorderMode -> (Int32, Scalar)
 marshalBorderMode = \case
     BorderConstant scalar -> (c'BORDER_CONSTANT    , scalar    )
     BorderReplicate       -> (c'BORDER_REPLICATE   , zeroScalar)
