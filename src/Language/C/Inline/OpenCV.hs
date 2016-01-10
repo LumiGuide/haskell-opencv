@@ -63,16 +63,16 @@ data C'Mat
 
 -- | Callback function for mouse events
 type C'MouseCallback
-   =  C.CInt -- ^ One of the @cv::MouseEvenTypes@ constants.
-   -> C.CInt -- ^ The x-coordinate of the mouse event.
-   -> C.CInt -- ^ The y-coordinate of the mouse event.
-   -> C.CInt -- ^ One of the @cv::MouseEventFlags@ constants.
+   =  Int32 -- ^ One of the @cv::MouseEvenTypes@ constants.
+   -> Int32 -- ^ The x-coordinate of the mouse event.
+   -> Int32 -- ^ The y-coordinate of the mouse event.
+   -> Int32 -- ^ One of the @cv::MouseEventFlags@ constants.
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 
 -- | Callback function for trackbars
 type C'TrackbarCallback
-   =  C.CInt -- ^ Current position of the specified trackbar.
+   =  Int32 -- ^ Current position of the specified trackbar.
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 

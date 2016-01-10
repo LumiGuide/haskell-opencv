@@ -12,7 +12,9 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
-import "this" OpenCV.Internal
+import "this" OpenCV.Internal ( CvException, handleCvException, cvExcept )
+import "this" OpenCV.Core.Types.Internal
+    ( ToPoint2f, toPoint2f, withPoint2fPtr, withPoint2fs )
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -38,8 +40,9 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
 pointPolygonTest
-    :: V.Vector Point2f -- ^ Contour.
-    -> Point2f -- ^ Point tested against the contour.
+    :: (ToPoint2f contourPoint2f, ToPoint2f testPoint2f)
+    => V.Vector contourPoint2f -- ^ Contour.
+    -> testPoint2f -- ^ Point tested against the contour.
     -> Bool
        -- ^ If true, the function estimates the signed distance from the point
        -- to the nearest contour edge. Otherwise, the function only checks if
@@ -47,13 +50,13 @@ pointPolygonTest
     -> Either CvException Double
 pointPolygonTest contour pt measureDist = unsafePerformIO $
     withPoint2fs contour $ \contourPtr ->
-    withPoint2fPtr pt $ \ptPtr ->
+    withPoint2fPtr (toPoint2f pt) $ \ptPtr ->
     alloca $ \(c'resultPtr) ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
         cv::_InputArray contour =
           cv::_InputArray( $(Point2f * contourPtr)
-                         , $(int c'numPoints)
+                         , $(int32_t c'numPoints)
                          );
         *$(double * c'resultPtr) =
           cv::pointPolygonTest( contour

@@ -208,15 +208,15 @@ toRepa
 toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
     alloca $ \(flagsPtr    :: Ptr Int32) ->
     alloca $ \(dimsPtr     :: Ptr Int32) ->
-    alloca $ \(sizePtr     :: Ptr (Ptr CInt)) ->
+    alloca $ \(sizePtr     :: Ptr (Ptr Int32)) ->
     alloca $ \(stepPtr     :: Ptr (Ptr CSize)) ->
     alloca $ \(dataPtrPtr  :: Ptr (Ptr CUChar)) -> do
       [CU.block| void {
         const Mat * const matPtr = $(Mat * matPtr);
-        *$(int32_t  * const flagsPtr)          = matPtr->flags;
-        *$(int32_t  * const dimsPtr)           = matPtr->dims;
-        *$(int    * * const sizePtr)           = matPtr->size.p;
-        *$(size_t * * const stepPtr)           = matPtr->step.p;
+        *$(int32_t       *   const flagsPtr  ) = matPtr->flags;
+        *$(int32_t       *   const dimsPtr   ) = matPtr->dims;
+        *$(int32_t       * * const sizePtr   ) = matPtr->size.p;
+        *$(size_t        * * const stepPtr   ) = matPtr->step.p;
         *$(unsigned char * * const dataPtrPtr) = matPtr->data;
       }|]
       (depth, channels) <- unmarshalFlags <$> peek flagsPtr
@@ -227,7 +227,7 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
                "The expected depth of " <> show expectedDepth <>
                " doesn't equal the actual depth of " <> show depth <> "!"
         else do
-          if channels /= expectedChannels
+          if channels /= fromIntegral expectedChannels
             then pure $ Left $
                    "Expected " <> show expectedChannels <> " channels" <>
                    " but got " <> show channels <> "!"
@@ -240,7 +240,7 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
                        "The expected rank of " <> show expectedRank <>
                        " doesn't equal the actual number of dimensions " <> show dims <> "!"
                 else do
-                  (size :: Ptr CInt) <- peek sizePtr
+                  (size :: Ptr Int32) <- peek sizePtr
                   sizeShape <- map fromIntegral <$> peekArray dims size
 
                   (step :: Ptr CSize) <- peek stepPtr

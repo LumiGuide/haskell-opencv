@@ -23,25 +23,26 @@ import "this" OpenCV.Core.Types.Mat.HMat
 
 --------------------------------------------------------------------------------
 
-#define IsoJSON(ISO, FROM, TO)                   \
-instance ToJSON FROM where {                     \
-    toJSON = toJSON . (view ISO :: FROM -> TO);  \
-};                                               \
-instance FromJSON FROM where {                   \
-    parseJSON = fmap (view $ from ISO :: TO -> FROM) . parseJSON; \
+#define IsoJSON(A, B, A_TO_B, B_TO_A)                \
+instance ToJSON A where {                            \
+    toJSON = toJSON . (A_TO_B :: A -> B);            \
+};                                                   \
+instance FromJSON A where {                          \
+    parseJSON = fmap (B_TO_A :: B -> A) . parseJSON; \
 }
 
 --------------------------------------------------------------------------------
 
-IsoJSON(isoPoint2iV2, Point2i, V2 Int   )
-IsoJSON(isoPoint2fV2, Point2f, V2 Float )
-IsoJSON(isoPoint2dV2, Point2d, V2 Double)
-IsoJSON(isoPoint3iV3, Point3i, V3 Int   )
-IsoJSON(isoPoint3fV3, Point3f, V3 Float )
-IsoJSON(isoPoint3dV3, Point3d, V3 Double)
-IsoJSON(isoSize2iV2 , Size2i , V2 Int   )
-IsoJSON(isoSize2fV2 , Size2f , V2 Float )
-IsoJSON(hmat        , Mat    , HMat     )
+IsoJSON(Point2i, V2 Int32 , fromPoint2i, toPoint2i       )
+IsoJSON(Point2f, V2 Float , fromPoint2f, toPoint2f       )
+IsoJSON(Point2d, V2 Double, fromPoint2d, toPoint2d       )
+IsoJSON(Point3i, V3 Int32 , fromPoint3i, toPoint3i       )
+IsoJSON(Point3f, V3 Float , fromPoint3f, toPoint3f       )
+IsoJSON(Point3d, V3 Double, fromPoint3d, toPoint3d       )
+IsoJSON(Size2i , V2 Int32 , fromSize2i , toSize2i        )
+IsoJSON(Size2f , V2 Float , fromSize2f , toSize2f        )
+IsoJSON(Mat    , HMat     , view hmat  , view (from hmat))
+
 
 --------------------------------------------------------------------------------
 

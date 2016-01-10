@@ -6,7 +6,6 @@ module OpenCV.ImgProc.ObjectDetection
     , matchTemplate
     ) where
 
-import "base" Foreign.C.Types
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
@@ -52,8 +51,8 @@ data MatchTemplateMethod
 #num CV_TM_CCOEFF
 #num CV_TM_CCOEFF_NORMED
 
-marshallMatchTemplateMethod :: MatchTemplateMethod -> Bool -> CInt
-marshallMatchTemplateMethod m n =
+marshalMatchTemplateMethod :: MatchTemplateMethod -> Bool -> Int32
+marshalMatchTemplateMethod m n =
     case (m, n) of
       (MatchTemplateSqDiff, False) -> c'CV_TM_SQDIFF
       (MatchTemplateSqDiff, True ) -> c'CV_TM_SQDIFF_NORMED
@@ -104,8 +103,8 @@ matchTemplate image templ method normed = unsafePerformIO $ do
           cv::matchTemplate( *$(Mat * imagePtr)
                            , *$(Mat * templPtr)
                            , *$(Mat * resultPtr)
-                           , $(int c'method)
+                           , $(int32_t c'method)
                            );
         |]
   where
-    c'method = marshallMatchTemplateMethod method normed
+    c'method = marshalMatchTemplateMethod method normed

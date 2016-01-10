@@ -10,6 +10,7 @@ module OpenCV.Core.Types.Mat.HMat
     ) where
 
 
+import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peekElemOff, pokeElemOff )
 import qualified "bytestring" Data.ByteString as B
@@ -29,8 +30,8 @@ import qualified "vector" Data.Vector.Unboxed.Mutable as VUM
 
 data HMat
    = HMat
-     { hmShape    :: ![Int]
-     , hmChannels :: !Int
+     { hmShape    :: ![Int32]
+     , hmChannels :: !Int32
      , hmElems    :: !HElems
      } deriving (Show, Eq)
 
@@ -72,7 +73,7 @@ hmat = iso matToHMat hMatToMat
 
 matToHMat :: Mat -> HMat
 matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
-    elems <- copyElems info step dataPtr
+    elems <- copyElems info (map fromIntegral step) dataPtr
     pure HMat
          { hmShape    = miShape    info
          , hmChannels = miChannels info
@@ -99,12 +100,12 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
       where
         copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
         copyToVec = do
-            v <- VUM.unsafeNew $ product0 shape * channels
-            forM_ (zip [0,channels..] $ dimPositions shape) $ \(posIx, pos) -> do
+            v <- VUM.unsafeNew $ product0 (map fromIntegral shape) * (fromIntegral channels)
+            forM_ (zip [0,channels..] $ dimPositions $ map fromIntegral shape) $ \(posIx, pos) -> do
                 let elemPtr = matElemAddress dataPtr step pos
                 forM_ [0 .. channels - 1] $ \channelIx -> do
-                  e <- peekElemOff elemPtr channelIx
-                  VUM.unsafeWrite v (posIx + channelIx) e
+                  e <- peekElemOff elemPtr $ fromIntegral channelIx
+                  VUM.unsafeWrite v (fromIntegral $ posIx + channelIx) e
             VU.unsafeFreeze v
 
 hMatToMat :: HMat -> Mat
@@ -115,9 +116,9 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
   where
     sizes = V.fromList shape
     depth = hElemsDepth elems
-    scalar = (zero :: V4 Double) ^. from isoScalarV4
+    scalar = toScalar (zero :: V4 CDouble)
 
-    copyElems :: [Int] -> Ptr Word8 -> IO ()
+    copyElems :: [CSize] -> Ptr Word8 -> IO ()
     copyElems step dataPtr = case elems of
         HElems_8U       v -> copyFromVec v
         HElems_8S       v -> copyFromVec v
@@ -130,14 +131,14 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
       where
         copyFromVec :: (Storable a, VU.Unbox a) => VU.Vector a -> IO ()
         copyFromVec v =
-            forM_ (zip [0,channels..] $ dimPositions shape) $ \(posIx, pos) -> do
-              let elemPtr = matElemAddress dataPtr step pos
+            forM_ (zip [0, fromIntegral channels ..] $ dimPositions (fromIntegral <$> shape)) $ \(posIx, pos) -> do
+              let elemPtr = matElemAddress dataPtr (fromIntegral <$> step) pos
               forM_ [0 .. channels - 1] $ \channelIx ->
-                pokeElemOff elemPtr channelIx $ VU.unsafeIndex v (posIx + channelIx)
+                pokeElemOff elemPtr (fromIntegral channelIx) $ VU.unsafeIndex v (fromIntegral $ posIx + channelIx)
 
 -- | All possible positions (indexes) for a given shape (list of
 -- sizes per dimension).
-dimPositions :: [Int] -> [[Int]]
+dimPositions :: (Num a, Enum a) => [a] -> [[a]]
 dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape
 
 matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a

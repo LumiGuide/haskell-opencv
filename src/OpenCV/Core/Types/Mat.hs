@@ -25,7 +25,6 @@ module OpenCV.Core.Types.Mat
     , createMat
     ) where
 
-import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray, allocaArray )
 import "base" Foreign.Ptr ( Ptr )
@@ -39,6 +38,7 @@ import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToP
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import "this" OpenCV.Unsafe
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG
@@ -59,40 +59,37 @@ newEmptyMat :: IO Mat
 newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
 
 newMat
-    :: V.Vector Int -- ^ Vector of sizes
+    :: V.Vector Int32 -- ^ Vector of sizes
     -> MatDepth
-    -> Int          -- ^ Number of channels
+    -> Int32        -- ^ Number of channels
     -> Scalar       -- ^ Default element value
     -> IO Mat
 newMat sizes matDepth cn defValue =
-    withVector c'sizes $ \sizesPtr ->
+    withVector sizes $ \sizesPtr ->
     withScalarPtr defValue $ \scalarPtr ->
       matFromPtr [CU.exp|Mat * {
-        new Mat( $(int     c'ndims)
-               , $(int *   sizesPtr)
+        new Mat( $(int32_t c'ndims)
+               , $(int32_t * sizesPtr)
                , $(int32_t c'type)
                , *$(Scalar * scalarPtr)
                )
       }|]
   where
     c'ndims = fromIntegral $ VG.length sizes
-    c'sizes = fmap fromIntegral sizes
     c'type  = marshalFlags matDepth cn
 
 -- | Identity matrix
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
-eyeMat :: Int -> Int -> MatDepth -> Int -> Mat
+eyeMat :: Int32 -> Int32 -> MatDepth -> Int32 -> Mat
 eyeMat rows cols depth channels = unsafePerformIO $
     matFromPtr [CU.exp|Mat * {
-      new Mat(Mat::eye( $(int     c'rows)
-                      , $(int     c'cols)
+      new Mat(Mat::eye( $(int32_t rows)
+                      , $(int32_t cols)
                       , $(int32_t c'type)
                       ))
     }|]
   where
-    c'rows = fromIntegral rows
-    c'cols = fromIntegral cols
     c'type = marshalFlags depth channels
 
 -- TODO (BvD): Move to some Utility module.
@@ -136,7 +133,7 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
-matCopyTo :: Mat -> V2 Int -> Mat -> Either CvException Mat
+matCopyTo :: Mat -> V2 Int32 -> Mat -> Either CvException Mat
 matCopyTo dst topLeft src = runST $ do
     dstMut <- thaw dst
     eResult <- matCopyToM dstMut topLeft src
@@ -147,7 +144,7 @@ matCopyTo dst topLeft src = runST $ do
 matCopyToM
     :: (PrimMonad m)
     => MutMat (PrimState m)
-    -> V2 Int
+    -> V2 Int32
     -> Mat
     -> m (Either CvException ())
 matCopyToM dstMut (V2 x y) src =
@@ -156,16 +153,13 @@ matCopyToM dstMut (V2 x y) src =
     withMatPtr src $ \srcPtr ->
       [cvExcept|
         const Mat * const srcPtr = $(const Mat * const srcPtr);
-        const int x = $(int c'x);
-        const int y = $(int c'y);
+        const int32_t x = $(int32_t x);
+        const int32_t y = $(int32_t y);
         srcPtr->copyTo( $(Mat * dstPtr)
                       ->rowRange(y, y + srcPtr->rows)
                        .colRange(x, x + srcPtr->cols)
                       );
       |]
-  where
-    c'x = fromIntegral x
-    c'y = fromIntegral y
 
           -- Mat * srcPtr = $(Mat * srcPtr);
           -- Mat dstRoi = Mat( *$(Mat * matOutPtr)
@@ -204,9 +198,9 @@ matConvertTo rtype alpha beta src = unsafePerformIO $ do
 
 data MatInfo
    = MatInfo
-     { miShape    :: ![Int]
+     { miShape    :: ![Int32]
      , miDepth    :: !MatDepth
-     , miChannels :: !Int
+     , miChannels :: !Int32
      }
      deriving (Show, Eq)
 
@@ -214,18 +208,18 @@ matInfo :: Mat -> MatInfo
 matInfo mat = unsafePerformIO $
     withMatPtr mat $ \matPtr ->
     alloca $ \(flagsPtr :: Ptr Int32) ->
-    alloca $ \(dimsPtr  :: Ptr CInt) ->
-    alloca $ \(sizePtr  :: Ptr (Ptr CInt)) -> do
+    alloca $ \(dimsPtr  :: Ptr Int32) ->
+    alloca $ \(sizePtr  :: Ptr (Ptr Int32)) -> do
       [CU.block|void {
         const Mat * const matPtr = $(Mat * matPtr);
-        *$(int32_t * const flagsPtr) = matPtr->flags;
-        *$(int *     const dimsPtr ) = matPtr->dims;
-        *$(int * *   const sizePtr ) = matPtr->size.p;
+        *$(int32_t *   const flagsPtr) = matPtr->flags;
+        *$(int32_t *   const dimsPtr ) = matPtr->dims;
+        *$(int32_t * * const sizePtr ) = matPtr->size.p;
       }|]
       (depth, channels) <- unmarshalFlags <$> peek flagsPtr
-      (dims :: Int) <- fromIntegral <$> peek dimsPtr
-      (size :: Ptr CInt) <- peek sizePtr
-      shape <- map fromIntegral <$> peekArray dims size
+      dims <- peek dimsPtr
+      size <- peek sizePtr
+      shape <- peekArray (fromIntegral dims) size
       pure MatInfo
            { miShape    = shape
            , miDepth    = depth

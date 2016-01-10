@@ -350,7 +350,7 @@ data ColorCode
 #num COLOR_BayerGR2RGB_EA
 
 class ColorConversion (fromColor :: ColorCode) (toColor :: ColorCode) where
-    colorCode :: Proxy fromColor -> Proxy toColor -> C.CInt
+    colorCode :: Proxy fromColor -> Proxy toColor -> Int32
 
 instance ColorConversion 'BGR      'BGRA      where colorCode _ _ = c'COLOR_BGR2BGRA
 instance ColorConversion 'RGB      'RGBA      where colorCode _ _ = c'COLOR_RGB2RGBA
@@ -607,7 +607,7 @@ cvtColor fromColor toColor src = unsafePerformIO $ do
         [cvExcept|
           cv::cvtColor( *$(Mat * srcPtr)
                       , *$(Mat * dstPtr)
-                      , $(int c'code)
+                      , $(int32_t c'code)
                       );
         |]
   where

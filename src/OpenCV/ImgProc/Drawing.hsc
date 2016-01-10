@@ -16,7 +16,6 @@ module OpenCV.ImgProc.Drawing
     , rectangle
     ) where
 
-import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
@@ -30,6 +29,7 @@ import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
@@ -61,8 +61,8 @@ data LineType
 #num LINE_4
 #num LINE_AA
 
-marshallLineType :: LineType -> CInt
-marshallLineType = \case
+marshalLineType :: LineType -> Int32
+marshalLineType = \case
   LineType_8  -> c'LINE_8
   LineType_4  -> c'LINE_4
   LineType_AA -> c'LINE_AA
@@ -97,8 +97,8 @@ data FontFace
 #num FONT_HERSHEY_SCRIPT_COMPLEX
 #num FONT_ITALIC
 
-marshallFontFace :: FontFace -> CInt
-marshallFontFace = \case
+marshalFontFace :: FontFace -> Int32
+marshalFontFace = \case
    FontHersheySimplex       -> c'FONT_HERSHEY_SIMPLEX
    FontHersheyPlain         -> c'FONT_HERSHEY_PLAIN
    FontHersheyDuplex        -> c'FONT_HERSHEY_DUPLEX
@@ -115,14 +115,14 @@ marshallFontFace = \case
 -- <http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc>
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 arrowedLine
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
-    -> Point2i -- ^ The point the arrow starts from.
-    -> Point2i -- ^ The point the arrow points to.
-    -> Scalar -- ^ Line color.
-    -> Int -- ^ Line thickness.
+    -> fromPoint2i -- ^ The point the arrow starts from.
+    -> toPoint2i -- ^ The point the arrow points to.
+    -> color -- ^ Line color.
+    -> Int32 -- ^ Line thickness.
     -> LineType
-    -> Int -- ^ Number of fractional bits in the point coordinates.
+    -> Int32 -- ^ Number of fractional bits in the point coordinates.
     -> Double -- ^ The length of the arrow tip in relation to the arrow length.
     -> m ()
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
@@ -136,30 +136,28 @@ arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
                        , *$(Point2i * pt1Ptr)
                        , *$(Point2i * pt2Ptr)
                        , *$(Scalar * colorPtr)
-                       , $(int c'thickness)
-                       , $(int c'lineType)
-                       , $(int c'shift)
+                       , $(int32_t thickness)
+                       , $(int32_t c'lineType)
+                       , $(int32_t shift)
                        , $(double c'tipLength)
                        )
       }|]
   where
-    c'thickness = fromIntegral thickness
-    c'lineType  = marshallLineType lineType
-    c'shift     = fromIntegral shift
+    c'lineType  = marshalLineType lineType
     c'tipLength = realToFrac tipLength
 
 -- | Draws a circle.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
 circle
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image where the circle is drawn.
-    -> Point2i -- ^ Center of the circle.
-    -> Int -- ^ Radius of the circle.
-    -> Scalar -- ^ Circle color.
-    -> Int -- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
+    -> point2i -- ^ Center of the circle.
+    -> Int32 -- ^ Radius of the circle.
+    -> color -- ^ Circle color.
+    -> Int32 -- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
     -> LineType -- ^ Type of the circle boundary.
-    -> Int -- ^ Number of fractional bits in the coordinates of the center and in the radius value.
+    -> Int32 -- ^ Number of fractional bits in the coordinates of the center and in the radius value.
     -> m ()
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
@@ -169,37 +167,34 @@ circle img center radius color thickness lineType shift =
       [C.exp|void {
         cv::circle( *$(Mat * matPtr)
                   , *$(Point2i * centerPtr)
-                  , $(int c'radius)
+                  , $(int32_t radius)
                   , *$(Scalar * colorPtr)
-                  , $(int c'thickness)
-                  , $(int c'lineType)
-                  , $(int c'shift)
+                  , $(int32_t thickness)
+                  , $(int32_t c'lineType)
+                  , $(int32_t shift)
                   )
       }|]
   where
-    c'radius    = fromIntegral radius
-    c'thickness = fromIntegral thickness
-    c'lineType  = marshallLineType lineType
-    c'shift     = fromIntegral shift
+    c'lineType  = marshalLineType lineType
 
 -- | Draws a simple or thick elliptic arc or fills an ellipse sector
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
 ellipse
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i point2i, ToSize2i size, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
-    -> Point2i -- ^ Center of the ellipse.
-    -> Size2i -- ^ Half of the size of the ellipse main axes.
+    -> point2i -- ^ Center of the ellipse.
+    -> size -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
     -> Double -- ^ Starting angle of the elliptic arc in degrees.
     -> Double -- ^ Ending angle of the elliptic arc in degrees.
-    -> Scalar -- ^ Ellipse color.
-    -> Int
+    -> color -- ^ Ellipse color.
+    -> Int32
        -- ^ Thickness of the ellipse arc outline, if
        -- positive. Otherwise, this indicates that a filled ellipse
        -- sector is to be drawn.
     -> LineType -- ^ Type of the ellipse boundary.
-    -> Int -- ^ Number of fractional bits in the coordinates of the center and values of axes.
+    -> Int32 -- ^ Number of fractional bits in the coordinates of the center and values of axes.
     -> m ()
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
@@ -215,18 +210,16 @@ ellipse img center axes angle startAngle endAngle color thickness lineType shift
                    , $(double c'startAngle)
                    , $(double c'endAngle)
                    , *$(Scalar * colorPtr)
-                   , $(int c'thickness)
-                   , $(int c'lineType)
-                   , $(int c'shift)
+                   , $(int32_t thickness)
+                   , $(int32_t c'lineType)
+                   , $(int32_t shift)
                    )
       }|]
   where
     c'angle      = realToFrac angle
     c'startAngle = realToFrac startAngle
     c'endAngle   = realToFrac endAngle
-    c'thickness  = fromIntegral thickness
-    c'lineType   = marshallLineType lineType
-    c'shift      = fromIntegral shift
+    c'lineType   = marshalLineType lineType
 
 -- | Fills a convex polygon.
 --
@@ -239,12 +232,12 @@ ellipse img center axes angle startAngle endAngle color thickness lineType shift
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc>
 fillConvexPoly
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
-    -> V.Vector Point2i -- ^ Polygon vertices.
-    -> Scalar -- ^ Polygon color.
+    -> V.Vector point2i -- ^ Polygon vertices.
+    -> color -- ^ Polygon color.
     -> LineType
-    -> Int -- ^ Number of fractional bits in the vertex coordinates.
+    -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
@@ -254,27 +247,26 @@ fillConvexPoly img points color lineType shift =
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
                           , $(Point2i * pointsPtr)
-                          , $(int c'numPoints)
+                          , $(int32_t c'numPoints)
                           , *$(Scalar * colorPtr)
-                          , $(int c'lineType)
-                          , $(int c'shift)
+                          , $(int32_t c'lineType)
+                          , $(int32_t shift)
                           )
       }|]
   where
     c'numPoints = fromIntegral $ V.length points
-    c'lineType  = marshallLineType lineType
-    c'shift     = fromIntegral shift
+    c'lineType  = marshalLineType lineType
 
 -- | Fills the area bounded by one or more polygons.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
 fillPoly
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
-    -> V.Vector (V.Vector Point2i) -- ^ Polygons.
-    -> Scalar -- ^ Polygon color.
+    -> V.Vector (V.Vector point2i) -- ^ Polygons.
+    -> color -- ^ Polygon color.
     -> LineType
-    -> Int -- ^ Number of fractional bits in the vertex coordinates.
+    -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 fillPoly img polygons color lineType shift =
     unsafePrimToPrim $
@@ -285,19 +277,18 @@ fillPoly img polygons color lineType shift =
       [C.exp|void {
         cv::fillPoly( *$(Mat * matPtr)
                     , $(const Point2i * * polygonsPtr)
-                    , $(int * nptsPtr)
-                    , $(int c'numPolygons)
+                    , $(int32_t * nptsPtr)
+                    , $(int32_t c'numPolygons)
                     , *$(Scalar * colorPtr)
-                    , $(int c'lineType)
-                    , $(int c'shift)
+                    , $(int32_t c'lineType)
+                    , $(int32_t shift)
                     )
       }|]
   where
     c'numPolygons = fromIntegral $ V.length polygons
-    c'lineType    = marshallLineType lineType
-    c'shift       = fromIntegral shift
+    c'lineType    = marshalLineType lineType
 
-    npts :: VS.Vector CInt
+    npts :: VS.Vector Int32
     npts = VS.convert $ V.map (fromIntegral . V.length) polygons
 
 -- | Calculates the width and height of a text string.
@@ -309,27 +300,26 @@ getTextSize
     :: Text
     -> FontFace
     -> Double  -- ^ Font scale.
-    -> Int -- ^ Thickness of lines used to render the text.
+    -> Int32 -- ^ Thickness of lines used to render the text.
     -> (Size2i, Int)
 getTextSize text fontFace fontScale thickness = unsafePerformIO $
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    alloca $ \(c'baseLinePtr :: Ptr CInt) -> do
+    alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
       size <- size2iFromPtr $
         [C.block|Size2i * {
           Size size = cv::getTextSize( $(char * c'text)
-                                     , $(int c'fontFace)
+                                     , $(int32_t c'fontFace)
                                      , $(double c'fontScale)
-                                     , $(int c'thickness)
-                                     , $(int * c'baseLinePtr)
+                                     , $(int32_t thickness)
+                                     , $(int32_t * c'baseLinePtr)
                                      );
           return new Size(size);
         }|]
       baseLine <- peek c'baseLinePtr
       pure (size, fromIntegral baseLine)
   where
-    c'fontFace  = marshallFontFace fontFace
+    c'fontFace  = marshalFontFace fontFace
     c'fontScale = realToFrac fontScale
-    c'thickness = fromIntegral thickness
 
 
 
@@ -337,14 +327,14 @@ getTextSize text fontFace fontScale thickness = unsafePerformIO $
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
 line
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
-    -> Point2i -- ^ First point of the line segment.
-    -> Point2i -- ^ Scond point of the line segment.
-    -> Scalar -- ^ Line color.
-    -> Int -- ^ Line thickness.
+    -> fromPoint2i -- ^ First point of the line segment.
+    -> toPoint2i -- ^ Scond point of the line segment.
+    -> color -- ^ Line color.
+    -> Int32 -- ^ Line thickness.
     -> LineType
-    -> Int -- ^ Number of fractional bits in the point coordinates.
+    -> Int32 -- ^ Number of fractional bits in the point coordinates.
     -> m ()
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
@@ -357,15 +347,13 @@ line img pt1 pt2 color thickness lineType shift =
                 , *$(Point2i * pt1Ptr)
                 , *$(Point2i * pt2Ptr)
                 , *$(Scalar * colorPtr)
-                , $(int c'thickness)
-                , $(int c'lineType)
-                , $(int c'shift)
+                , $(int32_t thickness)
+                , $(int32_t c'lineType)
+                , $(int32_t shift)
                 )
       }|]
   where
-    c'thickness = fromIntegral thickness
-    c'lineType  = marshallLineType lineType
-    c'shift     = fromIntegral shift
+    c'lineType = marshalLineType lineType
 
 -- | Draws a text string.
 --
@@ -375,14 +363,14 @@ line img pt1 pt2 color thickness lineType shift =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
 putText
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
-    -> Point2i -- ^ Bottom-left corner of the text string in the image.
+    -> point2i -- ^ Bottom-left corner of the text string in the image.
     -> FontFace
     -> Double -- ^ Font scale factor that is multiplied by the font-specific base size.
-    -> Scalar -- ^ Text color.
-    -> Int -- ^ Thickness of the lines used to draw a text.
+    -> color -- ^ Text color.
+    -> Int32 -- ^ Thickness of the lines used to draw a text.
     -> LineType
     -> Bool -- ^ When 'True', the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner.
     -> m ()
@@ -396,32 +384,31 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
         cv::putText( *$(Mat * matPtr)
                    , $(char * c'text)
                    , *$(Point2i * orgPtr)
-                   , $(int c'fontFace)
+                   , $(int32_t c'fontFace)
                    , $(double c'fontScale)
                    , *$(Scalar * colorPtr)
-                   , $(int c'thickness)
-                   , $(int c'lineType)
+                   , $(int32_t thickness)
+                   , $(int32_t c'lineType)
                    , $(bool c'bottomLeftOrigin)
                    )
       }|]
   where
-    c'fontFace         = marshallFontFace fontFace
+    c'fontFace         = marshalFontFace fontFace
     c'fontScale        = realToFrac fontScale
-    c'thickness        = fromIntegral thickness
-    c'lineType         = marshallLineType lineType
+    c'lineType         = marshalLineType lineType
     c'bottomLeftOrigin = fromBool bottomLeftOrigin
 
 -- | Draws a simple, thick, or filled up-right rectangle
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 rectangle
-    :: (PrimMonad m)
+    :: (PrimMonad m, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
     -> Rect
-    -> Scalar -- ^ Rectangle color or brightness (grayscale image).
-    -> Int -- ^ Line thickness.
+    -> color -- ^ Rectangle color or brightness (grayscale image).
+    -> Int32 -- ^ Line thickness.
     -> LineType
-    -> Int -- ^ Number of fractional bits in the point coordinates.
+    -> Int32 -- ^ Number of fractional bits in the point coordinates.
     -> m ()
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
@@ -432,12 +419,10 @@ rectangle img rect color thickness lineType shift =
         cv::rectangle( *$(Mat * matPtr)
                      , *$(Rect * rectPtr)
                      , *$(Scalar * colorPtr)
-                     , $(int c'thickness)
-                     , $(int c'lineType)
-                     , $(int c'shift)
+                     , $(int32_t thickness)
+                     , $(int32_t c'lineType)
+                     , $(int32_t shift)
                      )
       }|]
   where
-    c'thickness = fromIntegral thickness
-    c'lineType  = marshallLineType lineType
-    c'shift     = fromIntegral shift
+    c'lineType = marshalLineType lineType

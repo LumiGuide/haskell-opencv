@@ -54,6 +54,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
@@ -82,12 +83,13 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 warpAffine
-    :: Mat -- ^ Source image.
+    :: (ToScalar scalar)
+    => Mat -- ^ Source image.
     -> Mat -- ^ Affine transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
-    -> BorderMode -- ^ Pixel extrapolation method.
+    -> BorderMode scalar -- ^ Pixel extrapolation method.
     -> Either CvException Mat -- ^ Transformed source image.
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
@@ -119,12 +121,13 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: Mat -- ^ Source image.
+    :: (ToScalar scalar)
+    => Mat -- ^ Source image.
     -> Mat -- ^ Perspective transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
-    -> BorderMode -- ^ Pixel extrapolation method.
+    -> BorderMode scalar -- ^ Pixel extrapolation method.
     -> Either CvException Mat -- ^ Transformed source image.
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do

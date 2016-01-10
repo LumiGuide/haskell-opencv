@@ -67,8 +67,8 @@ data ImreadMode
 #num IMREAD_ANYCOLOR
 #num IMREAD_LOAD_GDAL
 
-marshallImreadMode :: ImreadMode -> CInt
-marshallImreadMode = \case
+marshalImreadMode :: ImreadMode -> Int32
+marshalImreadMode = \case
     ImreadUnchanged -> c'IMREAD_UNCHANGED
     ImreadGrayscale -> c'IMREAD_GRAYSCALE
     ImreadColor     -> c'IMREAD_COLOR
@@ -89,10 +89,10 @@ imdecode :: ImreadMode
 imdecode imreadMode hbuf = unsafePerformIO $ matFromPtr
     [C.block|Mat * {
       cv::_InputArray cbuf = cv::_InputArray($bs-ptr:hbuf, $bs-len:hbuf);
-      return new cv::Mat(cv::imdecode(cbuf, $(int c'imreadMode)));
+      return new cv::Mat(cv::imdecode(cbuf, $(int32_t c'imreadMode)));
     }|]
   where
-    c'imreadMode = marshallImreadMode imreadMode
+    c'imreadMode = marshalImreadMode imreadMode
 
 imdecodeM :: (PrimMonad m) => ImreadMode -> ByteString -> m (MutMat (PrimState m))
 imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
@@ -127,8 +127,8 @@ defaultJpegParams =
 #num IMWRITE_JPEG_LUMA_QUALITY
 #num IMWRITE_JPEG_CHROMA_QUALITY
 
-marshallJpegParams :: JpegParams -> VS.Vector CInt
-marshallJpegParams params =
+marshalJpegParams :: JpegParams -> VS.Vector CInt
+marshalJpegParams params =
     [ c'IMWRITE_JPEG_QUALITY       , fromIntegral $ jpegParamQuality         params
     , c'IMWRITE_JPEG_PROGRESSIVE   , fromBool     $ jpegParamProgressive     params
     , c'IMWRITE_JPEG_OPTIMIZE      , fromBool     $ jpegParamOptimize        params
@@ -151,8 +151,8 @@ data PngStrategy
 #num IMWRITE_PNG_STRATEGY_RLE
 #num IMWRITE_PNG_STRATEGY_FIXED
 
-marshallPngStrategy :: PngStrategy -> CInt
-marshallPngStrategy = \case
+marshalPngStrategy :: PngStrategy -> CInt
+marshalPngStrategy = \case
    PngStrategyDefault     -> c'IMWRITE_PNG_STRATEGY_DEFAULT
    PngStrategyFiltered    -> c'IMWRITE_PNG_STRATEGY_FILTERED
    PngStrategyHuffmanOnly -> c'IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY
@@ -178,10 +178,10 @@ defaultPngParams =
 #num IMWRITE_PNG_STRATEGY
 #num IMWRITE_PNG_BILEVEL
 
-marshallPngParams :: PngParams -> VS.Vector CInt
-marshallPngParams params =
+marshalPngParams :: PngParams -> VS.Vector CInt
+marshalPngParams params =
     [ c'IMWRITE_PNG_COMPRESSION, fromIntegral        $ pngParamCompression params
-    , c'IMWRITE_PNG_STRATEGY   , marshallPngStrategy $ pngParamStrategy    params
+    , c'IMWRITE_PNG_STRATEGY   , marshalPngStrategy $ pngParamStrategy    params
     , c'IMWRITE_PNG_BILEVEL    , fromBool            $ pngParamBinaryLevel params
     ]
 
@@ -202,14 +202,14 @@ data OutputFormat
 #num IMWRITE_PXM_BINARY
 #num IMWRITE_WEBP_QUALITY
 
-marshallOutputFormat :: OutputFormat -> (String, VS.Vector CInt)
-marshallOutputFormat = \case
+marshalOutputFormat :: OutputFormat -> (String, VS.Vector CInt)
+marshalOutputFormat = \case
     OutputBmp          -> (".bmp" , [])
     OutputExr          -> (".exr" , [])
     OutputHdr comp     -> (".hdr" , [fromBool comp])
-    OutputJpeg params  -> (".jpeg", marshallJpegParams params)
+    OutputJpeg params  -> (".jpeg", marshalJpegParams params)
     OutputJpeg2000     -> (".jp2" , [])
-    OutputPng params   -> (".png" , marshallPngParams params)
+    OutputPng params   -> (".png" , marshalPngParams params)
     OutputPxm binary   -> (".pxm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
     OutputSunras       -> (".sr"  , [])
     OutputTiff         -> (".tiff", [])
@@ -228,7 +228,7 @@ imencode format mat = unsafePerformIO $
     withCString ext $ \extPtr ->
     alloca $ \(bufPtrPtr :: Ptr (Ptr CUChar)) ->
     alloca $ \(vecPtrPtr :: Ptr (Ptr ())) ->
-    alloca $ \(c'bufSizePtr :: Ptr CInt) -> mask_ $ do
+    alloca $ \(c'bufSizePtr :: Ptr Int32) -> mask_ $ do
       ptrException <- [cvExcept|
         const int * const paramsPtr = $vec-ptr:(int * params);
         std::vector<uchar> * vec = new std::vector<uchar>();
@@ -239,7 +239,7 @@ imencode format mat = unsafePerformIO $
                     , *vec
                     , params
                     );
-        *$(int * c'bufSizePtr) = vec->size();
+        *$(int32_t * c'bufSizePtr) = vec->size();
         *$(unsigned char * * bufPtrPtr) = &((*vec)[0]);
       |]
       vecPtr <- peek vecPtrPtr
@@ -256,7 +256,7 @@ imencode format mat = unsafePerformIO $
                 (freeVec vecPtr)
         pure $ Right bs
   where
-    (ext, params) = marshallOutputFormat format
+    (ext, params) = marshalOutputFormat format
 
     freeVec :: Ptr () -> IO ()
     freeVec vecPtr = [C.exp|void { delete reinterpret_cast< std::vector<uchar> * >($(void * vecPtr)) }|]

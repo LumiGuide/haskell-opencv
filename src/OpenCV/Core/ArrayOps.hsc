@@ -12,12 +12,11 @@ module OpenCV.Core.ArrayOps
     , matSum
     ) where
 
-import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( Storable(..), peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.Vector ( zero )
 import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
@@ -79,9 +78,8 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
 -- TODO (RvD): implement mask
 minMaxLoc :: Mat -> Either CvException (Double, Double, Point2i, Point2i)
 minMaxLoc src = unsafePerformIO $ do
-    let v0 = V2 0 0 :: V2 CInt
-    minLoc <- newPoint2i v0
-    maxLoc <- newPoint2i v0
+    minLoc <- newPoint2i zero
+    maxLoc <- newPoint2i zero
     withMatPtr src $ \srcPtr ->
       withPoint2iPtr minLoc $ \minLocPtr ->
       withPoint2iPtr maxLoc $ \maxLocPtr ->
@@ -243,7 +241,7 @@ matSum
     :: Mat -- ^ Input array that must have from 1 to 4 channels.
     -> Either CvException Scalar
 matSum src = unsafePerformIO $ do
-    s <- newScalar $ pure (0 :: Double)
+    s <- newScalar zero
     handleCvException (pure s) $
       withMatPtr src $ \srcPtr ->
       withScalarPtr s $ \sPtr ->

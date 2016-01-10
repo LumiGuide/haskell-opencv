@@ -76,11 +76,11 @@ marshalMatDepth = \case
 
 marshalFlags
     :: MatDepth
-    -> Int -- ^ Number of channels
+    -> Int32 -- ^ Number of channels
     -> Int32
 marshalFlags depth cn =
     marshalMatDepth depth
-      .|. ((fromIntegral cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
+      .|. ((cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
 
 unmarshalDepth :: Int32 -> MatDepth
 unmarshalDepth n
@@ -94,27 +94,27 @@ unmarshalDepth n
     | n == c'CV_USRTYPE1 = MatDepth_USRTYPE1
     | otherwise          = error $ "unknown depth " <> show n
 
-unmarshalFlags :: Int32 -> (MatDepth, Int)
+unmarshalFlags :: Int32 -> (MatDepth, Int32)
 unmarshalFlags n =
     ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
-    , 1 + (fromIntegral $ (n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
+    , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
     )
 
 --------------------------------------------------------------------------------
 
-withMatData :: Mat -> ([Int] -> Ptr Word8 -> IO a) -> IO a
+withMatData :: Mat -> ([CSize] -> Ptr Word8 -> IO a) -> IO a
 withMatData mat f = withMatPtr mat $ \matPtr ->
-    alloca $ \(dimsPtr     :: Ptr Int32      ) ->
-    alloca $ \(stepPtr2    :: Ptr (Ptr CSize)) ->
-    alloca $ \(dataPtr2    :: Ptr (Ptr Word8)) -> do
+    alloca $ \(dimsPtr  :: Ptr Int32      ) ->
+    alloca $ \(stepPtr2 :: Ptr (Ptr CSize)) ->
+    alloca $ \(dataPtr2 :: Ptr (Ptr Word8)) -> do
       [CU.block|void {
         const Mat * const matPtr = $(Mat * matPtr);
         *$(int32_t *   const dimsPtr ) = matPtr->dims;
         *$(size_t  * * const stepPtr2) = matPtr->step.p;
         *$(uint8_t * * const dataPtr2) = matPtr->data;
       }|]
-      (dims  :: Int) <- fromIntegral <$> peek dimsPtr
-      (stepPtr :: Ptr CSize) <- peek stepPtr2
-      (dataPtr :: Ptr Word8) <- peek dataPtr2
-      (step :: [Int]) <- map fromIntegral <$> peekArray dims stepPtr
+      dims    <- peek dimsPtr
+      stepPtr <- peek stepPtr2
+      dataPtr <- peek dataPtr2
+      step    <- peekArray (fromIntegral dims) stepPtr
       f step dataPtr

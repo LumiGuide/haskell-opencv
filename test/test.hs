@@ -32,15 +32,14 @@ main :: IO ()
 main = defaultMain $ testGroup "thea"
     [ testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (isoPoint2iV2 :: Iso' Point2i (V2 Int))
-        , testIso "isoPoint2fV2" (isoPoint2fV2 :: Iso' Point2f (V2 Float))
-        , testIso "isoPoint2dV2" (isoPoint2dV2 :: Iso' Point2d (V2 Double))
-        , testIso "isoPoint3iV3" (isoPoint3iV3 :: Iso' Point3i (V3 Int))
-        , testIso "isoPoint3fV3" (isoPoint3fV3 :: Iso' Point3f (V3 Float))
-        , testIso "isoPoint3dV3" (isoPoint3dV3 :: Iso' Point3d (V3 Double))
-
-        , testIso "isoSize2iV2"  (isoSize2iV2  :: Iso' Size2i (V2 Int))
-        , testIso "isoSize2fV2"  (isoSize2fV2  :: Iso' Size2f (V2 Float))
+        [ testIso "isoPoint2iV2" (toPoint2i :: V2 Int32  -> Point2i) fromPoint2i
+        , testIso "isoPoint2fV2" (toPoint2f :: V2 Float  -> Point2f) fromPoint2f
+        , testIso "isoPoint2dV2" (toPoint2d :: V2 Double -> Point2d) fromPoint2d
+        , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
+        , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
+        , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
+        , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
+        , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -111,18 +110,18 @@ main = defaultMain $ testGroup "thea"
     ]
 
 
-testIso :: (QC.Arbitrary b, Eq b, Show b) => String -> Iso' a b -> TestTree
-testIso name myIso = QC.testProperty name $ \b -> b QC.=== (b ^. from myIso . myIso)
+testIso :: (QC.Arbitrary a, Eq a, Show a) => String -> (a -> b) -> (b -> a) -> TestTree
+testIso name a_to_b b_to_a = QC.testProperty name $ \a -> a QC.=== (b_to_a . a_to_b) a
 
 rectBasicProperties
-    :: V2 Int -- ^ tl
-    -> V2 Int -- ^ size
+    :: V2 Int32 -- ^ tl
+    -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ (rectTopLeft     rect ^. isoPoint2iV2) == tl
-      , (rectBottomRight rect ^. isoPoint2iV2) == tl ^+^ size
-      , (rectSize        rect ^. isoSize2iV2)  == size
-      ,  rectArea        rect                  == (w  *  h)
+      [ fromPoint2i (rectTopLeft     rect) == tl
+      , fromPoint2i (rectBottomRight rect) == tl ^+^ size
+      , fromSize2i  (rectSize        rect) == size
+      ,              rectArea        rect  == (w  *  h)
       ]
     where
       rect = mkRect tl size
@@ -132,24 +131,21 @@ rectContainsProperty point rect = rectContains point rect == myRectContains poin
 
 myRectContains :: Point2i -> Rect -> Bool
 myRectContains point rect =
-    and [ px >= rx
-        , py >= ry
+    and [ rx <= px
+        , ry <= py
 
         , px < rx + w
         , py < ry + h
-
-        , w > 0
-        , h > 0
         ]
   where
-    px, py :: Int
-    V2 px py = point ^. isoPoint2iV2
+    px, py :: Int32
+    V2 px py = fromPoint2i point
 
-    rx, ry :: Int
-    V2 rx ry = rectTopLeft rect ^. isoPoint2iV2
+    rx, ry :: Int32
+    V2 rx ry = fromPoint2i $ rectTopLeft rect
 
-    w, h :: Int
-    V2 w h = rectSize rect ^. isoSize2iV2
+    w, h :: Int32
+    V2 w h = fromSize2i $ rectSize rect
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
@@ -224,16 +220,16 @@ matToRepa
        , Typeable e,  Show e, Eq e
        , MatElem e
        )
-    => [Int]         -- ^ Sizes
+    => [Int32]       -- ^ Sizes
     -> MatDepth
-    -> Int           -- ^ Number of channels
+    -> Int32         -- ^ Number of channels
     -> V4 Double     -- ^ Default element value
     -> Proxy sh
     -> Proxy e
     -> Maybe (sh, e) -- ^ Optional index and expected value at that index
     -> TestTree
 matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
-    mat <- newMat (V.fromList sz) depth cn (defValue ^. from isoScalarV4)
+    mat <- newMat (V.fromList sz) depth cn (toScalar defValue)
     assertEqual "info" (MatInfo sz depth cn) $ matInfo mat
     case toRepa mat :: Either String (Repa.Array M sh e) of
       Left err -> assertFailure $ "Repa conversion failure: " <> err
@@ -247,7 +243,7 @@ matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $
           assertEqual "index"  expected (Repa.unsafeIndex a i)
 
           let outOfRange :: sh
-              outOfRange = Repa.shapeOfList $ zipWith (+) (Repa.listOfShape i) sz
+              outOfRange = Repa.shapeOfList $ zipWith (+) (Repa.listOfShape i) (fromIntegral <$> sz)
 
           r <- try (evaluate (Repa.index a outOfRange))
           case r of
@@ -255,7 +251,7 @@ matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $
             Right _x -> assertFailure $ "Indexing on " <> show outOfRange <> " should throw an error."
   where
     sh :: sh
-    sh = Repa.shapeOfList sz
+    sh = Repa.shapeOfList (fromIntegral <$> sz)
 
     name :: String
     name = show
@@ -315,4 +311,4 @@ instance QC.Arbitrary Rect where
     arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where
-    arbitrary = view (from isoPoint2iV2) <$> (QC.arbitrary :: QC.Gen (V2 Int))
+    arbitrary = toPoint2i <$> (QC.arbitrary :: QC.Gen (V2 Int32))

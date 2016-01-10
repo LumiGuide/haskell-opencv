@@ -55,7 +55,8 @@ module OpenCV.HighGui
     , imshowM
     ) where
 
-import "base" Foreign.C.Types
+import "base" Foreign.C.Types ( CInt )
+
 import qualified "base" Foreign.C.String as C
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
 import "base" Foreign.Marshal.Alloc ( free )
@@ -91,7 +92,7 @@ C.using "namespace cv"
 type WindowTitle = String
 type WindowName  = String
 
-type TrackbarState = (FunPtr C'TrackbarCallback, Ptr CInt)
+type TrackbarState = (FunPtr C'TrackbarCallback, Ptr Int32)
 
 data Window
    = Window
@@ -111,8 +112,8 @@ freeTrackbar (callback, value) = do
 -- #num WINDOW_FREERATIO
 -- #num WINDOW_KEEPRATIO
 
--- marshallWindowFlags :: WindowFlags -> CInt
--- marshallWindowFlags WindowFlags{..} =
+-- marshalWindowFlags :: WindowFlags -> Int32
+-- marshalWindowFlags WindowFlags{..} =
 
 makeWindow :: WindowTitle -> IO Window
 makeWindow title = do
@@ -146,11 +147,8 @@ destroyWindow window = mask_ $ do
 --------------------------------------------------------------------------------
 -- Keyboard
 
-waitKey :: Int -> IO Int
-waitKey delay = fromIntegral <$> f (fromIntegral delay)
-  where
-    f :: CInt -> IO CInt
-    f c'delay = [C.exp| int { cv::waitKey($(int c'delay)) }|]
+waitKey :: Int32 -> IO Int32
+waitKey delay = [C.exp| int32_t { cv::waitKey($(int32_t delay)) }|]
 
 
 --------------------------------------------------------------------------------
@@ -175,9 +173,9 @@ data Event
 --
 -- Information about which buttons and modifier keys where pressed during the
 -- event.
-newtype EventFlags = EventFlags CInt
+newtype EventFlags = EventFlags Int32
 
-matchEventFlag :: CInt -> EventFlags -> Bool
+matchEventFlag :: Int32 -> EventFlags -> Bool
 matchEventFlag flag = \(EventFlags flags) -> flags .&. flag /= 0
 
 hasLButton  :: EventFlags -> Bool
@@ -236,8 +234,8 @@ flagsToRec flags =
 #num EVENT_MOUSEWHEEL
 #num EVENT_MOUSEHWHEEL
 
-unmarshallEvent :: CInt -> Event
-unmarshallEvent event
+unmarshalEvent :: Int32 -> Event
+unmarshalEvent event
    | event == c'EVENT_MOUSEMOVE     = EventMouseMove
    | event == c'EVENT_LBUTTONDOWN   = EventLButtonDown
    | event == c'EVENT_RBUTTONDOWN   = EventRButtonDown
@@ -250,13 +248,13 @@ unmarshallEvent event
    | event == c'EVENT_MBUTTONDBLCLK = EventMButtonDbClick
    | event == c'EVENT_MOUSEWHEEL    = EventMouseWheel
    | event == c'EVENT_MOUSEHWHEEL   = EventMouseHWheel
-   | otherwise = error $ "unmarshallEvent - unknown event " <> show event
+   | otherwise = error $ "unmarshalEvent - unknown event " <> show event
 
 -- | Callback function for mouse events
 type MouseCallback
    =  Event -- ^ What happened to cause the callback to be fired.
-   -> Int -- ^ The x-coordinate of the mouse event.
-   -> Int -- ^ The y-coordinate of the mouse event.
+   -> Int32 -- ^ The x-coordinate of the mouse event.
+   -> Int32 -- ^ The y-coordinate of the mouse event.
    -> EventFlags
       -- ^ Context for the event, such as buttons and modifier keys pressed
       -- during the event.
@@ -272,11 +270,9 @@ setMouseCallback window callback =
         pure $ Just callbackPtr
   where
     c'callback :: C'MouseCallback
-    c'callback c'event c'x c'y c'flags _c'userDataPtr = callback event x y flags
+    c'callback c'event x y c'flags _c'userDataPtr = callback event x y flags
       where
-        event = unmarshallEvent c'event
-        x     = fromIntegral c'x
-        y     = fromIntegral c'y
+        event = unmarshalEvent c'event
         flags = EventFlags $ fromIntegral c'flags
 
 --------------------------------------------------------------------------------
@@ -286,28 +282,28 @@ type TrackbarName = String
 
 -- | Callback function for trackbars
 type TrackbarCallback
-   =  Int -- ^ Current position of the specified trackbar.
+   =  Int32 -- ^ Current position of the specified trackbar.
    -> IO ()
 
 createTrackbar
     :: Window
     -> TrackbarName
-    -> Int -- ^ Initial value
-    -> Int -- ^ Maximum value
+    -> Int32 -- ^ Initial value
+    -> Int32 -- ^ Maximum value
     -> TrackbarCallback
     -> IO ()
 createTrackbar window trackbarName value count callback =
     modifyMVar_ (windowTrackbars window) $ \trackbars ->
     C.withCString trackbarName $ \c'tn ->
     C.withCString (windowName window) $ \c'wn -> mask_ $ do
-      valuePtr <- new c'value
+      valuePtr <- new value
       callbackPtr <- $(C.mkFunPtr [t| C'TrackbarCallback |]) c'callback
       [C.exp| void {
         (void)cv::createTrackbar
           ( $(char * c'tn)
           , $(char * c'wn)
-          , $(int * valuePtr)
-          , $(int c'count)
+          , $(int32_t * valuePtr)
+          , $(int32_t count)
           , $(TrackbarCallback callbackPtr)
           )
       }|]
@@ -319,13 +315,8 @@ createTrackbar window trackbarName value count callback =
       mapM_ freeTrackbar mbPrevCallback
       pure trackbars'
   where
-    c'value = fromIntegral value
-    c'count = fromIntegral count
-
     c'callback :: C'TrackbarCallback
-    c'callback c'pos _c'userDataPtr = callback pos
-      where
-        pos = fromIntegral c'pos
+    c'callback pos _c'userDataPtr = callback pos
 
 
 --------------------------------------------------------------------------------

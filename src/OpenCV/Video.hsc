@@ -12,6 +12,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types ( newEmptyMat )
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat ( matInfo, miShape )
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
@@ -34,8 +35,9 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/video/doc/motion_analysis_and_object_tracking.html#estimaterigidtransform OpenCV Sphinx doc>
 estimateRigidTransform
-    :: V.Vector Point2i -- ^ Source
-    -> V.Vector Point2i -- ^ Destination
+    :: (ToPoint2i srcPoint2i, ToPoint2i dstPoint2i)
+    => V.Vector srcPoint2i -- ^ Source
+    -> V.Vector dstPoint2i -- ^ Destination
     -> Bool -- ^ Full affine
     -> Either CvException (Maybe Mat)
 estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTransform
@@ -50,8 +52,8 @@ estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTrans
             Mat * matOutPtr = $(Mat * matOutPtr);
             *matOutPtr =
                cv::estimateRigidTransform
-               ( cv::_InputArray($(Point2i * srcPtr), $(int c'srcLen))
-               , cv::_InputArray($(Point2i * dstPtr), $(int c'dstLen))
+               ( cv::_InputArray($(Point2i * srcPtr), $(int32_t c'srcLen))
+               , cv::_InputArray($(Point2i * dstPtr), $(int32_t c'dstLen))
                , $(bool c'fullAffine)
                );
           |]

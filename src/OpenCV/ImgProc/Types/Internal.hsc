@@ -1,9 +1,10 @@
 module OpenCV.ImgProc.Types.Internal where
 
-import "lens" Control.Lens ( (^.), from )
+import "base" Foreign.C.Types ( CDouble )
 import "linear" Linear.V4 ( V4(..) )
+import "linear" Linear.Vector ( zero )
 import "lumi-hackage-extended" Lumi.Prelude
-import "this" OpenCV.Core.Types ( Scalar, isoScalarV4 )
+import "this" OpenCV.Core.Types ( Scalar, ToScalar, toScalar )
 import "this" OpenCV.ImgProc.Types
 
 
@@ -38,15 +39,15 @@ marshalInterpolationMethod = \case
 #num BORDER_TRANSPARENT
 #num BORDER_ISOLATED
 
-marshalBorderMode :: BorderMode -> (Int32, Scalar)
+marshalBorderMode :: (ToScalar scalar) => BorderMode scalar -> (Int32, Scalar)
 marshalBorderMode = \case
-    BorderConstant scalar -> (c'BORDER_CONSTANT    , scalar    )
-    BorderReplicate       -> (c'BORDER_REPLICATE   , zeroScalar)
-    BorderReflect         -> (c'BORDER_REFLECT     , zeroScalar)
-    BorderWrap            -> (c'BORDER_WRAP        , zeroScalar)
-    BorderReflect101      -> (c'BORDER_REFLECT_101 , zeroScalar)
-    BorderTransparent     -> (c'BORDER_TRANSPARENT , zeroScalar)
-    BorderIsolated        -> (c'BORDER_ISOLATED    , zeroScalar)
+    BorderConstant s  -> (c'BORDER_CONSTANT    , toScalar s)
+    BorderReplicate   -> (c'BORDER_REPLICATE   , zeroScalar)
+    BorderReflect     -> (c'BORDER_REFLECT     , zeroScalar)
+    BorderWrap        -> (c'BORDER_WRAP        , zeroScalar)
+    BorderReflect101  -> (c'BORDER_REFLECT_101 , zeroScalar)
+    BorderTransparent -> (c'BORDER_TRANSPARENT , zeroScalar)
+    BorderIsolated    -> (c'BORDER_ISOLATED    , zeroScalar)
   where
     zeroScalar :: Scalar
-    zeroScalar = (V4 0 0 0 0 :: V4 Double) ^. from isoScalarV4
+    zeroScalar = toScalar (zero :: V4 CDouble)
