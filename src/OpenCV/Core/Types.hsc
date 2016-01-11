@@ -6,35 +6,18 @@
 module OpenCV.Core.Types
     ( -- * Point
       -- ** 2D types
-      Point2i
-    , Point2f
-    , Point2d
+      Point2i, ToPoint2i(toPoint2i), FromPoint2i(fromPoint2i)
+    , Point2f, ToPoint2f(toPoint2f), FromPoint2f(fromPoint2f)
+    , Point2d, ToPoint2d(toPoint2d), FromPoint2d(fromPoint2d)
       -- ** 3D types
-    , Point3i
-    , Point3f
-    , Point3d
-      -- ** 2D point conversion
-    , ToPoint2i, toPoint2i
-    , ToPoint2f, toPoint2f
-    , ToPoint2d, toPoint2d
-    , FromPoint2i, fromPoint2i
-    , FromPoint2f, fromPoint2f
-    , FromPoint2d, fromPoint2d
-      -- ** 3D point conversion
-    , ToPoint3i, toPoint3i
-    , ToPoint3f, toPoint3f
-    , ToPoint3d, toPoint3d
-    , FromPoint3i, fromPoint3i
-    , FromPoint3f, fromPoint3f
-    , FromPoint3d, fromPoint3d
+    , Point3i, ToPoint3i(toPoint3i), FromPoint3i(fromPoint3i)
+    , Point3f, ToPoint3f(toPoint3f), FromPoint3f(fromPoint3f)
+    , Point3d, ToPoint3d(toPoint3d), FromPoint3d(fromPoint3d)
       -- * Size
-    , Size2i
-    , Size2f
-      -- ** Size conversion
-    , ToSize2i, toSize2i
-    , ToSize2f, toSize2f
-    , FromSize2i, fromSize2i
-    , FromSize2f, fromSize2f
+    , Size2i, ToSize2i(toSize2i), FromSize2i(fromSize2i)
+    , Size2f, ToSize2f(toSize2f), FromSize2f(fromSize2f)
+      -- * Scalar
+    , Scalar, ToScalar(toScalar), FromScalar(fromScalar)
       -- * Rect
     , Rect
     , mkRect
@@ -54,10 +37,6 @@ module OpenCV.Core.Types
       -- * TermCriteria
     , TermCriteria
     , mkTermCriteria
-      -- * Scalar
-    , Scalar
-    , ToScalar, toScalar
-    , FromScalar, fromScalar
       -- * Matrix
     , module OpenCV.Core.Types.Mat
       -- * Exception

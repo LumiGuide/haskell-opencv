@@ -147,10 +147,21 @@ instance ToPoint3d (V3 Double) where toPoint3d = toPoint3d . fmap (realToFrac ::
 instance ToSize2f  (V2 Float ) where toSize2f  = toSize2f  . fmap (realToFrac :: Float  -> CFloat )
 instance ToScalar  (V4 Double) where toScalar  = toScalar  . fmap (realToFrac :: Double -> CDouble)
 
-
--- instance (Integral a) => ToPoint2i (a, a) where toPoint2i (x, y) = toPoint2i $ V2 x y
--- instance (Real a, Fractional a) => ToPoint2i (a, a) where toPoint2i (x, y) = toPoint2i $ V2 x y
--- instance (Integral a) => ToPoint2i (a, a) where toPoint2i (x, y) = toPoint2i $ V2 x y
+instance ToPoint2i (Int32  , Int32  ) where toPoint2i (x, y) = toPoint2i $ V2 x y
+instance ToPoint2f (CFloat , CFloat ) where toPoint2f (x, y) = toPoint2f $ V2 x y
+instance ToPoint2f (Float  , Float  ) where toPoint2f (x, y) = toPoint2f $ V2 x y
+instance ToPoint2d (CDouble, CDouble) where toPoint2d (x, y) = toPoint2d $ V2 x y
+instance ToPoint2d (Double , Double ) where toPoint2d (x, y) = toPoint2d $ V2 x y
+instance ToSize2i  (Int32  , Int32  ) where toSize2i  (x, y) = toSize2i  $ V2 x y
+instance ToSize2f  (CFloat , CFloat ) where toSize2f  (x, y) = toSize2f  $ V2 x y
+instance ToSize2f  (Float  , Float  ) where toSize2f  (x, y) = toSize2f  $ V2 x y
+instance ToPoint3i (Int32  , Int32  , Int32  ) where toPoint3i (x, y, z) = toPoint3i $ V3 x y z
+instance ToPoint3f (CFloat , CFloat , CFloat ) where toPoint3f (x, y, z) = toPoint3f $ V3 x y z
+instance ToPoint3f (Float  , Float  , Float  ) where toPoint3f (x, y, z) = toPoint3f $ V3 x y z
+instance ToPoint3d (CDouble, CDouble, CDouble) where toPoint3d (x, y, z) = toPoint3d $ V3 x y z
+instance ToPoint3d (Double , Double , Double ) where toPoint3d (x, y, z) = toPoint3d $ V3 x y z
+instance ToScalar  (CDouble, CDouble, CDouble, CDouble) where toScalar (x, y, z, w) = toScalar $ V4 x y z w
+instance ToScalar  (Double , Double , Double , Double ) where toScalar (x, y, z, w) = toScalar $ V4 x y z w
 
 instance FromPoint2i (V2 Int32) where
     fromPoint2i pt = unsafePerformIO $
@@ -290,6 +301,22 @@ instance FromPoint3f (V3 Float ) where fromPoint3f = fmap (realToFrac :: CFloat 
 instance FromPoint3d (V3 Double) where fromPoint3d = fmap (realToFrac :: CDouble -> Double) . fromPoint3d
 instance FromSize2f  (V2 Float ) where fromSize2f  = fmap (realToFrac :: CFloat  -> Float ) . fromSize2f
 instance FromScalar  (V4 Double) where fromScalar  = fmap (realToFrac :: CDouble -> Double) . fromScalar
+
+instance FromPoint2i (Int32  , Int32  ) where fromPoint2i p = let V2 x y = fromPoint2i p in (x, y)
+instance FromPoint2f (CFloat , CFloat ) where fromPoint2f p = let V2 x y = fromPoint2f p in (x, y)
+instance FromPoint2f (Float  , Float  ) where fromPoint2f p = let V2 x y = fromPoint2f p in (x, y)
+instance FromPoint2d (CDouble, CDouble) where fromPoint2d p = let V2 x y = fromPoint2d p in (x, y)
+instance FromPoint2d (Double , Double ) where fromPoint2d p = let V2 x y = fromPoint2d p in (x, y)
+instance FromSize2i  (Int32  , Int32  ) where fromSize2i  s = let V2 x y = fromSize2i  s in (x, y)
+instance FromSize2f  (CFloat , CFloat ) where fromSize2f  s = let V2 x y = fromSize2f  s in (x, y)
+instance FromSize2f  (Float  , Float  ) where fromSize2f  s = let V2 x y = fromSize2f  s in (x, y)
+instance FromPoint3i (Int32  , Int32  , Int32  ) where fromPoint3i p = let V3 x y z = fromPoint3i p in (x, y, z)
+instance FromPoint3f (CFloat , CFloat , CFloat ) where fromPoint3f p = let V3 x y z = fromPoint3f p in (x, y, z)
+instance FromPoint3f (Float  , Float  , Float  ) where fromPoint3f p = let V3 x y z = fromPoint3f p in (x, y, z)
+instance FromPoint3d (CDouble, CDouble, CDouble) where fromPoint3d p = let V3 x y z = fromPoint3d p in (x, y, z)
+instance FromPoint3d (Double , Double , Double ) where fromPoint3d p = let V3 x y z = fromPoint3d p in (x, y, z)
+instance FromScalar  (CDouble, CDouble, CDouble, CDouble) where fromScalar s = let V4 x y z w = fromScalar s in (x, y, z, w)
+instance FromScalar  (Double , Double , Double , Double ) where fromScalar s = let V4 x y z w = fromScalar s in (x, y, z, w)
 
 point2iFromPtr :: IO (Ptr C'Point2i) -> IO Point2i
 point2fFromPtr :: IO (Ptr C'Point2f) -> IO Point2f
