@@ -10,6 +10,7 @@ module OpenCV.ImgProc.Drawing
     , ellipse
     , fillConvexPoly
     , fillPoly
+    , polylines
     , getTextSize
     , line
     , putText
@@ -55,7 +56,7 @@ data LineType
    = LineType_8  -- ^ 8-connected line.
    | LineType_4  -- ^ 4-connected line.
    | LineType_AA -- ^ Antialiased line.
-     deriving Show
+     deriving (Show, Enum, Bounded)
 
 #num LINE_8
 #num LINE_4
@@ -86,6 +87,7 @@ data FontFace
      -- ^ More complex variant of 'FontHersheyScriptSimplex'
    | FontItalic
      -- ^ Flag for italic font
+     deriving (Show, Enum, Bounded)
 
 #num FONT_HERSHEY_SIMPLEX
 #num FONT_HERSHEY_PLAIN
@@ -110,10 +112,24 @@ marshalFontFace = \case
    FontItalic               -> c'FONT_ITALIC
 
 
--- | Draws a arrow segment pointing from the first point to the second one
---
--- <http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc>
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
+{- | Draws a arrow segment pointing from the first point to the second one
+
+Example:
+
+@
+arrowedLineImg :: 'Mat'
+arrowedLineImg = 'createMat' $ do
+  imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
+  'arrowedLine' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_8' 0 0.15
+  'arrowedLine' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_8' 0 0.4
+  'pure' imgM
+@
+
+<<doc/arrowedLine.png>>
+
+<http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc>
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
+-}
 arrowedLine
     :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
@@ -146,9 +162,23 @@ arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     c'lineType  = marshalLineType lineType
     c'tipLength = realToFrac tipLength
 
--- | Draws a circle.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
+{- | Draws a circle.
+
+Example:
+
+@
+circleImg :: 'Mat'
+circleImg = 'createMat' $ do
+  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
+  'circle' imgM (V2 100 100 :: V2 'Int32') 90 blue  5  'LineType_AA' 0
+  'circle' imgM (V2 300 100 :: V2 'Int32') 45 red (-1) 'LineType_AA' 0
+  'pure' imgM
+@
+
+<<doc/circle.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
+-}
 circle
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image where the circle is drawn.
@@ -177,14 +207,28 @@ circle img center radius color thickness lineType shift =
   where
     c'lineType  = marshalLineType lineType
 
--- | Draws a simple or thick elliptic arc or fills an ellipse sector
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
+{- | Draws a simple or thick elliptic arc or fills an ellipse sector
+
+Example:
+
+@
+ellipseImg :: 'Mat'
+ellipseImg = 'createMat' $ do
+  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
+  'ellipse' imgM (V2 100 100 :: V2 'Int32') (V2 90 60 :: V2 'Int32')  30  0 360 blue  5  'LineType_AA' 0
+  'ellipse' imgM (V2 300 100 :: V2 'Int32') (V2 80 40 :: V2 'Int32') 160 40 290 red (-1) 'LineType_AA' 0
+  'pure' imgM
+@
+
+<<doc/ellipse.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
+-}
 ellipse
-    :: (PrimMonad m, ToPoint2i point2i, ToSize2i size, ToScalar color)
+    :: (PrimMonad m, ToPoint2i point2i, ToSize2i size2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
     -> point2i -- ^ Center of the ellipse.
-    -> size -- ^ Half of the size of the ellipse main axes.
+    -> size2i -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
     -> Double -- ^ Starting angle of the elliptic arc in degrees.
     -> Double -- ^ Ending angle of the elliptic arc in degrees.
@@ -257,9 +301,49 @@ fillConvexPoly img points color lineType shift =
     c'numPoints = fromIntegral $ V.length points
     c'lineType  = marshalLineType lineType
 
--- | Fills the area bounded by one or more polygons.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
+
+{- | Fills the area bounded by one or more polygons.
+
+Example:
+
+@
+fillPolyImg :: 'Mat'
+fillPolyImg = 'createMat' $ do
+    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
+    'fillPoly' imgM pts light_blue 'LineType_AA' 0
+    'polylines' imgM pts True blue 2 'LineType_AA' 0
+    pure imgM
+  where
+    w = 300
+    h = 300
+    pts = 'V.singleton' $ 'V.fromList'
+          [ V2 (    w \`div`  4) ( 7*h \`div`  8)
+          , V2 (  3*w \`div`  4) ( 7*h \`div`  8)
+          , V2 (  3*w \`div`  4) (13*h \`div` 16)
+          , V2 ( 11*w \`div` 16) (13*h \`div` 16)
+          , V2 ( 19*w \`div` 32) ( 3*h \`div`  8)
+          , V2 (  3*w \`div`  4) ( 3*h \`div`  8)
+          , V2 (  3*w \`div`  4) (   h \`div`  8)
+          , V2 ( 26*w \`div` 40) (   h \`div`  8)
+          , V2 ( 26*w \`div` 40) (   h \`div`  4)
+          , V2 ( 22*w \`div` 40) (   h \`div`  4)
+          , V2 ( 22*w \`div` 40) (   h \`div`  8)
+          , V2 ( 18*w \`div` 40) (   h \`div`  8)
+          , V2 ( 18*w \`div` 40) (   h \`div`  4)
+          , V2 ( 14*w \`div` 40) (   h \`div`  4)
+          , V2 ( 14*w \`div` 40) (   h \`div`  8)
+          , V2 (    w \`div`  4) (   h \`div`  8)
+          , V2 (    w \`div`  4) ( 3*h \`div`  8)
+          , V2 ( 13*w \`div` 32) ( 3*h \`div`  8)
+          , V2 (  5*w \`div` 16) (13*h \`div` 16)
+          , V2 (    w \`div`  4) (13*h \`div` 16)
+          ]
+@
+
+<<doc/fillPoly.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
+-}
 fillPoly
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
@@ -290,6 +374,52 @@ fillPoly img polygons color lineType shift =
 
     npts :: VS.Vector Int32
     npts = VS.convert $ V.map (fromIntegral . V.length) polygons
+
+{- | Draws several polygonal curves
+
+See 'fillPoly' for an example.
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#polylines OpenCV Sphinx doc>
+-}
+polylines
+    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    => MutMat (PrimState m) -- ^ Image.
+    -> V.Vector (V.Vector point2i) -- ^ Vertices.
+    -> Bool
+       -- ^ Flag indicating whether the drawn polylines are closed or not. If
+       -- they are closed, the function draws a line from the last vertex of
+       -- each curve to its first vertex.
+    -> color
+    -> Int32 -- ^ Thickness of the polyline edges.
+    -> LineType
+    -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
+    -> m ()
+polylines img curves isClosed color thickness lineType shift =
+    unsafePrimToPrim $
+    withMatPtr (unMutMat img) $ \matPtr ->
+    withPolygons curves $ \curvesPtr ->
+    VS.unsafeWith npts $ \nptsPtr ->
+    withScalarPtr color $ \colorPtr ->
+      [C.exp|void {
+        cv::polylines
+        ( *$(Mat * matPtr)
+        , $(const Point2i * * curvesPtr)
+        , $(int32_t * nptsPtr)
+        , $(int32_t c'numCurves)
+        , $(bool c'isClosed)
+        , *$(Scalar * colorPtr)
+        , $(int32_t thickness)
+        , $(int32_t c'lineType)
+        , $(int32_t shift)
+        );
+      }|]
+  where
+    c'numCurves = fromIntegral $ V.length curves
+    c'isClosed  = fromBool isClosed
+    c'lineType  = marshalLineType lineType
+
+    npts :: VS.Vector Int32
+    npts = VS.convert $ V.map (fromIntegral . V.length) curves
 
 -- | Calculates the width and height of a text string.
 --
@@ -323,9 +453,23 @@ getTextSize text fontFace fontScale thickness = unsafePerformIO $
 
 
 
--- | Draws a line segment connecting two points.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
+{- | Draws a line segment connecting two points.
+
+Example:
+
+@
+lineImg :: 'Mat'
+lineImg = 'createMat' $ do
+  imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
+  'line' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_8' 0
+  'line' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_8' 0
+  'pure' imgM
+@
+
+<<doc/line.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
+-}
 line
     :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
@@ -355,13 +499,28 @@ line img pt1 pt2 color thickness lineType shift =
   where
     c'lineType = marshalLineType lineType
 
--- | Draws a text string.
---
--- The function putText renders the specified text string in the
--- image. Symbols that cannot be rendered using the specified font are
--- replaced by question marks.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
+{- | Draws a text string.
+
+The function putText renders the specified text string in the
+image. Symbols that cannot be rendered using the specified font are
+replaced by question marks.
+
+Example:
+
+@
+putTextImg :: 'Mat'
+putTextImg = 'createMat' $ do
+  let dims = 'V.fromList' [50 + 'fromIntegral' (30 * 'fromEnum' ('maxBound' :: 'FontFace')), 400]
+  imgM <- 'mkMatM' dims 'MatDepth_8U' 4 transparent
+  'forM_' ('zip' [0..] ['minBound' .. 'maxBound']) $ \(n, fontFace) ->
+    'putText' imgM (T.pack $ 'show' fontFace) (V2 10 (35 + n * 30) :: V2 'Int32') fontFace 1.0 black 1 'LineType_AA' False
+  'pure' imgM
+@
+
+<<doc/putText.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
+-}
 putText
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
@@ -398,9 +557,23 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
     c'lineType         = marshalLineType lineType
     c'bottomLeftOrigin = fromBool bottomLeftOrigin
 
--- | Draws a simple, thick, or filled up-right rectangle
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
+{- | Draws a simple, thick, or filled up-right rectangle
+
+Example:
+
+@
+rectangleImg :: 'Mat'
+rectangleImg = 'createMat' $ do
+  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
+  'rectangle' imgM ('mkRect' (V2  10 10) (V2 180 180)) blue  5  'LineType_8' 0
+  'rectangle' imgM ('mkRect' (V2 260 30) (V2  80 140)) red (-1) 'LineType_8' 0
+  'pure' imgM
+@
+
+<<doc/rectangle.png>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
+-}
 rectangle
     :: (PrimMonad m, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.

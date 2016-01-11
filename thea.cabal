@@ -7,9 +7,12 @@ maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 build-type:    Simple
 cabal-version: >=1.10
 
-extra-source-files: data/*.png
-                    data/*.jpg
-extra-doc-files: doc/*.jpg
+extra-source-files:
+    data/*.png
+    data/*.jpg
+extra-doc-files:
+    doc/*.png
+    doc/*.jpg
 
 library
   hs-source-dirs: src
@@ -89,6 +92,19 @@ library
                     , TupleSections
   default-language:   Haskell2010
   pkgconfig-depends:  opencv
+
+test-suite thea-doc-images
+  type: exitcode-stdio-1.0
+  hs-source-dirs: doc
+  main-is: images.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+  build-depends: base >= 4.8 && < 5
+               , bytestring
+               , linear
+               , text
+               , thea
+               , vector
 
 test-suite test-thea
   type:             exitcode-stdio-1.0
