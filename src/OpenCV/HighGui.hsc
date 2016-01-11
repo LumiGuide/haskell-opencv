@@ -55,8 +55,6 @@ module OpenCV.HighGui
     , imshowM
     ) where
 
-import "base" Foreign.C.Types ( CInt )
-
 import qualified "base" Foreign.C.String as C
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
 import "base" Foreign.Marshal.Alloc ( free )
