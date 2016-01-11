@@ -188,7 +188,6 @@ loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
 
 emptyToRepa :: HU.Assertion
 emptyToRepa = do
-    emptyMat <- newEmptyMat
     assertBool "Repa conversion failure" $
       isJust (emptyMat ^? repa :: Maybe (Repa.Array M Repa.DIM0 NoElem))
 
@@ -229,7 +228,7 @@ matToRepa
     -> Maybe (sh, e) -- ^ Optional index and expected value at that index
     -> TestTree
 matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
-    mat <- newMat (V.fromList sz) depth cn (toScalar defValue)
+    let mat = mkMat (V.fromList sz) depth cn (toScalar defValue)
     assertEqual "info" (MatInfo sz depth cn) $ matInfo mat
     case toRepa mat :: Either String (Repa.Array M sh e) of
       Left err -> assertFailure $ "Repa conversion failure: " <> err

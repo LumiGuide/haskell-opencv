@@ -3,6 +3,8 @@
 
 module OpenCV.Core.Types.Mat.Internal
     ( MatDepth(..)
+    , newEmptyMat
+    , newMat
     , marshalMatDepth
     , marshalFlags
     , unmarshalDepth
@@ -12,7 +14,7 @@ module OpenCV.Core.Types.Mat.Internal
 
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Array ( peekArray )
+import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import qualified "inline-c" Language.C.Inline as C
@@ -20,7 +22,10 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Internal
+import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Generic as VG
 
 --------------------------------------------------------------------------------
 
@@ -33,6 +38,50 @@ C.using "namespace cv"
 #include "opencv2/core.hpp"
 
 #include "namespace.hpp"
+
+--------------------------------------------------------------------------------
+
+newEmptyMat :: IO Mat
+newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
+
+newMat
+    :: (ToScalar scalar)
+    => V.Vector Int32 -- ^ Vector of sizes
+    -> MatDepth
+    -> Int32        -- ^ Number of channels
+    -> scalar       -- ^ Default element value
+    -> IO Mat
+newMat sizes matDepth cn defValue =
+    withVector sizes $ \sizesPtr ->
+    withScalarPtr defValue $ \scalarPtr ->
+      matFromPtr [CU.exp|Mat * {
+        new Mat( $(int32_t c'ndims)
+               , $(int32_t * sizesPtr)
+               , $(int32_t c'type)
+               , *$(Scalar * scalarPtr)
+               )
+      }|]
+  where
+    c'ndims = fromIntegral $ VG.length sizes
+    c'type  = marshalFlags matDepth cn
+
+-- TODO (BvD): Move to some Utility module.
+withVector
+    :: (VG.Vector v a, Storable a)
+    => v a
+    -> (Ptr a -> IO b)
+    -> IO b
+withVector v f =
+    allocaArray n $ \ptr ->
+      let go !ix
+              | ix < n = do
+                  pokeElemOff ptr ix (VG.unsafeIndex v ix)
+                  go (ix+1)
+              | otherwise = f ptr
+      in go 0
+  where
+    n = VG.length v
+
 
 --------------------------------------------------------------------------------
 

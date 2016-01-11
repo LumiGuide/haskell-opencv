@@ -43,6 +43,7 @@ import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
+import "this" OpenCV.Core.Types.Mat.Internal ( newEmptyMat )
 import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types ( BorderMode )
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )

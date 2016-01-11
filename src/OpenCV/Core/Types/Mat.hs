@@ -5,9 +5,10 @@
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
       Mat
-    , newEmptyMat
     , MatDepth(..)
-    , newMat
+    , emptyMat
+    , mkMat
+    , mkMatM
     , eyeMat
     , cloneMat
     , matSubRect
@@ -26,9 +27,9 @@ module OpenCV.Core.Types.Mat
     ) where
 
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Array ( peekArray, allocaArray )
+import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Ptr ( Ptr )
-import "base" Foreign.Storable ( Storable(..), peek, pokeElemOff )
+import "base" Foreign.Storable ( Storable(..), peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -41,7 +42,6 @@ import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import qualified "vector" Data.Vector as V
-import qualified "vector" Data.Vector.Generic as VG
 
 --------------------------------------------------------------------------------
 
@@ -55,28 +55,26 @@ C.using "namespace cv"
 -- Matrix
 --------------------------------------------------------------------------------
 
-newEmptyMat :: IO Mat
-newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
+emptyMat :: Mat
+emptyMat = unsafePerformIO newEmptyMat
 
-newMat
-    :: V.Vector Int32 -- ^ Vector of sizes
+mkMat
+    :: (ToScalar scalar)
+    => V.Vector Int32 -- ^ Vector of sizes
     -> MatDepth
     -> Int32        -- ^ Number of channels
-    -> Scalar       -- ^ Default element value
-    -> IO Mat
-newMat sizes matDepth cn defValue =
-    withVector sizes $ \sizesPtr ->
-    withScalarPtr defValue $ \scalarPtr ->
-      matFromPtr [CU.exp|Mat * {
-        new Mat( $(int32_t c'ndims)
-               , $(int32_t * sizesPtr)
-               , $(int32_t c'type)
-               , *$(Scalar * scalarPtr)
-               )
-      }|]
-  where
-    c'ndims = fromIntegral $ VG.length sizes
-    c'type  = marshalFlags matDepth cn
+    -> scalar       -- ^ Default element value
+    -> Mat
+mkMat sizes matDepth cn defValue = unsafePerformIO $ newMat sizes matDepth cn defValue
+
+mkMatM
+    :: (PrimMonad m, ToScalar scalar)
+    => V.Vector Int32 -- ^ Vector of sizes
+    -> MatDepth
+    -> Int32        -- ^ Number of channels
+    -> scalar       -- ^ Default element value
+    -> m (MutMat (PrimState m))
+mkMatM sizes matDepth cn defValue = unsafeThaw $ mkMat sizes matDepth cn defValue
 
 -- | Identity matrix
 --
@@ -91,23 +89,6 @@ eyeMat rows cols depth channels = unsafePerformIO $
     }|]
   where
     c'type = marshalFlags depth channels
-
--- TODO (BvD): Move to some Utility module.
-withVector
-    :: (VG.Vector v a, Storable a)
-    => v a
-    -> (Ptr a -> IO b)
-    -> IO b
-withVector v f =
-    allocaArray n $ \ptr ->
-      let go !ix
-              | ix < n = do
-                  pokeElemOff ptr ix (VG.unsafeIndex v ix)
-                  go (ix+1)
-              | otherwise = f ptr
-      in go 0
-  where
-    n = VG.length v
 
 cloneMat :: Mat -> Mat
 cloneMat = unsafePerformIO . cloneMatIO
