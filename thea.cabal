@@ -11,8 +11,8 @@ extra-source-files:
     data/*.png
     data/*.jpg
 extra-doc-files:
-    doc/*.png
     doc/*.jpg
+    doc/generated/*.png
 
 library
   hs-source-dirs: src
@@ -101,7 +101,11 @@ test-suite thea-doc-images
   ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
   build-depends: base >= 4.8 && < 5
                , bytestring
+               , directory
+               , Glob
+               , haskell-src-meta
                , linear
+               , template-haskell
                , text
                , thea
                , vector

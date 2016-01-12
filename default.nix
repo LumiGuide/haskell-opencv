@@ -24,6 +24,9 @@
 , vector
 
 # test dependencies
+, directory
+, Glob
+, haskell-src-meta
 , QuickCheck
 , tasty
 , tasty-hunit
@@ -57,6 +60,9 @@ mkDerivation {
   ];
   testHaskellDepends = [
     base
+    directory
+    Glob
+    haskell-src-meta
     QuickCheck
     tasty
     tasty-hunit

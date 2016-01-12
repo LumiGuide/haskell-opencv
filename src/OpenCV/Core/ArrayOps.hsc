@@ -10,6 +10,10 @@ module OpenCV.Core.ArrayOps
     , normDiff
     , normalize
     , matSum
+    , bitwise_not
+    , bitwise_and
+    , bitwise_or
+    , bitwise_xor
     ) where
 
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -247,4 +251,74 @@ matSum src = unsafePerformIO $ do
       withScalarPtr s $ \sPtr ->
         [cvExcept|
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
+        |]
+
+bitwise_not :: Mat -> Maybe Mat -> Either CvException Mat
+bitwise_not src mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr   src    $ \srcPtr ->
+      withMatPtr   dst    $ \dstPtr ->
+      withMbMatPtr mbMask $ \mskPtr ->
+        [cvExcept|
+          Mat * mskPtr = $(Mat * mskPtr);
+          cv::bitwise_not
+          ( *$(Mat * srcPtr)
+          , *$(Mat * dstPtr)
+          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+          );
+        |]
+
+bitwise_and :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_and src1 src2 mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr   src1   $ \src1Ptr ->
+      withMatPtr   src2   $ \src2Ptr ->
+      withMatPtr   dst    $ \dstPtr  ->
+      withMbMatPtr mbMask $ \mskPtr  ->
+        [cvExcept|
+          Mat * mskPtr = $(Mat * mskPtr);
+          cv::bitwise_and
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+          );
+        |]
+
+bitwise_or :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_or src1 src2 mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr   src1   $ \src1Ptr ->
+      withMatPtr   src2   $ \src2Ptr ->
+      withMatPtr   dst    $ \dstPtr  ->
+      withMbMatPtr mbMask $ \mskPtr  ->
+        [cvExcept|
+          Mat * mskPtr = $(Mat * mskPtr);
+          cv::bitwise_or
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+          );
+        |]
+
+bitwise_xor :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_xor src1 src2 mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr   src1   $ \src1Ptr ->
+      withMatPtr   src2   $ \src2Ptr ->
+      withMatPtr   dst    $ \dstPtr  ->
+      withMbMatPtr mbMask $ \mskPtr  ->
+        [cvExcept|
+          Mat * mskPtr = $(Mat * mskPtr);
+          cv::bitwise_xor
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+          );
         |]

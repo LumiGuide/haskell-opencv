@@ -125,7 +125,7 @@ arrowedLineImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/arrowedLine.png>>
+<<doc/generated/arrowedLineImg.png arrowedLineImg>>
 
 <http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc>
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
@@ -175,7 +175,7 @@ circleImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/circle.png>>
+<<doc/generated/circleImg.png circleImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
 -}
@@ -220,7 +220,7 @@ ellipseImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/ellipse.png>>
+<<doc/generated/ellipseImg.png ellipseImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
 -}
@@ -265,16 +265,17 @@ ellipse img center axes angle startAngle endAngle color thickness lineType shift
     c'endAngle   = realToFrac endAngle
     c'lineType   = marshalLineType lineType
 
--- | Fills a convex polygon.
---
--- The function 'fillConvexPoly' draws a filled convex polygon. This
--- function is much faster than the function 'fillPoly' . It can fill
--- not only convex polygons but any monotonic polygon without
--- self-intersections, that is, a polygon whose contour intersects
--- every horizontal line (scan line) twice at the most (though, its
--- top-most and/or the bottom edge could be horizontal).
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc>
+{- | Fills a convex polygon.
+
+The function 'fillConvexPoly' draws a filled convex polygon. This
+function is much faster than the function 'fillPoly' . It can fill
+not only convex polygons but any monotonic polygon without
+self-intersections, that is, a polygon whose contour intersects
+every horizontal line (scan line) twice at the most (though, its
+top-most and/or the bottom edge could be horizontal).
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc>
+-}
 fillConvexPoly
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
     => MutMat (PrimState m) -- ^ Image.
@@ -307,16 +308,8 @@ fillConvexPoly img points color lineType shift =
 Example:
 
 @
-fillPolyImg :: 'Mat'
-fillPolyImg = 'createMat' $ do
-    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
-    'fillPoly' imgM pts light_blue 'LineType_AA' 0
-    'polylines' imgM pts True blue 2 'LineType_AA' 0
-    pure imgM
-  where
-    w = 300
-    h = 300
-    pts = 'V.singleton' $ 'V.fromList'
+rookPts :: Int32 -> Int32 -> V.Vector (V.Vector (V2 Int32))
+rookPts w h = 'V.singleton' $ 'V.fromList'
           [ V2 (    w \`div`  4) ( 7*h \`div`  8)
           , V2 (  3*w \`div`  4) ( 7*h \`div`  8)
           , V2 (  3*w \`div`  4) (13*h \`div` 16)
@@ -338,9 +331,18 @@ fillPolyImg = 'createMat' $ do
           , V2 (  5*w \`div` 16) (13*h \`div` 16)
           , V2 (    w \`div`  4) (13*h \`div` 16)
           ]
+
+fillPolyImg :: 'Mat'
+fillPolyImg = 'createMat' $ do
+    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
+    'fillPoly' imgM (rookPts w h) blue 'LineType_AA' 0
+    pure imgM
+  where
+    w = 300
+    h = 300
 @
 
-<<doc/fillPoly.png>>
+<<doc/generated/fillPolyImg.png fillPolyImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
 -}
@@ -377,7 +379,20 @@ fillPoly img polygons color lineType shift =
 
 {- | Draws several polygonal curves
 
-See 'fillPoly' for an example.
+Example:
+
+@
+polylinesImg :: 'Mat'
+polylinesImg = 'createMat' $ do
+    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
+    'polylines' imgM (rookPts w h) True blue 2 'LineType_AA' 0
+    pure imgM
+  where
+    w = 300
+    h = 300
+@
+
+<<doc/generated/polylinesImg.png polylinesImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#polylines OpenCV Sphinx doc>
 -}
@@ -466,7 +481,7 @@ lineImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/line.png>>
+<<doc/generated/lineImg.png lineImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
 -}
@@ -517,7 +532,7 @@ putTextImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/putText.png>>
+<<doc/generated/putTextImg.png putTextImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
 -}
@@ -570,7 +585,7 @@ rectangleImg = 'createMat' $ do
   'pure' imgM
 @
 
-<<doc/rectangle.png>>
+<<doc/generated/rectangleImg.png rectangleImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}

@@ -76,18 +76,21 @@ defaultAnchor = toPoint2i (pure (-1) :: V2 Int32)
 -- Types
 --------------------------------------------------------------------------------
 
-data MorphShape
+data MorphShape point2i
    = MorphRect -- ^ A rectangular structuring element.
    | MorphEllipse
      -- ^ An elliptic structuring element, that is, a filled ellipse inscribed
      -- into the rectangle Rect(0, 0, esize.width, 0.esize.height).
-   | MorphCross !(V2 Int32) -- ^ A cross-shaped structuring element.
+   | MorphCross !point2i -- ^ A cross-shaped structuring element.
 
 #num MORPH_RECT
 #num MORPH_ELLIPSE
 #num MORPH_CROSS
 
-marshalMorphShape :: MorphShape -> (Int32, Point2i)
+marshalMorphShape
+    :: (ToPoint2i point2i)
+    => MorphShape point2i
+    -> (Int32, Point2i)
 marshalMorphShape = \case
     MorphRect         -> (c'MORPH_RECT   , defaultAnchor)
     MorphEllipse      -> (c'MORPH_ELLIPSE, defaultAnchor)
@@ -119,9 +122,24 @@ marshalMorphOperation = \case
 -- Image Filtering
 --------------------------------------------------------------------------------
 
--- | Blurs an image using the median filter
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc>
+{- | Blurs an image using the median filter
+
+Example:
+
+@
+medianBlurImg :: 'Mat'
+medianBlurImg = 'createMat' $ do
+  let [h, w] = 'miShape' $ 'matInfo' lenna
+  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 3 white
+  'void' $ 'matCopyToM' imgM (V2 0 0) lenna
+  'void' $ 'matCopyToM' imgM (V2 w 0) $ 'either' 'throw' 'id' $ 'medianBlur' lenna 13
+  'pure' imgM
+@
+
+<<doc/generated/medianBlurImg.png medianBlurImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc>
+-}
 medianBlur
     :: Mat
        -- ^ Input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image
@@ -138,13 +156,35 @@ medianBlur matIn ksize = unsafePerformIO $ do
       withMatPtr matIn $ \matInPtr ->
         [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int32_t ksize)); |]
 
--- | Erodes an image by using a specific structuring element
+{- | Erodes an image by using a specific structuring element
+
+Example:
+
+@
+erodeImg :: 'Mat'
+erodeImg = 'createMat' $ do
+  let [h, w] = 'miShape' $ 'matInfo' lambda
+  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
+  'void' $ 'matCopyToM' imgM (V2 0 0) lambda
+  'void' $ 'matCopyToM' imgM (V2 w 0)
+         $ 'either' 'throw' 'id'
+         $ 'erode' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 5 ('BorderReplicate' :: 'BorderMode' 'Scalar')
+  'pure' imgM
+@
+
+<<doc/generated/erodeImg.png erodeImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
+-}
 erode
     :: (ToPoint2i point2i, ToScalar scalar)
-    => Mat
+    => Mat -- ^ Input image.
     -> Mat
-    -> Maybe point2i
-    -> Int
+       -- ^ Structuring element used for erosion. If `emptyMat` is
+       -- used a @3x3@ rectangular structuring element is used. Kernel
+       -- can be created using `getStructuringElement`.
+    -> Maybe point2i -- ^ anchor
+    -> Int           -- ^ iterations
     -> BorderMode scalar
     -> Either CvException Mat
 erode src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
@@ -171,13 +211,36 @@ erode src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
--- | Dilates an image by using a specific structuring element
+{- | Dilates an image by using a specific structuring element
+
+Example:
+
+@
+dilateImg :: 'Mat'
+dilateImg = 'createMat' $ do
+  let [h, w] = 'miShape' $ 'matInfo' lambda
+  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
+  'void' $ 'matCopyToM' imgM (V2 0 0) lambda
+  'void' $ 'matCopyToM' imgM (V2 w 0)
+         $ 'either' 'throw' 'id'
+         $ 'dilate' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 3 ('BorderReplicate' :: 'BorderMode' 'Scalar')
+  'pure' imgM
+@
+
+<<doc/generated/dilateImg.png dilateImg>>
+
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
+-}
 dilate
     :: (ToPoint2i point2i, ToScalar scalar)
-    => Mat
+    => Mat -- ^ Input image.
     -> Mat
-    -> Maybe point2i
-    -> Int
+       -- ^ Structuring element used for dilation. If `emptyMat` is
+       -- used a @3x3@ rectangular structuring element is used. Kernel
+       -- can be created using `getStructuringElement`.
+    -> Maybe point2i -- ^ anchor
+    -> Int           -- ^ iterations
     -> BorderMode scalar
     -> Either CvException Mat
 dilate src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
@@ -204,6 +267,10 @@ dilate src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
+{- | Performs advanced morphological transformations
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
+-}
 morphologyEx
     :: (ToPoint2i point2i, ToScalar scalar)
      => Mat
@@ -244,13 +311,37 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
 
--- | Returns a structuring element of the specified size and shape for
--- morphological operations
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
+{- | Returns a structuring element of the specified size and shape for
+morphological operations
+
+Example:
+
+@
+structureImg :: 'MorphShape' (V2 'Int32') -> 'Mat'
+structureImg shape = 'either' 'throw' 'id' $ do
+    mat <- 'getStructuringElement' shape (V2 128 128 :: V2 'Int32')
+    img <- 'matConvertTo' 'Nothing' ('Just' 255) 'Nothing' mat
+    'bitwise_not' img 'Nothing'
+
+morphRectImg :: 'Mat'
+morphRectImg = structureImg 'MorphRect'
+
+morphEllipseImg :: 'Mat'
+morphEllipseImg = structureImg 'MorphEllipse'
+
+morphCrossImg :: 'Mat'
+morphCrossImg = structureImg ('MorphCross' $ 'pure' (-1))
+@
+
+<<doc/generated/morphEllipseImg.png morphEllipseImg>>
+<<doc/generated/morphCrossImg.png morphCrossImg>>
+<<doc/generated/morphRectImg.png morphRectImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
+-}
 getStructuringElement
-    :: (ToSize2i size2i)
-    => MorphShape
+    :: (ToPoint2i point2i, ToSize2i size2i)
+    => MorphShape point2i
     -> size2i
     -> Either CvException Mat
 getStructuringElement morphShape ksize = unsafePerformIO $ do
