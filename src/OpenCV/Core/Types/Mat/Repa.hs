@@ -39,7 +39,6 @@ import "lens" Control.Lens hiding ( ix )
 import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
 import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import qualified "vector" Data.Vector.Unboxed as VU
@@ -210,14 +209,14 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
     alloca $ \(dimsPtr     :: Ptr Int32) ->
     alloca $ \(sizePtr     :: Ptr (Ptr Int32)) ->
     alloca $ \(stepPtr     :: Ptr (Ptr CSize)) ->
-    alloca $ \(dataPtrPtr  :: Ptr (Ptr CUChar)) -> do
+    alloca $ \(dataPtrPtr  :: Ptr (Ptr Word8)) -> do
       [CU.block| void {
         const Mat * const matPtr = $(Mat * matPtr);
-        *$(int32_t       *   const flagsPtr  ) = matPtr->flags;
-        *$(int32_t       *   const dimsPtr   ) = matPtr->dims;
-        *$(int32_t       * * const sizePtr   ) = matPtr->size.p;
-        *$(size_t        * * const stepPtr   ) = matPtr->step.p;
-        *$(unsigned char * * const dataPtrPtr) = matPtr->data;
+        *$(int32_t *   const flagsPtr  ) = matPtr->flags;
+        *$(int32_t *   const dimsPtr   ) = matPtr->dims;
+        *$(int32_t * * const sizePtr   ) = matPtr->size.p;
+        *$(size_t  * * const stepPtr   ) = matPtr->step.p;
+        *$(uint8_t * * const dataPtrPtr) = matPtr->data;
       }|]
       (depth, channels) <- unmarshalFlags <$> peek flagsPtr
       let expectedDepth    = toMatDepth  (Proxy :: Proxy e)
@@ -246,7 +245,7 @@ toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
                   (step :: Ptr CSize) <- peek stepPtr
                   stepShape <- map fromIntegral <$> peekArray dims step
 
-                  (dataPtr :: Ptr CUChar) <- peek dataPtrPtr
+                  (dataPtr :: Ptr Word8) <- peek dataPtrPtr
                   pure $ Right $ Array mat dataPtr sizeShape stepShape
 
 -- | Converts a Repa array back into an OpenCV @'Mat'rix@.
@@ -266,7 +265,7 @@ instance (Storable e) => Repa.Source M e where
 
     data Array M sh e =
          Array !Mat -- The Mat is kept around so that the data doesn't get garbage collected.
-               !(Ptr CUChar) -- Pointer to the data.
+               !(Ptr Word8) -- Pointer to the data.
                ![Int] -- The shape of the extent which is determined by mat->dims and mat->size.p.
                ![Int] -- The shape of the data which is determined by mat->dims and mat->step.p.
 
@@ -293,10 +292,7 @@ instance (Storable e) => Repa.Source M e where
         unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr
       where
         elemPtr :: Ptr e
-        elemPtr = dataPtr `plusPtr` offset
-
-        offset :: Int
-        offset = sum $ zipWith (*) stepShape (Repa.listOfShape ix)
+        elemPtr = matElemAddress dataPtr stepShape (Repa.listOfShape ix)
 
     linearIndex :: (Repa.Shape sh) => Repa.Array M sh e -> Int -> e
     linearIndex a ix = Repa.index a sh

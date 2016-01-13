@@ -43,7 +43,7 @@ import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal ( newEmptyMat )
+import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types ( BorderMode )
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
@@ -129,11 +129,13 @@ Example:
 @
 medianBlurImg :: 'Mat'
 medianBlurImg = 'createMat' $ do
-  let [h, w] = 'miShape' $ 'matInfo' lenna
-  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 3 white
-  'void' $ 'matCopyToM' imgM (V2 0 0) lenna
-  'void' $ 'matCopyToM' imgM (V2 w 0) $ 'either' 'throw' 'id' $ 'medianBlur' lenna 13
-  'pure' imgM
+    imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 3 white
+    'void' $ 'matCopyToM' imgM (V2 0 0) birds_512x341
+    'void' $ 'matCopyToM' imgM (V2 w 0) birdsBlurred
+    'pure' imgM
+  where
+    birdsBlurred = 'either' 'throw' 'id' $ 'medianBlur' birds_512x341 13
+    [h, w] = 'miShape' $ 'matInfo' birds_512x341
 @
 
 <<doc/generated/medianBlurImg.png medianBlurImg>>
@@ -163,13 +165,13 @@ Example:
 @
 erodeImg :: 'Mat'
 erodeImg = 'createMat' $ do
-  let [h, w] = 'miShape' $ 'matInfo' lambda
-  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
-  'void' $ 'matCopyToM' imgM (V2 0 0) lambda
-  'void' $ 'matCopyToM' imgM (V2 w 0)
-         $ 'either' 'throw' 'id'
-         $ 'erode' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 5 ('BorderReplicate' :: 'BorderMode' 'Scalar')
-  'pure' imgM
+    let [h, w] = 'miShape' $ 'matInfo' lambda
+    imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
+    'void' $ 'matCopyToM' imgM (V2 0 0) lambda
+    'void' $ 'matCopyToM' imgM (V2 w 0)
+           $ 'either' 'throw' 'id'
+           $ 'erode' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 5 'BorderReplicate'
+    'pure' imgM
 @
 
 <<doc/generated/erodeImg.png erodeImg>>
@@ -177,7 +179,7 @@ erodeImg = 'createMat' $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
 -}
 erode
-    :: (ToPoint2i point2i, ToScalar scalar)
+    :: (ToPoint2i point2i)
     => Mat -- ^ Input image.
     -> Mat
        -- ^ Structuring element used for erosion. If `emptyMat` is
@@ -185,7 +187,7 @@ erode
        -- can be created using `getStructuringElement`.
     -> Maybe point2i -- ^ anchor
     -> Int           -- ^ iterations
-    -> BorderMode scalar
+    -> BorderMode
     -> Either CvException Mat
 erode src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
@@ -218,13 +220,13 @@ Example:
 @
 dilateImg :: 'Mat'
 dilateImg = 'createMat' $ do
-  let [h, w] = 'miShape' $ 'matInfo' lambda
-  imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
-  'void' $ 'matCopyToM' imgM (V2 0 0) lambda
-  'void' $ 'matCopyToM' imgM (V2 w 0)
-         $ 'either' 'throw' 'id'
-         $ 'dilate' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 3 ('BorderReplicate' :: 'BorderMode' 'Scalar')
-  'pure' imgM
+    let [h, w] = 'miShape' $ 'matInfo' lambda
+    imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 1 white
+    'void' $ 'matCopyToM' imgM (V2 0 0) lambda
+    'void' $ 'matCopyToM' imgM (V2 w 0)
+           $ 'either' 'throw' 'id'
+           $ 'dilate' lambda 'emptyMat' ('Nothing' :: 'Maybe' 'Point2i') 3 'BorderReplicate'
+    'pure' imgM
 @
 
 <<doc/generated/dilateImg.png dilateImg>>
@@ -233,7 +235,7 @@ dilateImg = 'createMat' $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
 -}
 dilate
-    :: (ToPoint2i point2i, ToScalar scalar)
+    :: (ToPoint2i point2i)
     => Mat -- ^ Input image.
     -> Mat
        -- ^ Structuring element used for dilation. If `emptyMat` is
@@ -241,7 +243,7 @@ dilate
        -- can be created using `getStructuringElement`.
     -> Maybe point2i -- ^ anchor
     -> Int           -- ^ iterations
-    -> BorderMode scalar
+    -> BorderMode
     -> Either CvException Mat
 dilate src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
@@ -272,7 +274,7 @@ dilate src kernel mbAnchor iterations borderMode = unsafePerformIO $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
-    :: (ToPoint2i point2i, ToScalar scalar)
+    :: (ToPoint2i point2i)
      => Mat
        -- ^ Source image. The number of channels can be arbitrary. The depth
        -- should be one of 'MatDepth_8U', 'MatDepth_16U', 'MatDepth_16S',
@@ -281,7 +283,7 @@ morphologyEx
     -> Mat            -- ^ Structuring element.
     -> Maybe point2i  -- ^ Anchor position with the kernel.
     -> Int            -- ^ Number of times erosion and dilation are applied.
-    -> BorderMode scalar
+    -> BorderMode
     -> Either CvException Mat
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat

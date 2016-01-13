@@ -11,20 +11,20 @@ module OpenCV.Core.Types.Mat.HMat
 
 
 import "base" Foreign.C.Types
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peekElemOff, pokeElemOff )
 import qualified "bytestring" Data.ByteString as B
 import "lens" Control.Lens hiding ( ix )
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V4 ( V4(..) )
 import "lumi-hackage-extended" Lumi.Prelude
-import "this" OpenCV.Internal
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG
 import qualified "vector" Data.Vector.Unboxed as VU
 import qualified "vector" Data.Vector.Unboxed.Mutable as VUM
+
 
 --------------------------------------------------------------------------------
 
@@ -140,14 +140,6 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
 -- sizes per dimension).
 dimPositions :: (Num a, Enum a) => [a] -> [[a]]
 dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape
-
-matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
-matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
-    where
-      offset = sum $ zipWith (*) step pos
-
-
---------------------------------------------------------------------------------
 
 product0 :: (Num a) => [a] -> a
 product0 [] = 0

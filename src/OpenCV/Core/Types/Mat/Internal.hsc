@@ -2,7 +2,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Core.Types.Mat.Internal
-    ( MatDepth(..)
+    ( Mat(..)
+    , MutMat(..)
+    , MatDepth(..)
+    , matFromPtr
+    , withMatPtr
+    , withMbMatPtr
+    , keepMatAliveDuring
     , newEmptyMat
     , newMat
     , marshalMatDepth
@@ -10,12 +16,14 @@ module OpenCV.Core.Types.Mat.Internal
     , unmarshalDepth
     , unmarshalFlags
     , withMatData
+    , matElemAddress
     ) where
 
 import "base" Foreign.C.Types
+import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr )
+import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -40,6 +48,31 @@ C.using "namespace cv"
 #include "namespace.hpp"
 
 --------------------------------------------------------------------------------
+
+newtype Mat = Mat {unMat :: ForeignPtr C'Mat}
+newtype MutMat s = MutMat { unMutMat :: Mat }
+
+
+matFromPtr :: IO (Ptr C'Mat) -> IO Mat
+matFromPtr = objFromPtr Mat $ \ptr -> [CU.exp| void { delete $(Mat * ptr) }|]
+
+withMatPtr :: Mat -> (Ptr C'Mat -> IO a) -> IO a
+withMatPtr = withForeignPtr . unMat
+
+withMbMatPtr :: Maybe Mat -> (Ptr C'Mat -> IO a) -> IO a
+withMbMatPtr mbMat f =
+    case mbMat of
+      Just mat -> withMatPtr mat f
+      Nothing  -> f nullPtr
+
+-- | Similar to 'withMatPtr' in that it keeps the 'ForeignPtr' alive
+-- during the execution of the given action but it doesn't extract the 'Ptr'
+-- from the 'ForeignPtr'.
+keepMatAliveDuring :: Mat -> IO a -> IO a
+keepMatAliveDuring mat m = do
+    x <- m
+    touchForeignPtr $ unMat mat
+    pure x
 
 newEmptyMat :: IO Mat
 newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
@@ -167,3 +200,8 @@ withMatData mat f = withMatPtr mat $ \matPtr ->
       dataPtr <- peek dataPtr2
       step    <- peekArray (fromIntegral dims) stepPtr
       f step dataPtr
+
+matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
+matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
+    where
+      offset = sum $ zipWith (*) step pos

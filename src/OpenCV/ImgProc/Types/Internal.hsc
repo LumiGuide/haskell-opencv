@@ -4,7 +4,7 @@ import "base" Foreign.C.Types ( CDouble )
 import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
 import "lumi-hackage-extended" Lumi.Prelude
-import "this" OpenCV.Core.Types ( Scalar, ToScalar, toScalar )
+import "this" OpenCV.Core.Types ( Scalar, toScalar )
 import "this" OpenCV.ImgProc.Types
 
 
@@ -39,9 +39,9 @@ marshalInterpolationMethod = \case
 #num BORDER_TRANSPARENT
 #num BORDER_ISOLATED
 
-marshalBorderMode :: (ToScalar scalar) => BorderMode scalar -> (Int32, Scalar)
+marshalBorderMode :: BorderMode -> (Int32, Scalar)
 marshalBorderMode = \case
-    BorderConstant s  -> (c'BORDER_CONSTANT    , toScalar s)
+    BorderConstant s  -> (c'BORDER_CONSTANT    , s         )
     BorderReplicate   -> (c'BORDER_REPLICATE   , zeroScalar)
     BorderReflect     -> (c'BORDER_REFLECT     , zeroScalar)
     BorderWrap        -> (c'BORDER_WRAP        , zeroScalar)

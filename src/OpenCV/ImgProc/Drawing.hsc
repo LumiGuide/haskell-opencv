@@ -31,7 +31,7 @@ import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Internal
+import "this" OpenCV.Core.Types.Mat.Internal
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
 

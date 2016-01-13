@@ -29,7 +29,7 @@ module OpenCV.Core.Types.Mat
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Ptr ( Ptr )
-import "base" Foreign.Storable ( Storable(..), peek )
+import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -100,6 +100,30 @@ cloneMatIO :: Mat -> IO Mat
 cloneMatIO mat = matFromPtr $ withMatPtr mat $ \matPtr ->
     [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
 
+
+{- | Extract a sub region from a 2D-matrix (image)
+
+Example:
+
+@
+matSubRectImg :: 'Mat'
+matSubRectImg = 'createMat' $ do
+    imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 3 white
+    'void' $ 'matCopyToM' imgM (V2 0 0) birds_512x341
+    'void' $ 'matCopyToM' imgM (V2 w 0) subImg
+    rectangle imgM subRect blue 1 LineType_4 0
+    rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
+    pure imgM
+  where
+    subRect = mkRect (V2 96 131) (V2 90 60)
+    subImg = 'either' 'throw' 'id' $
+               resize (ResizeAbs $ 'toSize2i' (w, h)) InterCubic =<<
+               'matSubRect' birds_512x341 subRect
+    [h, w] = 'miShape' $ 'matInfo' birds_512x341
+@
+
+<<doc/generated/matSubRectImg.png matSubRectImg>>
+-}
 matSubRect :: Mat -> Rect -> Either CvException Mat
 matSubRect matIn rect = unsafePerformIO $ do
     matOut <- newEmptyMat

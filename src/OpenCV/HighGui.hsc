@@ -66,7 +66,8 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
+import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Unsafe ( unsafeFreeze )
 
 --------------------------------------------------------------------------------

@@ -44,18 +44,23 @@ is taken as the interpolated pixel value. In OpenCV, you can choose between
 several interpolation methods. See resize for details.
 -}
 module OpenCV.ImgProc.GeometricImgTransform
-    ( warpAffine
+    ( ResizeAbsRel(..)
+    , resize
+    , warpAffine
     , warpPerspective
     , invertAffineTransform
     ) where
 
+import "base" Foreign.C.Types ( CDouble )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.Vector ( zero )
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal ( newEmptyMat )
+import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
@@ -73,24 +78,95 @@ C.using "namespace cv"
 #include "opencv2/imgproc.hpp"
 
 #include "namespace.hpp"
-#include "macros.hpp"
 
 --------------------------------------------------------------------------------
+
+data ResizeAbsRel
+   = ResizeAbs Size2i -- ^ Resize to an absolute size.
+   | ResizeRel (V2 Double)
+     -- ^ Resize with relative factors for both the width and the height.
+     deriving Show
+
+marshalResizeAbsRel
+    :: ResizeAbsRel
+    -> (Size2i, CDouble, CDouble)
+marshalResizeAbsRel (ResizeAbs s) = (s, 0   , 0   )
+marshalResizeAbsRel (ResizeRel f) = (s, c'fx, c'fy)
+  where
+    s = toSize2i (zero :: V2 Int32)
+    (V2 c'fx c'fy) = realToFrac <$> f
+
+{- | Resizes an image
+
+To shrink an image, it will generally look best with 'InterArea' interpolation,
+whereas to enlarge an image, it will generally look best with 'InterCubic'
+(slow) or 'InterLinear' (faster but still looks OK).
+
+Example:
+
+@
+resizeInterAreaImg :: 'Mat'
+resizeInterAreaImg = 'either' 'throw' 'id' $
+    'resize' ('ResizeRel' $ pure 0.5) 'InterArea' birds_768x512
+@
+
+<<doc/generated/resizeInterAreaImg.png resizeInterAreaImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#resize OpenCV Sphinx doc>
+-}
+resize
+    :: ResizeAbsRel
+    -> InterpolationMethod
+    -> Mat
+    -> Either CvException Mat
+resize factor interpolationMethod src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    handleCvException (pure dst) $
+      withMatPtr src $ \srcPtr ->
+      withMatPtr dst $ \dstPtr ->
+      withSize2iPtr dsize $ \dsizePtr ->
+        [cvExcept|
+          cv::resize
+          ( *$(Mat * srcPtr)
+          , *$(Mat * dstPtr)
+          , *$(Size2i * dsizePtr)
+          , $(double fx)
+          , $(double fy)
+          , $(int32_t c'interpolation)
+          );
+        |]
+  where
+    (dsize, fx, fy) = marshalResizeAbsRel factor
+    c'interpolation = marshalInterpolationMethod interpolationMethod
 
 #num WARP_FILL_OUTLIERS
 #num WARP_INVERSE_MAP
 
--- | Applies an affine transformation to an image
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
+{- | Applies an affine transformation to an image
+
+Example:
+
+@
+warpAffineImg :: 'Mat'
+warpAffineImg = either throw id $
+    'warpAffine' birds_512x341 transform 'InterLinear' False False 'BorderReplicate'
+  where
+    -- TODO: more interesting transformation (use cv::getRotationMatrix2D)
+    transform :: Mat
+    transform = eyeMat 2 3 MatDepth_32F 1
+@
+
+<<doc/generated/warpAffineImg.png warpAffineImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
+-}
 warpAffine
-    :: (ToScalar scalar)
-    => Mat -- ^ Source image.
+    :: Mat -- ^ Source image.
     -> Mat -- ^ Affine transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
-    -> BorderMode scalar -- ^ Pixel extrapolation method.
+    -> BorderMode -- ^ Pixel extrapolation method.
     -> Either CvException Mat -- ^ Transformed source image.
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
@@ -122,13 +198,12 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: (ToScalar scalar)
-    => Mat -- ^ Source image.
+    :: Mat -- ^ Source image.
     -> Mat -- ^ Perspective transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
-    -> BorderMode scalar -- ^ Pixel extrapolation method.
+    -> BorderMode -- ^ Pixel extrapolation method.
     -> Either CvException Mat -- ^ Transformed source image.
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do

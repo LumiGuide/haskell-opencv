@@ -5,7 +5,7 @@ module OpenCV.Internal where
 
 import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.Concurrent ( newForeignPtr )
-import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
+import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -68,41 +68,6 @@ cvExceptWrap s =
     \    return new cv::Exception(e);\n\
     \  }\n\
     \}"
-
---------------------------------------------------------------------------------
---  Matrix
---------------------------------------------------------------------------------
-
-newtype Mat = Mat {unMat :: ForeignPtr C'Mat}
-
-matFromPtr :: IO (Ptr C'Mat) -> IO Mat
-matFromPtr = objFromPtr Mat $ \ptr -> [CU.exp| void { delete $(Mat * ptr) }|]
-
-withMatPtr :: Mat -> (Ptr C'Mat -> IO a) -> IO a
-withMatPtr = withForeignPtr . unMat
-
-withMbMatPtr :: Maybe Mat -> (Ptr C'Mat -> IO a) -> IO a
-withMbMatPtr mbMat f =
-    case mbMat of
-      Just mat -> withMatPtr mat f
-      Nothing  -> f nullPtr
-
--- | Similar to 'withMatPtr' in that it keeps the 'ForeignPtr' alive
--- during the execution of the given action but it doesn't extract the 'Ptr'
--- from the 'ForeignPtr'.
-keepMatAliveDuring :: Mat -> IO a -> IO a
-keepMatAliveDuring mat m = do
-    x <- m
-    touchForeignPtr $ unMat mat
-    pure x
-
-
---------------------------------------------------------------------------------
--- Mutable Matrix
---------------------------------------------------------------------------------
-
-newtype MutMat s = MutMat { unMutMat :: Mat }
-
 
 --------------------------------------------------------------------------------
 -- Utils

@@ -78,6 +78,11 @@ instance Show Point2i where
                                showString "fromPoint2i "
                              . shows (fromPoint2i point :: V2 Int32)
 
+instance Show Size2i where
+    showsPrec prec size = showParen (prec >= 10) $
+                              showString "fromSize2i "
+                            . shows (fromSize2i size :: V2 Int32)
+
 --------------------------------------------------------------------------------
 --  Rect
 --------------------------------------------------------------------------------

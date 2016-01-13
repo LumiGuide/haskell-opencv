@@ -3,6 +3,7 @@ module OpenCV.ImgProc.Types
     , BorderMode(..)
     ) where
 
+import "this" OpenCV.Core.Types ( Scalar )
 import "lumi-hackage-extended" Lumi.Prelude ( Show )
 
 --------------------------------------------------------------------------------
@@ -20,8 +21,8 @@ data InterpolationMethod
 
 -- TODO (RvD): Show instance
 -- Needs a Show instance for Scalar
-data BorderMode scalar
-   = BorderConstant scalar -- ^ 1D example: @iiiiii|abcdefgh|iiiiiii@  with some specified @i@
+data BorderMode
+   = BorderConstant Scalar -- ^ 1D example: @iiiiii|abcdefgh|iiiiiii@  with some specified @i@
    | BorderReplicate   -- ^ 1D example: @aaaaaa|abcdefgh|hhhhhhh@
    | BorderReflect     -- ^ 1D example: @fedcba|abcdefgh|hgfedcb@
    | BorderWrap        -- ^ 1D example: @cdefgh|abcdefgh|abcdefg@
