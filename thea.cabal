@@ -80,6 +80,7 @@ library
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.ImgProc.Types.Internal
+                 , OpenCV.ImgProc.MiscImgTransform.ColorCodes
                  , Language.C.Inline.OpenCV
 
   default-extensions: ScopedTypeVariables

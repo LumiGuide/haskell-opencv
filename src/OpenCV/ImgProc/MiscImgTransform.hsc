@@ -5,9 +5,109 @@
 {-# LANGUAGE KindSignatures #-}
 
 module OpenCV.ImgProc.MiscImgTransform
-    ( ColorCode(..)
+    ( -- * Color conversion
+      cvtColor
     , ColorConversion
-    , cvtColor
+    , ColorCode(..)
+
+      -- ** Color code proxies
+    , bayerBG
+    , bayerGB
+    , bayerGR
+    , bayerRG
+    , bgr
+    , bgr555
+    , bgr565
+    , bgra
+    , bgra_I420
+    , bgra_IYUV
+    , bgra_NV12
+    , bgra_NV21
+    , bgra_UYNV
+    , bgra_UYVY
+    , bgra_Y422
+    , bgra_YUNV
+    , bgra_YUY2
+    , bgra_YUYV
+    , bgra_YV12
+    , bgra_YVYU
+    , bgr_EA
+    , bgr_FULL
+    , bgr_I420
+    , bgr_IYUV
+    , bgr_NV12
+    , bgr_NV21
+    , bgr_UYNV
+    , bgr_UYVY
+    , bgr_VNG
+    , bgr_Y422
+    , bgr_YUNV
+    , bgr_YUY2
+    , bgr_YUYV
+    , bgr_YV12
+    , bgr_YVYU
+    , gray
+    , gray_420
+    , gray_I420
+    , gray_IYUV
+    , gray_NV12
+    , gray_NV21
+    , gray_UYNV
+    , gray_UYVY
+    , gray_Y422
+    , gray_YUNV
+    , gray_YUY2
+    , gray_YUYV
+    , gray_YV12
+    , gray_YVYU
+    , hls
+    , hls_FULL
+    , hsv
+    , hsv_FULL
+    , lab
+    , lbgr
+    , lrgb
+    , luv
+    , mrgba
+    , rgb
+    , rgba
+    , rgba_I420
+    , rgba_IYUV
+    , rgba_NV12
+    , rgba_NV21
+    , rgba_UYNV
+    , rgba_UYVY
+    , rgba_Y422
+    , rgba_YUNV
+    , rgba_YUY2
+    , rgba_YUYV
+    , rgba_YV12
+    , rgba_YVYU
+    , rgb_EA
+    , rgb_FULL
+    , rgb_I420
+    , rgb_IYUV
+    , rgb_NV12
+    , rgb_NV21
+    , rgb_UYNV
+    , rgb_UYVY
+    , rgb_VNG
+    , rgb_Y422
+    , rgb_YUNV
+    , rgb_YUY2
+    , rgb_YUYV
+    , rgb_YV12
+    , rgb_YVYU
+    , xyz
+    , yCrCb
+    , yuv
+    , yuv420p
+    , yuv420sp
+    , yuv_I420
+    , yuv_IYUV
+    , yuv_YV12
+
+      -- * Thresholding
     , ThreshType(..)
     , ThreshValue(..)
     , threshold
@@ -23,6 +123,7 @@ import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
+import "this" OpenCV.ImgProc.MiscImgTransform.ColorCodes
 
 --------------------------------------------------------------------------------
 
@@ -39,113 +140,6 @@ C.using "namespace cv"
 #include "namespace.hpp"
 
 --------------------------------------------------------------------------------
-
--- | Names of color encodings
-data ColorCode
-    = BayerBG -- ^ Bayer pattern with BG in the second row, second and third column
-    | BayerGB -- ^ Bayer pattern with GB in the second row, second and third column
-    | BayerGR -- ^ Bayer pattern with GR in the second row, second and third column
-    | BayerRG -- ^ Bayer pattern with RG in the second row, second and third column
-
-    | BGR    -- ^ 24 bit RGB color space with channels: (B8:G8:R8)
-    | BGR555 -- ^ 15 bit RGB color space with channels: (B5:G5:R5)
-    | BGR565 -- ^ 16 bit RGB color space with channels: (B5:G6:R5)
-
-    | BGRA -- ^ 32 bit RGBA color space with channels: (B8:G8:R8:A8)
-    | BGRA_I420
-    | BGRA_IYUV
-    | BGRA_NV12
-    | BGRA_NV21
-    | BGRA_UYNV
-    | BGRA_UYVY
-    | BGRA_Y422
-    | BGRA_YUNV
-    | BGRA_YUY2
-    | BGRA_YUYV
-    | BGRA_YV12
-    | BGRA_YVYU
-
-    | BGR_EA
-    | BGR_FULL
-    | BGR_I420
-    | BGR_IYUV
-    | BGR_NV12
-    | BGR_NV21
-    | BGR_UYNV
-    | BGR_UYVY
-    | BGR_VNG
-    | BGR_Y422
-    | BGR_YUNV
-    | BGR_YUY2
-    | BGR_YUYV
-    | BGR_YV12
-    | BGR_YVYU
-
-    | GRAY -- ^ 8 bit single channel color space
-    | GRAY_420
-    | GRAY_I420
-    | GRAY_IYUV
-    | GRAY_NV12
-    | GRAY_NV21
-    | GRAY_UYNV
-    | GRAY_UYVY
-    | GRAY_Y422
-    | GRAY_YUNV
-    | GRAY_YUY2
-    | GRAY_YUYV
-    | GRAY_YV12
-    | GRAY_YVYU
-
-    | HLS
-    | HLS_FULL
-    | HSV
-    | HSV_FULL
-    | Lab
-    | LBGR
-    | LRGB
-    | Luv
-    | MRGBA
-    | RGB -- ^ 24 bit RGB color space with channels: (R8:G8:B8)
-
-    | RGBA
-    | RGBA_I420
-    | RGBA_IYUV
-    | RGBA_NV12
-    | RGBA_NV21
-    | RGBA_UYNV
-    | RGBA_UYVY
-    | RGBA_Y422
-    | RGBA_YUNV
-    | RGBA_YUY2
-    | RGBA_YUYV
-    | RGBA_YV12
-    | RGBA_YVYU
-
-    | RGB_EA
-    | RGB_FULL
-    | RGB_I420
-    | RGB_IYUV
-    | RGB_NV12
-    | RGB_NV21
-    | RGB_UYNV
-    | RGB_UYVY
-    | RGB_VNG
-    | RGB_Y422
-    | RGB_YUNV
-    | RGB_YUY2
-    | RGB_YUYV
-    | RGB_YV12
-    | RGB_YVYU
-
-    | XYZ
-    | YCrCb
-
-    | YUV
-    | YUV420p
-    | YUV420sp
-    | YUV_I420
-    | YUV_IYUV
-    | YUV_YV12
 
 #num COLOR_BGR2BGRA
 #num COLOR_RGB2RGBA
@@ -551,49 +545,71 @@ instance ColorConversion 'BayerGB  'RGB_EA    where colorCode _ _ = c'COLOR_Baye
 instance ColorConversion 'BayerRG  'RGB_EA    where colorCode _ _ = c'COLOR_BayerRG2RGB_EA
 instance ColorConversion 'BayerGR  'RGB_EA    where colorCode _ _ = c'COLOR_BayerGR2RGB_EA
 
--- | Converts an image from one color space to another
---
--- The function converts an input image from one color space to
--- another. In case of a transformation to-from RGB color space, the
--- order of the channels should be specified explicitly (RGB or
--- BGR). Note that the default color format in OpenCV is often
--- referred to as RGB but it is actually BGR (the bytes are
--- reversed). So the first byte in a standard (24-bit) color image
--- will be an 8-bit Blue component, the second byte will be Green, and
--- the third byte will be Red. The fourth, fifth, and sixth bytes
--- would then be the second pixel (Blue, then Green, then Red), and so
--- on.
---
--- The conventional ranges for R, G, and B channel values are:
---
---   * 0 to 255 for CV_8U images
---
---   * 0 to 65535 for CV_16U images
---
---   * 0 to 1 for CV_32F images
---
--- In case of linear transformations, the range does not matter. But
--- in case of a non-linear transformation, an input RGB image should
--- be normalized to the proper value range to get the correct results,
--- for example, for RGB ￼ L*u*v* transformation. For example, if you
--- have a 32-bit floating-point image directly converted from an 8-bit
--- image without any scaling, then it will have the 0..255 value range
--- instead of 0..1 assumed by the function. So, before calling
--- 'cvtColor', you need first to scale the image down:
---
--- >  cvtColor (img * 1/255) 'ColorConvBGR2Luv'
---
--- If you use 'cvtColor' with 8-bit images, the conversion will have
--- some information lost. For many applications, this will not be
--- noticeable but it is recommended to use 32-bit images in
--- applications that need the full range of colors or that convert an
--- image before an operation and then convert back.
---
--- If conversion adds the alpha channel, its value will set to the
--- maximum of corresponding channel range: 255 for CV_8U, 65535 for
--- CV_16U, 1 for CV_32F.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
+{- | Converts an image from one color space to another
+
+The function converts an input image from one color space to
+another. In case of a transformation to-from RGB color space, the
+order of the channels should be specified explicitly (RGB or
+BGR). Note that the default color format in OpenCV is often
+referred to as RGB but it is actually BGR (the bytes are
+reversed). So the first byte in a standard (24-bit) color image
+will be an 8-bit Blue component, the second byte will be Green, and
+the third byte will be Red. The fourth, fifth, and sixth bytes
+would then be the second pixel (Blue, then Green, then Red), and so
+on.
+
+The conventional ranges for R, G, and B channel values are:
+
+  * 0 to 255 for CV_8U images
+
+  * 0 to 65535 for CV_16U images
+
+  * 0 to 1 for CV_32F images
+
+In case of linear transformations, the range does not matter. But
+in case of a non-linear transformation, an input RGB image should
+be normalized to the proper value range to get the correct results,
+for example, for RGB ￼ L*u*v* transformation. For example, if you
+have a 32-bit floating-point image directly converted from an 8-bit
+image without any scaling, then it will have the 0..255 value range
+instead of 0..1 assumed by the function. So, before calling
+'cvtColor', you need first to scale the image down:
+
+>  cvtColor (img * 1/255) 'ColorConvBGR2Luv'
+
+If you use 'cvtColor' with 8-bit images, the conversion will have
+some information lost. For many applications, this will not be
+noticeable but it is recommended to use 32-bit images in
+applications that need the full range of colors or that convert an
+image before an operation and then convert back.
+
+If conversion adds the alpha channel, its value will set to the
+maximum of corresponding channel range: 255 for CV_8U, 65535 for
+CV_16U, 1 for CV_32F.
+
+Example:
+
+@
+cvtColorImg :: Mat
+cvtColorImg = createMat $ do
+    imgM <- mkMatM (V.fromList [h, 2 * w]) MatDepth_8U 3 white
+    void $ matCopyToM imgM (V2 0 0) birds_512x341
+    void $ matCopyToM imgM (V2 w 0) birds_gray
+    arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
+    pure imgM
+  where
+    birds_gray = either throw id $ 'cvtColor' gray bgr =<< 'cvtColor' bgr gray birds_512x341
+
+    [h, w] = miShape $ matInfo birds_512x341
+    startX = round $ fromIntegral w * (0.95 :: Double)
+    pointX = round $ fromIntegral w * (1.05 :: Double)
+    midY = h `div` 2
+@
+
+<<doc/generated/cvtColorImg.png cvtColorImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
+-}
 cvtColor :: forall (fromColor :: ColorCode) (toColor :: ColorCode)
          . (ColorConversion fromColor toColor)
          => Proxy fromColor
