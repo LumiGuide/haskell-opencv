@@ -105,9 +105,20 @@ whereas to enlarge an image, it will generally look best with 'InterCubic'
 Example:
 
 @
-resizeInterAreaImg :: 'Mat'
-resizeInterAreaImg = 'either' 'throw' 'id' $
-    'resize' ('ResizeRel' $ pure 0.5) 'InterArea' birds_768x512
+resizeInterAreaImg :: Mat
+resizeInterAreaImg = createMat $ do
+    imgM <- mkMatM (V.fromList [h, w + (w `div` 2)]) MatDepth_8U 3 transparent
+    void $ matCopyToM imgM (V2 0 0) birds_768x512
+    void $ matCopyToM imgM (V2 w 0) birds_resized
+    arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
+    pure imgM
+  where
+    birds_resized = either throw id $ 'resize' ('ResizeRel' $ pure 0.5) 'InterArea' birds_768x512
+
+    [h, w] = miShape $ matInfo birds_768x512
+    startX = round $ fromIntegral w * (0.95 :: Double)
+    pointX = round $ fromIntegral w * (1.05 :: Double)
+    y = h `div` 4
 @
 
 <<doc/generated/resizeInterAreaImg.png resizeInterAreaImg>>
