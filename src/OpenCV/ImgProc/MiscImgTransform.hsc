@@ -603,7 +603,7 @@ cvtColorImg = createMat $ do
     [h, w] = miShape $ matInfo birds_512x341
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
-    midY = h `div` 2
+    midY = h \`div\` 2
 @
 
 <<doc/generated/cvtColorImg.png cvtColorImg>>

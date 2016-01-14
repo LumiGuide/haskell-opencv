@@ -118,7 +118,7 @@ resizeInterAreaImg = createMat $ do
     [h, w] = miShape $ matInfo birds_768x512
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
-    y = h `div` 4
+    y = h \`div\` 4
 @
 
 <<doc/generated/resizeInterAreaImg.png resizeInterAreaImg>>
