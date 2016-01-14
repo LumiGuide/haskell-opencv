@@ -100,7 +100,8 @@ instance (KnownNat n) => NumChannels (Elem n a) where
 
 -- | A 'MatElem' that contains @n@ times an @a@.
 --
--- Implementation detail: the @n@ times an @a@ is stored in an unboxed 'VU.Vector'.
+-- This type is very similar to the @V@ type from @linear@ but instead of using
+-- a boxed @Vector@ we use an unboxed 'VU.Vector'.
 newtype Elem (n::Nat) a = Elem
     { getChannels :: VU.Vector a -- ^ Retrieve the channel elements.
     } deriving (Eq, Show)
