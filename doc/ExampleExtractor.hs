@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module ExampleExtractor ( extractExampleImages ) where
+module ExampleExtractor ( render, extractExampleImages ) where
 
 import "base" Control.Exception ( throw )
 import "base" Control.Arrow ( second )
@@ -23,10 +23,10 @@ import qualified "bytestring" Data.ByteString as B ( writeFile )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Syntax
 
-render :: FilePath -> CV.Mat -> FilePath -> IO ()
-render destDir img fp = do
+render :: CV.Mat -> FilePath -> IO ()
+render img fp = do
     let bs = either throw id $ CV.imencode (CV.OutputPng CV.defaultPngParams) img
-        dest = destDir <> "/" <> fp <> ".png"
+        dest = "doc/generated/" <> fp <> ".png"
     putStr $ "Writing file " <> dest <> " ..."
     B.writeFile dest bs
     putStrLn " OK"
@@ -52,13 +52,13 @@ extractExampleImages srcDir = do
     let results = concatMap snd perFileResults
         imgNames = findImgDecls results
 
-    mdecs <- mkMain imgNames
+    mdecs <- mkRenderExampleImages imgNames
     pure $ results <> mdecs
 
-mkMain :: [Name] -> Q [Dec]
-mkMain names = [d|
-    main :: IO ()
-    main = mapM_ (\(img, fp) -> render "doc/generated" img fp) $(pure images)
+mkRenderExampleImages :: [Name] -> Q [Dec]
+mkRenderExampleImages names = [d|
+    renderExampleImages :: IO ()
+    renderExampleImages = mapM_ (\(img, fp) -> render img fp) $(pure images)
     |]
   where
     images :: Exp

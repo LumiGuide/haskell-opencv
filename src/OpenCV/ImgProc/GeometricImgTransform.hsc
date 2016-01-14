@@ -49,10 +49,12 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpAffine
     , warpPerspective
     , invertAffineTransform
+    , getRotationMatrix2D
     ) where
 
 import "base" Foreign.C.Types ( CDouble )
 import qualified "inline-c" Language.C.Inline as C
+import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
@@ -160,11 +162,10 @@ Example:
 @
 warpAffineImg :: 'Mat'
 warpAffineImg = either throw id $
-    'warpAffine' birds_512x341 transform 'InterLinear' False False 'BorderReplicate'
+    'warpAffine' birds_512x341 transform 'InterLinear' False False ('BorderConstant' $ 'toScalar' (zero :: V4 Double))
   where
-    -- TODO: more interesting transformation (use cv::getRotationMatrix2D)
     transform :: Mat
-    transform = eyeMat 2 3 MatDepth_32F 1
+    transform = 'getRotationMatrix2D' (V2 256 170 :: V2 Float) 45 0.75
 @
 
 <<doc/generated/warpAffineImg.png warpAffineImg>>
@@ -254,3 +255,31 @@ invertAffineTransform matIn = unsafePerformIO $ do
         [cvExcept|
            cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
         |]
+
+{- | Calculates an affine matrix of 2D rotation
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
+-}
+getRotationMatrix2D
+    :: (ToPoint2f point2f)
+    => point2f -- ^ Center of the rotation in the source image.
+    -> Double
+       -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
+       -- rotation (the coordinate origin is assumed to be the top-left corner).
+    -> Double -- ^ Isotropic scale factor.
+    -> Mat -- ^ The output affine transformation, 2x3 floating-point matrix.
+getRotationMatrix2D center angle scale = unsafePerformIO $
+    withPoint2fPtr center $ \centerPtr ->
+      matFromPtr
+      [CU.block| Mat * {
+        return new cv::Mat
+        ( cv::getRotationMatrix2D
+          ( *$(Point2f * centerPtr)
+          , $(double c'angle)
+          , $(double c'scale)
+          )
+        );
+      }|]
+  where
+    c'angle = realToFrac angle
+    c'scale = realToFrac scale

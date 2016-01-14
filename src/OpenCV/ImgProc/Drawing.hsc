@@ -51,11 +51,10 @@ C.using "namespace cv"
 
 --------------------------------------------------------------------------------
 
-
 data LineType
-   = LineType_8  -- ^ 8-connected line.
-   | LineType_4  -- ^ 4-connected line.
-   | LineType_AA -- ^ Antialiased line.
+   = LineType_8  -- ^ 8-connected line. <<doc/generated/lineType8Img.png 8-connected line>>
+   | LineType_4  -- ^ 4-connected line. <<doc/generated/lineType4Img.png 4-connected line>>
+   | LineType_AA -- ^ Antialiased line. <<doc/generated/lineTypeAAImg.png Antialised line>>
      deriving (Show, Enum, Bounded)
 
 #num LINE_8
@@ -120,8 +119,8 @@ Example:
 arrowedLineImg :: 'Mat'
 arrowedLineImg = 'createMat' $ do
   imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
-  'arrowedLine' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_8' 0 0.15
-  'arrowedLine' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_8' 0 0.4
+  'arrowedLine' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_AA' 0 0.15
+  'arrowedLine' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_AA' 0 0.4
   'pure' imgM
 @
 
@@ -476,8 +475,8 @@ Example:
 lineImg :: 'Mat'
 lineImg = 'createMat' $ do
   imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
-  'line' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_8' 0
-  'line' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_8' 0
+  'line' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_AA' 0
+  'line' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_AA' 0
   'pure' imgM
 @
 

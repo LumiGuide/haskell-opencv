@@ -36,7 +36,7 @@ library
            , src/OpenCV/Video.cpp
 
   cc-options: -Wall -O2 -std=c++11
-  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
 
   build-depends: aeson
                , base >=4.8 && <5
@@ -98,7 +98,7 @@ test-suite thea-doc-images
   hs-source-dirs: doc
   main-is: images.hs
   default-language: Haskell2010
-  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
   build-depends: base >= 4.8 && < 5
                , bytestring
                , directory
@@ -115,7 +115,7 @@ test-suite test-thea
   hs-source-dirs:   test
   main-is:          test.hs
   default-language: Haskell2010
-  ghc-options:      -Wall
+  ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
   build-depends: thea
                , base >= 4.8 && < 5
                , bytestring
@@ -134,7 +134,7 @@ benchmark bench-thea
   hs-source-dirs:   bench
   main-is:          bench.hs
   default-language: Haskell2010
-  ghc-options: -Wall -threaded -funbox-strict-fields -O2 -rtsopts
+  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
   build-depends:    thea
                   , base >= 4.8 && < 5
                   , bytestring
