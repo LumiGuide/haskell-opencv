@@ -612,9 +612,9 @@ cvtColorImg = createMat $ do
 -}
 cvtColor :: forall (fromColor :: ColorCode) (toColor :: ColorCode)
          . (ColorConversion fromColor toColor)
-         => Proxy fromColor
-         -> Proxy toColor
-         -> Mat
+         => Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
+         -> Proxy toColor   -- ^ Convert to 'ColorCode'.
+         -> Mat             -- ^ Source image
          -> Either CvException Mat
 cvtColor fromColor toColor src = unsafePerformIO $ do
     dst <- newEmptyMat
