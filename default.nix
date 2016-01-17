@@ -27,6 +27,7 @@
 , directory
 , Glob
 , haskell-src-meta
+, haskell-src-exts
 , QuickCheck
 , tasty
 , tasty-hunit
@@ -63,6 +64,7 @@ mkDerivation {
     directory
     Glob
     haskell-src-meta
+    haskell-src-exts
     QuickCheck
     tasty
     tasty-hunit

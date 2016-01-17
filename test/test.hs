@@ -9,24 +9,20 @@
 
 module Main where
 
-import           "base"                  Foreign.Storable (Storable(..))
-import           "lumi-hackage-extended" Lumi.Prelude
-import qualified "bytestring"            Data.ByteString as B
-import           "lens"                  Control.Lens
-import           "linear"                Linear.Matrix ( M23, M33 )
-import           "linear"                Linear.Vector ( (^+^), zero  )
-import           "linear"                Linear.V2 ( V2(..) )
-import           "linear"                Linear.V3 ( V3(..) )
-import           "linear"                Linear.V4 ( V4(..) )
-import qualified "repa"                  Data.Array.Repa as Repa
-import           "repa"                  Data.Array.Repa.Index (Z(Z),(:.)((:.)))
-import           "tasty"                 Test.Tasty
-import           "tasty-hunit"           Test.Tasty.HUnit      as HU
-import qualified "tasty-quickcheck"      Test.Tasty.QuickCheck as QC (testProperty)
-import qualified "QuickCheck"            Test.QuickCheck       as QC
-import           "thea"                  OpenCV
-import qualified "vector"                Data.Vector as V
--- import qualified "vector"                Data.Vector.Unboxed as VU
+import qualified "bytestring" Data.ByteString as B
+import "linear" Linear.Matrix ( M23, M33 )
+import "linear" Linear.Vector ( (^+^), zero )
+import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V3 ( V3(..) )
+import "linear" Linear.V4 ( V4(..) )
+import "lumi-hackage-extended" Lumi.Prelude
+import qualified "repa" Data.Array.Repa as Repa
+import "repa" Data.Array.Repa.Index ((:.)((:.)))
+import "tasty" Test.Tasty
+import "tasty-hunit" Test.Tasty.HUnit as HU
+import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
+import "thea" OpenCV
+import qualified "QuickCheck" Test.QuickCheck as QC
 
 main :: IO ()
 main = defaultMain $ testGroup "thea"
@@ -67,17 +63,7 @@ main = defaultMain $ testGroup "thea"
             ]
           ]
         , testGroup "Repa"
-          [ HU.testCase "emptyToRepa" emptyToRepa
-          , HU.testCase "imgToRepa"   imgToRepa
-          , testGroup "matToRepa"
-            [ --        Size     Elem type    Channels Elem value Repa dimensions            Repa elem type                 Expected elem at index
-              matToRepa [2,3]    MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy Word8)         (Just (Z :. 0 :. 1,      0))
-            , matToRepa [2,3]    MatDepth_16S 3        zero       (Proxy :: Proxy Repa.DIM2) (Proxy :: Proxy (3 :* Int16))  (Just (Z :. 0 :. 1,      (0 ::: 0 ::: 0)))
-            , matToRepa []       MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM0) (Proxy :: Proxy NoElem)        Nothing
-            , matToRepa [2,3,10] MatDepth_64F 1        zero       (Proxy :: Proxy Repa.DIM3) (Proxy :: Proxy Double)        (Just (Z :. 2 :. 1 :. 0, 0))
-    -- !?!?!, matToRepa [3]      MatDepth_8U  1        zero       (Proxy :: Proxy Repa.DIM1) (Proxy :: Proxy Word8)         (Just (Z :. 2,           0))
-            ]
-          ]
+          [ HU.testCase "imgToRepa" imgToRepa ]
         , testGroup "fixed size matrices"
           [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
           , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
@@ -85,7 +71,9 @@ main = defaultMain $ testGroup "thea"
         ]
       ]
     , testGroup "ImgProc"
-      [
+      [ testGroup "GeometricImgTransform"
+        [ HU.testCase "getRotationMatrix2D" testGetRotationMatrix2D
+        ]
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
@@ -152,24 +140,32 @@ matHasInfoFP fp expectedInfo = HU.testCase fp $ do
     mat <- loadImg ImreadUnchanged fp
     assertEqual "" expectedInfo (matInfo mat)
 
+testGetRotationMatrix2D :: HU.Assertion
+testGetRotationMatrix2D =
+    case coerceMat rot2D `asTypeOf` Right rot2D of
+      Left errors -> assertFailure (intercalate ", " errors)
+      Right _ -> return ()
+  where
+    rot2D = getRotationMatrix2D (zero :: V2 Float) 0 0
+
 hMatEncodeDecodeFP :: FilePath -> TestTree
 hMatEncodeDecodeFP fp = HU.testCase fp $ do
     mat <- loadImg ImreadUnchanged fp
     hMatEncodeDecode mat
 
-hMatEncodeDecode :: Mat -> HU.Assertion
+hMatEncodeDecode :: Mat shape channels depth -> HU.Assertion
 hMatEncodeDecode m1 =
     assertEqual "" h1 h2
     -- assertBool "mat hmat conversion failure" (h1 == h2)
   where
-    h1 = m1 ^. hmat
-    m2 = h1 ^. from hmat
-    h2 = m2 ^. hmat
+    h1 = matToHMat m1
+    m2 = hMatToMat h1
+    h2 = matToHMat m2
 
 hmatElemSize :: FilePath -> Int -> HU.Assertion
 hmatElemSize fp expectedElemSize = do
   mat <- loadImg ImreadUnchanged fp
-  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ mat ^. hmat
+  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
 
 encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
@@ -183,109 +179,42 @@ encodeDecode outputFormat = do
     assertBool "imencode . imdecode failure"
                (bs2 == bs3)
 
-loadImg :: ImreadMode -> FilePath -> IO Mat
+loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
 loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
-
-emptyToRepa :: HU.Assertion
-emptyToRepa = do
-    assertBool "Repa conversion failure" $
-      isJust (emptyMat ^? repa :: Maybe (Repa.Array M Repa.DIM0 NoElem))
-
-data NoElem = NoElem deriving (Show, Eq)
-
-instance Storable NoElem where
-    sizeOf    _ = 0
-    alignment _ = 0
-    peek        = undefined
-    poke        = undefined
-
-instance ToMatDepth NoElem where
-    toMatDepth = const MatDepth_8U
-
-instance NumChannels NoElem where
-    numChannels = const 1
 
 imgToRepa :: HU.Assertion
 imgToRepa = do
     mat <- loadImg ImreadUnchanged "kikker.jpg"
-    case mat ^? repa :: Maybe (Repa.Array M Repa.DIM2 (3 :* Word8)) of
-      Nothing -> assertFailure "Repa conversion failure"
-      Just repaArray -> do
-        assertEqual "extent" (Z :. 500 :. 390) (Repa.extent repaArray)
-
-matToRepa
-    :: forall sh e
-     . ( Typeable sh, Show sh, Repa.Shape sh
-       , Typeable e,  Show e, Eq e
-       , MatElem e
-       )
-    => [Int32]       -- ^ Sizes
-    -> MatDepth
-    -> Int32         -- ^ Number of channels
-    -> V4 Double     -- ^ Default element value
-    -> Proxy sh
-    -> Proxy e
-    -> Maybe (sh, e) -- ^ Optional index and expected value at that index
-    -> TestTree
-matToRepa sz depth cn defValue shapeProxy elemProxy mbIndex = HU.testCase name $ do
-    let mat = mkMat (V.fromList sz) depth cn (toScalar defValue)
-    assertEqual "info" (MatInfo sz depth cn) $ matInfo mat
-    case toRepa mat :: Either String (Repa.Array M sh e) of
-      Left err -> assertFailure $ "Repa conversion failure: " <> err
-      Right a -> do
-        let size :: sh
-            size = Repa.extent a
-
-        assertEqual "size" sh size
-
-        forM_ mbIndex $ \(i, expected) -> do
-          assertEqual "index"  expected (Repa.unsafeIndex a i)
-
-          let outOfRange :: sh
-              outOfRange = Repa.shapeOfList $ zipWith (+) (Repa.listOfShape i) (fromIntegral <$> sz)
-
-          r <- try (evaluate (Repa.index a outOfRange))
-          case r of
-            Left (_err :: ErrorCall) -> pure ()
-            Right _x -> assertFailure $ "Indexing on " <> show outOfRange <> " should throw an error."
-  where
-    sh :: sh
-    sh = Repa.shapeOfList (fromIntegral <$> sz)
-
-    name :: String
-    name = show
-           ( sz
-           , depth
-           , cn
-           , defValue
-           , typeRep shapeProxy
-           , typeRep elemProxy
-           , mbIndex
-           )
+    case coerceMat mat of
+      Left errors -> assertFailure (intercalate ", " errors)
+      Right (mat' :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)) -> do
+        let repaArray :: Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8
+            repaArray = toRepa mat'
+        assertEqual "extent" (Repa.Z :. 3 :. 500 :. 390 ) (Repa.extent repaArray)
 
 testMatToM23
-    :: (Eq e, Show e, MatElem e)
-    => Mat
+    :: (Eq e, Show e, Storable e)
+    => Mat (ShapeT [2, 3]) ('S 1) ('S e)
     -> V2 (V3 e)
     -> HU.Assertion
-testMatToM23 m v = assertEqual "" (Right v) $ matToM23 m
+testMatToM23 m v = assertEqual "" v $ matToM23 m
 
 testMatToM33
-    :: (Eq e, Show e, MatElem e)
-    => Mat
+    :: (Eq e, Show e, Storable e)
+    => Mat (ShapeT [3, 3]) ('S 1) ('S e)
     -> V3 (V3 e)
     -> HU.Assertion
-testMatToM33 m v = assertEqual "" (Right v) $ matToM33 m
+testMatToM33 m v = assertEqual "" v $ matToM33 m
 
 --------------------------------------------------------------------------------
 
-eye23_8u_1c :: Mat
-eye33_8u_1c :: Mat
-eye22_8u_3c :: Mat
+eye23_8u_1c :: Mat (ShapeT [2, 3]) ('S 1) ('S Word8)
+eye33_8u_1c :: Mat (ShapeT [3, 3]) ('S 1) ('S Word8)
+eye22_8u_3c :: Mat (ShapeT [2, 2]) ('S 3) ('S Word8)
 
-eye23_8u_1c = eyeMat 2 3 MatDepth_8U 1
-eye33_8u_1c = eyeMat 3 3 MatDepth_8U 1
-eye22_8u_3c = eyeMat 2 2 MatDepth_8U 3
+eye23_8u_1c = eyeMat (Proxy :: Proxy 2) (Proxy :: Proxy 3) (Proxy :: Proxy 1) (Proxy :: Proxy Word8)
+eye33_8u_1c = eyeMat (Proxy :: Proxy 3) (Proxy :: Proxy 3) (Proxy :: Proxy 1) (Proxy :: Proxy Word8)
+eye22_8u_3c = eyeMat (Proxy :: Proxy 2) (Proxy :: Proxy 2) (Proxy :: Proxy 3) (Proxy :: Proxy Word8)
 
 eye_m23 :: (Num e) => M23 e
 eye_m33 :: (Num e) => M33 e

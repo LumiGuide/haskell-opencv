@@ -24,9 +24,11 @@ import "linear" Linear.Vector ( zero )
 import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.ArrayOps.Internal
 
 --------------------------------------------------------------------------------
 
@@ -35,10 +37,6 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-
-#include "namespace.hpp"
 
 --------------------------------------------------------------------------------
 -- Operations on Arrays
@@ -48,15 +46,17 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
 addWeighted
-    :: Mat    -- ^ src1
+    :: forall shape channels srcDepth dstDepth
+     . (Convert (Proxy dstDepth) (DS MatDepth))
+    => Mat shape channels srcDepth -- ^ src1
     -> Double -- ^ alpha
-    -> Mat    -- ^ src2
+    -> Mat shape channels srcDepth -- ^ src2
     -> Double -- ^ beta
     -> Double -- ^ gamma
-    -> Either CvException Mat
+    -> Either CvException (Mat shape channels dstDepth)
 addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src1 $ \src1Ptr ->
       withMatPtr src2 $ \src2Ptr ->
       withMatPtr dst $ \dstPtr ->
@@ -68,19 +68,23 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
           , $(double c'beta)
           , $(double c'gamma)
           , *$(Mat * dstPtr)
+          , $(int32_t c'dtype)
           );
       |]
   where
     c'alpha = realToFrac alpha
     c'beta  = realToFrac beta
     c'gamma = realToFrac gamma
+    c'dtype = maybe (-1) marshalMatDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
 
 -- | Finds the global minimum and maximum in an array
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
 
 -- TODO (RvD): implement mask
-minMaxLoc :: Mat -> Either CvException (Double, Double, Point2i, Point2i)
+minMaxLoc
+    :: Mat ('S [height, width]) channels depth -- ^
+    -> Either CvException (Double, Double, Point2i, Point2i)
 minMaxLoc src = unsafePerformIO $ do
     minLoc <- newPoint2i zero
     maxLoc <- newPoint2i zero
@@ -103,56 +107,15 @@ minMaxLoc src = unsafePerformIO $ do
                          );
           |]
 
--- | Normalization type
-data NormType
-   = Norm_Inf
-   | Norm_L1
-   | Norm_L2
-   | Norm_L2SQR
-   | Norm_Hamming
-   | Norm_Hamming2
-   | Norm_MinMax
-     deriving (Show, Eq)
-
-data NormAbsRel
-   = NormRelative
-   | NormAbsolute
-     deriving (Show, Eq)
-
-#num NORM_INF
-#num NORM_L1
-#num NORM_L2
-#num NORM_L2SQR
-#num NORM_HAMMING
-#num NORM_HAMMING2
-#num NORM_MINMAX
-
-#num NORM_RELATIVE
-
-marshalNormType :: NormAbsRel -> NormType -> Int32
-marshalNormType absRel normType =
-    case absRel of
-      NormRelative -> c'normType .|. c'NORM_RELATIVE
-      NormAbsolute -> c'normType
-  where
-    c'normType = case normType of
-        Norm_Inf      -> c'NORM_INF
-        Norm_L1       -> c'NORM_L1
-        Norm_L2       -> c'NORM_L2
-        Norm_L2SQR    -> c'NORM_L2SQR
-        Norm_Hamming  -> c'NORM_HAMMING
-        Norm_Hamming2 -> c'NORM_HAMMING2
-        Norm_MinMax   -> c'NORM_MINMAX
-
 -- | Calculates an absolute array norm
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
 norm
     :: NormType
-    -> Maybe Mat
+    -> Maybe (Mat shape ('S 1) ('S Word8))
        -- ^ Optional operation mask; it must have the same size as the input
        -- array, depth 'MatDepth_8U' and 1 channel.
-    -> Mat -- ^ Input array.
+    -> Mat shape channels depth -- ^ Input array.
     -> Either CvException Double  -- ^ Calculated norm.
 norm normType mbMask src = unsafePerformIO $
     withMatPtr   src    $ \srcPtr  ->
@@ -176,11 +139,11 @@ norm normType mbMask src = unsafePerformIO $
 normDiff
     :: NormAbsRel -- ^ Absolute or relative norm.
     -> NormType
-    -> Maybe Mat
+    -> Maybe (Mat shape ('S 1) ('S Word8))
        -- ^ Optional operation mask; it must have the same size as the input
        -- array, depth 'MatDepth_8U' and 1 channel.
-    -> Mat -- ^ First input array.
-    -> Mat -- ^ Second input array of the same size and type as the first.
+    -> Mat shape channels depth -- ^ First input array.
+    -> Mat shape channels depth -- ^ Second input array of the same size and type as the first.
     -> Either CvException Double -- ^ Calculated norm.
 normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
     withMatPtr   src1   $ \src1Ptr ->
@@ -204,20 +167,21 @@ normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc>
 normalize
-    :: Double
+    :: forall shape channels srcDepth dstDepth
+     . (Convert (Proxy dstDepth) (Maybe MatDepth))
+    => Double
        -- ^ Norm value to normalize to or the lower range boundary in case of
        -- the range normalization.
     -> Double
        -- ^ Upper range boundary in case of the range normalization; it is not
        -- used for the norm normalization.
     -> NormType
-    -> Maybe MatDepth
-    -> Maybe Mat -- ^ Optional operation mask.
-    -> Mat -- ^ Input array.
-    -> Either CvException Mat
-normalize alpha beta normType dtype mbMask src = unsafePerformIO $ do
+    -> Maybe (Mat shape ('S 1) ('S Word8)) -- ^ Optional operation mask.
+    -> Mat shape channels srcDepth -- ^ Input array.
+    -> Either CvException (Mat shape channels dstDepth)
+normalize alpha beta normType mbMask src = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src      $ \srcPtr ->
       withMatPtr dst      $ \dstPtr ->
       withMbMatPtr mbMask $ \mskPtr ->
@@ -236,13 +200,15 @@ normalize alpha beta normType dtype mbMask src = unsafePerformIO $ do
     c'alpha    = realToFrac alpha
     c'beta     = realToFrac beta
     c'normType = marshalNormType NormAbsolute normType
-    c'dtype    = maybe (-1) marshalMatDepth dtype
+    c'dtype    = maybe (-1) marshalMatDepth $ convert (Proxy :: Proxy dstDepth)
 
 -- | Calculates the sum of array elements
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum OpenCV Sphinx doc>
 matSum
-    :: Mat -- ^ Input array that must have from 1 to 4 channels.
+    :: -- (1 <= channels, channels <= 4)
+    -- =>
+    Mat shape channels depth -- ^ Input array that must have from 1 to 4 channels.
     -> Either CvException Scalar
 matSum src = unsafePerformIO $ do
     s <- newScalar zero
@@ -253,10 +219,13 @@ matSum src = unsafePerformIO $ do
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
         |]
 
-bitwise_not :: Mat -> Maybe Mat -> Either CvException Mat
+bitwise_not
+    :: Mat shape channels depth -- ^
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+    -> Either CvException (Mat shape channels depth)
 bitwise_not src mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr   src    $ \srcPtr ->
       withMatPtr   dst    $ \dstPtr ->
       withMbMatPtr mbMask $ \mskPtr ->
@@ -269,10 +238,14 @@ bitwise_not src mbMask = unsafePerformIO $ do
           );
         |]
 
-bitwise_and :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_and
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+    -> Either CvException (Mat shape channels depth)
 bitwise_and src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr   src1   $ \src1Ptr ->
       withMatPtr   src2   $ \src2Ptr ->
       withMatPtr   dst    $ \dstPtr  ->
@@ -287,10 +260,14 @@ bitwise_and src1 src2 mbMask = unsafePerformIO $ do
           );
         |]
 
-bitwise_or :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_or
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+    -> Either CvException (Mat shape channels depth)
 bitwise_or src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr   src1   $ \src1Ptr ->
       withMatPtr   src2   $ \src2Ptr ->
       withMatPtr   dst    $ \dstPtr  ->
@@ -305,10 +282,14 @@ bitwise_or src1 src2 mbMask = unsafePerformIO $ do
           );
         |]
 
-bitwise_xor :: Mat -> Mat -> Maybe Mat -> Either CvException Mat
+bitwise_xor
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+    -> Either CvException (Mat shape channels depth)
 bitwise_xor src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr   src1   $ \src1Ptr ->
       withMatPtr   src2   $ \src2Ptr ->
       withMatPtr   dst    $ \dstPtr  ->

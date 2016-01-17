@@ -11,8 +11,8 @@ module OpenCV.ImgProc.Drawing
     , fillConvexPoly
     , fillPoly
     , polylines
-    , getTextSize
     , line
+    , getTextSize
     , putText
     , rectangle
     ) where
@@ -32,6 +32,7 @@ import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
 
@@ -52,9 +53,18 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 data LineType
-   = LineType_8  -- ^ 8-connected line. <<doc/generated/lineType8Img.png 8-connected line>>
-   | LineType_4  -- ^ 4-connected line. <<doc/generated/lineType4Img.png 4-connected line>>
-   | LineType_AA -- ^ Antialiased line. <<doc/generated/lineTypeAAImg.png Antialised line>>
+   = LineType_8
+     -- ^ 8-connected line.
+     --
+     -- <<doc/generated/LineType_8.png 8-connected line>>
+   | LineType_4
+     -- ^ 4-connected line.
+     --
+     -- <<doc/generated/LineType_4.png 4-connected line>>
+   | LineType_AA
+     -- ^ Antialiased line.
+     --
+     -- <<doc/generated/LineType_AA.png Antialised line>>
      deriving (Show, Enum, Bounded)
 
 #num LINE_8
@@ -69,23 +79,41 @@ marshalLineType = \case
 
 data FontFace
    = FontHersheySimplex
-     -- ^ Normal size sans-serif font
+     -- ^ Normal size sans-serif font.
+     --
+     -- <<doc/generated/FontHersheySimplex.png FontHersheySimplex>>
    | FontHersheyPlain
-     -- ^ Small size sans-serif font
+     -- ^ Small size sans-serif font.
+     --
+     -- <<doc/generated/FontHersheyPlain.png FontHersheyPlain>>
    | FontHersheyDuplex
-     -- ^ Normal size sans-serif font (more complex than 'FontHersheySimplex')
+     -- ^ Normal size sans-serif font (more complex than 'FontHersheySimplex').
+     --
+     -- <<doc/generated/FontHersheyDuplex.png FontHersheyDuplex>>
    | FontHersheyComplex
-     -- ^ Normal size serif font
+     -- ^ Normal size serif font.
+     --
+     -- <<doc/generated/FontHersheyComplex.png FontHersheyComplex>>
    | FontHersheyTriplex
-     -- ^ Normal size serif font (more complex than 'FontHersheyComplex')
+     -- ^ Normal size serif font (more complex than 'FontHersheyComplex').
+     --
+     -- <<doc/generated/FontHersheyTriplex.png FontHersheyTriplex>>
    | FontHersheyComplexSmall
-     -- ^ Smaller version of 'FontHersheyComplex'
+     -- ^ Smaller version of 'FontHersheyComplex'.
+     --
+     -- <<doc/generated/FontHersheyComplexSmall.png FontHersheyComplexSmall>>
    | FontHersheyScriptSimplex
-     -- ^ Hand-writing style font
+     -- ^ Hand-writing style font.
+     --
+     -- <<doc/generated/FontHersheyScriptSimplex.png FontHersheyScriptSimplex>>
    | FontHersheyScriptComplex
-     -- ^ More complex variant of 'FontHersheyScriptSimplex'
+     -- ^ More complex variant of 'FontHersheyScriptSimplex'.
+     --
+     -- <<doc/generated/FontHersheyScriptComplex.png FontHersheyScriptComplex>>
    | FontItalic
-     -- ^ Flag for italic font
+     -- ^ Flag for italic font.
+     --
+     -- <<doc/generated/FontItalic.png FontItalic>>
      deriving (Show, Enum, Bounded)
 
 #num FONT_HERSHEY_SIMPLEX
@@ -116,22 +144,29 @@ marshalFontFace = \case
 Example:
 
 @
-arrowedLineImg :: 'Mat'
-arrowedLineImg = 'createMat' $ do
-  imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
-  'arrowedLine' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_AA' 0 0.15
-  'arrowedLine' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_AA' 0 0.4
-  'pure' imgM
+arrowedLineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
+arrowedLineImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [200, 300])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    arrowedLine imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0 0.15
+    arrowedLine imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0 0.4
+    pure imgM
 @
 
-<<doc/generated/arrowedLineImg.png arrowedLineImg>>
+<<doc/generated/examples/arrowedLineImg.png arrowedLineImg>>
 
 <http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc>
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 -}
 arrowedLine
-    :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    :: ( ToPoint2i fromPoint2i
+       , ToPoint2i toPoint2i
+       , ToScalar color
+       , PrimMonad m
+       )
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ The point the arrow starts from.
     -> toPoint2i -- ^ The point the arrow points to.
     -> color -- ^ Line color.
@@ -166,21 +201,24 @@ arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
 Example:
 
 @
-circleImg :: 'Mat'
-circleImg = 'createMat' $ do
-  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
-  'circle' imgM (V2 100 100 :: V2 'Int32') 90 blue  5  'LineType_AA' 0
-  'circle' imgM (V2 300 100 :: V2 'Int32') 45 red (-1) 'LineType_AA' 0
-  'pure' imgM
+circleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+circleImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [200, 400])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    circle imgM (V2 100 100 :: V2 Int32) 90 blue  5  LineType_AA 0
+    circle imgM (V2 300 100 :: V2 Int32) 45 red (-1) LineType_AA 0
+    pure imgM
 @
 
-<<doc/generated/circleImg.png circleImg>>
+<<doc/generated/examples/circleImg.png circleImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
 -}
 circle
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image where the circle is drawn.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image where the circle is drawn.
     -> point2i -- ^ Center of the circle.
     -> Int32 -- ^ Radius of the circle.
     -> color -- ^ Circle color.
@@ -211,21 +249,24 @@ circle img center radius color thickness lineType shift =
 Example:
 
 @
-ellipseImg :: 'Mat'
-ellipseImg = 'createMat' $ do
-  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
-  'ellipse' imgM (V2 100 100 :: V2 'Int32') (V2 90 60 :: V2 'Int32')  30  0 360 blue  5  'LineType_AA' 0
-  'ellipse' imgM (V2 300 100 :: V2 'Int32') (V2 80 40 :: V2 'Int32') 160 40 290 red (-1) 'LineType_AA' 0
-  'pure' imgM
+ellipseImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+ellipseImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [200, 400])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    ellipse imgM (V2 100 100 :: V2 Int32) (V2 90 60 :: V2 Int32)  30  0 360 blue  5  LineType_AA 0
+    ellipse imgM (V2 300 100 :: V2 Int32) (V2 80 40 :: V2 Int32) 160 40 290 red (-1) LineType_AA 0
+    pure imgM
 @
 
-<<doc/generated/ellipseImg.png ellipseImg>>
+<<doc/generated/examples/ellipseImg.png ellipseImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
 -}
 ellipse
     :: (PrimMonad m, ToPoint2i point2i, ToSize2i size2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> point2i -- ^ Center of the ellipse.
     -> size2i -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
@@ -277,7 +318,7 @@ top-most and/or the bottom edge could be horizontal).
 -}
 fillConvexPoly
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector point2i -- ^ Polygon vertices.
     -> color -- ^ Polygon color.
     -> LineType
@@ -308,7 +349,7 @@ Example:
 
 @
 rookPts :: Int32 -> Int32 -> V.Vector (V.Vector (V2 Int32))
-rookPts w h = 'V.singleton' $ 'V.fromList'
+rookPts w h = V.singleton $ V.fromList
           [ V2 (    w \`div`  4) ( 7*h \`div`  8)
           , V2 (  3*w \`div`  4) ( 7*h \`div`  8)
           , V2 (  3*w \`div`  4) (13*h \`div` 16)
@@ -331,23 +372,29 @@ rookPts w h = 'V.singleton' $ 'V.fromList'
           , V2 (    w \`div`  4) (13*h \`div` 16)
           ]
 
-fillPolyImg :: 'Mat'
-fillPolyImg = 'createMat' $ do
-    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
-    'fillPoly' imgM (rookPts w h) blue 'LineType_AA' 0
+fillPolyImg
+    :: forall (h :: Nat) (w :: Nat)
+     . (h ~ 300, w ~ 300)
+    => Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+fillPolyImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [h, w])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    fillPoly imgM (rookPts w h) blue LineType_AA 0
     pure imgM
   where
-    w = 300
-    h = 300
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+    w = fromInteger $ natVal (Proxy :: Proxy w)
 @
 
-<<doc/generated/fillPolyImg.png fillPolyImg>>
+<<doc/generated/examples/fillPolyImg.png fillPolyImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
 -}
 fillPoly
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Polygons.
     -> color -- ^ Polygon color.
     -> LineType
@@ -381,23 +428,29 @@ fillPoly img polygons color lineType shift =
 Example:
 
 @
-polylinesImg :: 'Mat'
-polylinesImg = 'createMat' $ do
-    imgM <- 'mkMatM' ('V.fromList' [h, w]) 'MatDepth_8U' 4 transparent
-    'polylines' imgM (rookPts w h) True blue 2 'LineType_AA' 0
+polylinesImg
+    :: forall (h :: Nat) (w :: Nat)
+     . (h ~ 300, w ~ 300)
+    => Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+polylinesImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [h, w])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    polylines imgM (rookPts w h) True blue 2 LineType_AA 0
     pure imgM
   where
-    w = 300
-    h = 300
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+    w = fromInteger $ natVal (Proxy :: Proxy w)
 @
 
-<<doc/generated/polylinesImg.png polylinesImg>>
+<<doc/generated/examples/polylinesImg.png polylinesImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#polylines OpenCV Sphinx doc>
 -}
 polylines
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Vertices.
     -> Bool
        -- ^ Flag indicating whether the drawn polylines are closed or not. If
@@ -435,58 +488,29 @@ polylines img curves isClosed color thickness lineType shift =
     npts :: VS.Vector Int32
     npts = VS.convert $ V.map (fromIntegral . V.length) curves
 
--- | Calculates the width and height of a text string.
---
---  Calculates and returns the size of a box that contains the specified text.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#gettextsize OpenCV Sphinx doc>
-getTextSize
-    :: Text
-    -> FontFace
-    -> Double  -- ^ Font scale.
-    -> Int32 -- ^ Thickness of lines used to render the text.
-    -> (Size2i, Int)
-getTextSize text fontFace fontScale thickness = unsafePerformIO $
-    T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
-      size <- size2iFromPtr $
-        [C.block|Size2i * {
-          Size size = cv::getTextSize( $(char * c'text)
-                                     , $(int32_t c'fontFace)
-                                     , $(double c'fontScale)
-                                     , $(int32_t thickness)
-                                     , $(int32_t * c'baseLinePtr)
-                                     );
-          return new Size(size);
-        }|]
-      baseLine <- peek c'baseLinePtr
-      pure (size, fromIntegral baseLine)
-  where
-    c'fontFace  = marshalFontFace fontFace
-    c'fontScale = realToFrac fontScale
-
-
-
 {- | Draws a line segment connecting two points.
 
 Example:
 
 @
-lineImg :: 'Mat'
-lineImg = 'createMat' $ do
-  imgM <- 'mkMatM' ('V.fromList' [200, 300]) 'MatDepth_8U' 4 transparent
-  'line' imgM (V2  10 130 :: V2 'Int32') (V2 190  40 :: V2 'Int32') blue 5 'LineType_AA' 0
-  'line' imgM (V2 210  50 :: V2 'Int32') (V2 250 180 :: V2 'Int32') red  8 'LineType_AA' 0
-  'pure' imgM
+lineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
+lineImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [200, 300])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    line imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0
+    line imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0
+    pure imgM
 @
 
-<<doc/generated/lineImg.png lineImg>>
+<<doc/generated/examples/lineImg.png lineImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
 -}
 line
     :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ First point of the line segment.
     -> toPoint2i -- ^ Scond point of the line segment.
     -> color -- ^ Line color.
@@ -513,6 +537,39 @@ line img pt1 pt2 color thickness lineType shift =
   where
     c'lineType = marshalLineType lineType
 
+{- | Calculates the size of a box that contains the specified text
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#gettextsize OpenCV Sphinx doc>
+-}
+getTextSize
+    :: Text
+    -> FontFace
+    -> Double  -- ^ Font scale.
+    -> Int32 -- ^ Thickness of lines used to render the text.
+    -> (Size2i, Int32)
+       -- ^ (size, baseLine) =
+       -- (The size of a box that contains the specified text.
+       -- , y-coordinate of the baseline relative to the bottom-most text point)
+getTextSize text fontFace fontScale thickness = unsafePerformIO $
+    T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
+    alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
+      size <- size2iFromPtr $
+        [C.block|Size2i * {
+          Size size = cv::getTextSize( $(char * c'text)
+                                     , $(int32_t c'fontFace)
+                                     , $(double c'fontScale)
+                                     , $(int32_t thickness)
+                                     , $(int32_t * c'baseLinePtr)
+                                     );
+          return new Size(size);
+        }|]
+      baseLine <- peek c'baseLinePtr
+      pure (size, baseLine)
+  where
+    c'fontFace  = marshalFontFace fontFace
+    c'fontScale = realToFrac fontScale
+
+
 {- | Draws a text string.
 
 The function putText renders the specified text string in the
@@ -522,22 +579,27 @@ replaced by question marks.
 Example:
 
 @
-putTextImg :: 'Mat'
-putTextImg = 'createMat' $ do
-  let dims = 'V.fromList' [50 + 'fromIntegral' (30 * 'fromEnum' ('maxBound' :: 'FontFace')), 400]
-  imgM <- 'mkMatM' dims 'MatDepth_8U' 4 transparent
-  'forM_' ('zip' [0..] ['minBound' .. 'maxBound']) $ \(n, fontFace) ->
-    'putText' imgM (T.pack $ 'show' fontFace) (V2 10 (35 + n * 30) :: V2 'Int32') fontFace 1.0 black 1 'LineType_AA' False
-  'pure' imgM
+putTextImg :: Mat ('S ['D, 'S 400]) ('S 4) ('S Word8)
+putTextImg = createMat $ do
+    imgM <- mkMatM (height ::: (Proxy :: Proxy 400) ::: Z)
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    forM_ (zip [0..] [minBound .. maxBound]) $ \(n, fontFace) ->
+      putText imgM (T.pack $ show fontFace) (V2 10 (35 + n * 30) :: V2 Int32) fontFace 1.0 black 1 LineType_AA False
+    pure imgM
+  where
+    height :: Int32
+    height = 50 + fromIntegral (30 * fromEnum (maxBound :: FontFace))
 @
 
-<<doc/generated/putTextImg.png putTextImg>>
+<<doc/generated/examples/putTextImg.png putTextImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
 -}
 putText
     :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
     -> point2i -- ^ Bottom-left corner of the text string in the image.
     -> FontFace
@@ -576,21 +638,24 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
 Example:
 
 @
-rectangleImg :: 'Mat'
-rectangleImg = 'createMat' $ do
-  imgM <- 'mkMatM' ('V.fromList' [200, 400]) 'MatDepth_8U' 4 transparent
-  'rectangle' imgM ('mkRect' (V2  10 10) (V2 180 180)) blue  5  'LineType_8' 0
-  'rectangle' imgM ('mkRect' (V2 260 30) (V2  80 140)) red (-1) 'LineType_8' 0
-  'pure' imgM
+rectangleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+rectangleImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [200, 400])
+                   (Proxy :: Proxy 4)
+                   (Proxy :: Proxy Word8)
+                   transparent
+    rectangle imgM (mkRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+    rectangle imgM (mkRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
+    pure imgM
 @
 
-<<doc/generated/rectangleImg.png rectangleImg>>
+<<doc/generated/examples/rectangleImg.png rectangleImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
     :: (PrimMonad m, ToScalar color)
-    => MutMat (PrimState m) -- ^ Image.
+    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Rect
     -> color -- ^ Rectangle color or brightness (grayscale image).
     -> Int32 -- ^ Line thickness.

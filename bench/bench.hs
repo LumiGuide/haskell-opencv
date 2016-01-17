@@ -1,13 +1,15 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Main where
 
-import "lumi-hackage-extended" Lumi.Prelude
 import qualified "bytestring" Data.ByteString as B
 import "criterion" Criterion.Main
-import "thea" OpenCV
+import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
+import "thea" OpenCV
+import "thea" OpenCV.Unsafe
 
 main :: IO ()
 main = defaultMain
@@ -45,11 +47,14 @@ nfArrayIO m = nfIO $ do
                 a <- m
                 evaluate $ Repa.deepSeqArray a ()
 
-benchComputeS :: Repa.Array M Repa.DIM2 Word8 -> Repa.Array Repa.U Repa.DIM2 Word8
+benchComputeS :: Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8 -> Repa.Array Repa.U Repa.DIM3 Word8
 benchComputeS = Repa.computeS . Repa.delay
 
-benchComputeP :: Repa.Array M Repa.DIM2 Word8 -> IO (Repa.Array Repa.U Repa.DIM2 Word8)
+benchComputeP :: Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8 -> IO (Repa.Array Repa.U Repa.DIM3 Word8)
 benchComputeP = Repa.computeP . Repa.delay
 
-loadImgAsRepa :: FilePath -> IO (Repa.Array M Repa.DIM2 Word8)
-loadImgAsRepa fp = either error id . toRepa . imdecode ImreadGrayscale <$> B.readFile ("data/" <> fp)
+loadImgAsRepa :: FilePath -> IO (Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8)
+loadImgAsRepa fp = toRepa <$> loadImg
+  where
+    loadImg :: IO (Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8))
+    loadImg = (unsafeCoerceMat . imdecode ImreadGrayscale) <$> B.readFile ("data/" <> fp)

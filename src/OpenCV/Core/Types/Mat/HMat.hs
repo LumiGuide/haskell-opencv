@@ -6,7 +6,9 @@ module OpenCV.Core.Types.Mat.HMat
     , HElems(..)
     , hElemsDepth
     , hElemsLength
-    , hmat
+
+    , matToHMat
+    , hMatToMat
     ) where
 
 
@@ -14,12 +16,12 @@ import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peekElemOff, pokeElemOff )
 import qualified "bytestring" Data.ByteString as B
-import "lens" Control.Lens hiding ( ix )
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V4 ( V4(..) )
 import "lumi-hackage-extended" Lumi.Prelude
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG
 import qualified "vector" Data.Vector.Unboxed as VU
@@ -68,10 +70,7 @@ hElemsLength = \case
     HElems_64F      v -> VG.length v
     HElems_USRTYPE1 v -> VG.length v
 
-hmat :: Iso' Mat HMat
-hmat = iso matToHMat hMatToMat
-
-matToHMat :: Mat -> HMat
+matToHMat :: Mat shape channels depth -> HMat
 matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
     elems <- copyElems info (map fromIntegral step) dataPtr
     pure HMat
@@ -108,9 +107,9 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
                   VUM.unsafeWrite v (fromIntegral $ posIx + channelIx) e
             VU.unsafeFreeze v
 
-hMatToMat :: HMat -> Mat
+hMatToMat :: HMat -> Mat 'D 'D 'D
 hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
-    mat <- newMat sizes depth channels scalar
+    mat <- newMat sizes channels depth scalar
     withMatData mat copyElems
     pure mat
   where

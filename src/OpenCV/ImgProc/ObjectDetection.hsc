@@ -6,6 +6,7 @@ module OpenCV.ImgProc.ObjectDetection
     , matchTemplate
     ) where
 
+import "base" GHC.TypeLits
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
@@ -13,6 +14,7 @@ import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -78,15 +80,18 @@ marshalMatchTemplateMethod m n =
 -- The summation is done over template and/or the image patch:
 -- <<http://docs.opencv.org/3.0-last-rst/_images/math/ff90cafd4a71d85875237787b54815ee8ac77bff.png x' = 0...w-1, y' = 0...h-1>>
 matchTemplate
-    :: Mat
+    :: ( depth `In` [Word8, Float]
+       , Length searchShape <= 2
+       )
+    => Mat ('S searchShape) ('S 1) ('S depth)
        -- ^ Image where the search is running. It must be 8-bit or 32-bit floating-point.
-    -> Mat
+    -> Mat ('S [th, tw]) ('S 1) ('S depth)
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
     -> MatchTemplateMethod
        -- ^ Parameter specifying the comparison method.
     -> Bool
        -- ^ Normalise. See 'MatchTemplateMethod'.
-    -> Either CvException Mat
+    -> Either CvException (Mat ('S [rh, rw]) ('S 1) ('S Float))
        -- ^ Map of comparison results. It must be single-channel 32-bit floating-point.
        -- If image is
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e4926c3d97c3f7434c6317ba24b8b9294a0aba64.png>>
@@ -96,7 +101,7 @@ matchTemplate
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
 matchTemplate image templ method normed = unsafePerformIO $ do
     result <- newEmptyMat
-    handleCvException (pure result) $
+    handleCvException (pure $ unsafeCoerceMat result) $
       withMatPtr result $ \resultPtr ->
       withMatPtr image $ \imagePtr ->
       withMatPtr templ $ \templPtr ->

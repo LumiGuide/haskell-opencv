@@ -68,6 +68,7 @@ import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe ( unsafeFreeze )
 
 --------------------------------------------------------------------------------
@@ -321,11 +322,17 @@ createTrackbar window trackbarName value count callback =
 --------------------------------------------------------------------------------
 -- Drawing
 
-imshow :: Window -> Mat -> IO ()
+imshow
+    :: Window -- ^
+    -> Mat ('S [height, width]) channels depth
+    -> IO ()
 imshow window mat =
     C.withCString (windowName window) $ \c'name ->
       withMatPtr mat $ \matPtr ->
         [C.exp| void { cv::imshow($(char * c'name), *$(Mat * matPtr)); }|]
 
-imshowM :: Window -> MutMat (PrimState IO) -> IO ()
+imshowM
+    :: Window -- ^
+    -> MutMat ('S [height, width]) channels depth (PrimState IO)
+    -> IO ()
 imshowM window mat = imshow window =<< unsafeFreeze mat

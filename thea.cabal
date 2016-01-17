@@ -12,6 +12,7 @@ extra-source-files:
     data/*.jpg
 extra-doc-files:
     doc/generated/*.png
+    doc/generated/examples/*.png
 
 library
   hs-source-dirs: src
@@ -75,21 +76,30 @@ library
                  , OpenCV.ImgCodecs
                  , OpenCV.HighGui
                  , OpenCV.Video
+                 , OpenCV.TypeLevel
                  , OpenCV.JSON
   other-modules:   OpenCV.Internal
+                 , OpenCV.Core.ArrayOps.Internal
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.ImgProc.Types.Internal
                  , OpenCV.ImgProc.MiscImgTransform.ColorCodes
+                 , OpenCV.ImgCodecs.Internal
                  , Language.C.Inline.OpenCV
 
-  default-extensions: ScopedTypeVariables
-                    , PackageImports
-                    , OverloadedStrings
-                    , NoImplicitPrelude
-                    , BangPatterns
+  default-extensions: BangPatterns
+                    , DataKinds
+                    , FlexibleContexts
                     , LambdaCase
+                    , NoImplicitPrelude
+                    , OverloadedStrings
+                    , PackageImports
+                    , PolyKinds
+                    , ScopedTypeVariables
                     , TupleSections
+                    , TypeFamilies
+                    , TypeOperators
+
   default-language:   Haskell2010
   pkgconfig-depends:  opencv
 
@@ -104,11 +114,23 @@ test-suite thea-doc-images
                , directory
                , Glob
                , haskell-src-meta
+               , haskell-src-exts
                , linear
                , template-haskell
                , text
                , thea
                , vector
+
+  default-extensions: BangPatterns
+                    , DataKinds
+                    , LambdaCase
+                    , OverloadedStrings
+                    , PackageImports
+                    , PolyKinds
+                    , ScopedTypeVariables
+                    , TupleSections
+                    , TypeFamilies
+                    , TypeOperators
 
 test-suite test-thea
   type:             exitcode-stdio-1.0

@@ -1,10 +1,16 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
-      Mat
+      coerceMat
+    , DepthT
+
+    , Mat
     , MatDepth(..)
     , emptyMat
     , mkMat
@@ -26,10 +32,6 @@ module OpenCV.Core.Types.Mat
     , createMat
     ) where
 
-import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Array ( peekArray )
-import "base" Foreign.Ptr ( Ptr )
-import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -38,6 +40,7 @@ import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
@@ -55,50 +58,82 @@ C.using "namespace cv"
 -- Matrix
 --------------------------------------------------------------------------------
 
-emptyMat :: Mat
+emptyMat :: Mat 'D 'D 'D
 emptyMat = unsafePerformIO newEmptyMat
 
 mkMat
-    :: (ToScalar scalar)
-    => V.Vector Int32 -- ^ Vector of sizes
-    -> MatDepth
-    -> Int32        -- ^ Number of channels
-    -> scalar       -- ^ Default element value
-    -> Mat
-mkMat sizes matDepth cn defValue = unsafePerformIO $ newMat sizes matDepth cn defValue
+    :: ( Convert shape    (V.Vector Int32)
+       , Convert channels Int32
+       , Convert depth    MatDepth
+       , ToScalar scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)
+mkMat shape channels depth defValue =
+    unsafePerformIO $ newMat shape channels depth defValue
 
 mkMatM
-    :: (PrimMonad m, ToScalar scalar)
-    => V.Vector Int32 -- ^ Vector of sizes
-    -> MatDepth
-    -> Int32        -- ^ Number of channels
-    -> scalar       -- ^ Default element value
-    -> m (MutMat (PrimState m))
-mkMatM sizes matDepth cn defValue = unsafeThaw $ mkMat sizes matDepth cn defValue
+    :: ( PrimMonad m
+       , Convert shape    (V.Vector Int32)
+       , Convert channels Int32
+       , Convert depth    MatDepth
+       , ToScalar scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> m (MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState m))
+mkMatM shape channels depth defValue = do
+    mat <- unsafePrimToPrim $ newMat shape channels depth defValue
+    unsafeThaw mat
 
 -- | Identity matrix
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
-eyeMat :: Int32 -> Int32 -> MatDepth -> Int32 -> Mat
-eyeMat rows cols depth channels = unsafePerformIO $
+eyeMat
+    :: ( Convert height   Int32
+       , Convert width    Int32
+       , Convert channels Int32
+       , Convert depth    MatDepth
+       )
+    => height   -- ^
+    -> width    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> Mat (ShapeT (height ::: width ::: Z)) (ChannelsT channels) (DepthT depth)
+eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
     matFromPtr [CU.exp|Mat * {
-      new Mat(Mat::eye( $(int32_t rows)
-                      , $(int32_t cols)
+      new Mat(Mat::eye( $(int32_t c'height)
+                      , $(int32_t c'width)
                       , $(int32_t c'type)
                       ))
     }|]
   where
-    c'type = marshalFlags depth channels
+    c'type = marshalFlags depth' channels'
 
-cloneMat :: Mat -> Mat
+    c'height  = convert height
+    c'width   = convert width
+    channels' = convert channels
+    depth'    = convert depth
+
+cloneMat :: Mat shape channels depth
+         -> Mat shape channels depth
 cloneMat = unsafePerformIO . cloneMatIO
 
-cloneMatM :: (PrimMonad m) => Mat -> m Mat
+cloneMatM :: (PrimMonad m)
+          => Mat shape channels depth
+          -> m (Mat shape channels depth)
 cloneMatM = unsafePrimToPrim . cloneMatIO
 
-cloneMatIO :: Mat -> IO Mat
-cloneMatIO mat = matFromPtr $ withMatPtr mat $ \matPtr ->
-    [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
+cloneMatIO :: Mat shape channels depth
+           -> IO (Mat shape channels depth)
+cloneMatIO mat =
+    fmap unsafeCoerceMat $ matFromPtr $ withMatPtr mat $ \matPtr ->
+      [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
 
 
 {- | Extract a sub region from a 2D-matrix (image)
@@ -106,28 +141,31 @@ cloneMatIO mat = matFromPtr $ withMatPtr mat $ \matPtr ->
 Example:
 
 @
-matSubRectImg :: 'Mat'
-matSubRectImg = 'createMat' $ do
-    imgM <- 'mkMatM' ('V.fromList' [h, 2 * w]) 'MatDepth_8U' 3 white
-    'void' $ 'matCopyToM' imgM (V2 0 0) birds_512x341
-    'void' $ 'matCopyToM' imgM (V2 w 0) subImg
+matSubRectImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+matSubRectImg = createMat $ do
+    imgM <- mkMatM (h ::: 2 * w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white
+    void $ matCopyToM imgM (V2 0 0) birds_512x341
+    void $ matCopyToM imgM (V2 w 0) subImg
     rectangle imgM subRect blue 1 LineType_4 0
     rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
     pure imgM
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
-    subImg = 'either' 'throw' 'id' $
-               resize (ResizeAbs $ 'toSize2i' (w, h)) InterCubic =<<
-               'matSubRect' birds_512x341 subRect
-    [h, w] = 'miShape' $ 'matInfo' birds_512x341
+    subImg = either throw id $
+               resize (ResizeAbs $ toSize2i (w, h)) InterCubic =<<
+               matSubRect birds_512x341 subRect
+    [h, w] = miShape $ matInfo birds_512x341
 @
 
-<<doc/generated/matSubRectImg.png matSubRectImg>>
+<<doc/generated/examples/matSubRectImg.png matSubRectImg>>
 -}
-matSubRect :: Mat -> Rect -> Either CvException Mat
+matSubRect
+    :: Mat ('S [height, width]) channels depth
+    -> Rect
+    -> Either CvException (Mat ('S ['D, 'D]) channels depth)
 matSubRect matIn rect = unsafePerformIO $ do
     matOut <- newEmptyMat
-    handleCvException (pure matOut) $
+    handleCvException (pure $ unsafeCoerceMat matOut) $
       withMatPtr matIn $ \matInPtr ->
       withMatPtr matOut $ \matOutPtr ->
       withRectPtr rect $ \rectPtr ->
@@ -138,7 +176,11 @@ matSubRect matIn rect = unsafePerformIO $ do
                );
         |]
 
-matCopyTo :: Mat -> V2 Int32 -> Mat -> Either CvException Mat
+matCopyTo
+    :: Mat ('S [dstHeight, dstWidth]) channels depth -- ^
+    -> V2 Int32 -- ^
+    -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
+    -> Either CvException (Mat ('S [dstHeight, dstWidth]) channels depth)
 matCopyTo dst topLeft src = runST $ do
     dstMut <- thaw dst
     eResult <- matCopyToM dstMut topLeft src
@@ -148,9 +190,9 @@ matCopyTo dst topLeft src = runST $ do
 
 matCopyToM
     :: (PrimMonad m)
-    => MutMat (PrimState m)
-    -> V2 Int32
-    -> Mat
+    => MutMat ('S [dstHeight, dstWidth]) channels depth (PrimState m) -- ^
+    -> V2 Int32 -- ^
+    -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> m (Either CvException ())
 matCopyToM dstMut (V2 x y) src =
     unsafePrimToPrim $ handleCvException (pure ()) $
@@ -174,18 +216,20 @@ matCopyToM dstMut (V2 x y) src =
           --                 );
           -- srcPtr->copyTo(dstRoi);
 
--- | Converts an array to another data type with optional scaling
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html?highlight=convertto#mat-convertto OpenCV Sphinx doc>
+{- | Converts an array to another data type with optional scaling
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html?highlight=convertto#mat-convertto OpenCV Sphinx doc>
+-}
 matConvertTo
-    :: Maybe MatDepth
-    -> Maybe Double -- ^ Optional scale factor.
+    :: forall shape channels srcDepth dstDepth
+     . (Convert (Proxy dstDepth) (DS MatDepth))
+    => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
-    -> Mat
-    -> Either CvException Mat
-matConvertTo rtype alpha beta src = unsafePerformIO $ do
+    -> Mat shape channels srcDepth
+    -> Either CvException (Mat shape channels dstDepth)
+matConvertTo alpha beta src = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src $ \srcPtr ->
       withMatPtr dst $ \dstPtr ->
         [cvExcept|
@@ -197,52 +241,33 @@ matConvertTo rtype alpha beta src = unsafePerformIO $ do
                      );
         |]
   where
+    rtype :: Maybe MatDepth
+    rtype = dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+
     c'rtype = maybe (-1) marshalMatDepth rtype
     c'alpha = maybe 1 realToFrac alpha
     c'beta  = maybe 0 realToFrac beta
-
-data MatInfo
-   = MatInfo
-     { miShape    :: ![Int32]
-     , miDepth    :: !MatDepth
-     , miChannels :: !Int32
-     }
-     deriving (Show, Eq)
-
-matInfo :: Mat -> MatInfo
-matInfo mat = unsafePerformIO $
-    withMatPtr mat $ \matPtr ->
-    alloca $ \(flagsPtr :: Ptr Int32) ->
-    alloca $ \(dimsPtr  :: Ptr Int32) ->
-    alloca $ \(sizePtr  :: Ptr (Ptr Int32)) -> do
-      [CU.block|void {
-        const Mat * const matPtr = $(Mat * matPtr);
-        *$(int32_t *   const flagsPtr) = matPtr->flags;
-        *$(int32_t *   const dimsPtr ) = matPtr->dims;
-        *$(int32_t * * const sizePtr ) = matPtr->size.p;
-      }|]
-      (depth, channels) <- unmarshalFlags <$> peek flagsPtr
-      dims <- peek dimsPtr
-      size <- peek sizePtr
-      shape <- peekArray (fromIntegral dims) size
-      pure MatInfo
-           { miShape    = shape
-           , miDepth    = depth
-           , miChannels = channels
-           }
 
 --------------------------------------------------------------------------------
 -- Mutable Matrix
 --------------------------------------------------------------------------------
 
-type IOMat   = MutMat RealWorld
-type STMat s = MutMat s
+type IOMat shape channels depth   = MutMat shape channels depth RealWorld
+type STMat shape channels depth s = MutMat shape channels depth s
 
-freeze :: (PrimMonad m) => MutMat (PrimState m) -> m Mat
+freeze
+    :: (PrimMonad m)
+    => MutMat shape channels depth (PrimState m) -- ^
+    -> m (Mat shape channels depth)
 freeze = cloneMatM . unMutMat
 
-thaw :: (PrimMonad m) => Mat -> m (MutMat (PrimState m))
+thaw
+    :: (PrimMonad m)
+    => Mat shape channels depth -- ^
+    -> m (MutMat shape channels depth (PrimState m))
 thaw = fmap MutMat . cloneMatM
 
-createMat :: (forall s. ST s (MutMat s)) -> Mat
+createMat
+    :: (forall s. ST s (MutMat shape channels depth s)) -- ^
+    -> Mat shape channels depth
 createMat mk = runST $ unsafeFreeze =<< mk

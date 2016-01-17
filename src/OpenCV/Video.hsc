@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -15,6 +16,7 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -39,8 +41,9 @@ estimateRigidTransform
     => V.Vector srcPoint2i -- ^ Source
     -> V.Vector dstPoint2i -- ^ Destination
     -> Bool -- ^ Full affine
-    -> Either CvException (Maybe Mat)
-estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTransform
+    -> Either CvException (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
+estimateRigidTransform src dst fullAffine =
+    checkResult <$> c'estimateRigidTransform
   where
     c'estimateRigidTransform = unsafePerformIO $ do
       matOut <- newEmptyMat
@@ -62,6 +65,4 @@ estimateRigidTransform src dst fullAffine = checkResult <$> c'estimateRigidTrans
     c'dstLen     = fromIntegral $ V.length dst
     c'fullAffine = fromBool fullAffine
 
-    checkResult m
-        | miShape (matInfo m) == [2, 3] = Just m
-        | otherwise = Nothing
+    checkResult = either (const Nothing) Just . coerceMat

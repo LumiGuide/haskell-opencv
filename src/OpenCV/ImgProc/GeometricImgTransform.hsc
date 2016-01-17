@@ -66,6 +66,7 @@ import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
+import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -107,34 +108,37 @@ whereas to enlarge an image, it will generally look best with 'InterCubic'
 Example:
 
 @
-resizeInterAreaImg :: Mat
+resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
 resizeInterAreaImg = createMat $ do
-    imgM <- mkMatM (V.fromList [h, w + (w `div` 2)]) MatDepth_8U 3 transparent
+    imgM <- mkMatM (h ::: w + (w \`div` 2) ::: Z)
+                   (Proxy :: Proxy 3)
+                   (Proxy :: Proxy Word8)
+                   transparent
     void $ matCopyToM imgM (V2 0 0) birds_768x512
     void $ matCopyToM imgM (V2 w 0) birds_resized
     arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
     pure imgM
   where
-    birds_resized = either throw id $ 'resize' ('ResizeRel' $ pure 0.5) 'InterArea' birds_768x512
+    birds_resized = either throw id $ resize (ResizeRel $ pure 0.5) InterArea birds_768x512
 
     [h, w] = miShape $ matInfo birds_768x512
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
-    y = h \`div\` 4
+    y = h \`div` 4
 @
 
-<<doc/generated/resizeInterAreaImg.png resizeInterAreaImg>>
+<<doc/generated/examples/resizeInterAreaImg.png resizeInterAreaImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#resize OpenCV Sphinx doc>
 -}
 resize
     :: ResizeAbsRel
     -> InterpolationMethod
-    -> Mat
-    -> Either CvException Mat
+    -> Mat ('S [height, width]) channels depth
+    -> Either CvException (Mat ('S ['D, 'D]) channels depth)
 resize factor interpolationMethod src = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src $ \srcPtr ->
       withMatPtr dst $ \dstPtr ->
       withSize2iPtr dsize $ \dsizePtr ->
@@ -160,30 +164,36 @@ resize factor interpolationMethod src = unsafePerformIO $ do
 Example:
 
 @
-warpAffineImg :: 'Mat'
+rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
+rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 Float) 45 0.75
+
+warpAffineImg :: Birds_512x341
 warpAffineImg = either throw id $
-    'warpAffine' birds_512x341 transform 'InterLinear' False False ('BorderConstant' $ 'toScalar' (zero :: V4 Double))
-  where
-    transform :: Mat
-    transform = 'getRotationMatrix2D' (V2 256 170 :: V2 Float) 45 0.75
+    warpAffine birds_512x341 rotateBirds InterArea False False (BorderConstant black)
+
+warpAffineInvImg :: Birds_512x341
+warpAffineInvImg = either throw id $
+    warpAffine warpAffineImg rotateBirds InterCubic True False (BorderConstant black)
 @
 
-<<doc/generated/warpAffineImg.png warpAffineImg>>
+<<doc/generated/birds_512x341.png             original        >>
+<<doc/generated/examples/warpAffineImg.png    warpAffineImg   >>
+<<doc/generated/examples/warpAffineInvImg.png warpAffineInvImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
 warpAffine
-    :: Mat -- ^ Source image.
-    -> Mat -- ^ Affine transformation matrix.
+    :: Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> Either CvException Mat -- ^ Transformed source image.
+    -> Either CvException (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
       dst <- newEmptyMat
-      handleCvException (pure dst) $
+      handleCvException (pure $ unsafeCoerceMat dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
         withMatPtr transform $ \transformPtr ->
@@ -210,17 +220,17 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: Mat -- ^ Source image.
-    -> Mat -- ^ Perspective transformation matrix.
+    :: Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> Either CvException Mat -- ^ Transformed source image.
+    -> Either CvException (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
       dst <- newEmptyMat
-      handleCvException (pure dst) $
+      handleCvException (pure $ unsafeCoerceMat dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
         withMatPtr transform $ \transformPtr ->
@@ -246,10 +256,12 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
 -- | Inverts an affine transformation
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#invertaffinetransform OpenCV Sphinx doc>
-invertAffineTransform :: Mat -> Either CvException Mat
+invertAffineTransform
+    :: Mat (ShapeT [2, 3]) ('S 1) depth
+    -> Either CvException (Mat (ShapeT [2, 3]) ('S 1) depth)
 invertAffineTransform matIn = unsafePerformIO $ do
     matOut <- newEmptyMat
-    handleCvException (pure matOut) $
+    handleCvException (pure $ unsafeCoerceMat matOut) $
       withMatPtr matIn  $ \matInPtr ->
       withMatPtr matOut $ \matOutPtr ->
         [cvExcept|
@@ -267,8 +279,8 @@ getRotationMatrix2D
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
        -- rotation (the coordinate origin is assumed to be the top-left corner).
     -> Double -- ^ Isotropic scale factor.
-    -> Mat -- ^ The output affine transformation, 2x3 floating-point matrix.
-getRotationMatrix2D center angle scale = unsafePerformIO $
+    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
+getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
     withPoint2fPtr center $ \centerPtr ->
       matFromPtr
       [CU.block| Mat * {

@@ -19,6 +19,8 @@ module OpenCV
     , module OpenCV.HighGui
     , module OpenCV.Video
 
+    , module OpenCV.TypeLevel
+
     , module OpenCV.JSON
     ) where
 
@@ -39,5 +41,7 @@ import OpenCV.ImgProc.Types
 import OpenCV.ImgCodecs
 import OpenCV.HighGui
 import OpenCV.Video
+
+import OpenCV.TypeLevel
 
 import OpenCV.JSON ( )

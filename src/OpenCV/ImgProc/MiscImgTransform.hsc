@@ -1,8 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
 
 module OpenCV.ImgProc.MiscImgTransform
     ( -- * Color conversion
@@ -116,14 +114,16 @@ module OpenCV.ImgProc.MiscImgTransform
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
+import "base" GHC.TypeLits
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.MiscImgTransform.ColorCodes
+import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -590,35 +590,54 @@ CV_16U, 1 for CV_32F.
 Example:
 
 @
-cvtColorImg :: Mat
+cvtColorImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width2 ~ ((*) width 2)   -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
 cvtColorImg = createMat $ do
-    imgM <- mkMatM (V.fromList [h, 2 * w]) MatDepth_8U 3 white
+    imgM <- mkMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
+                   (Proxy :: Proxy channels)
+                   (Proxy :: Proxy depth)
+                   white
     void $ matCopyToM imgM (V2 0 0) birds_512x341
-    void $ matCopyToM imgM (V2 w 0) birds_gray
+    void $ matCopyToM imgM (V2 w 0) (unsafeCoerceMat birds_gray)
     arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
     pure imgM
   where
-    birds_gray = either throw id $ 'cvtColor' gray bgr =<< 'cvtColor' bgr gray birds_512x341
+    birds_gray = either throw id $ cvtColor gray bgr =<< cvtColor bgr gray birds_512x341
 
-    [h, w] = miShape $ matInfo birds_512x341
+    h, w :: Int32
+    h = fromInteger $ natVal (Proxy :: Proxy height)
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+
+    startX, pointX :: Int32
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
     midY = h \`div\` 2
 @
 
-<<doc/generated/cvtColorImg.png cvtColorImg>>
+<<doc/generated/examples/cvtColorImg.png cvtColorImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
 -}
-cvtColor :: forall (fromColor :: ColorCode) (toColor :: ColorCode)
+cvtColor :: forall (fromColor :: ColorCode)
+                   (toColor   :: ColorCode)
+                   (shape     :: DS [DS Nat])
+                   srcChannels srcDepth
          . (ColorConversion fromColor toColor)
          => Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
          -> Proxy toColor   -- ^ Convert to 'ColorCode'.
-         -> Mat             -- ^ Source image
-         -> Either CvException Mat
+         -> Mat shape srcChannels srcDepth -- ^ Source image
+         -> Either CvException (Mat shape 'D 'D)
 cvtColor fromColor toColor src = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src $ \srcPtr ->
       withMatPtr dst $ \dstPtr ->
         [cvExcept|
@@ -669,20 +688,26 @@ marshalThreshValue = \case
 
 -- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
 
--- | Applies a fixed-level threshold to each array element
---
--- The function applies fixed-level thresholding to a single-channel array. The
--- function is typically used to get a bi-level (binary) image out of a
--- grayscale image or for removing a noise, that is, filtering out pixels with
--- too small or too large values. There are several types of thresholding
--- supported by the function.
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc>
-threshold :: ThreshValue -> ThreshType -> Mat -> Either CvException (Mat, Double)
+{- | Applies a fixed-level threshold to each array element
+
+The function applies fixed-level thresholding to a single-channel array. The
+function is typically used to get a bi-level (binary) image out of a
+grayscale image or for removing a noise, that is, filtering out pixels with
+too small or too large values. There are several types of thresholding
+supported by the function.
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc>
+-}
+threshold
+    :: (depth `In` [Word8, Float])
+    => ThreshValue -- ^
+    -> ThreshType
+    -> (Mat shape ('S 1) ('S depth))
+    -> Either CvException (Mat shape ('S 1) ('S depth), Double)
 threshold threshVal threshType src = unsafePerformIO $ do
     dst <- newEmptyMat
     alloca $ \calcThreshPtr ->
-      handleCvException ((dst, ) . realToFrac <$> peek calcThreshPtr) $
+      handleCvException ((unsafeCoerceMat dst, ) . realToFrac <$> peek calcThreshPtr) $
       withMatPtr src $ \srcPtr ->
       withMatPtr dst $ \dstPtr ->
         [cvExcept|

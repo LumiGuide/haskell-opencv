@@ -13,6 +13,7 @@ import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Internal
+import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -31,19 +32,19 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 data ColorMap
-   = ColorMapAutumn  -- ^ <<doc/generated/colorMapAutumImg.png   colorMapAutumImg  >>
-   | ColorMapBone    -- ^ <<doc/generated/colorMapBoneImg.png    colorMapBoneImg   >>
-   | ColorMapJet     -- ^ <<doc/generated/colorMapJetImg.png     colorMapJetImg    >>
-   | ColorMapWinter  -- ^ <<doc/generated/colorMapWinterImg.png  colorMapWinterImg >>
-   | ColorMapRainbow -- ^ <<doc/generated/colorMapRainbowImg.png colorMapRainbowImg>>
-   | ColorMapOcean   -- ^ <<doc/generated/colorMapOceanImg.png   colorMapOceanImg  >>
-   | ColorMapSummer  -- ^ <<doc/generated/colorMapSummerImg.png  colorMapSummerImg >>
-   | ColorMapSpring  -- ^ <<doc/generated/colorMapSpringImg.png  colorMapSpringImg >>
-   | ColorMapCool    -- ^ <<doc/generated/colorMapCoolImg.png    colorMapCoolImg   >>
-   | ColorMapHsv     -- ^ <<doc/generated/colorMapHsvImg.png     colorMapHsvImg    >>
-   | ColorMapPink    -- ^ <<doc/generated/colorMapPinkImg.png    colorMapPinkImg   >>
-   | ColorMapHot     -- ^ <<doc/generated/colorMapHotImg.png     colorMapHotImg    >>
-   | ColorMapParula  -- ^ <<doc/generated/colorMapParulaImg.png  colorMapParulaImg >>
+   = ColorMapAutumn  -- ^ <<doc/generated/examples/colorMapAutumImg.png   colorMapAutumImg  >>
+   | ColorMapBone    -- ^ <<doc/generated/examples/colorMapBoneImg.png    colorMapBoneImg   >>
+   | ColorMapJet     -- ^ <<doc/generated/examples/colorMapJetImg.png     colorMapJetImg    >>
+   | ColorMapWinter  -- ^ <<doc/generated/examples/colorMapWinterImg.png  colorMapWinterImg >>
+   | ColorMapRainbow -- ^ <<doc/generated/examples/colorMapRainbowImg.png colorMapRainbowImg>>
+   | ColorMapOcean   -- ^ <<doc/generated/examples/colorMapOceanImg.png   colorMapOceanImg  >>
+   | ColorMapSummer  -- ^ <<doc/generated/examples/colorMapSummerImg.png  colorMapSummerImg >>
+   | ColorMapSpring  -- ^ <<doc/generated/examples/colorMapSpringImg.png  colorMapSpringImg >>
+   | ColorMapCool    -- ^ <<doc/generated/examples/colorMapCoolImg.png    colorMapCoolImg   >>
+   | ColorMapHsv     -- ^ <<doc/generated/examples/colorMapHsvImg.png     colorMapHsvImg    >>
+   | ColorMapPink    -- ^ <<doc/generated/examples/colorMapPinkImg.png    colorMapPinkImg   >>
+   | ColorMapHot     -- ^ <<doc/generated/examples/colorMapHotImg.png     colorMapHotImg    >>
+   | ColorMapParula  -- ^ <<doc/generated/examples/colorMapParulaImg.png  colorMapParulaImg >>
 
 #num COLORMAP_AUTUMN
 #num COLORMAP_BONE
@@ -86,57 +87,68 @@ your computer vision application.
 Example:
 
 @
-grayscaleImg :: 'Mat'
-grayscaleImg = 'createMat' $ do
-    imgM <- 'mkMatM' (V.fromList ['fromIntegral' h, 'fromIntegral' w]) 'MatDepth_8U' 1 black
+grayscaleImg
+    :: forall (height :: Nat) (width :: Nat) depth
+     . (height ~ 30, width ~ 256, depth ~ Word8)
+    => Mat (ShapeT [height, width]) ('S 1) ('S depth)
+grayscaleImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [height, width])
+                   (Proxy :: Proxy 1)
+                   (Proxy :: Proxy depth)
+                   black
     forM_ [0..w-1] $ \x ->
       forM_ [0..h-1] $ \y ->
-        'unsafeWrite' imgM [y,x] ('fromIntegral' x :: 'Word8')
+        unsafeWrite imgM [y, x] (fromIntegral x :: depth)
     pure imgM
   where
-    w = 256
-    h = 30
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    h = fromInteger $ natVal (Proxy :: Proxy height)
 
-mkColorMapImg :: 'ColorMap' -> 'Mat'
-mkColorMapImg cmap = either throw id $ 'applyColorMap' cmap grayscaleImg
+type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
 
-colorMapAutumImg   :: 'Mat'
-colorMapBoneImg    :: 'Mat'
-colorMapJetImg     :: 'Mat'
-colorMapWinterImg  :: 'Mat'
-colorMapRainbowImg :: 'Mat'
-colorMapOceanImg   :: 'Mat'
-colorMapSummerImg  :: 'Mat'
-colorMapSpringImg  :: 'Mat'
-colorMapCoolImg    :: 'Mat'
-colorMapHsvImg     :: 'Mat'
-colorMapPinkImg    :: 'Mat'
-colorMapHotImg     :: 'Mat'
-colorMapParulaImg  :: 'Mat'
+mkColorMapImg :: ColorMap -> ColorMapImg
+mkColorMapImg cmap = either throw id $ applyColorMap cmap grayscaleImg
 
-colorMapAutumImg   = mkColorMapImg 'ColorMapAutumn'
-colorMapBoneImg    = mkColorMapImg 'ColorMapBone'
-colorMapJetImg     = mkColorMapImg 'ColorMapJet'
-colorMapWinterImg  = mkColorMapImg 'ColorMapWinter'
-colorMapRainbowImg = mkColorMapImg 'ColorMapRainbow'
-colorMapOceanImg   = mkColorMapImg 'ColorMapOcean'
-colorMapSummerImg  = mkColorMapImg 'ColorMapSummer'
-colorMapSpringImg  = mkColorMapImg 'ColorMapSpring'
-colorMapCoolImg    = mkColorMapImg 'ColorMapCool'
-colorMapHsvImg     = mkColorMapImg 'ColorMapHsv'
-colorMapPinkImg    = mkColorMapImg 'ColorMapPink'
-colorMapHotImg     = mkColorMapImg 'ColorMapHot'
-colorMapParulaImg  = mkColorMapImg 'ColorMapParula'
+colorMapAutumImg   :: ColorMapImg
+colorMapBoneImg    :: ColorMapImg
+colorMapJetImg     :: ColorMapImg
+colorMapWinterImg  :: ColorMapImg
+colorMapRainbowImg :: ColorMapImg
+colorMapOceanImg   :: ColorMapImg
+colorMapSummerImg  :: ColorMapImg
+colorMapSpringImg  :: ColorMapImg
+colorMapCoolImg    :: ColorMapImg
+colorMapHsvImg     :: ColorMapImg
+colorMapPinkImg    :: ColorMapImg
+colorMapHotImg     :: ColorMapImg
+colorMapParulaImg  :: ColorMapImg
+
+colorMapAutumImg   = mkColorMapImg ColorMapAutumn
+colorMapBoneImg    = mkColorMapImg ColorMapBone
+colorMapJetImg     = mkColorMapImg ColorMapJet
+colorMapWinterImg  = mkColorMapImg ColorMapWinter
+colorMapRainbowImg = mkColorMapImg ColorMapRainbow
+colorMapOceanImg   = mkColorMapImg ColorMapOcean
+colorMapSummerImg  = mkColorMapImg ColorMapSummer
+colorMapSpringImg  = mkColorMapImg ColorMapSpring
+colorMapCoolImg    = mkColorMapImg ColorMapCool
+colorMapHsvImg     = mkColorMapImg ColorMapHsv
+colorMapPinkImg    = mkColorMapImg ColorMapPink
+colorMapHotImg     = mkColorMapImg ColorMapHot
+colorMapParulaImg  = mkColorMapImg ColorMapParula
 @
 
-<<doc/generated/grayscaleImg.png grayscaleImg>>
+<<doc/generated/examples/grayscaleImg.png grayscaleImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap OpenCV Sphinx doc>
 -}
-applyColorMap :: ColorMap -> Mat -> Either CvException Mat
+applyColorMap
+    :: ColorMap
+    -> Mat shape ('S 1) ('S Word8)
+    -> Either CvException (Mat shape ('S 3) ('S Word8))
 applyColorMap colorMap src = unsafePerformIO $ do
     dst <- newEmptyMat
-    handleCvException (pure dst) $
+    handleCvException (pure $ unsafeCoerceMat dst) $
       withMatPtr src $ \srcPtr ->
       withMatPtr dst $ \dstPtr ->
         [cvExcept|

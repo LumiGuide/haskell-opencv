@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -9,7 +10,6 @@ import "aeson" Data.Aeson
 import "aeson" Data.Aeson.Types ( Parser )
 import "aeson" Data.Aeson.TH
 import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
-import "lens" Control.Lens hiding ( (.=) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
@@ -20,6 +20,7 @@ import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.HMat
+import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -33,15 +34,28 @@ instance FromJSON A where {                          \
 
 --------------------------------------------------------------------------------
 
-IsoJSON(Point2i, V2 Int32 , fromPoint2i, toPoint2i       )
-IsoJSON(Point2f, V2 Float , fromPoint2f, toPoint2f       )
-IsoJSON(Point2d, V2 Double, fromPoint2d, toPoint2d       )
-IsoJSON(Point3i, V3 Int32 , fromPoint3i, toPoint3i       )
-IsoJSON(Point3f, V3 Float , fromPoint3f, toPoint3f       )
-IsoJSON(Point3d, V3 Double, fromPoint3d, toPoint3d       )
-IsoJSON(Size2i , V2 Int32 , fromSize2i , toSize2i        )
-IsoJSON(Size2f , V2 Float , fromSize2f , toSize2f        )
-IsoJSON(Mat    , HMat     , view hmat  , view (from hmat))
+IsoJSON(Point2i, V2 Int32 , fromPoint2i, toPoint2i)
+IsoJSON(Point2f, V2 Float , fromPoint2f, toPoint2f)
+IsoJSON(Point2d, V2 Double, fromPoint2d, toPoint2d)
+IsoJSON(Point3i, V3 Int32 , fromPoint3i, toPoint3i)
+IsoJSON(Point3f, V3 Float , fromPoint3f, toPoint3f)
+IsoJSON(Point3d, V3 Double, fromPoint3d, toPoint3d)
+IsoJSON(Size2i , V2 Int32 , fromSize2i , toSize2i )
+IsoJSON(Size2f , V2 Float , fromSize2f , toSize2f )
+
+instance ToJSON (Mat shape channels depth) where
+    toJSON = toJSON . matToHMat
+
+instance ( Convert (Proxy shape)    (DS [DS Int32])
+         , Convert (Proxy channels) (DS Int32)
+         , Convert (Proxy depth)    (DS MatDepth)
+         )
+      => FromJSON (Mat shape channels depth) where
+    parseJSON value = do
+      matDyn <- hMatToMat <$> parseJSON value
+      case coerceMat (matDyn :: Mat 'D 'D 'D) of
+        Left errors -> fail $ intercalate "\n" errors
+        Right mat   -> pure mat
 
 
 --------------------------------------------------------------------------------
