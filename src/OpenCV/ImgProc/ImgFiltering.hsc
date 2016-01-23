@@ -372,11 +372,11 @@ morphological operations
 Example:
 
 @
-type StructureImg = Mat ('S ['D, 'D]) ('S 1) ('S Word8)
+type StructureImg = Mat (ShapeT [128, 128]) ('S 1) ('S Word8)
 
 structureImg :: MorphShape -> StructureImg
 structureImg shape = either throw id $ do
-    mat <- getStructuringElement shape (V2 128 128 :: V2 Int32)
+    mat <- getStructuringElement shape (Proxy :: Proxy 128) (Proxy :: Proxy 128)
     img <- matConvertTo Nothing (Just 255) mat
     bitwise_not img Nothing
 
@@ -396,14 +396,13 @@ morphCrossImg = structureImg (MorphCross $ toPoint2i $ (pure (-1) :: V2 Int32))
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
 -}
--- TODO (RvD): make a variant where the size is statically known
--- You can use the same size in the resulting Mat
 getStructuringElement
-    :: (ToSize2i size2i)
+    :: (Convert height Int32, Convert width Int32)
     => MorphShape
-    -> size2i
-    -> Either CvException (Mat ('S ['D, 'D]) ('S 1) ('S Word8))
-getStructuringElement morphShape ksize = unsafePerformIO $ do
+    -> height
+    -> width
+    -> Either CvException (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
+getStructuringElement morphShape height width = unsafePerformIO $ do
     element <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat element) $
       withSize2iPtr  ksize   $ \ksizePtr   ->
@@ -418,4 +417,5 @@ getStructuringElement morphShape ksize = unsafePerformIO $ do
            );
        |]
   where
+    ksize = toSize2i (V2 (convert width) (convert height) :: V2 Int32)
     (c'morphShape, anchor) = marshalMorphShape morphShape
