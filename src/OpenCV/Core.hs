@@ -9,10 +9,10 @@ module OpenCV.Core
     , matToM33
     ) where
 
+import "base" Foreign.Storable ( Storable )
 import "linear" Linear.Matrix ( M23, M33 )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Repa

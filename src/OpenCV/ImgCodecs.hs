@@ -14,22 +14,24 @@ module OpenCV.ImgCodecs
     , imencodeM
     ) where
 
+import "base" Control.Exception ( mask_ )
+import "base" Data.Int ( Int32 )
 import "base" Foreign.C.String ( withCString )
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Ptr ( Ptr, nullPtr, castPtr )
 import "base" Foreign.Storable ( peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import "bytestring" Data.ByteString ( ByteString )
 import qualified "bytestring" Data.ByteString.Unsafe as BU
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgCodecs.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 

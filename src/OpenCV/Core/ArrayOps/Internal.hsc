@@ -5,7 +5,6 @@ module OpenCV.Core.ArrayOps.Internal
     )
     where
 
-import "base" Prelude
 import "base" Data.Bits ( (.|.) )
 import "base" Data.Int
 

@@ -4,7 +4,6 @@ module OpenCV.ImgProc.Types
     ) where
 
 import "this" OpenCV.Core.Types ( Scalar )
-import "lumi-hackage-extended" Lumi.Prelude ( Show )
 
 --------------------------------------------------------------------------------
 

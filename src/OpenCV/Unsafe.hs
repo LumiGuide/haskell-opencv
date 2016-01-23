@@ -8,8 +8,7 @@ module OpenCV.Unsafe
     , unsafeWrite
     ) where
 
-import "base" Foreign.Storable ( peek, poke )
-import "lumi-hackage-extended" Lumi.Prelude
+import "base" Foreign.Storable ( Storable, peek, poke )
 import "primitive" Control.Monad.Primitive
     ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Mat.Internal

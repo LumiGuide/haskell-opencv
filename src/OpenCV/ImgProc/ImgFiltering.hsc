@@ -36,15 +36,17 @@ module OpenCV.ImgProc.ImgFiltering
     , getStructuringElement
     ) where
 
+import "base" Data.Int
+import "base" Data.Word
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types ( BorderMode )
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
 import "this" OpenCV.TypeLevel

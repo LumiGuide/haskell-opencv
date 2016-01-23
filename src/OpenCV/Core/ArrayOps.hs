@@ -16,14 +16,16 @@ module OpenCV.Core.ArrayOps
     , bitwise_xor
     ) where
 
+import "base" Data.Proxy ( Proxy(..) )
+import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( Storable(..), peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat

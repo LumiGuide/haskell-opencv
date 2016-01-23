@@ -25,12 +25,13 @@ module Language.C.Inline.OpenCV
     ) where
 
 import "base" Foreign.Ptr ( Ptr, FunPtr )
+import "base" Data.Int ( Int32 )
+import "base" Data.Monoid ( (<>) )
 import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Types  as C
 import qualified "inline-c" Language.C.Inline.Context as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( yield )
 
 -- | Haskell representation of an OpenCV exception
 data C'Exception

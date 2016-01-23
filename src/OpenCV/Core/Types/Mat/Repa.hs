@@ -16,17 +16,21 @@ module OpenCV.Core.Types.Mat.Repa
     , toRepa
     ) where
 
+import "base" Data.Int
+import "base" Data.Monoid
+import "base" Data.Proxy
+import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek, sizeOf )
 import "base" GHC.TypeLits
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import "deepseq" Control.DeepSeq (NFData, rnf)
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
 import           "repa" Data.Array.Repa.Index ( (:.) )
 import "this" Language.C.Inline.OpenCV

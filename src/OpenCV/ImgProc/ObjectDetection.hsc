@@ -6,14 +6,16 @@ module OpenCV.ImgProc.ObjectDetection
     , matchTemplate
     ) where
 
+import "base" Data.Int
+import "base" Data.Word
 import "base" GHC.TypeLits
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------

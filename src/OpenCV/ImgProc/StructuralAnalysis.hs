@@ -8,11 +8,11 @@ module OpenCV.ImgProc.StructuralAnalysis
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Storable ( peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
-import "this" OpenCV.Internal ( CvException, handleCvException, cvExcept )
+import "this" OpenCV.Exception ( CvException, handleCvException, cvExcept )
 import "this" OpenCV.Core.Types.Internal
     ( ToPoint2f, toPoint2f, withPoint2fPtr, withPoint2fs )
 import qualified "vector" Data.Vector as V

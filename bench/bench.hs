@@ -1,12 +1,10 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Main where
 
+import "base" Control.Exception ( evaluate )
+import "base" Data.Monoid
+import "base" Data.Word
 import qualified "bytestring" Data.ByteString as B
 import "criterion" Criterion.Main
-import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
 import "thea" OpenCV
 import "thea" OpenCV.Unsafe

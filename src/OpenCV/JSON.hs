@@ -6,6 +6,10 @@
 
 module OpenCV.JSON ( ) where
 
+import "base" Data.Int ( Int32 )
+import "base" Data.List ( intercalate )
+import "base" Data.Monoid ( (<>) )
+import "base" Data.Proxy ( Proxy(..) )
 import "aeson" Data.Aeson
 import "aeson" Data.Aeson.Types ( Parser )
 import "aeson" Data.Aeson.TH
@@ -13,8 +17,6 @@ import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, dec
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
-import "lumi-hackage-extended" Lumi.Prelude
-import "lumi-hackage-extended" Data.Aeson.Extended ( lumiJsonOptions, delPrefix )
 import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
@@ -103,7 +105,7 @@ instance FromJSON Rect where
 
 --------------------------------------------------------------------------------
 
-deriveJSON (lumiJsonOptions $ delPrefix "hm") ''HMat
-deriveJSON (lumiJsonOptions id) ''V2
-deriveJSON (lumiJsonOptions id) ''V3
-deriveJSON (lumiJsonOptions id) ''V4
+deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
+deriveJSON defaultOptions ''V2
+deriveJSON defaultOptions ''V3
+deriveJSON defaultOptions ''V4

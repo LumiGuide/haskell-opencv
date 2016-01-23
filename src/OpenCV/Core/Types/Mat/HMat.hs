@@ -12,13 +12,16 @@ module OpenCV.Core.Types.Mat.HMat
     ) where
 
 
+import "base" Data.Foldable
+import "base" Data.Int
+import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peekElemOff, pokeElemOff )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V4 ( V4(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel

@@ -4,19 +4,22 @@
 
 module OpenCV.Core.Types.Internal where
 
+import "base" Data.Bits ( (.|.) )
+import "base" Data.Functor ( ($>) )
+import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( sizeOf, peek, poke )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V

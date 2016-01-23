@@ -17,8 +17,7 @@ extra-doc-files:
 library
   hs-source-dirs: src
   include-dirs: include
-  c-sources: src/OpenCV/Internal.cpp
-
+  c-sources: src/OpenCV/Exception.cpp
            , src/OpenCV/Core/Types.cpp
            , src/OpenCV/Core/Types/Internal.cpp
            , src/OpenCV/Core/Types/Mat.cpp
@@ -48,9 +47,7 @@ library
                , deepseq
                , inline-c
                , inline-c-cpp
-               , lens
                , linear
-               , lumi-hackage-extended
                , primitive
                , repa
                , template-haskell
@@ -78,7 +75,8 @@ library
                  , OpenCV.Video
                  , OpenCV.TypeLevel
                  , OpenCV.JSON
-  other-modules:   OpenCV.Internal
+  other-modules:   OpenCV.Exception
+                 , OpenCV.Internal
                  , OpenCV.Core.ArrayOps.Internal
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
@@ -91,7 +89,6 @@ library
                     , DataKinds
                     , FlexibleContexts
                     , LambdaCase
-                    , NoImplicitPrelude
                     , OverloadedStrings
                     , PackageImports
                     , PolyKinds
@@ -141,7 +138,6 @@ test-suite test-thea
   build-depends: thea
                , base >= 4.8 && < 5
                , bytestring
-               , lumi-hackage-extended
                , repa
                , tasty
                , tasty-hunit
@@ -150,6 +146,12 @@ test-suite test-thea
                , lens
                , linear
                , vector
+
+  default-extensions: DataKinds
+                    , PackageImports
+                    , RankNTypes
+                    , ScopedTypeVariables
+                    , TypeOperators
 
 benchmark bench-thea
   type:             exitcode-stdio-1.0
@@ -162,4 +164,6 @@ benchmark bench-thea
                   , bytestring
                   , criterion
                   , repa
-                  , lumi-hackage-extended
+
+  default-extensions: DataKinds
+                    , PackageImports

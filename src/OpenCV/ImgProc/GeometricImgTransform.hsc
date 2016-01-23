@@ -52,18 +52,19 @@ module OpenCV.ImgProc.GeometricImgTransform
     , getRotationMatrix2D
     ) where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types ( CDouble )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
 import "this" OpenCV.TypeLevel

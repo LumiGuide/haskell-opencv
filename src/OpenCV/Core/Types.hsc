@@ -43,15 +43,16 @@ module OpenCV.Core.Types
     , CvException
     ) where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.Marshal.Utils ( toBool )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 

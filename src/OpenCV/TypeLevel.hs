@@ -25,7 +25,6 @@ module OpenCV.TypeLevel
     , ShapeT
     ) where
 
-import "base" Prelude
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" GHC.TypeLits

@@ -17,13 +17,14 @@ module OpenCV.ImgProc.Drawing
     , rectangle
     ) where
 
+import "base" Data.Int
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )

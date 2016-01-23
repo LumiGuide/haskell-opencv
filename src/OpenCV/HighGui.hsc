@@ -55,6 +55,12 @@ module OpenCV.HighGui
     , imshowM
     ) where
 
+import "base" Control.Concurrent.MVar
+import "base" Control.Exception ( mask_ )
+import "base" Data.Bits ( (.&.) )
+import "base" Data.Int ( Int32 )
+import "base" Data.Monoid ( (<>) )
+import "base" Data.Unique ( newUnique, hashUnique )
 import qualified "base" Foreign.C.String as C
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
 import "base" Foreign.Marshal.Alloc ( free )
@@ -63,7 +69,6 @@ import "containers" Data.Map ( Map )
 import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Core.Types.Mat

@@ -19,7 +19,6 @@ import "base" Data.Int
 import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Prelude
 import qualified "vector" Data.Vector.Storable as VS
 
 

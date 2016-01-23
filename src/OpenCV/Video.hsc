@@ -8,14 +8,14 @@ module OpenCV.Video
     ) where
 
 import "base" Foreign.Marshal.Utils ( fromBool )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 

@@ -1,9 +1,9 @@
 module OpenCV.ImgProc.Types.Internal where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types ( CDouble )
 import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" OpenCV.Core.Types ( Scalar, toScalar )
 import "this" OpenCV.ImgProc.Types
 

@@ -1,21 +1,20 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Main where
 
+import "base" Control.Exception
+import "base" Data.Int
+import "base" Data.List
+import "base" Data.Monoid
+import "base" Data.Proxy
+import "base" Data.Word
+import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Matrix ( M23, M33 )
 import "linear" Linear.Vector ( (^+^), zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty

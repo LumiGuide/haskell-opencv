@@ -32,14 +32,17 @@ module OpenCV.Core.Types.Mat
     , createMat
     ) where
 
+import "base" Control.Monad.ST ( RealWorld, ST, runST )
+import "base" Data.Int ( Int32 )
+import "base" Data.Proxy
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
-import "lumi-hackage-extended" Lumi.Prelude
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal

@@ -14,9 +14,7 @@
 , deepseq
 , inline-c
 , inline-c-cpp
-, lens
 , linear
-, lumi-hackage-extended
 , primitive
 , repa
 , template-haskell
@@ -50,9 +48,7 @@ mkDerivation {
     deepseq
     inline-c
     inline-c-cpp
-    lens
     linear
-    lumi-hackage-extended
     primitive
     repa
     template-haskell

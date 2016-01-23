@@ -111,18 +111,22 @@ module OpenCV.ImgProc.MiscImgTransform
     , threshold
     ) where
 
+import "base" Data.Bits
+import "base" Data.Int
+import "base" Data.Proxy
+import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" GHC.TypeLits
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude hiding ( shift )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgProc.MiscImgTransform.ColorCodes
-import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------

@@ -34,6 +34,12 @@ module OpenCV.Core.Types.Mat.Internal
     -- , matInfo
     -- ) where
 
+import "base" Data.Bits
+import "base" Data.Int
+import "base" Data.Maybe
+import "base" Data.Monoid ( (<>) )
+import "base" Data.Proxy
+import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -41,10 +47,11 @@ import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
 import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
+import "base" System.IO.Unsafe ( unsafePerformIO )
+import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "lumi-hackage-extended" Lumi.Prelude
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Internal
