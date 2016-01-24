@@ -1,12 +1,16 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module OpenCV.ImgProc.MiscImgTransform
     ( -- * Color conversion
       cvtColor
     , ColorConversion
     , ColorCode(..)
+    , ColorCodeChannels
+    , ColorCodeDepth
+    , ColorCodeMatchesChannels
 
       -- ** Color code proxies
     , bayerBG
@@ -115,7 +119,6 @@ import "base" Data.Bits
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Word
-import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" GHC.TypeLits
@@ -127,6 +130,7 @@ import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgProc.MiscImgTransform.ColorCodes
+import "this" OpenCV.ImgProc.MiscImgTransform.Internal
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -137,216 +141,7 @@ C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
 C.using "namespace cv"
 
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-
-#include "namespace.hpp"
-
 --------------------------------------------------------------------------------
-
-#num COLOR_BGR2BGRA
-#num COLOR_RGB2RGBA
-#num COLOR_BGRA2BGR
-#num COLOR_RGBA2RGB
-#num COLOR_BGR2RGBA
-#num COLOR_RGB2BGRA
-#num COLOR_RGBA2BGR
-#num COLOR_BGRA2RGB
-#num COLOR_BGR2RGB
-#num COLOR_RGB2BGR
-#num COLOR_BGRA2RGBA
-#num COLOR_RGBA2BGRA
-#num COLOR_BGR2GRAY
-#num COLOR_RGB2GRAY
-#num COLOR_GRAY2BGR
-#num COLOR_GRAY2RGB
-#num COLOR_GRAY2BGRA
-#num COLOR_GRAY2RGBA
-#num COLOR_BGRA2GRAY
-#num COLOR_RGBA2GRAY
-#num COLOR_BGR2BGR565
-#num COLOR_RGB2BGR565
-#num COLOR_BGR5652BGR
-#num COLOR_BGR5652RGB
-#num COLOR_BGRA2BGR565
-#num COLOR_RGBA2BGR565
-#num COLOR_BGR5652BGRA
-#num COLOR_BGR5652RGBA
-#num COLOR_GRAY2BGR565
-#num COLOR_BGR5652GRAY
-#num COLOR_BGR2BGR555
-#num COLOR_RGB2BGR555
-#num COLOR_BGR5552BGR
-#num COLOR_BGR5552RGB
-#num COLOR_BGRA2BGR555
-#num COLOR_RGBA2BGR555
-#num COLOR_BGR5552BGRA
-#num COLOR_BGR5552RGBA
-#num COLOR_GRAY2BGR555
-#num COLOR_BGR5552GRAY
-#num COLOR_BGR2XYZ
-#num COLOR_RGB2XYZ
-#num COLOR_XYZ2BGR
-#num COLOR_XYZ2RGB
-#num COLOR_BGR2YCrCb
-#num COLOR_RGB2YCrCb
-#num COLOR_YCrCb2BGR
-#num COLOR_YCrCb2RGB
-#num COLOR_BGR2HSV
-#num COLOR_RGB2HSV
-#num COLOR_BGR2Lab
-#num COLOR_RGB2Lab
-#num COLOR_BGR2Luv
-#num COLOR_RGB2Luv
-#num COLOR_BGR2HLS
-#num COLOR_RGB2HLS
-#num COLOR_HSV2BGR
-#num COLOR_HSV2RGB
-#num COLOR_Lab2BGR
-#num COLOR_Lab2RGB
-#num COLOR_Luv2BGR
-#num COLOR_Luv2RGB
-#num COLOR_HLS2BGR
-#num COLOR_HLS2RGB
-#num COLOR_BGR2HSV_FULL
-#num COLOR_RGB2HSV_FULL
-#num COLOR_BGR2HLS_FULL
-#num COLOR_RGB2HLS_FULL
-#num COLOR_HSV2BGR_FULL
-#num COLOR_HSV2RGB_FULL
-#num COLOR_HLS2BGR_FULL
-#num COLOR_HLS2RGB_FULL
-#num COLOR_LBGR2Lab
-#num COLOR_LRGB2Lab
-#num COLOR_LBGR2Luv
-#num COLOR_LRGB2Luv
-#num COLOR_Lab2LBGR
-#num COLOR_Lab2LRGB
-#num COLOR_Luv2LBGR
-#num COLOR_Luv2LRGB
-#num COLOR_BGR2YUV
-#num COLOR_RGB2YUV
-#num COLOR_YUV2BGR
-#num COLOR_YUV2RGB
-#num COLOR_YUV2RGB_NV12
-#num COLOR_YUV2BGR_NV12
-#num COLOR_YUV2RGB_NV21
-#num COLOR_YUV2BGR_NV21
-#num COLOR_YUV420sp2RGB
-#num COLOR_YUV420sp2BGR
-#num COLOR_YUV2RGBA_NV12
-#num COLOR_YUV2BGRA_NV12
-#num COLOR_YUV2RGBA_NV21
-#num COLOR_YUV2BGRA_NV21
-#num COLOR_YUV420sp2RGBA
-#num COLOR_YUV420sp2BGRA
-#num COLOR_YUV2RGB_YV12
-#num COLOR_YUV2BGR_YV12
-#num COLOR_YUV2RGB_IYUV
-#num COLOR_YUV2BGR_IYUV
-#num COLOR_YUV2RGB_I420
-#num COLOR_YUV2BGR_I420
-#num COLOR_YUV420p2RGB
-#num COLOR_YUV420p2BGR
-#num COLOR_YUV2RGBA_YV12
-#num COLOR_YUV2BGRA_YV12
-#num COLOR_YUV2RGBA_IYUV
-#num COLOR_YUV2BGRA_IYUV
-#num COLOR_YUV2RGBA_I420
-#num COLOR_YUV2BGRA_I420
-#num COLOR_YUV420p2RGBA
-#num COLOR_YUV420p2BGRA
-#num COLOR_YUV2GRAY_420
-#num COLOR_YUV2GRAY_NV21
-#num COLOR_YUV2GRAY_NV12
-#num COLOR_YUV2GRAY_YV12
-#num COLOR_YUV2GRAY_IYUV
-#num COLOR_YUV2GRAY_I420
-#num COLOR_YUV420sp2GRAY
-#num COLOR_YUV420p2GRAY
-#num COLOR_YUV2RGB_UYVY
-#num COLOR_YUV2BGR_UYVY
--- #num COLOR_YUV2RGB_VYUY
--- #num COLOR_YUV2BGR_VYUY
-#num COLOR_YUV2RGB_Y422
-#num COLOR_YUV2BGR_Y422
-#num COLOR_YUV2RGB_UYNV
-#num COLOR_YUV2BGR_UYNV
-#num COLOR_YUV2RGBA_UYVY
-#num COLOR_YUV2BGRA_UYVY
--- #num COLOR_YUV2RGBA_VYUY
--- #num COLOR_YUV2BGRA_VYUY
-#num COLOR_YUV2RGBA_Y422
-#num COLOR_YUV2BGRA_Y422
-#num COLOR_YUV2RGBA_UYNV
-#num COLOR_YUV2BGRA_UYNV
-#num COLOR_YUV2RGB_YUY2
-#num COLOR_YUV2BGR_YUY2
-#num COLOR_YUV2RGB_YVYU
-#num COLOR_YUV2BGR_YVYU
-#num COLOR_YUV2RGB_YUYV
-#num COLOR_YUV2BGR_YUYV
-#num COLOR_YUV2RGB_YUNV
-#num COLOR_YUV2BGR_YUNV
-#num COLOR_YUV2RGBA_YUY2
-#num COLOR_YUV2BGRA_YUY2
-#num COLOR_YUV2RGBA_YVYU
-#num COLOR_YUV2BGRA_YVYU
-#num COLOR_YUV2RGBA_YUYV
-#num COLOR_YUV2BGRA_YUYV
-#num COLOR_YUV2RGBA_YUNV
-#num COLOR_YUV2BGRA_YUNV
-#num COLOR_YUV2GRAY_UYVY
-#num COLOR_YUV2GRAY_YUY2
--- #num CV_YUV2GRAY_VYUY
-#num COLOR_YUV2GRAY_Y422
-#num COLOR_YUV2GRAY_UYNV
-#num COLOR_YUV2GRAY_YVYU
-#num COLOR_YUV2GRAY_YUYV
-#num COLOR_YUV2GRAY_YUNV
-#num COLOR_RGBA2mRGBA
-#num COLOR_mRGBA2RGBA
-#num COLOR_RGB2YUV_I420
-#num COLOR_BGR2YUV_I420
-#num COLOR_RGB2YUV_IYUV
-#num COLOR_BGR2YUV_IYUV
-#num COLOR_RGBA2YUV_I420
-#num COLOR_BGRA2YUV_I420
-#num COLOR_RGBA2YUV_IYUV
-#num COLOR_BGRA2YUV_IYUV
-#num COLOR_RGB2YUV_YV12
-#num COLOR_BGR2YUV_YV12
-#num COLOR_RGBA2YUV_YV12
-#num COLOR_BGRA2YUV_YV12
-#num COLOR_BayerBG2BGR
-#num COLOR_BayerGB2BGR
-#num COLOR_BayerRG2BGR
-#num COLOR_BayerGR2BGR
-#num COLOR_BayerBG2RGB
-#num COLOR_BayerGB2RGB
-#num COLOR_BayerRG2RGB
-#num COLOR_BayerGR2RGB
-#num COLOR_BayerBG2GRAY
-#num COLOR_BayerGB2GRAY
-#num COLOR_BayerRG2GRAY
-#num COLOR_BayerGR2GRAY
-#num COLOR_BayerBG2BGR_VNG
-#num COLOR_BayerGB2BGR_VNG
-#num COLOR_BayerRG2BGR_VNG
-#num COLOR_BayerGR2BGR_VNG
-#num COLOR_BayerBG2RGB_VNG
-#num COLOR_BayerGB2RGB_VNG
-#num COLOR_BayerRG2RGB_VNG
-#num COLOR_BayerGR2RGB_VNG
-#num COLOR_BayerBG2BGR_EA
-#num COLOR_BayerGB2BGR_EA
-#num COLOR_BayerRG2BGR_EA
-#num COLOR_BayerGR2BGR_EA
-#num COLOR_BayerBG2RGB_EA
-#num COLOR_BayerGB2RGB_EA
-#num COLOR_BayerRG2RGB_EA
-#num COLOR_BayerGR2RGB_EA
 
 class ColorConversion (fromColor :: ColorCode) (toColor :: ColorCode) where
     colorCode :: Proxy fromColor -> Proxy toColor -> Int32
@@ -549,6 +344,322 @@ instance ColorConversion 'BayerGB  'RGB_EA    where colorCode _ _ = c'COLOR_Baye
 instance ColorConversion 'BayerRG  'RGB_EA    where colorCode _ _ = c'COLOR_BayerRG2RGB_EA
 instance ColorConversion 'BayerGR  'RGB_EA    where colorCode _ _ = c'COLOR_BayerGR2RGB_EA
 
+-- | Gives the number of channels associated with a particular color encoding
+type family ColorCodeChannels (cc :: ColorCode) :: Nat where
+  ColorCodeChannels 'BayerBG   = 1
+  ColorCodeChannels 'BayerGB   = 1
+  ColorCodeChannels 'BayerGR   = 1
+  ColorCodeChannels 'BayerRG   = 1
+  ColorCodeChannels 'BGR       = 3
+  ColorCodeChannels 'BGR555    = 2
+  ColorCodeChannels 'BGR565    = 2
+  ColorCodeChannels 'BGRA      = 4
+  ColorCodeChannels 'BGRA_I420 = 4
+  ColorCodeChannels 'BGRA_IYUV = 4
+  ColorCodeChannels 'BGRA_NV12 = 4
+  ColorCodeChannels 'BGRA_NV21 = 4
+  ColorCodeChannels 'BGRA_UYNV = 4
+  ColorCodeChannels 'BGRA_UYVY = 4
+  ColorCodeChannels 'BGRA_Y422 = 4
+  ColorCodeChannels 'BGRA_YUNV = 4
+  ColorCodeChannels 'BGRA_YUY2 = 4
+  ColorCodeChannels 'BGRA_YUYV = 4
+  ColorCodeChannels 'BGRA_YV12 = 4
+  ColorCodeChannels 'BGRA_YVYU = 4
+  ColorCodeChannels 'BGR_EA    = 3
+  ColorCodeChannels 'BGR_FULL  = 3
+  ColorCodeChannels 'BGR_I420  = 3
+  ColorCodeChannels 'BGR_IYUV  = 3
+  ColorCodeChannels 'BGR_NV12  = 3
+  ColorCodeChannels 'BGR_NV21  = 3
+  ColorCodeChannels 'BGR_UYNV  = 3
+  ColorCodeChannels 'BGR_UYVY  = 3
+  ColorCodeChannels 'BGR_VNG   = 3
+  ColorCodeChannels 'BGR_Y422  = 3
+  ColorCodeChannels 'BGR_YUNV  = 3
+  ColorCodeChannels 'BGR_YUY2  = 3
+  ColorCodeChannels 'BGR_YUYV  = 3
+  ColorCodeChannels 'BGR_YV12  = 3
+  ColorCodeChannels 'BGR_YVYU  = 3
+  ColorCodeChannels 'GRAY      = 1
+  ColorCodeChannels 'GRAY_420  = 1
+  ColorCodeChannels 'GRAY_I420 = 1
+  ColorCodeChannels 'GRAY_IYUV = 1
+  ColorCodeChannels 'GRAY_NV12 = 1
+  ColorCodeChannels 'GRAY_NV21 = 1
+  ColorCodeChannels 'GRAY_UYNV = 1
+  ColorCodeChannels 'GRAY_UYVY = 1
+  ColorCodeChannels 'GRAY_Y422 = 1
+  ColorCodeChannels 'GRAY_YUNV = 1
+  ColorCodeChannels 'GRAY_YUY2 = 1
+  ColorCodeChannels 'GRAY_YUYV = 1
+  ColorCodeChannels 'GRAY_YV12 = 1
+  ColorCodeChannels 'GRAY_YVYU = 1
+  ColorCodeChannels 'HLS       = 3
+  ColorCodeChannels 'HLS_FULL  = 3
+  ColorCodeChannels 'HSV       = 3
+  ColorCodeChannels 'HSV_FULL  = 3
+  ColorCodeChannels 'Lab       = 3
+  ColorCodeChannels 'LBGR      = 3
+  ColorCodeChannels 'LRGB      = 3
+  ColorCodeChannels 'Luv       = 3
+  ColorCodeChannels 'MRGBA     = 4
+  ColorCodeChannels 'RGB       = 3
+  ColorCodeChannels 'RGBA      = 4
+  ColorCodeChannels 'RGBA_I420 = 4
+  ColorCodeChannels 'RGBA_IYUV = 4
+  ColorCodeChannels 'RGBA_NV12 = 4
+  ColorCodeChannels 'RGBA_NV21 = 4
+  ColorCodeChannels 'RGBA_UYNV = 4
+  ColorCodeChannels 'RGBA_UYVY = 4
+  ColorCodeChannels 'RGBA_Y422 = 4
+  ColorCodeChannels 'RGBA_YUNV = 4
+  ColorCodeChannels 'RGBA_YUY2 = 4
+  ColorCodeChannels 'RGBA_YUYV = 4
+  ColorCodeChannels 'RGBA_YV12 = 4
+  ColorCodeChannels 'RGBA_YVYU = 4
+  ColorCodeChannels 'RGB_EA    = 3
+  ColorCodeChannels 'RGB_FULL  = 3
+  ColorCodeChannels 'RGB_I420  = 3
+  ColorCodeChannels 'RGB_IYUV  = 3
+  ColorCodeChannels 'RGB_NV12  = 3
+  ColorCodeChannels 'RGB_NV21  = 3
+  ColorCodeChannels 'RGB_UYNV  = 3
+  ColorCodeChannels 'RGB_UYVY  = 3
+  ColorCodeChannels 'RGB_VNG   = 3
+  ColorCodeChannels 'RGB_Y422  = 3
+  ColorCodeChannels 'RGB_YUNV  = 3
+  ColorCodeChannels 'RGB_YUY2  = 3
+  ColorCodeChannels 'RGB_YUYV  = 3
+  ColorCodeChannels 'RGB_YV12  = 3
+  ColorCodeChannels 'RGB_YVYU  = 3
+  ColorCodeChannels 'XYZ       = 3
+  ColorCodeChannels 'YCrCb     = 3
+  ColorCodeChannels 'YUV       = 3
+  ColorCodeChannels 'YUV420p   = 3
+  ColorCodeChannels 'YUV420sp  = 3
+  ColorCodeChannels 'YUV_I420  = 1
+  ColorCodeChannels 'YUV_IYUV  = 1
+  ColorCodeChannels 'YUV_YV12  = 1
+
+class ColorCodeMatchesChannels (code :: ColorCode) (channels :: DS Nat)
+
+instance (ColorCodeChannels code ~ channels) => ColorCodeMatchesChannels code ('S channels)
+
+type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDepth :: DS *) :: (DS *) where
+  ColorCodeDepth 'BGR     'BGRA       ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'BGRA       ('S depth)  = 'S depth
+  ColorCodeDepth 'BGRA    'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'RGBA    'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'BGRA    'RGBA       ('S depth)  = 'S depth
+
+  ColorCodeDepth 'BGR     'BGR565     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'BGR555     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'BGR565     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'BGR555     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGRA    'BGR565     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGRA    'BGR555     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGBA    'BGR565     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGBA    'BGR555     ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'BGR565  'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR555  'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR565  'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR555  'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR565  'BGRA       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR555  'BGRA       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR565  'RGBA       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR555  'RGBA       ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'BGR     'GRAY       ('S depth)  = 'S depth
+  ColorCodeDepth 'BGRA    'GRAY       ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'GRAY       ('S depth)  = 'S depth
+  ColorCodeDepth 'RGBA    'GRAY       ('S depth)  = 'S depth
+
+  ColorCodeDepth 'BGR565  'GRAY       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR555  'GRAY       ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'GRAY    'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'GRAY    'BGRA       ('S depth)  = 'S depth
+
+  ColorCodeDepth 'GRAY    'BGR565     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'GRAY    'BGR555     ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'BGR     'YCrCb      ('S depth)  = 'S depth
+  ColorCodeDepth 'BGR     'YUV        ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'YCrCb      ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'YUV        ('S depth)  = 'S depth
+
+  ColorCodeDepth 'YCrCb   'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'YCrCb   'RGB        ('S depth)  = 'S depth
+  ColorCodeDepth 'YUV     'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'YUV     'RGB        ('S depth)  = 'S depth
+
+  ColorCodeDepth 'BGR     'XYZ        ('S depth)  = 'S depth
+  ColorCodeDepth 'RGB     'XYZ        ('S depth)  = 'S depth
+
+  ColorCodeDepth 'XYZ     'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'XYZ     'RGB        ('S depth)  = 'S depth
+
+  ColorCodeDepth 'BGR     'HSV        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'HSV        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'HSV_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'HSV_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'HLS        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'HLS        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'HLS_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'HLS_FULL   ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'BGR     'HSV        ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'HSV        ('S Float)  = 'S Float
+  ColorCodeDepth 'BGR     'HSV_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'HSV_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'BGR     'HLS        ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'HLS        ('S Float)  = 'S Float
+  ColorCodeDepth 'BGR     'HLS_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'HLS_FULL   ('S Float)  = 'S Float
+
+  ColorCodeDepth 'HSV     'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HSV     'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HSV     'BGR_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HSV     'RGB_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HLS     'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HLS     'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HLS     'BGR_FULL   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'HLS     'RGB_FULL   ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'HSV     'BGR        ('S Float)  = 'S Float
+  ColorCodeDepth 'HSV     'RGB        ('S Float)  = 'S Float
+  ColorCodeDepth 'HSV     'BGR_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'HSV     'RGB_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'HLS     'BGR        ('S Float)  = 'S Float
+  ColorCodeDepth 'HLS     'RGB        ('S Float)  = 'S Float
+  ColorCodeDepth 'HLS     'BGR_FULL   ('S Float)  = 'S Float
+  ColorCodeDepth 'HLS     'RGB_FULL   ('S Float)  = 'S Float
+
+  ColorCodeDepth 'BGR     'Lab        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'Lab        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'LBGR    'Lab        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'LRGB    'Lab        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'Luv        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'Luv        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'LBGR    'Luv        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'LRGB    'Luv        ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'BGR     'Lab        ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'Lab        ('S Float)  = 'S Float
+  ColorCodeDepth 'LBGR    'Lab        ('S Float)  = 'S Float
+  ColorCodeDepth 'LRGB    'Lab        ('S Float)  = 'S Float
+  ColorCodeDepth 'BGR     'Luv        ('S Float)  = 'S Float
+  ColorCodeDepth 'RGB     'Luv        ('S Float)  = 'S Float
+  ColorCodeDepth 'LBGR    'Luv        ('S Float)  = 'S Float
+  ColorCodeDepth 'LRGB    'Luv        ('S Float)  = 'S Float
+
+  ColorCodeDepth 'Lab     'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Lab     'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Lab     'LBGR       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Lab     'LRGB       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Luv     'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Luv     'RGB        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Luv     'LBGR       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'Luv     'LRGB       ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'Lab     'BGR        ('S Float)  = 'S Float
+  ColorCodeDepth 'Lab     'RGB        ('S Float)  = 'S Float
+  ColorCodeDepth 'Lab     'LBGR       ('S Float)  = 'S Float
+  ColorCodeDepth 'Lab     'LRGB       ('S Float)  = 'S Float
+  ColorCodeDepth 'Luv     'BGR        ('S Float)  = 'S Float
+  ColorCodeDepth 'Luv     'RGB        ('S Float)  = 'S Float
+  ColorCodeDepth 'Luv     'LBGR       ('S Float)  = 'S Float
+  ColorCodeDepth 'Luv     'LRGB       ('S Float)  = 'S Float
+
+  ColorCodeDepth 'BayerBG 'GRAY       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerBG 'GRAY       ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGB 'GRAY       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGB 'GRAY       ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGR 'GRAY       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGR 'GRAY       ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerRG 'GRAY       ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerRG 'GRAY       ('S Word16) = 'S Word16
+
+  ColorCodeDepth 'BayerBG 'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerBG 'BGR        ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGB 'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGB 'BGR        ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGR 'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGR 'BGR        ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerRG 'BGR        ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerRG 'BGR        ('S Word16) = 'S Word16
+
+  ColorCodeDepth 'BayerBG 'BGR_VNG    ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerBG 'BGR_VNG    ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGB 'BGR_VNG    ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGB 'BGR_VNG    ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGR 'BGR_VNG    ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGR 'BGR_VNG    ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerRG 'BGR_VNG    ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerRG 'BGR_VNG    ('S Word16) = 'S Word16
+
+  ColorCodeDepth 'BayerBG 'BGR_EA     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerBG 'BGR_EA     ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGB 'BGR_EA     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGB 'BGR_EA     ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerGR 'BGR_EA     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerGR 'BGR_EA     ('S Word16) = 'S Word16
+  ColorCodeDepth 'BayerRG 'BGR_EA     ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BayerRG 'BGR_EA     ('S Word16) = 'S Word16
+
+  ColorCodeDepth 'YUV     'BGR_NV21   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_NV21   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGR_NV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_NV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_NV21  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_NV21  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_NV12  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_NV12  ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'YUV     'BGR_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_YV12  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_YV12  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGR_IYUV   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_IYUV   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_IYUV  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_IYUV  ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'YUV     'GRAY_420   ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'RGB     'YUV_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'YUV_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGBA    'YUV_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGRA    'YUV_YV12   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGB     'YUV_IYUV   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGR     'YUV_IYUV   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'RGBA    'YUV_IYUV   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'BGRA    'YUV_IYUV   ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'YUV     'RGB_UYVY   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGR_UYVY   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_UYVY  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_UYVY  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_YUY2   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGR_YUY2   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGB_YVYU   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGR_YVYU   ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_YUY2  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_YUY2  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'RGBA_YVYU  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'BGRA_YVYU  ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'YUV     'GRAY_UYVY  ('S Word8)  = 'S Word8
+  ColorCodeDepth 'YUV     'GRAY_YUY2  ('S Word8)  = 'S Word8
+
+  ColorCodeDepth 'RGBA    'MRGBA      ('S Word8)  = 'S Word8
+  ColorCodeDepth 'MRGBA   'RGBA       ('S Word8)  = 'S Word8
+
+  ColorCodeDepth srcCode  dstCode      'D         = 'D
+
 {- | Converts an image from one color space to another
 
 The function converts an input image from one color space to
@@ -564,16 +675,16 @@ on.
 
 The conventional ranges for R, G, and B channel values are:
 
-  * 0 to 255 for CV_8U images
+  * 0 to 255 for 'Word8' images
 
-  * 0 to 65535 for CV_16U images
+  * 0 to 65535 for 'Word16' images
 
-  * 0 to 1 for CV_32F images
+  * 0 to 1 for 'Float' images
 
 In case of linear transformations, the range does not matter. But
 in case of a non-linear transformation, an input RGB image should
 be normalized to the proper value range to get the correct results,
-for example, for RGB ￼ L*u*v* transformation. For example, if you
+for example, for RGB to L*u*v* transformation. For example, if you
 have a 32-bit floating-point image directly converted from an 8-bit
 image without any scaling, then it will have the 0..255 value range
 instead of 0..1 assumed by the function. So, before calling
@@ -588,8 +699,8 @@ applications that need the full range of colors or that convert an
 image before an operation and then convert back.
 
 If conversion adds the alpha channel, its value will set to the
-maximum of corresponding channel range: 255 for CV_8U, 65535 for
-CV_16U, 1 for CV_32F.
+maximum of corresponding channel range: 255 for 'Word8', 65535 for
+'Word16', 1 for 'Float'.
 
 Example:
 
@@ -601,7 +712,7 @@ cvtColorImg
               (channels :: Nat)
               (depth    :: *)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
-       , width2 ~ ((*) width 2)   -- TODO (RvD): HSE parse error with infix type operator
+       , width2 ~ (width + width)
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
 cvtColorImg = createMat $ do
@@ -610,7 +721,7 @@ cvtColorImg = createMat $ do
                    (Proxy :: Proxy depth)
                    white
     void $ matCopyToM imgM (V2 0 0) birds_512x341
-    void $ matCopyToM imgM (V2 w 0) (unsafeCoerceMat birds_gray)
+    void $ matCopyToM imgM (V2 w 0) birds_gray
     arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
     pure imgM
   where
@@ -630,15 +741,23 @@ cvtColorImg = createMat $ do
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
 -}
-cvtColor :: forall (fromColor :: ColorCode)
-                   (toColor   :: ColorCode)
-                   (shape     :: DS [DS Nat])
-                   srcChannels srcDepth
-         . (ColorConversion fromColor toColor)
+cvtColor :: forall (fromColor   :: ColorCode)
+                   (toColor     :: ColorCode)
+                   (shape       :: DS [DS Nat])
+                   (srcChannels :: DS Nat)
+                   (dstChannels :: DS Nat)
+                   (srcDepth    :: DS *)
+                   (dstDepth    :: DS *)
+         . ( ColorConversion fromColor toColor
+           , ColorCodeMatchesChannels fromColor srcChannels
+           , dstChannels ~ 'S (ColorCodeChannels toColor)
+           , srcDepth `In` ['D, 'S Word8, 'S Word16, 'S Float]
+           , dstDepth ~ ColorCodeDepth fromColor toColor srcDepth
+           )
          => Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
          -> Proxy toColor   -- ^ Convert to 'ColorCode'.
          -> Mat shape srcChannels srcDepth -- ^ Source image
-         -> Either CvException (Mat shape 'D 'D)
+         -> Either CvException (Mat shape dstChannels dstDepth)
 cvtColor fromColor toColor src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -648,47 +767,11 @@ cvtColor fromColor toColor src = unsafePerformIO $ do
           cv::cvtColor( *$(Mat * srcPtr)
                       , *$(Mat * dstPtr)
                       , $(int32_t c'code)
+                      , 0
                       );
         |]
   where
     c'code = colorCode fromColor toColor
-
-data ThreshType
-   = Thresh_Binary    !Double
-   | Thresh_BinaryInv !Double
-   | Thresh_Truncate
-   | Thresh_ToZero
-   | Thresh_ToZeroInv
-     deriving (Show, Eq)
-
-#num THRESH_BINARY
-#num THRESH_BINARY_INV
-#num THRESH_TRUNC
-#num THRESH_TOZERO
-#num THRESH_TOZERO_INV
-
-marshalThreshType :: ThreshType -> (Int32, CDouble)
-marshalThreshType = \case
-    Thresh_Binary    maxVal -> (c'THRESH_BINARY    , realToFrac maxVal)
-    Thresh_BinaryInv maxVal -> (c'THRESH_BINARY_INV, realToFrac maxVal)
-    Thresh_Truncate         -> (c'THRESH_TRUNC     , 0)
-    Thresh_ToZero           -> (c'THRESH_TOZERO    , 0)
-    Thresh_ToZeroInv        -> (c'THRESH_TOZERO_INV, 0)
-
-data ThreshValue
-   = ThreshVal_Abs !Double
-   | ThreshVal_Otsu
-   | ThreshVal_Triangle
-     deriving (Show, Eq)
-
-#num THRESH_OTSU
-#num THRESH_TRIANGLE
-
-marshalThreshValue :: ThreshValue -> (Int32, CDouble)
-marshalThreshValue = \case
-    ThreshVal_Abs val  -> (0                , realToFrac val)
-    ThreshVal_Otsu     -> (c'THRESH_OTSU    , 0)
-    ThreshVal_Triangle -> (c'THRESH_TRIANGLE, 0)
 
 -- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
 

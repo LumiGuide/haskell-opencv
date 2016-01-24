@@ -12,8 +12,8 @@ data ColorCode
     | BayerRG   -- ^ ('bayerRG') Bayer pattern with RG in the second row, second and third column
 
     | BGR       -- ^ ('bgr') 24 bit RGB color space with channels: (B8:G8:R8)
-    | BGR555    -- ^ ('bgr555') 15 bit RGB color space with channels: (B5:G5:R5)
-    | BGR565    -- ^ ('bgr565') 16 bit RGB color space with channels: (B5:G6:R5)
+    | BGR555    -- ^ ('bgr555') 15 bit RGB color space
+    | BGR565    -- ^ ('bgr565') 16 bit RGB color space
 
     | BGRA      -- ^ ('bgra') 32 bit RGBA color space with channels: (B8:G8:R8:A8)
     | BGRA_I420 -- ^ ('bgra_I420')
@@ -29,7 +29,7 @@ data ColorCode
     | BGRA_YV12 -- ^ ('bgra_YV12')
     | BGRA_YVYU -- ^ ('bgra_YVYU')
 
-    | BGR_EA    -- ^ ('bgr_EA')
+    | BGR_EA    -- ^ ('bgr_EA') Edge-Aware
     | BGR_FULL  -- ^ ('bgr_FULL')
     | BGR_I420  -- ^ ('bgr_I420')
     | BGR_IYUV  -- ^ ('bgr_IYUV')
@@ -85,7 +85,7 @@ data ColorCode
     | RGBA_YV12 -- ^ ('rgba_YV12')
     | RGBA_YVYU -- ^ ('rgba_YVYU')
 
-    | RGB_EA    -- ^ ('rgb_EA')
+    | RGB_EA    -- ^ ('rgb_EA') Edge-Aware
     | RGB_FULL  -- ^ ('rgb_FULL')
     | RGB_I420  -- ^ ('rgb_I420')
     | RGB_IYUV  -- ^ ('rgb_IYUV')
