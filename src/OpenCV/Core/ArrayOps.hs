@@ -49,7 +49,7 @@ C.using "namespace cv"
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
 addWeighted
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS MatDepth))
+     . (Convert (Proxy dstDepth) (DS Depth))
     => Mat shape channels srcDepth -- ^ src1
     -> Double -- ^ alpha
     -> Mat shape channels srcDepth -- ^ src2
@@ -77,7 +77,7 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     c'alpha = realToFrac alpha
     c'beta  = realToFrac beta
     c'gamma = realToFrac gamma
-    c'dtype = maybe (-1) marshalMatDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+    c'dtype = maybe (-1) marshalDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
 
 -- | Finds the global minimum and maximum in an array
 --
@@ -116,7 +116,7 @@ norm
     :: NormType
     -> Maybe (Mat shape ('S 1) ('S Word8))
        -- ^ Optional operation mask; it must have the same size as the input
-       -- array, depth 'MatDepth_8U' and 1 channel.
+       -- array, depth 'Depth_8U' and 1 channel.
     -> Mat shape channels depth -- ^ Input array.
     -> Either CvException Double  -- ^ Calculated norm.
 norm normType mbMask src = unsafePerformIO $
@@ -143,7 +143,7 @@ normDiff
     -> NormType
     -> Maybe (Mat shape ('S 1) ('S Word8))
        -- ^ Optional operation mask; it must have the same size as the input
-       -- array, depth 'MatDepth_8U' and 1 channel.
+       -- array, depth 'Depth_8U' and 1 channel.
     -> Mat shape channels depth -- ^ First input array.
     -> Mat shape channels depth -- ^ Second input array of the same size and type as the first.
     -> Either CvException Double -- ^ Calculated norm.
@@ -170,7 +170,7 @@ normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc>
 normalize
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (Maybe MatDepth))
+     . (Convert (Proxy dstDepth) (DS Depth))
     => Double
        -- ^ Norm value to normalize to or the lower range boundary in case of
        -- the range normalization.
@@ -202,7 +202,7 @@ normalize alpha beta normType mbMask src = unsafePerformIO $ do
     c'alpha    = realToFrac alpha
     c'beta     = realToFrac beta
     c'normType = marshalNormType NormAbsolute normType
-    c'dtype    = maybe (-1) marshalMatDepth $ convert (Proxy :: Proxy dstDepth)
+    c'dtype    = maybe (-1) marshalDepth $ dsToMaybe$ convert (Proxy :: Proxy dstDepth)
 
 -- | Calculates the sum of array elements
 --

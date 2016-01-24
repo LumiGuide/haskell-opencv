@@ -11,7 +11,7 @@ module OpenCV.Core.Types.Mat
     , DepthT
 
     , Mat
-    , MatDepth(..)
+    , Depth(..)
     , emptyMat
     , mkMat
     , mkMatM
@@ -67,7 +67,7 @@ emptyMat = unsafePerformIO newEmptyMat
 mkMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    MatDepth
+       , Convert depth    Depth
        , ToScalar scalar
        )
     => shape    -- ^
@@ -82,7 +82,7 @@ mkMatM
     :: ( PrimMonad m
        , Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    MatDepth
+       , Convert depth    Depth
        , ToScalar scalar
        )
     => shape    -- ^
@@ -101,7 +101,7 @@ eyeMat
     :: ( Convert height   Int32
        , Convert width    Int32
        , Convert channels Int32
-       , Convert depth    MatDepth
+       , Convert depth    Depth
        )
     => height   -- ^
     -> width    -- ^
@@ -225,7 +225,7 @@ matCopyToM dstMut (V2 x y) src =
 -}
 matConvertTo
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS MatDepth))
+     . (Convert (Proxy dstDepth) (DS Depth))
     => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
     -> Mat shape channels srcDepth
@@ -244,10 +244,10 @@ matConvertTo alpha beta src = unsafePerformIO $ do
                      );
         |]
   where
-    rtype :: Maybe MatDepth
+    rtype :: Maybe Depth
     rtype = dsToMaybe $ convert (Proxy :: Proxy dstDepth)
 
-    c'rtype = maybe (-1) marshalMatDepth rtype
+    c'rtype = maybe (-1) marshalDepth rtype
     c'alpha = maybe 1 realToFrac alpha
     c'beta  = maybe 0 realToFrac beta
 

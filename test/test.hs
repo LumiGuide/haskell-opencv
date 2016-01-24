@@ -48,8 +48,8 @@ main = defaultMain $ testGroup "thea"
         ]
       , testGroup "Mat"
         [ testGroup "matInfo"
-          [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] MatDepth_8U 3
-          , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] MatDepth_8U 3
+          [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
+          , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
           ]
         , testGroup "HMat"
           [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)

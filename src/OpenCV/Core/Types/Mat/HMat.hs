@@ -51,16 +51,16 @@ data HElems
    | HElems_USRTYPE1 !(V.Vector B.ByteString)
      deriving (Show, Eq)
 
-hElemsDepth :: HElems -> MatDepth
+hElemsDepth :: HElems -> Depth
 hElemsDepth = \case
-    HElems_8U       _v -> MatDepth_8U
-    HElems_8S       _v -> MatDepth_8S
-    HElems_16U      _v -> MatDepth_16U
-    HElems_16S      _v -> MatDepth_16S
-    HElems_32S      _v -> MatDepth_32S
-    HElems_32F      _v -> MatDepth_32F
-    HElems_64F      _v -> MatDepth_64F
-    HElems_USRTYPE1 _v -> MatDepth_USRTYPE1
+    HElems_8U       _v -> Depth_8U
+    HElems_8S       _v -> Depth_8S
+    HElems_16U      _v -> Depth_16U
+    HElems_16S      _v -> Depth_16S
+    HElems_32S      _v -> Depth_32S
+    HElems_32F      _v -> Depth_32F
+    HElems_64F      _v -> Depth_64F
+    HElems_USRTYPE1 _v -> Depth_USRTYPE1
 
 hElemsLength :: HElems -> Int
 hElemsLength = \case
@@ -91,14 +91,14 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
         -> IO HElems
     copyElems (MatInfo shape depth channels) step dataPtr =
         case depth of
-          MatDepth_8U  -> HElems_8U  <$> copyToVec
-          MatDepth_8S  -> HElems_8S  <$> copyToVec
-          MatDepth_16U -> HElems_16U <$> copyToVec
-          MatDepth_16S -> HElems_16S <$> copyToVec
-          MatDepth_32S -> HElems_32S <$> copyToVec
-          MatDepth_32F -> HElems_32F <$> copyToVec
-          MatDepth_64F -> HElems_64F <$> copyToVec
-          MatDepth_USRTYPE1 -> HElems_USRTYPE1 <$> error "todo"
+          Depth_8U  -> HElems_8U  <$> copyToVec
+          Depth_8S  -> HElems_8S  <$> copyToVec
+          Depth_16U -> HElems_16U <$> copyToVec
+          Depth_16S -> HElems_16S <$> copyToVec
+          Depth_32S -> HElems_32S <$> copyToVec
+          Depth_32F -> HElems_32F <$> copyToVec
+          Depth_64F -> HElems_64F <$> copyToVec
+          Depth_USRTYPE1 -> HElems_USRTYPE1 <$> error "todo"
       where
         copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
         copyToVec = do

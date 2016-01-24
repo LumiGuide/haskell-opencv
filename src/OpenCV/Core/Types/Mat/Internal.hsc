@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -7,32 +6,33 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module OpenCV.Core.Types.Mat.Internal
-    where
-    -- ( typeCheckMat
-    -- , coerceMat
-    -- , unsafeCoerceMat
-    -- , unsafeCoerceMatM
+    ( Depth(..)
+    , DepthT
+    , marshalDepth
+    , marshalFlags
+    , unmarshalDepth
+    , unmarshalFlags
 
-    -- , Mat(..)
-    -- , MutMat(..)
-    -- , MatDepth(..)
-    -- , matFromPtr
-    -- , withMatPtr
-    -- , withMbMatPtr
-    -- , keepMatAliveDuring
-    -- , newEmptyMat
-    -- , newMat
-    -- , newMatDyn
-    -- , marshalMatDepth
-    -- , marshalFlags
-    -- , unmarshalDepth
-    -- , unmarshalFlags
-    -- , withMatData
-    -- , matElemAddress
+    , Mat(..)
+    , MutMat(..)
 
-    -- , MatInfo(..)
-    -- , matInfo
-    -- ) where
+    , typeCheckMat
+    , coerceMat
+    , unsafeCoerceMat
+    , unsafeCoerceMatM
+
+    , matFromPtr
+    , withMatPtr
+    , withMbMatPtr
+    , keepMatAliveDuring
+    , newEmptyMat
+    , newMat
+    , withMatData
+    , matElemAddress
+
+    , MatInfo(..)
+    , matInfo
+    ) where
 
 import "base" Data.Bits
 import "base" Data.Int
@@ -74,29 +74,29 @@ C.using "namespace cv"
 
 --------------------------------------------------------------------------------
 
-data MatDepth =
-     MatDepth_8U
-   | MatDepth_8S
-   | MatDepth_16U
-   | MatDepth_16S
-   | MatDepth_32S
-   | MatDepth_32F
-   | MatDepth_64F
-   | MatDepth_USRTYPE1
+data Depth =
+     Depth_8U
+   | Depth_8S
+   | Depth_16U
+   | Depth_16S
+   | Depth_32S
+   | Depth_32F
+   | Depth_64F
+   | Depth_USRTYPE1
      deriving (Show, Eq)
 
-instance Convert (Proxy Word8 ) MatDepth where convert _p = MatDepth_8U
-instance Convert (Proxy Int8  ) MatDepth where convert _p = MatDepth_8S
-instance Convert (Proxy Word16) MatDepth where convert _p = MatDepth_16U
-instance Convert (Proxy Int16 ) MatDepth where convert _p = MatDepth_16S
-instance Convert (Proxy Int32 ) MatDepth where convert _p = MatDepth_32S
-instance Convert (Proxy Float ) MatDepth where convert _p = MatDepth_32F
-instance Convert (Proxy Double) MatDepth where convert _p = MatDepth_64F
--- TODO (BvD): instance ToMatDepth ? where toMatDepth = const MatDepth_USRTYPE1
+instance Convert (Proxy Word8 ) Depth where convert _p = Depth_8U
+instance Convert (Proxy Int8  ) Depth where convert _p = Depth_8S
+instance Convert (Proxy Word16) Depth where convert _p = Depth_16U
+instance Convert (Proxy Int16 ) Depth where convert _p = Depth_16S
+instance Convert (Proxy Int32 ) Depth where convert _p = Depth_32S
+instance Convert (Proxy Float ) Depth where convert _p = Depth_32F
+instance Convert (Proxy Double) Depth where convert _p = Depth_64F
+-- TODO (BvD): instance ToDepth ? where toDepth = const Depth_USRTYPE1
 -- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
 
 type family DepthT a :: DS * where
-    DepthT MatDepth = 'D
+    DepthT Depth = 'D
     DepthT (Proxy d) = 'S d
 
 --------------------------------------------------------------------------------
@@ -115,38 +115,38 @@ type family DepthT a :: DS * where
 
 #num CV_MAT_DEPTH_MASK
 
-marshalMatDepth :: MatDepth -> Int32
-marshalMatDepth = \case
-    MatDepth_8U       -> c'CV_8U
-    MatDepth_8S       -> c'CV_8S
-    MatDepth_16U      -> c'CV_16U
-    MatDepth_16S      -> c'CV_16S
-    MatDepth_32S      -> c'CV_32S
-    MatDepth_32F      -> c'CV_32F
-    MatDepth_64F      -> c'CV_64F
-    MatDepth_USRTYPE1 -> c'CV_USRTYPE1
+marshalDepth :: Depth -> Int32
+marshalDepth = \case
+    Depth_8U       -> c'CV_8U
+    Depth_8S       -> c'CV_8S
+    Depth_16U      -> c'CV_16U
+    Depth_16S      -> c'CV_16S
+    Depth_32S      -> c'CV_32S
+    Depth_32F      -> c'CV_32F
+    Depth_64F      -> c'CV_64F
+    Depth_USRTYPE1 -> c'CV_USRTYPE1
 
 marshalFlags
-    :: MatDepth
+    :: Depth
     -> Int32 -- ^ Number of channels
     -> Int32
 marshalFlags depth cn =
-    marshalMatDepth depth
+    marshalDepth depth
       .|. ((cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
 
-unmarshalDepth :: Int32 -> MatDepth
+unmarshalDepth :: Int32 -> Depth
 unmarshalDepth n
-    | n == c'CV_8U       = MatDepth_8U
-    | n == c'CV_8S       = MatDepth_8S
-    | n == c'CV_16U      = MatDepth_16U
-    | n == c'CV_16S      = MatDepth_16S
-    | n == c'CV_32S      = MatDepth_32S
-    | n == c'CV_32F      = MatDepth_32F
-    | n == c'CV_64F      = MatDepth_64F
-    | n == c'CV_USRTYPE1 = MatDepth_USRTYPE1
+    | n == c'CV_8U       = Depth_8U
+    | n == c'CV_8S       = Depth_8S
+    | n == c'CV_16U      = Depth_16U
+    | n == c'CV_16S      = Depth_16S
+    | n == c'CV_32S      = Depth_32S
+    | n == c'CV_32F      = Depth_32F
+    | n == c'CV_64F      = Depth_64F
+    | n == c'CV_USRTYPE1 = Depth_USRTYPE1
     | otherwise          = error $ "unknown depth " <> show n
 
-unmarshalFlags :: Int32 -> (MatDepth, Int32)
+unmarshalFlags :: Int32 -> (Depth, Int32)
 unmarshalFlags n =
     ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
     , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
@@ -174,7 +174,7 @@ typeCheckMat
               (depth    :: DS *)
      . ( Convert (Proxy shape)    (DS [DS Int32])
        , Convert (Proxy channels) (DS Int32)
-       , Convert (Proxy depth)    (DS MatDepth)
+       , Convert (Proxy depth)    (DS Depth)
        )
     => Mat shape channels depth -> [String]
 typeCheckMat mat =
@@ -190,7 +190,7 @@ typeCheckMat mat =
     dsExpectedNumChannels :: DS Int32
     dsExpectedNumChannels = convert (Proxy :: Proxy channels)
 
-    dsExpectedDepth :: DS MatDepth
+    dsExpectedDepth :: DS Depth
     dsExpectedDepth = convert (Proxy :: Proxy depth)
 
     checkShape :: [DS Int32] -> [String]
@@ -231,7 +231,7 @@ typeCheckMat mat =
                              <> " doesn't equal actual number of channels "
                              <> show (miChannels mi)
 
-    checkDepth :: MatDepth -> Maybe String
+    checkDepth :: Depth -> Maybe String
     checkDepth expectedDepth
         | miDepth mi == expectedDepth = Nothing
         | otherwise = Just $ "Expected depth "
@@ -243,7 +243,7 @@ typeCheckMat mat =
 coerceMat
     :: ( Convert (Proxy shapeOut)    (DS [DS Int32])
        , Convert (Proxy channelsOut) (DS Int32)
-       , Convert (Proxy depthOut)    (DS MatDepth)
+       , Convert (Proxy depthOut)    (DS Depth)
        )
     => Mat shapeIn channelsIn depthIn -- ^
     -> Either [String] (Mat shapeOut channelsOut depthOut)
@@ -294,7 +294,7 @@ newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
 newMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    MatDepth
+       , Convert depth    Depth
        , ToScalar scalar
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
@@ -377,7 +377,7 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
 data MatInfo
    = MatInfo
      { miShape    :: ![Int32]
-     , miDepth    :: !MatDepth
+     , miDepth    :: !Depth
      , miChannels :: !Int32
      }
      deriving (Show, Eq)

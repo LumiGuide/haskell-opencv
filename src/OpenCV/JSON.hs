@@ -50,7 +50,7 @@ instance ToJSON (Mat shape channels depth) where
 
 instance ( Convert (Proxy shape)    (DS [DS Int32])
          , Convert (Proxy channels) (DS Int32)
-         , Convert (Proxy depth)    (DS MatDepth)
+         , Convert (Proxy depth)    (DS Depth)
          )
       => FromJSON (Mat shape channels depth) where
     parseJSON value = do
