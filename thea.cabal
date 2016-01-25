@@ -81,7 +81,6 @@ library
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.ImgProc.Types.Internal
-                 , OpenCV.ImgProc.MiscImgTransform.ColorCodes
                  , OpenCV.ImgProc.MiscImgTransform.Internal
                  , OpenCV.ImgCodecs.Internal
                  , Language.C.Inline.OpenCV
