@@ -2,7 +2,45 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module OpenCV.Core.Types.Internal where
+module OpenCV.Core.Types.Internal
+    ( -- * Point
+      -- ** 2D types
+      Point2i(..), ToPoint2i(toPoint2i), FromPoint2i(fromPoint2i)
+    , Point2f(..), ToPoint2f(toPoint2f), FromPoint2f(fromPoint2f)
+    , Point2d(..), ToPoint2d(toPoint2d), FromPoint2d(fromPoint2d)
+    , newPoint2i, point2iFromPtr, withPoint2iPtr
+    , newPoint2f, point2fFromPtr, withPoint2fPtr
+    , newPoint2d, point2dFromPtr, withPoint2dPtr
+      -- ** 3D types
+    , Point3i(..), ToPoint3i(toPoint3i), FromPoint3i(fromPoint3i)
+    , Point3f(..), ToPoint3f(toPoint3f), FromPoint3f(fromPoint3f)
+    , Point3d(..), ToPoint3d(toPoint3d), FromPoint3d(fromPoint3d)
+    , newPoint3i, point3iFromPtr, withPoint3iPtr
+    , newPoint3f, point3fFromPtr, withPoint3fPtr
+    , newPoint3d, point3dFromPtr, withPoint3dPtr
+      -- * Size
+    , Size2i(..), ToSize2i(toSize2i), FromSize2i(fromSize2i)
+    , Size2f(..), ToSize2f(toSize2f), FromSize2f(fromSize2f)
+    , newSize2i, size2iFromPtr, withSize2iPtr
+    , newSize2f, size2fFromPtr, withSize2fPtr
+      -- * Scalar
+    , Scalar(..), ToScalar(toScalar), FromScalar(fromScalar)
+    , newScalar, scalarFromPtr, withScalarPtr
+      -- * Rect
+    , Rect(..)
+    , newRect, rectFromPtr, withRectPtr
+      -- * RotatedRect
+    , RotatedRect(..)
+    , newRotatedRect, rotatedRectFromPtr, withRotatedRectPtr
+      -- * TermCriteria
+    , TermCriteria(..)
+    , newTermCriteria, termCriteriaFromPtr, withTermCriteriaPtr
+      -- * Polygons
+    , withPolygons
+    , withPoint2is
+    , withPoint2fs
+    , withPoint2ds
+    ) where
 
 import "base" Data.Bits ( (.|.) )
 import "base" Data.Functor ( ($>) )
@@ -39,6 +77,7 @@ C.using "namespace cv"
 
 #sizeof Point2i
 #sizeof Point2f
+#sizeof Point2d
 
 
 --------------------------------------------------------------------------------
@@ -509,9 +548,9 @@ withPoint2is points act =
         [C.exp| void { new($(Point2i * destPtr)) Point2i(*$(Point2i * srcPtr)) }|]
 
 withPoint2fs
-    :: forall a point2i
-     . (ToPoint2f point2i)
-    => V.Vector point2i
+    :: forall a point2f
+     . (ToPoint2f point2f)
+    => V.Vector point2f
     -> (Ptr C'Point2f -> IO a)
     -> IO a
 withPoint2fs points act =
@@ -519,10 +558,29 @@ withPoint2fs points act =
       V.foldM'_ copyNext ptsPtr points
       act ptsPtr
   where
-    copyNext :: Ptr C'Point2f -> point2i -> IO (Ptr C'Point2f)
+    copyNext :: Ptr C'Point2f -> point2f -> IO (Ptr C'Point2f)
     copyNext !ptr point = copyPoint2f ptr point $> plusPtr ptr c'sizeof_Point2f
 
-    copyPoint2f :: Ptr C'Point2f -> point2i -> IO ()
+    copyPoint2f :: Ptr C'Point2f -> point2f -> IO ()
     copyPoint2f destPtr src =
       withPoint2fPtr (toPoint2f src) $ \srcPtr ->
         [C.exp| void { new($(Point2f * destPtr)) Point2f(*$(Point2f * srcPtr)) }|]
+
+withPoint2ds
+    :: forall a point2d
+     . (ToPoint2d point2d)
+    => V.Vector point2d
+    -> (Ptr C'Point2d -> IO a)
+    -> IO a
+withPoint2ds points act =
+    allocaBytes (c'sizeof_Point2d * V.length points) $ \ptsPtr -> do
+      V.foldM'_ copyNext ptsPtr points
+      act ptsPtr
+  where
+    copyNext :: Ptr C'Point2d -> point2d -> IO (Ptr C'Point2d)
+    copyNext !ptr point = copyPoint2d ptr point $> plusPtr ptr c'sizeof_Point2d
+
+    copyPoint2d :: Ptr C'Point2d -> point2d -> IO ()
+    copyPoint2d destPtr src =
+      withPoint2dPtr (toPoint2d src) $ \srcPtr ->
+        [C.exp| void { new($(Point2d * destPtr)) Point2d(*$(Point2d * srcPtr)) }|]

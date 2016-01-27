@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -fno-warn-dodgy-exports #-}
 
 module OpenCV
-    ( module OpenCV.Core
+    ( module OpenCV.Calib3d
+    , module OpenCV.Core
     , module OpenCV.Core.Types
     , module OpenCV.Core.Types.Mat
     , module OpenCV.Core.Types.Mat.HMat
@@ -24,6 +25,7 @@ module OpenCV
     , module OpenCV.JSON
     ) where
 
+import OpenCV.Calib3d
 import OpenCV.Core
 import OpenCV.Core.Types
 import OpenCV.Core.Types.Mat
