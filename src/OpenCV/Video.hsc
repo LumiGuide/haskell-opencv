@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -37,7 +36,9 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/video/doc/motion_analysis_and_object_tracking.html#estimaterigidtransform OpenCV Sphinx doc>
 estimateRigidTransform
-    :: (ToPoint2i srcPoint2i, ToPoint2i dstPoint2i)
+    :: ( Convert srcPoint2i Point2i
+       , Convert dstPoint2i Point2i
+       )
     => V.Vector srcPoint2i -- ^ Source
     -> V.Vector dstPoint2i -- ^ Destination
     -> Bool -- ^ Full affine
@@ -48,8 +49,8 @@ estimateRigidTransform src dst fullAffine =
     c'estimateRigidTransform = unsafePerformIO $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withPoint2is src $ \srcPtr ->
-        withPoint2is dst $ \dstPtr ->
+        withArrayPtr (V.map convert src :: V.Vector Point2i) $ \srcPtr ->
+        withArrayPtr (V.map convert dst :: V.Vector Point2i) $ \dstPtr ->
         withMatPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);

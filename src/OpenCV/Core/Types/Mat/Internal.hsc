@@ -1,5 +1,4 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -20,6 +19,7 @@ module OpenCV.Core.Types.Mat.Internal
     , coerceMat
     , unsafeCoerceMat
     , unsafeCoerceMatM
+    , relaxMat
 
     , matFromPtr
     , withMatPtr
@@ -96,7 +96,7 @@ instance Convert (Proxy Double) Depth where convert _p = Depth_64F
 -- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
 
 type family DepthT a :: DS * where
-    DepthT Depth = 'D
+    DepthT Depth     = 'D
     DepthT (Proxy d) = 'S d
 
 --------------------------------------------------------------------------------
@@ -167,16 +167,31 @@ newtype MutMat (shape    :: DS [DS Nat])
 
 --------------------------------------------------------------------------------
 
--- | Tests whether a Mat is deserving of its type level attributes
+{- | Tests whether a 'Mat' is deserving of its type level attributes
+
+Checks if the properties encoded in the type of a 'Mat' correspond to
+the value level representation. For each property that does not hold
+this function will produce an error message. If everything checks out
+it will produce an empty list.
+
+The following properties are checked:
+
+ * Dimensionality
+ * Size of each dimension
+ * Number of channels
+ * Depth (data type of elements)
+
+If a property is explicitly encoded as statically unknown ('D'ynamic)
+it will not be checked.
+-}
 typeCheckMat
-    :: forall (shape    :: DS [DS Nat])
-              (channels :: DS Nat)
-              (depth    :: DS *)
+    :: forall shape channels depth
      . ( Convert (Proxy shape)    (DS [DS Int32])
        , Convert (Proxy channels) (DS Int32)
        , Convert (Proxy depth)    (DS Depth)
        )
-    => Mat shape channels depth -> [String]
+    => Mat shape channels depth -- ^ The matrix to be checked.
+    -> [String] -- ^ Error messages.
 typeCheckMat mat =
        fromMaybe [] (checkShape <$> dsToMaybe dsExpectedShape)
     <> maybeToList (dsToMaybe dsExpectedNumChannels >>= checkNumChannels)
@@ -263,6 +278,26 @@ unsafeCoerceMatM
     -> MutMat shapeOut channelsOut depthOut s
 unsafeCoerceMatM = unsafeCoerce
 
+-- | Relaxes the type level constraints
+--
+-- Only identical or looser constraints are allowed. For tighter
+-- constraints use 'coerceMat'.
+--
+-- This allows you to \'forget\' type level guarantees for zero
+-- cost. Similar to 'unsafeCoerceMat', but totally safe.
+--
+-- [Identical] @a@ to @b@ with @a ~ b@
+-- [Looser]  @(\''S' a)@ to @\''D'@ or @(\''S' a)@ to @(\''S' b)@ with @'MayRelax' a b@
+-- [Tighter] @\''D'@ to @(\''S' a)@
+relaxMat
+    :: ( MayRelax shapeIn    shapeOut
+       , MayRelax channelsIn channelsOut
+       , MayRelax depthIn    depthOut
+       )
+    => Mat shapeIn  channelsIn  depthIn  -- ^ Original 'Mat'.
+    -> Mat shapeOut channelsOut depthOut -- ^ 'Mat' with relaxed constraints.
+relaxMat = unsafeCoerce
+
 --------------------------------------------------------------------------------
 
 matFromPtr :: IO (Ptr C'Mat) -> IO (Mat 'D 'D 'D)
@@ -286,8 +321,8 @@ keepMatAliveDuring mat m = do
     touchForeignPtr $ unMat mat
     pure x
 
-newEmptyMat :: IO (Mat 'D 'D 'D)
-newEmptyMat = matFromPtr [CU.exp|Mat * { new Mat() }|]
+newEmptyMat :: IO (Mat ('S '[]) ('S 1) ('S Word8))
+newEmptyMat = unsafeCoerceMat <$> matFromPtr [CU.exp|Mat * { new Mat() }|]
 
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
@@ -295,7 +330,7 @@ newMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , ToScalar scalar
+       , Convert scalar   Scalar
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
        -- , channels .<=? 512
@@ -310,7 +345,7 @@ newMat
     -> IO (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 newMat shape channels depth defValue = fmap unsafeCoerceMat $
     withVector shape' $ \shapePtr ->
-    withScalarPtr defValue $ \scalarPtr ->
+    withPtr (convert defValue :: Scalar) $ \scalarPtr ->
       matFromPtr [CU.exp|Mat * {
         new Mat( $(int32_t c'ndims)
                , $(int32_t * shapePtr)

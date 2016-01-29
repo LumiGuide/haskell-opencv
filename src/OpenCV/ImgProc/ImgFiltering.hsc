@@ -72,7 +72,7 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 defaultAnchor :: Point2i
-defaultAnchor = toPoint2i (pure (-1) :: V2 Int32)
+defaultAnchor = convert (pure (-1) :: V2 Int32)
 
 
 --------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ erodeImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
 -}
 erode
-    :: ( ToPoint2i point2i
+    :: ( Convert point2i Point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -225,11 +225,11 @@ erode
 erode src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr     src         $ \srcPtr         ->
-      withMatPtr     dst         $ \dstPtr         ->
-      withMatPtr     kernel      $ \kernelPtr      ->
-      withPoint2iPtr anchor      $ \anchorPtr      ->
-      withScalarPtr  borderValue $ \borderValuePtr ->
+      withMatPtr src    $ \srcPtr    ->
+      withMatPtr dst    $ \dstPtr    ->
+      withMatPtr kernel $ \kernelPtr ->
+      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::erode
           ( *$(Mat     * srcPtr        )
@@ -243,9 +243,9 @@ erode src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
         |]
   where
     kernel :: Mat 'D 'D 'D
-    kernel = maybe emptyMat unsafeCoerceMat mbKernel
+    kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor convert mbAnchor
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -284,7 +284,7 @@ dilateImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
 -}
 dilate
-    :: ( ToPoint2i point2i
+    :: ( Convert point2i Point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -299,11 +299,11 @@ dilate
 dilate src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr     src         $ \srcPtr         ->
-      withMatPtr     dst         $ \dstPtr         ->
-      withMatPtr     kernel      $ \kernelPtr      ->
-      withPoint2iPtr anchor      $ \anchorPtr      ->
-      withScalarPtr  borderValue $ \borderValuePtr ->
+      withMatPtr src    $ \srcPtr    ->
+      withMatPtr dst    $ \dstPtr    ->
+      withMatPtr kernel $ \kernelPtr ->
+      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::dilate
           ( *$(Mat     * srcPtr        )
@@ -317,9 +317,9 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
         |]
   where
     kernel :: Mat 'D 'D 'D
-    kernel = maybe emptyMat unsafeCoerceMat mbKernel
+    kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor convert mbAnchor
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -328,7 +328,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
-    :: ( ToPoint2i point2i
+    :: ( Convert point2i Point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
      => Mat shape channels ('S depth) -- ^ Source image.
@@ -341,11 +341,11 @@ morphologyEx
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr     src         $ \srcPtr         ->
-      withMatPtr     dst         $ \dstPtr         ->
-      withMatPtr     kernel      $ \kernelPtr      ->
-      withPoint2iPtr anchor      $ \anchorPtr      ->
-      withScalarPtr  borderValue $ \borderValuePtr ->
+      withMatPtr src    $ \srcPtr    ->
+      withMatPtr dst    $ \dstPtr    ->
+      withMatPtr kernel $ \kernelPtr ->
+      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::morphologyEx
           ( *$(Mat     * srcPtr        )
@@ -361,7 +361,7 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
 
   where
     c'op = marshalMorphOperation op
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor convert mbAnchor
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -387,7 +387,7 @@ morphEllipseImg :: StructureImg
 morphEllipseImg = structureImg MorphEllipse
 
 morphCrossImg :: StructureImg
-morphCrossImg = structureImg (MorphCross $ toPoint2i $ (pure (-1) :: V2 Int32))
+morphCrossImg = structureImg (MorphCross $ convert $ (pure (-1) :: V2 Int32))
 @
 
 <<doc/generated/examples/morphEllipseImg.png morphEllipseImg>>
@@ -405,9 +405,9 @@ getStructuringElement
 getStructuringElement morphShape height width = unsafePerformIO $ do
     element <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat element) $
-      withSize2iPtr  ksize   $ \ksizePtr   ->
-      withPoint2iPtr anchor  $ \anchorPtr  ->
-      withMatPtr     element $ \elementPtr ->
+      withPtr    ksize   $ \ksizePtr   ->
+      withPtr    anchor  $ \anchorPtr  ->
+      withMatPtr element $ \elementPtr ->
        [cvExcept|
          *$(Mat * elementPtr) =
            cv::getStructuringElement
@@ -417,5 +417,6 @@ getStructuringElement morphShape height width = unsafePerformIO $ do
            );
        |]
   where
-    ksize = toSize2i (V2 (convert width) (convert height) :: V2 Int32)
+    ksize :: Size2i
+    ksize = convert (V2 (convert width) (convert height) :: V2 Int32)
     (c'morphShape, anchor) = marshalMorphShape morphShape

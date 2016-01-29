@@ -91,8 +91,8 @@ minMaxLoc src = unsafePerformIO $ do
     minLoc <- newPoint2i zero
     maxLoc <- newPoint2i zero
     withMatPtr src $ \srcPtr ->
-      withPoint2iPtr minLoc $ \minLocPtr ->
-      withPoint2iPtr maxLoc $ \maxLocPtr ->
+      withPtr minLoc $ \minLocPtr ->
+      withPtr maxLoc $ \maxLocPtr ->
       alloca $ \minValPtr ->
       alloca $ \maxValPtr -> do
         handleCvException
@@ -216,7 +216,7 @@ matSum src = unsafePerformIO $ do
     s <- newScalar zero
     handleCvException (pure s) $
       withMatPtr src $ \srcPtr ->
-      withScalarPtr s $ \sPtr ->
+      withPtr s $ \sPtr ->
         [cvExcept|
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
         |]

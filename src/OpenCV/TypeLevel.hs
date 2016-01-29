@@ -1,6 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -14,10 +13,15 @@ module OpenCV.TypeLevel
     , Convert(convert)
 
       -- * Type functions
+    , Not
+    , And
+    , Or
     , Length
     , Elem
+    , Relax
       -- ** Predicates (constraints)
     , In
+    , MayRelax
       -- ** Type conversions
     , DSNat
     , DSNats
@@ -36,9 +40,15 @@ import qualified "vector" Data.Vector as V
 
 -- | 'D'ynamically or 'S'tatically known values
 --
+-- Mainly used as a promoted type.
+--
 -- Operationally exactly the 'Maybe' type
-data DS a = D | S a deriving (Show, Eq, Functor)
+data DS a
+   = D   -- ^ Something is dynamically known
+   | S a -- ^ Something is statically known, in particular: @a@
+     deriving (Show, Eq, Functor)
 
+-- | Converts a DS value to the corresponding Maybe value
 dsToMaybe :: DS a -> Maybe a
 dsToMaybe D     = Nothing
 dsToMaybe (S a) = Just a
@@ -110,6 +120,19 @@ instance (Convert (Proxy a) b)
 -- Type functions
 --------------------------------------------------------------------------------
 
+type family Not (a :: Bool) :: Bool where
+    Not 'True  = 'False
+    Not 'False = 'True
+
+type family And (a :: Bool) (b :: Bool) :: Bool where
+    And 'True 'True = 'True
+    And a     b     = 'False
+
+type family Or (a :: Bool) (b :: Bool) :: Bool where
+    Or 'True b     = 'True
+    Or a     'True = 'True
+    Or a     b     = 'False
+
 type family Length (xs :: [a]) :: Nat where
     Length '[]        = 0
     Length (_x ': xs) = 1 + Length xs
@@ -143,6 +166,13 @@ type family ShapeT (a :: ka) :: DS [DS Nat] where
     ShapeT (xs :: [Nat])    = 'S (DSNats xs)
     ShapeT (Proxy a)        = ShapeT a
 
+type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
+    Relax x      'D     = 'True
+    Relax ('S (x ': xs)) ('S (y ': ys)) = Relax x y `And` Relax ('S xs) ('S ys)
+    Relax ('S x) ('S y) = 'True
+    Relax x      y      = 'False
+
+type MayRelax a b = Relax a b ~ 'True
 
 -- type family LeDS_F (a :: Nat) (b :: DS Nat) :: Bool where
 --     LeDS_F _a 'D     = 'True

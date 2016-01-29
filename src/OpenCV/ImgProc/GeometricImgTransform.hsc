@@ -97,7 +97,7 @@ marshalResizeAbsRel
 marshalResizeAbsRel (ResizeAbs s) = (s, 0   , 0   )
 marshalResizeAbsRel (ResizeRel f) = (s, c'fx, c'fy)
   where
-    s = toSize2i (zero :: V2 Int32)
+    s = convert (zero :: V2 Int32)
     (V2 c'fx c'fy) = realToFrac <$> f
 
 {- | Resizes an image
@@ -140,9 +140,9 @@ resize
 resize factor interpolationMethod src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src $ \srcPtr ->
-      withMatPtr dst $ \dstPtr ->
-      withSize2iPtr dsize $ \dsizePtr ->
+      withMatPtr src   $ \srcPtr   ->
+      withMatPtr dst   $ \dstPtr   ->
+      withPtr    dsize $ \dsizePtr ->
         [cvExcept|
           cv::resize
           ( *$(Mat * srcPtr)
@@ -197,8 +197,8 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
       handleCvException (pure $ unsafeCoerceMat dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
-        withMatPtr transform $ \transformPtr ->
-        withScalarPtr borderValue $ \borderValuePtr ->
+        withMatPtr transform   $ \transformPtr ->
+        withPtr    borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpAffine
@@ -234,8 +234,8 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
       handleCvException (pure $ unsafeCoerceMat dst) $
         withMatPtr src $ \srcPtr ->
         withMatPtr dst $ \dstPtr ->
-        withMatPtr transform $ \transformPtr ->
-        withScalarPtr borderValue $ \borderValuePtr ->
+        withMatPtr transform   $ \transformPtr   ->
+        withPtr    borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpPerspective
@@ -274,7 +274,7 @@ invertAffineTransform matIn = unsafePerformIO $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
 -}
 getRotationMatrix2D
-    :: (ToPoint2f point2f)
+    :: (Convert point2f Point2f)
     => point2f -- ^ Center of the rotation in the source image.
     -> Double
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
@@ -282,7 +282,7 @@ getRotationMatrix2D
     -> Double -- ^ Isotropic scale factor.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
-    withPoint2fPtr center $ \centerPtr ->
+    withPtr (convert center :: Point2f) $ \centerPtr ->
       matFromPtr
       [CU.block| Mat * {
         return new cv::Mat

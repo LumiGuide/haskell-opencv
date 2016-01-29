@@ -162,9 +162,9 @@ arrowedLineImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 -}
 arrowedLine
-    :: ( ToPoint2i fromPoint2i
-       , ToPoint2i toPoint2i
-       , ToScalar color
+    :: ( Convert fromPoint2i Point2i
+       , Convert toPoint2i   Point2i
+       , Convert color       Scalar
        , PrimMonad m
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
@@ -179,9 +179,9 @@ arrowedLine
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoint2iPtr pt1 $ \pt1Ptr ->
-    withPoint2iPtr pt2 $ \pt2Ptr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
+    withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
+    withPtr (convert color :: Scalar)  $ \colorPtr ->
       [C.exp|void {
         cv::arrowedLine( *$(Mat * matPtr)
                        , *$(Point2i * pt1Ptr)
@@ -218,7 +218,10 @@ circleImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc>
 -}
 circle
-    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image where the circle is drawn.
     -> point2i -- ^ Center of the circle.
     -> Int32 -- ^ Radius of the circle.
@@ -230,8 +233,8 @@ circle
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoint2iPtr center $ \centerPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert center :: Point2i) $ \centerPtr ->
+    withPtr (convert color  :: Scalar ) $ \colorPtr  ->
       [C.exp|void {
         cv::circle( *$(Mat * matPtr)
                   , *$(Point2i * centerPtr)
@@ -266,7 +269,11 @@ ellipseImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc>
 -}
 ellipse
-    :: (PrimMonad m, ToPoint2i point2i, ToSize2i size2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert size2i  Size2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> point2i -- ^ Center of the ellipse.
     -> size2i -- ^ Half of the size of the ellipse main axes.
@@ -284,9 +291,9 @@ ellipse
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoint2iPtr center $ \centerPtr ->
-    withSize2iPtr axes $ \axesPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert center :: Point2i) $ \centerPtr ->
+    withPtr (convert axes   :: Size2i ) $ \axesPtr   ->
+    withPtr (convert color  :: Scalar ) $ \colorPtr  ->
       [C.exp|void {
         cv::ellipse( *$(Mat * matPtr)
                    , *$(Point2i * centerPtr)
@@ -318,7 +325,10 @@ top-most and/or the bottom edge could be horizontal).
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc>
 -}
 fillConvexPoly
-    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector point2i -- ^ Polygon vertices.
     -> color -- ^ Polygon color.
@@ -328,8 +338,8 @@ fillConvexPoly
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoint2is points $ \pointsPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withArrayPtr (V.map convert points :: V.Vector Point2i) $ \pointsPtr ->
+    withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
                           , $(Point2i * pointsPtr)
@@ -394,7 +404,10 @@ fillPolyImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc>
 -}
 fillPoly
-    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Polygons.
     -> color -- ^ Polygon color.
@@ -406,7 +419,7 @@ fillPoly img polygons color lineType shift =
     withMatPtr (unMutMat img) $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {
         cv::fillPoly( *$(Mat * matPtr)
                     , $(const Point2i * * polygonsPtr)
@@ -450,7 +463,10 @@ polylinesImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#polylines OpenCV Sphinx doc>
 -}
 polylines
-    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Vertices.
     -> Bool
@@ -467,7 +483,7 @@ polylines img curves isClosed color thickness lineType shift =
     withMatPtr (unMutMat img) $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {
         cv::polylines
         ( *$(Mat * matPtr)
@@ -510,7 +526,11 @@ lineImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc>
 -}
 line
-    :: (PrimMonad m, ToPoint2i fromPoint2i, ToPoint2i toPoint2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert fromPoint2i Point2i
+       , Convert toPoint2i   Point2i
+       , Convert color       Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ First point of the line segment.
     -> toPoint2i -- ^ Scond point of the line segment.
@@ -522,9 +542,9 @@ line
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withPoint2iPtr pt1 $ \pt1Ptr ->
-    withPoint2iPtr pt2 $ \pt2Ptr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
+    withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
+    withPtr (convert color :: Scalar ) $ \colorPtr ->
       [C.exp|void {
         cv::line( *$(Mat * matPtr)
                 , *$(Point2i * pt1Ptr)
@@ -599,7 +619,10 @@ putTextImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc>
 -}
 putText
-    :: (PrimMonad m, ToPoint2i point2i, ToScalar color)
+    :: ( PrimMonad m
+       , Convert point2i Point2i
+       , Convert color   Scalar
+       )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
     -> point2i -- ^ Bottom-left corner of the text string in the image.
@@ -614,8 +637,8 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    withPoint2iPtr org $ \orgPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr (convert org   :: Point2i) $ \orgPtr   ->
+    withPtr (convert color :: Scalar ) $ \colorPtr ->
       [C.exp|void {
         cv::putText( *$(Mat * matPtr)
                    , $(char * c'text)
@@ -655,7 +678,7 @@ rectangleImg = createMat $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
-    :: (PrimMonad m, ToScalar color)
+    :: (PrimMonad m, Convert color Scalar)
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Rect
     -> color -- ^ Rectangle color or brightness (grayscale image).
@@ -666,8 +689,8 @@ rectangle
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
     withMatPtr (unMutMat img) $ \matPtr ->
-    withRectPtr rect $ \rectPtr ->
-    withScalarPtr color $ \colorPtr ->
+    withPtr rect $ \rectPtr ->
+    withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {
         cv::rectangle( *$(Mat * matPtr)
                      , *$(Rect * rectPtr)

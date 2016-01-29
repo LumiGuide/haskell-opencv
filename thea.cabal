@@ -81,6 +81,7 @@ library
                  , OpenCV.Exception
                  , OpenCV.Internal
                  , OpenCV.Core.ArrayOps.Internal
+                 , OpenCV.Core.Types.Constants
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.ImgProc.Types.Internal
@@ -91,6 +92,7 @@ library
   default-extensions: BangPatterns
                     , DataKinds
                     , FlexibleContexts
+                    , FlexibleInstances
                     , LambdaCase
                     , OverloadedStrings
                     , PackageImports
@@ -151,6 +153,7 @@ test-suite test-thea
                , vector
 
   default-extensions: DataKinds
+                    , FlexibleContexts
                     , PackageImports
                     , RankNTypes
                     , ScopedTypeVariables

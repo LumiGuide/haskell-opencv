@@ -26,24 +26,24 @@ import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
-#define IsoJSON(A, B, A_TO_B, B_TO_A)                \
-instance ToJSON A where {                            \
-    toJSON = toJSON . (A_TO_B :: A -> B);            \
-};                                                   \
-instance FromJSON A where {                          \
-    parseJSON = fmap (B_TO_A :: B -> A) . parseJSON; \
+#define IsoJSON(A, B, CONVERT)                        \
+instance ToJSON A where {                             \
+    toJSON = toJSON . (CONVERT :: A -> B);            \
+};                                                    \
+instance FromJSON A where {                           \
+    parseJSON = fmap (CONVERT :: B -> A) . parseJSON; \
 }
 
 --------------------------------------------------------------------------------
 
-IsoJSON(Point2i, V2 Int32 , fromPoint2i, toPoint2i)
-IsoJSON(Point2f, V2 Float , fromPoint2f, toPoint2f)
-IsoJSON(Point2d, V2 Double, fromPoint2d, toPoint2d)
-IsoJSON(Point3i, V3 Int32 , fromPoint3i, toPoint3i)
-IsoJSON(Point3f, V3 Float , fromPoint3f, toPoint3f)
-IsoJSON(Point3d, V3 Double, fromPoint3d, toPoint3d)
-IsoJSON(Size2i , V2 Int32 , fromSize2i , toSize2i )
-IsoJSON(Size2f , V2 Float , fromSize2f , toSize2f )
+IsoJSON(Point2i, V2 Int32 , convert)
+IsoJSON(Point2f, V2 Float , convert)
+IsoJSON(Point2d, V2 Double, convert)
+IsoJSON(Point3i, V3 Int32 , convert)
+IsoJSON(Point3f, V3 Float , convert)
+IsoJSON(Point3d, V3 Double, convert)
+IsoJSON(Size2i , V2 Int32 , convert)
+IsoJSON(Size2f , V2 Float , convert)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat

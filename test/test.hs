@@ -22,19 +22,24 @@ import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import "thea" OpenCV
 import qualified "QuickCheck" Test.QuickCheck as QC
+import qualified "vector" Data.Vector as V
 
 main :: IO ()
 main = defaultMain $ testGroup "thea"
-    [ testGroup "Core"
+    [ testGroup "Calib3d"
+      [ HU.testCase "findFundamentalMat - no points" testFindFundamentalMat_noPoints
+      , HU.testCase "findFundamentalMat" testFindFundamentalMat
+      ]
+    , testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (toPoint2i :: V2 Int32  -> Point2i) fromPoint2i
-        , testIso "isoPoint2fV2" (toPoint2f :: V2 Float  -> Point2f) fromPoint2f
-        , testIso "isoPoint2dV2" (toPoint2d :: V2 Double -> Point2d) fromPoint2d
-        , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
-        , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
-        , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
-        , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
-        , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
+        [ testIso "isoPoint2iV2" (convert :: V2 Int32  -> Point2i) convert
+        , testIso "isoPoint2fV2" (convert :: V2 Float  -> Point2f) convert
+        , testIso "isoPoint2dV2" (convert :: V2 Double -> Point2d) convert
+        , testIso "isoPoint3iV3" (convert :: V3 Int32  -> Point3i) convert
+        , testIso "isoPoint3fV3" (convert :: V3 Float  -> Point3f) convert
+        , testIso "isoPoint3dV3" (convert :: V3 Double -> Point3d) convert
+        , testIso "isoSize2iV2"  (convert :: V2 Int32  -> Size2i ) convert
+        , testIso "isoSize2fV2"  (convert :: V2 Float  -> Size2f ) convert
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -46,26 +51,29 @@ main = defaultMain $ testGroup "thea"
       , testGroup "Scalar"
         [
         ]
-      , testGroup "Mat"
-        [ testGroup "matInfo"
-          [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
-          , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
-          ]
-        , testGroup "HMat"
-          [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
-          -- , HU.testCase "eye 33" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
-          , testGroup "mat -> hmat -> mat -> hmat"
-            [ HU.testCase "eye 33 - 1 channel"  $ hMatEncodeDecode eye33_8u_1c
-            , HU.testCase "eye 22 - 3 channels" $ hMatEncodeDecode eye22_8u_3c
-            , hMatEncodeDecodeFP "Lenna.png"
-            , hMatEncodeDecodeFP "kikker.jpg"
+      , testGroup "Types"
+        [ testGroup "Mat"
+          [ HU.testCase "emptyMat" $ testMatType emptyMat
+          , testGroup "matInfo"
+            [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
+            , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
             ]
-          ]
-        , testGroup "Repa"
-          [ HU.testCase "imgToRepa" imgToRepa ]
-        , testGroup "fixed size matrices"
-          [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
-          , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
+          , testGroup "HMat"
+            [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
+            -- , HU.testCase "eye 33" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
+            , testGroup "mat -> hmat -> mat -> hmat"
+              [ HU.testCase "eye 33 - 1 channel"  $ hMatEncodeDecode eye33_8u_1c
+              , HU.testCase "eye 22 - 3 channels" $ hMatEncodeDecode eye22_8u_3c
+              , hMatEncodeDecodeFP "Lenna.png"
+              , hMatEncodeDecodeFP "kikker.jpg"
+              ]
+            ]
+          , testGroup "Repa"
+            [ HU.testCase "imgToRepa" imgToRepa ]
+          , testGroup "fixed size matrices"
+            [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
+            , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
+            ]
           ]
         ]
       ]
@@ -96,6 +104,29 @@ main = defaultMain $ testGroup "thea"
       ]
     ]
 
+testFindFundamentalMat_noPoints :: HU.Assertion
+testFindFundamentalMat_noPoints =
+    case findFundamentalMat points points (FM_Ransac Nothing Nothing) of
+      Left err -> assertFailure (show err)
+      Right Nothing -> pure ()
+      Right (Just _) -> assertFailure "result despite lack of data"
+  where
+    points :: V.Vector (V2 Double)
+    points = V.empty
+
+testFindFundamentalMat :: HU.Assertion
+testFindFundamentalMat =
+    case findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
+      Left err -> assertFailure (show err)
+      Right Nothing -> assertFailure "couldn't find fundamental matrix"
+      Right (Just (fm, pointsMask)) -> do
+          assertNull (typeCheckMat fm        ) (("fm: "         <>) . show)
+          assertNull (typeCheckMat pointsMask) (("pointsMask: " <>) . show)
+  where
+    points1, points2 :: V.Vector (V2 Double)
+    points1 = V.fromList [V2 x y | x <- [0..10], y <- [0..10]]
+    points2 = V.map (^+^ (V2 3 2)) points1
+
 
 testIso :: (QC.Arbitrary a, Eq a, Show a) => String -> (a -> b) -> (b -> a) -> TestTree
 testIso name a_to_b b_to_a = QC.testProperty name $ \a -> a QC.=== (b_to_a . a_to_b) a
@@ -105,10 +136,10 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ fromPoint2i (rectTopLeft     rect) == tl
-      , fromPoint2i (rectBottomRight rect) == tl ^+^ size
-      , fromSize2i  (rectSize        rect) == size
-      ,              rectArea        rect  == (w  *  h)
+      [ convert (rectTopLeft     rect) == tl
+      , convert (rectBottomRight rect) == tl ^+^ size
+      , convert (rectSize        rect) == size
+      ,          rectArea        rect  == (w  *  h)
       ]
     where
       rect = mkRect tl size
@@ -126,13 +157,25 @@ myRectContains point rect =
         ]
   where
     px, py :: Int32
-    V2 px py = fromPoint2i point
+    V2 px py = convert point
 
     rx, ry :: Int32
-    V2 rx ry = fromPoint2i $ rectTopLeft rect
+    V2 rx ry = convert $ rectTopLeft rect
 
     w, h :: Int32
-    V2 w h = fromSize2i $ rectSize rect
+    V2 w h = convert $ rectSize rect
+
+testMatType
+    :: ( Convert (Proxy shape)    (DS [DS Int32])
+       , Convert (Proxy channels) (DS Int32)
+       , Convert (Proxy depth)    (DS Depth)
+       )
+    => Mat shape channels depth
+    -> HU.Assertion
+testMatType mat =
+    case typeCheckMat mat of
+      [] -> pure ()
+      errors -> assertFailure (intercalate ", " errors)
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
@@ -140,10 +183,7 @@ matHasInfoFP fp expectedInfo = HU.testCase fp $ do
     assertEqual "" expectedInfo (matInfo mat)
 
 testGetRotationMatrix2D :: HU.Assertion
-testGetRotationMatrix2D =
-    case coerceMat rot2D `asTypeOf` Right rot2D of
-      Left errors -> assertFailure (intercalate ", " errors)
-      Right _ -> return ()
+testGetRotationMatrix2D = testMatType rot2D
   where
     rot2D = getRotationMatrix2D (zero :: V2 Float) 0 0
 
@@ -238,4 +278,13 @@ instance QC.Arbitrary Rect where
     arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where
-    arbitrary = toPoint2i <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+    arbitrary = convert <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+
+--------------------------------------------------------------------------------
+
+assertNull
+    :: [a] -- ^ List that should be empty.
+    -> ([a] -> String) -- ^ Error when the list is not empty.
+    -> IO ()
+assertNull [] _showError = pure ()
+assertNull xs  showError = assertFailure $ showError xs

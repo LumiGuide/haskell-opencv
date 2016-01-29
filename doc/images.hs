@@ -26,11 +26,11 @@ import "this" ExampleExtractor ( render, extractExampleImages )
 --------------------------------------------------------------------------------
 
 transparent, white, black, blue, red :: Scalar
-transparent = toScalar (V4 255 255 255   0 :: V4 Double)
-white       = toScalar (V4 255 255 255 255 :: V4 Double)
-black       = toScalar (V4   0   0   0 255 :: V4 Double)
-blue        = toScalar (V4 255   0   0 255 :: V4 Double)
-red         = toScalar (V4   0   0 255 255 :: V4 Double)
+transparent = convert (V4 255 255 255   0 :: V4 Double)
+white       = convert (V4 255 255 255 255 :: V4 Double)
+black       = convert (V4   0   0   0 255 :: V4 Double)
+blue        = convert (V4 255   0   0 255 :: V4 Double)
+red         = convert (V4   0   0 255 255 :: V4 Double)
 
 type Birds_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Birds_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
@@ -42,7 +42,7 @@ birds_768x512 = either (error . concat) id $ coerceMat $ unsafePerformIO $
 
 birds_512x341 :: Birds_512x341
 birds_512x341 = either throw (either (error . concat) id . coerceMat) $
-                  resize (ResizeAbs $ toSize2i (V2 512 341 :: V2 Int32))
+                  resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
                          InterArea
                          birds_768x512
 
@@ -94,7 +94,7 @@ fontFaceImg fontFace = createMat $ do
     txt = "The quick brown fox jumps over the lazy dog"
     (size2i, baseLine) = getTextSize txt fontFace scale thickness
     tw, th :: Int32
-    V2 tw th = fromSize2i size2i
+    V2 tw th = convert size2i
     scale     = 1
     thickness = 1
 

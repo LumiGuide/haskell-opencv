@@ -1,13 +1,12 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
       coerceMat
+    , relaxMat
+    , typeCheckMat
     , DepthT
 
     , Mat
@@ -34,7 +33,8 @@ module OpenCV.Core.Types.Mat
 
 import "base" Control.Monad.ST ( RealWorld, ST, runST )
 import "base" Data.Int ( Int32 )
-import "base" Data.Proxy
+import "base" Data.Proxy ( Proxy(..) )
+import "base" Data.Word ( Word8 )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -61,14 +61,14 @@ C.using "namespace cv"
 -- Matrix
 --------------------------------------------------------------------------------
 
-emptyMat :: Mat 'D 'D 'D
+emptyMat :: Mat ('S '[]) ('S 1) ('S Word8)
 emptyMat = unsafePerformIO newEmptyMat
 
 mkMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , ToScalar scalar
+       , Convert scalar   Scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -83,7 +83,7 @@ mkMatM
        , Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , ToScalar scalar
+       , Convert scalar   Scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -155,7 +155,7 @@ matSubRectImg = createMat $ do
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
     subImg = either throw id $
-               resize (ResizeAbs $ toSize2i (w, h)) InterCubic =<<
+               resize (ResizeAbs $ convert (w, h)) InterCubic =<<
                matSubRect birds_512x341 subRect
     [h, w] = miShape $ matInfo birds_512x341
 @
@@ -171,7 +171,7 @@ matSubRect matIn rect = unsafePerformIO $ do
     handleCvException (pure $ unsafeCoerceMat matOut) $
       withMatPtr matIn $ \matInPtr ->
       withMatPtr matOut $ \matOutPtr ->
-      withRectPtr rect $ \rectPtr ->
+      withPtr rect $ \rectPtr ->
         [cvExceptU|
           *$(Mat * matOutPtr) =
             Mat( *$(Mat * matInPtr)

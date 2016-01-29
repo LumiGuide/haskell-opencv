@@ -4,8 +4,9 @@ import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types ( CDouble )
 import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
-import "this" OpenCV.Core.Types ( Scalar, toScalar )
+import "this" OpenCV.Core.Types ( Scalar )
 import "this" OpenCV.ImgProc.Types
+import "this" OpenCV.TypeLevel
 
 
 --------------------------------------------------------------------------------
@@ -50,4 +51,4 @@ marshalBorderMode = \case
     BorderIsolated    -> (c'BORDER_ISOLATED    , zeroScalar)
   where
     zeroScalar :: Scalar
-    zeroScalar = toScalar (zero :: V4 CDouble)
+    zeroScalar = convert (zero :: V4 CDouble)

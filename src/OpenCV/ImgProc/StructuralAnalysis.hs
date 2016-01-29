@@ -14,7 +14,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Exception ( CvException, handleCvException, cvExcept )
 import "this" OpenCV.Core.Types.Internal
-    ( ToPoint2f, toPoint2f, withPoint2fPtr, withPoint2fs )
+import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -40,7 +40,9 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
 pointPolygonTest
-    :: (ToPoint2f contourPoint2f, ToPoint2f testPoint2f)
+    :: ( Convert contourPoint2f Point2f
+       , Convert testPoint2f    Point2f
+       )
     => V.Vector contourPoint2f -- ^ Contour.
     -> testPoint2f -- ^ Point tested against the contour.
     -> Bool
@@ -49,8 +51,8 @@ pointPolygonTest
        -- the point is inside a contour or not.
     -> Either CvException Double
 pointPolygonTest contour pt measureDist = unsafePerformIO $
-    withPoint2fs contour $ \contourPtr ->
-    withPoint2fPtr (toPoint2f pt) $ \ptPtr ->
+    withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
+    withPtr (convert pt :: Point2f) $ \ptPtr ->
     alloca $ \(c'resultPtr) ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
