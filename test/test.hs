@@ -21,6 +21,7 @@ import "tasty" Test.Tasty
 import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import "thea" OpenCV
+import "thea" OpenCV.Unsafe
 import qualified "QuickCheck" Test.QuickCheck as QC
 import qualified "vector" Data.Vector as V
 
@@ -29,6 +30,7 @@ main = defaultMain $ testGroup "thea"
     [ testGroup "Calib3d"
       [ HU.testCase "findFundamentalMat - no points" testFindFundamentalMat_noPoints
       , HU.testCase "findFundamentalMat" testFindFundamentalMat
+      , HU.testCase "computeCorrespondEpilines" testComputeCorrespondEpilines
       ]
     , testGroup "Core"
       [ testGroup "Iso"
@@ -124,9 +126,27 @@ testFindFundamentalMat =
           assertNull (typeCheckMat pointsMask) (("pointsMask: " <>) . show)
   where
     points1, points2 :: V.Vector (V2 Double)
-    points1 = V.fromList [V2 x y | x <- [0..10], y <- [0..10]]
+    points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
     points2 = V.map (^+^ (V2 3 2)) points1
 
+testComputeCorrespondEpilines :: HU.Assertion
+testComputeCorrespondEpilines =
+    case findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
+      Right (Just (fm, _pointsMask)) ->
+          let fm' = unsafeCoerceMat fm
+          in case computeCorrespondEpilines points1 Image1 fm' of
+               Left err1 -> assertFailure (show err1)
+               Right epilines1 -> do
+                 assertNull (typeCheckMat epilines1) (("epilines1: " <>) . show)
+                 case computeCorrespondEpilines points2 Image2 fm' of
+                   Left err2 -> assertFailure (show err2)
+                   Right epilines2 ->
+                       assertNull (typeCheckMat epilines2) (("epilines2: " <>) . show)
+      _ -> assertFailure "couldn't find fundamental matrix"
+  where
+    points1, points2 :: V.Vector (V2 Double)
+    points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
+    points2 = V.map (^+^ (V2 3 2)) points1
 
 testIso :: (QC.Arbitrary a, Eq a, Show a) => String -> (a -> b) -> (b -> a) -> TestTree
 testIso name a_to_b b_to_a = QC.testProperty name $ \a -> a QC.=== (b_to_a . a_to_b) a

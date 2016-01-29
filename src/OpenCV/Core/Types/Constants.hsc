@@ -20,5 +20,7 @@ module OpenCV.Core.Types.Constants where
 
 #sizeof Scalar
 
+#sizeof Range
+
 #num TERMCRITERIA_COUNT
 #num TERMCRITERIA_EPS

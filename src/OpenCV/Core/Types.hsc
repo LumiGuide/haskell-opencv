@@ -37,13 +37,19 @@ module OpenCV.Core.Types
       -- * TermCriteria
     , TermCriteria
     , mkTermCriteria
+      -- * Range
+    , Range
+    , mkRange
+    , wholeRange
       -- * Matrix
     , module OpenCV.Core.Types.Mat
       -- * Exception
     , CvException
       -- * Polymorphic stuff
     , PointT
+    , C
     , WithPtr
+    , FromPtr
     , CSizeOf
     , PlacementNew
     ) where
@@ -115,17 +121,17 @@ mkRect pos size = unsafePerformIO $ newRect pos size
 
 -- | The top-left corner
 rectTopLeft :: Rect -> Point2i
-rectTopLeft rect = unsafePerformIO $ point2iFromPtr $ withPtr rect $ \rectPtr ->
+rectTopLeft rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
     [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->tl()) }|]
 
 -- | The bottom-right corner
 rectBottomRight :: Rect -> Point2i
-rectBottomRight rect = unsafePerformIO $ point2iFromPtr $ withPtr rect $ \rectPtr ->
+rectBottomRight rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
     [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->br()) }|]
 
 -- | Size (width, height) of the rectangle
 rectSize :: Rect -> Size2i
-rectSize rect = unsafePerformIO $ size2iFromPtr $ withPtr rect $ \rectPtr ->
+rectSize rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
     [CU.exp| Size2i * { new Size2i($(Rect * rectPtr)->size()) }|]
 
 -- | Area (width*height) of the rectangle
@@ -163,15 +169,13 @@ mkRotatedRect center size angle =
 
 -- | Rectangle mass center
 rotatedRectCenter :: RotatedRect -> Point2f
-rotatedRectCenter rotRect = unsafePerformIO $
-    point2fFromPtr $
+rotatedRectCenter rotRect = unsafePerformIO $ fromPtr $
       withPtr rotRect $ \rotRectPtr ->
         [CU.exp| Point2f * { new Point2f($(RotatedRect * rotRectPtr)->center) }|]
 
 -- | Width and height of the rectangle
 rotatedRectSize :: RotatedRect -> Size2f
-rotatedRectSize rotRect = unsafePerformIO $
-    size2fFromPtr $
+rotatedRectSize rotRect = unsafePerformIO $ fromPtr $
       withPtr rotRect $ \rotRectPtr ->
         [CU.exp| Size2f * { new Size2f($(RotatedRect * rotRectPtr)->size) }|]
 
@@ -187,7 +191,7 @@ rotatedRectAngle rotRect = realToFrac $ unsafePerformIO $
 -- | The minimal up-right rectangle containing the rotated rectangle
 rotatedRectBoundingRect :: RotatedRect -> Rect
 rotatedRectBoundingRect rotRect =
-    unsafePerformIO $ rectFromPtr $ withPtr rotRect $ \rotRectPtr ->
+    unsafePerformIO $ fromPtr $ withPtr rotRect $ \rotRectPtr ->
       [CU.exp| Rect * { new Rect($(RotatedRect * rotRectPtr)->boundingRect()) }|]
 
 rotatedRectPoints :: RotatedRect -> (Point2f, Point2f, Point2f, Point2f)
@@ -222,3 +226,13 @@ mkTermCriteria
     -> TermCriteria
 mkTermCriteria mbMaxCount mbEpsilon =
     unsafePerformIO $ newTermCriteria mbMaxCount mbEpsilon
+
+--------------------------------------------------------------------------------
+-- Range
+--------------------------------------------------------------------------------
+
+mkRange :: Int32 -> Int32 -> Range
+mkRange start end = unsafePerformIO $ newRange start end
+
+wholeRange :: Range
+wholeRange = unsafePerformIO newWholeRange

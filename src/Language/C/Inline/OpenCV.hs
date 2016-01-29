@@ -15,6 +15,7 @@ module Language.C.Inline.OpenCV
     , C'Rect
     , C'RotatedRect
     , C'TermCriteria
+    , C'Range
     , C'Scalar
     , C'Mat
 
@@ -57,6 +58,8 @@ data C'Rect
 data C'RotatedRect
 -- | Haskell representation of an OpenCV @cv::TermCriteria@ object
 data C'TermCriteria
+-- | Haskell representation of an OpenCV @cv::Range@ object
+data C'Range
 -- | Haskell representation of an OpenCV @cv::Scalar_\<double>@ object
 data C'Scalar
 -- | Haskell representation of an OpenCV @cv::Mat@ object
@@ -94,23 +97,24 @@ openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
 
 openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
-  [ (C.TypeName "bool"        , [t| C.CInt |] )
+  [ ( C.TypeName "bool"        , [t| C.CInt |] )
 
-  , (C.TypeName "Exception"   , [t| C'Exception    |] )
-  , (C.TypeName "Point2i"     , [t| C'Point2i      |] )
-  , (C.TypeName "Point2f"     , [t| C'Point2f      |] )
-  , (C.TypeName "Point2d"     , [t| C'Point2d      |] )
-  , (C.TypeName "Point3i"     , [t| C'Point3i      |] )
-  , (C.TypeName "Point3f"     , [t| C'Point3f      |] )
-  , (C.TypeName "Point3d"     , [t| C'Point3d      |] )
-  , (C.TypeName "Size2i"      , [t| C'Size2i       |] )
-  , (C.TypeName "Size2f"      , [t| C'Size2f       |] )
-  , (C.TypeName "Rect"        , [t| C'Rect         |] )
-  , (C.TypeName "RotatedRect" , [t| C'RotatedRect  |] )
-  , (C.TypeName "TermCriteria", [t| C'TermCriteria |] )
-  , (C.TypeName "Scalar"      , [t| C'Scalar       |] )
-  , (C.TypeName "Mat"         , [t| C'Mat          |] )
+  , ( C.TypeName "Exception"   , [t| C'Exception    |] )
+  , ( C.TypeName "Point2i"     , [t| C'Point2i      |] )
+  , ( C.TypeName "Point2f"     , [t| C'Point2f      |] )
+  , ( C.TypeName "Point2d"     , [t| C'Point2d      |] )
+  , ( C.TypeName "Point3i"     , [t| C'Point3i      |] )
+  , ( C.TypeName "Point3f"     , [t| C'Point3f      |] )
+  , ( C.TypeName "Point3d"     , [t| C'Point3d      |] )
+  , ( C.TypeName "Size2i"      , [t| C'Size2i       |] )
+  , ( C.TypeName "Size2f"      , [t| C'Size2f       |] )
+  , ( C.TypeName "Rect"        , [t| C'Rect         |] )
+  , ( C.TypeName "RotatedRect" , [t| C'RotatedRect  |] )
+  , ( C.TypeName "TermCriteria", [t| C'TermCriteria |] )
+  , ( C.TypeName "Scalar"      , [t| C'Scalar       |] )
+  , ( C.TypeName "Mat"         , [t| C'Mat          |] )
+  , ( C.TypeName "Range"       , [t| C'Range        |] )
 
-  , (C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
-  , (C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )
+  , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
+  , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )
   ]

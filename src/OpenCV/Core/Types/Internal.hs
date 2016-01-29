@@ -8,39 +8,45 @@ module OpenCV.Core.Types.Internal
       Point2i(..)
     , Point2f(..)
     , Point2d(..)
-    , newPoint2i, point2iFromPtr
-    , newPoint2f, point2fFromPtr
-    , newPoint2d, point2dFromPtr
+    , newPoint2i
+    , newPoint2f
+    , newPoint2d
       -- ** 3D types
     , Point3i(..)
     , Point3f(..)
     , Point3d(..)
-    , newPoint3i, point3iFromPtr
-    , newPoint3f, point3fFromPtr
-    , newPoint3d, point3dFromPtr
+    , newPoint3i
+    , newPoint3f
+    , newPoint3d
       -- * Size
     , Size2i(..)
     , Size2f(..)
-    , newSize2i, size2iFromPtr
-    , newSize2f, size2fFromPtr
+    , newSize2i
+    , newSize2f
       -- * Scalar
     , Scalar(..)
-    , newScalar, scalarFromPtr
+    , newScalar
       -- * Rect
     , Rect(..)
-    , newRect, rectFromPtr
+    , newRect
       -- * RotatedRect
     , RotatedRect(..)
-    , newRotatedRect, rotatedRectFromPtr
+    , newRotatedRect
       -- * TermCriteria
     , TermCriteria(..)
-    , newTermCriteria, termCriteriaFromPtr
+    , newTermCriteria
+      -- * Range
+    , Range(..)
+    , newRange
+    , newWholeRange
       -- * Polygons
     , withPolygons
     , withArrayPtr
       -- * Polymorphic stuff
     , PointT
+    , C
     , WithPtr(..)
+    , FromPtr(..)
     , CSizeOf(..)
     , PlacementNew(..)
     ) where
@@ -76,61 +82,62 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
+
 --------------------------------------------------------------------------------
--- Point
+-- Types
 --------------------------------------------------------------------------------
 
 -- | 2D point with integer coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV Sphinx doc>
-newtype Point2i = Point2i {unPoint2i :: ForeignPtr C'Point2i}
+newtype Point2i = Point2i {unPoint2i :: ForeignPtr (C Point2i)}
 
 -- | 2D point with 32 bit floating point coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV Sphinx doc>
-newtype Point2f = Point2f {unPoint2f :: ForeignPtr C'Point2f}
+newtype Point2f = Point2f {unPoint2f :: ForeignPtr (C Point2f)}
 
 -- | 2D point with 64 bit floating point coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point OpenCV Sphinx doc>
-newtype Point2d = Point2d {unPoint2d :: ForeignPtr C'Point2d}
+newtype Point2d = Point2d {unPoint2d :: ForeignPtr (C Point2d)}
 
 -- | 3D point with integer coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
-newtype Point3i = Point3i {unPoint3i :: ForeignPtr C'Point3i}
+newtype Point3i = Point3i {unPoint3i :: ForeignPtr (C Point3i)}
 
 -- | 3D point with 32 bit floating point coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
-newtype Point3f = Point3f {unPoint3f :: ForeignPtr C'Point3f}
+newtype Point3f = Point3f {unPoint3f :: ForeignPtr (C Point3f)}
 
 -- | 3D point with 64 bit floating point coördinates
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
-newtype Point3d = Point3d {unPoint3d :: ForeignPtr C'Point3d}
+newtype Point3d = Point3d {unPoint3d :: ForeignPtr (C Point3d)}
 
 -- | Size of an image or rectangle with integer values
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
-newtype Size2i = Size2i {unSize2i :: ForeignPtr C'Size2i}
+newtype Size2i = Size2i {unSize2i :: ForeignPtr (C Size2i)}
 
 -- | Size of an image or rectangle with 32 bit floating point values
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
-newtype Size2f = Size2f {unSize2f :: ForeignPtr C'Size2f}
+newtype Size2f = Size2f {unSize2f :: ForeignPtr (C Size2f)}
 
 -- | A 4-element vector with 64 bit floating point elements
 --
 -- The type 'Scalar' is widely used in OpenCV to pass pixel values.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#scalar OpenCV Sphinx doc>
-newtype Scalar = Scalar {unScalar :: ForeignPtr C'Scalar}
+newtype Scalar = Scalar {unScalar :: ForeignPtr (C Scalar)}
 
 -- | 2D rectangles
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#rect OpenCV Sphinx doc>
-newtype Rect = Rect {unRect :: ForeignPtr C'Rect}
+newtype Rect = Rect {unRect :: ForeignPtr (C Rect)}
 
 -- | Rotated (i.e. not up-right) rectangles on a plane
 --
@@ -138,13 +145,28 @@ newtype Rect = Rect {unRect :: ForeignPtr C'Rect}
 -- side (represented by 'Size2f') and the rotation angle in degrees.
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#rotatedrect OpenCV Sphinx doc>
-newtype RotatedRect = RotatedRect {unRotatedRect :: ForeignPtr C'RotatedRect}
+newtype RotatedRect = RotatedRect {unRotatedRect :: ForeignPtr (C RotatedRect)}
 
 -- | Termination criteria for iterative algorithms
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#termcriteria OpenCV Sphinx doc>
-newtype TermCriteria = TermCriteria { unTermCriteria :: ForeignPtr C'TermCriteria }
+newtype TermCriteria = TermCriteria {unTermCriteria :: ForeignPtr (C TermCriteria)}
 
+-- | A continuous subsequence (slice) of a sequence
+--
+-- The type is used to specify a row or a column span in a matrix (`Mat`) and
+-- for many other purposes. @'mkRange' a b@ is basically the same as @a:b@ in
+-- Matlab or @a..b@ in Python. As in Python, start is an inclusive left boundary
+-- of the range and end is an exclusive right boundary of the range. Such a
+-- half-opened interval is usually denoted as @[start, end)@.
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#range OpenCV Sphinx doc>
+newtype Range = Range {unRange :: ForeignPtr (C Range)}
+
+
+--------------------------------------------------------------------------------
+-- Conversions
+--------------------------------------------------------------------------------
 
 instance Convert (V2 Int32  ) Point2i where convert = unsafePerformIO . newPoint2i
 instance Convert (V2 CFloat ) Point2f where convert = unsafePerformIO . newPoint2f
@@ -334,66 +356,44 @@ instance Convert Point3d (Double , Double , Double ) where convert a = let V3 x 
 instance Convert Scalar  (CDouble, CDouble, CDouble, CDouble) where convert a = let V4 x y z w = convert a in (x, y, z, w)
 instance Convert Scalar  (Double , Double , Double , Double ) where convert a = let V4 x y z w = convert a in (x, y, z, w)
 
-point2iFromPtr :: IO (Ptr C'Point2i) -> IO Point2i
-point2fFromPtr :: IO (Ptr C'Point2f) -> IO Point2f
-point2dFromPtr :: IO (Ptr C'Point2d) -> IO Point2d
-point3iFromPtr :: IO (Ptr C'Point3i) -> IO Point3i
-point3fFromPtr :: IO (Ptr C'Point3f) -> IO Point3f
-point3dFromPtr :: IO (Ptr C'Point3d) -> IO Point3d
-size2iFromPtr  :: IO (Ptr C'Size2i ) -> IO Size2i
-size2fFromPtr  :: IO (Ptr C'Size2f ) -> IO Size2f
-scalarFromPtr  :: IO (Ptr C'Scalar ) -> IO Scalar
-rectFromPtr    :: IO (Ptr C'Rect   ) -> IO Rect
-rotatedRectFromPtr  :: IO (Ptr C'RotatedRect ) -> IO RotatedRect
-termCriteriaFromPtr :: IO (Ptr C'TermCriteria) -> IO TermCriteria
-
-point2iFromPtr = objFromPtr Point2i $ \ptr -> [CU.exp| void { delete $(Point2i * ptr) }|]
-point2fFromPtr = objFromPtr Point2f $ \ptr -> [CU.exp| void { delete $(Point2f * ptr) }|]
-point2dFromPtr = objFromPtr Point2d $ \ptr -> [CU.exp| void { delete $(Point2d * ptr) }|]
-point3iFromPtr = objFromPtr Point3i $ \ptr -> [CU.exp| void { delete $(Point3i * ptr) }|]
-point3fFromPtr = objFromPtr Point3f $ \ptr -> [CU.exp| void { delete $(Point3f * ptr) }|]
-point3dFromPtr = objFromPtr Point3d $ \ptr -> [CU.exp| void { delete $(Point3d * ptr) }|]
-size2iFromPtr  = objFromPtr Size2i  $ \ptr -> [CU.exp| void { delete $(Size2i  * ptr) }|]
-size2fFromPtr  = objFromPtr Size2f  $ \ptr -> [CU.exp| void { delete $(Size2f  * ptr) }|]
-scalarFromPtr  = objFromPtr Scalar  $ \ptr -> [CU.exp| void { delete $(Scalar  * ptr) }|]
-rectFromPtr    = objFromPtr Rect    $ \ptr -> [CU.exp| void { delete $(Rect    * ptr) }|]
-rotatedRectFromPtr  = objFromPtr RotatedRect  $ \ptr -> [CU.exp| void { delete $(RotatedRect  * ptr) }|]
-termCriteriaFromPtr = objFromPtr TermCriteria $ \ptr -> [CU.exp| void { delete $(TermCriteria * ptr) }|]
+--------------------------------------------------------------------------------
+-- Constructing new values
+--------------------------------------------------------------------------------
 
 newPoint2i :: V2 Int32 -> IO Point2i
-newPoint2i (V2 x y) = point2iFromPtr $
+newPoint2i (V2 x y) = fromPtr $
     [CU.exp|Point2i * { new cv::Point2i($(int32_t x), $(int32_t y)) }|]
 
 newPoint2f :: V2 CFloat -> IO Point2f
-newPoint2f (V2 x y) = point2fFromPtr $
+newPoint2f (V2 x y) = fromPtr $
     [CU.exp|Point2f * { new cv::Point2f($(float x), $(float y)) }|]
 
 newPoint2d :: V2 CDouble -> IO Point2d
-newPoint2d (V2 x y) = point2dFromPtr $
+newPoint2d (V2 x y) = fromPtr $
     [CU.exp|Point2d * { new cv::Point2d($(double x), $(double y)) }|]
 
 newPoint3i :: V3 Int32 -> IO Point3i
-newPoint3i (V3 x y z) = point3iFromPtr $
+newPoint3i (V3 x y z) = fromPtr $
     [CU.exp|Point3i * { new cv::Point3i($(int32_t x), $(int32_t y), $(int32_t z)) }|]
 
 newPoint3f :: V3 CFloat -> IO Point3f
-newPoint3f (V3 x y z) = point3fFromPtr $
+newPoint3f (V3 x y z) = fromPtr $
     [CU.exp|Point3f * { new cv::Point3f($(float x), $(float y), $(float z)) }|]
 
 newPoint3d :: V3 CDouble -> IO Point3d
-newPoint3d (V3 x y z) = point3dFromPtr $
+newPoint3d (V3 x y z) = fromPtr $
     [CU.exp|Point3d * { new cv::Point3d($(double x), $(double y), $(double z)) }|]
 
 newSize2i :: V2 Int32 -> IO Size2i
-newSize2i (V2 x y) = size2iFromPtr $
+newSize2i (V2 x y) = fromPtr $
     [CU.exp|Size2i * { new cv::Size2i($(int32_t x), $(int32_t y)) }|]
 
 newSize2f :: V2 CFloat -> IO Size2f
-newSize2f (V2 x y) = size2fFromPtr $
+newSize2f (V2 x y) = fromPtr $
     [CU.exp|Size2f * { new cv::Size2f($(float x), $(float y)) }|]
 
 newScalar :: V4 CDouble -> IO Scalar
-newScalar (V4 x y z w) = scalarFromPtr $
+newScalar (V4 x y z w) = fromPtr $
     [CU.exp|Scalar * { new cv::Scalar( $(double x)
                                      , $(double y)
                                      , $(double z)
@@ -405,7 +405,7 @@ newRect
     :: V2 Int32 -- ^ top left
     -> V2 Int32 -- ^ size
     -> IO Rect
-newRect (V2 x y) (V2 width height) = rectFromPtr $
+newRect (V2 x y) (V2 width height) = fromPtr $
     [CU.exp|Rect * { new cv::Rect( $(int32_t x)
                                  , $(int32_t y)
                                  , $(int32_t width)
@@ -423,8 +423,7 @@ newRotatedRect
        -- ^ The rotation angle (in degrees). When the angle is 0, 90,
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
     -> IO RotatedRect
-newRotatedRect center size angle =
-    rotatedRectFromPtr $
+newRotatedRect center size angle = fromPtr $
     withPtr (convert center :: Point2f) $ \centerPtr ->
     withPtr (convert size   :: Size2f ) $ \sizePtr ->
       [CU.exp| RotatedRect * {
@@ -439,7 +438,7 @@ newTermCriteria
     :: Maybe Int    -- ^ Optionally the maximum number of iterations/elements.
     -> Maybe Double -- ^ Optionally the desired accuracy.
     -> IO TermCriteria
-newTermCriteria mbMaxCount mbEpsilon = termCriteriaFromPtr $
+newTermCriteria mbMaxCount mbEpsilon = fromPtr $
     [CU.exp|TermCriteria * {
       new cv::TermCriteria( $(int32_t c'type    )
                           , $(int32_t c'maxCount)
@@ -452,6 +451,21 @@ newTermCriteria mbMaxCount mbEpsilon = termCriteriaFromPtr $
     c'maxCount = maybe 0 fromIntegral mbMaxCount
     c'epsilon  = maybe 0 realToFrac   mbEpsilon
 
+newRange
+    :: Int32 -- ^ Inclusive start
+    -> Int32 -- ^ Exlusive end
+    -> IO Range
+newRange start end = fromPtr $
+    [CU.exp|Range * { new cv::Range( $(int32_t start), $(int32_t end)) }|]
+
+-- | Special 'Range' value which means "the whole sequence" or "the whole range"
+newWholeRange :: IO Range
+newWholeRange = fromPtr $
+    [CU.block|Range * {
+      cv::Range a = cv::Range::all();
+      return new cv::Range(a.start, a.end);
+    }|]
+
 
 --------------------------------------------------------------------------------
 -- Polygons
@@ -461,17 +475,17 @@ withPolygons
     :: forall a point2i
      . (Convert point2i Point2i)
     => V.Vector (V.Vector point2i)
-    -> (Ptr (Ptr C'Point2i) -> IO a)
+    -> (Ptr (Ptr (C Point2i)) -> IO a)
     -> IO a
 withPolygons polygons act =
     allocaArray (V.length polygons) $ \polygonsPtr -> do
-      let go :: Ptr (Ptr C'Point2i) -> Int -> IO a
+      let go :: Ptr (Ptr (C Point2i)) -> Int -> IO a
           go !acc !ix
             | ix < V.length polygons =
                 let pts = V.map convert $ V.unsafeIndex polygons ix :: V.Vector Point2i
                 in withArrayPtr pts $ \ptsPtr -> do
                      poke acc ptsPtr
-                     go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr C'Point2i))) (ix + 1)
+                     go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr (C Point2i)))) (ix + 1)
             | otherwise = act polygonsPtr
       go polygonsPtr 0
 
@@ -523,14 +537,28 @@ type family PointT (dim :: Nat) (depth :: *) :: * where
     PointT 3 CFloat  = Point3f
     PointT 3 CDouble = Point3d
 
+-- | Equivalent type in C
+--
+-- Actually a proxy type in Haskell that stands for the equivalent type in C.
+type family C (a :: *) :: * where
+    C Point2i      = C'Point2i
+    C Point2f      = C'Point2f
+    C Point2d      = C'Point2d
+    C Point3i      = C'Point3i
+    C Point3f      = C'Point3f
+    C Point3d      = C'Point3d
+    C Size2i       = C'Size2i
+    C Size2f       = C'Size2f
+    C Scalar       = C'Scalar
+    C Rect         = C'Rect
+    C RotatedRect  = C'RotatedRect
+    C TermCriteria = C'TermCriteria
+    C Range        = C'Range
+
+--------------------------------------------------------------------------------
+
 -- | Perform an IO action with a pointer to the C equivalent of a value
 class WithPtr a where
-    -- | Equivalent type in C
-    --
-    -- Actually a proxy type in Haskell that stands for the equivalent type in
-    -- C.
-    type C a :: *
-
     -- | Perform an action with a temporary pointer to the underlying
     -- representation of @a@
     --
@@ -538,53 +566,81 @@ class WithPtr a where
     -- function. The same warnings apply as for 'withForeignPtr'.
     withPtr :: a -> (Ptr (C a) -> IO b) -> IO b
 
-instance WithPtr Point2i where
-    type C Point2i = C'Point2i
-    withPtr = withForeignPtr . unPoint2i
+instance WithPtr Point2i      where withPtr = withForeignPtr . unPoint2i
+instance WithPtr Point2f      where withPtr = withForeignPtr . unPoint2f
+instance WithPtr Point2d      where withPtr = withForeignPtr . unPoint2d
+instance WithPtr Point3i      where withPtr = withForeignPtr . unPoint3i
+instance WithPtr Point3f      where withPtr = withForeignPtr . unPoint3f
+instance WithPtr Point3d      where withPtr = withForeignPtr . unPoint3d
+instance WithPtr Size2i       where withPtr = withForeignPtr . unSize2i
+instance WithPtr Size2f       where withPtr = withForeignPtr . unSize2f
+instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
+instance WithPtr Rect         where withPtr = withForeignPtr . unRect
+instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
+instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
+instance WithPtr Range        where withPtr = withForeignPtr . unRange
 
-instance WithPtr Point2f where
-    type C Point2f = C'Point2f
-    withPtr = withForeignPtr . unPoint2f
+--------------------------------------------------------------------------------
 
-instance WithPtr Point2d where
-    type C Point2d = C'Point2d
-    withPtr = withForeignPtr . unPoint2d
+-- | Types of which a value can be constructed from a pointer to the C
+-- equivalent of that value
+--
+-- Used to wrap values created in C.
+class FromPtr a where
+    fromPtr :: IO (Ptr (C a)) -> IO a
 
-instance WithPtr Point3i where
-    type C Point3i = C'Point3i
-    withPtr = withForeignPtr . unPoint3i
+instance FromPtr Point2i where
+    fromPtr = objFromPtr Point2i $ \ptr ->
+                [CU.exp| void { delete $(Point2i * ptr) }|]
 
-instance WithPtr Point3f where
-    type C Point3f = C'Point3f
-    withPtr = withForeignPtr . unPoint3f
+instance FromPtr Point2f where
+    fromPtr = objFromPtr Point2f $ \ptr ->
+                [CU.exp| void { delete $(Point2f * ptr) }|]
 
-instance WithPtr Point3d where
-    type C Point3d = C'Point3d
-    withPtr = withForeignPtr . unPoint3d
+instance FromPtr Point2d where
+    fromPtr = objFromPtr Point2d $ \ptr ->
+                [CU.exp| void { delete $(Point2d * ptr) }|]
 
-instance WithPtr Size2i where
-    type C Size2i = C'Size2i
-    withPtr = withForeignPtr . unSize2i
+instance FromPtr Point3i where
+    fromPtr = objFromPtr Point3i $ \ptr ->
+                [CU.exp| void { delete $(Point3i * ptr) }|]
 
-instance WithPtr Size2f where
-    type C Size2f = C'Size2f
-    withPtr = withForeignPtr . unSize2f
+instance FromPtr Point3f where
+    fromPtr = objFromPtr Point3f $ \ptr ->
+                [CU.exp| void { delete $(Point3f * ptr) }|]
 
-instance WithPtr Scalar where
-    type C Scalar = C'Scalar
-    withPtr = withForeignPtr . unScalar
+instance FromPtr Point3d where
+    fromPtr = objFromPtr Point3d $ \ptr ->
+                [CU.exp| void { delete $(Point3d * ptr) }|]
 
-instance WithPtr Rect where
-    type C Rect = C'Rect
-    withPtr = withForeignPtr . unRect
+instance FromPtr Size2i where
+    fromPtr = objFromPtr Size2i $ \ptr ->
+                [CU.exp| void { delete $(Size2i * ptr) }|]
 
-instance WithPtr RotatedRect where
-    type C RotatedRect = C'RotatedRect
-    withPtr = withForeignPtr . unRotatedRect
+instance FromPtr Size2f where
+    fromPtr = objFromPtr Size2f $ \ptr ->
+                [CU.exp| void { delete $(Size2f * ptr) }|]
 
-instance WithPtr TermCriteria where
-    type C TermCriteria = C'TermCriteria
-    withPtr = withForeignPtr . unTermCriteria
+instance FromPtr Scalar where
+    fromPtr = objFromPtr Scalar $ \ptr ->
+                [CU.exp| void { delete $(Scalar * ptr) }|]
+
+instance FromPtr Rect where
+    fromPtr = objFromPtr Rect $ \ptr ->
+                [CU.exp| void { delete $(Rect * ptr) }|]
+
+instance FromPtr RotatedRect where
+    fromPtr = objFromPtr RotatedRect $ \ptr ->
+                [CU.exp| void { delete $(RotatedRect * ptr) }|]
+
+instance FromPtr TermCriteria where
+    fromPtr = objFromPtr TermCriteria $ \ptr ->
+                [CU.exp| void { delete $(TermCriteria * ptr) }|]
+
+instance FromPtr Range where
+    fromPtr = objFromPtr Range $ \ptr ->
+                [CU.exp| void { delete $(Range * ptr) }|]
+
 
 --------------------------------------------------------------------------------
 
@@ -606,6 +662,7 @@ instance CSizeOf C'Point3d where cSizeOf _proxy = c'sizeof_Point3d
 instance CSizeOf C'Size2i  where cSizeOf _proxy = c'sizeof_Size2i
 instance CSizeOf C'Size2f  where cSizeOf _proxy = c'sizeof_Size2f
 instance CSizeOf C'Scalar  where cSizeOf _proxy = c'sizeof_Scalar
+instance CSizeOf C'Range   where cSizeOf _proxy = c'sizeof_Range
 
 --------------------------------------------------------------------------------
 

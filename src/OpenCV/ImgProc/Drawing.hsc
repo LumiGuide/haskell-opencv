@@ -574,7 +574,7 @@ getTextSize
 getTextSize text fontFace fontScale thickness = unsafePerformIO $
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
     alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
-      size <- size2iFromPtr $
+      size <- fromPtr $
         [C.block|Size2i * {
           Size size = cv::getTextSize( $(char * c'text)
                                      , $(int32_t c'fontFace)

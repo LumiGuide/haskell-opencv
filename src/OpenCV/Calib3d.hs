@@ -12,7 +12,6 @@ module OpenCV.Calib3d
 import "base" Data.Int
 import "base" Data.Word
 import "base" Foreign.C.Types
-import "base" Foreign.Ptr ( Ptr, castPtr )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -145,32 +144,24 @@ findFundamentalMat pts1 pts2 method = unsafePerformIO $ do
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc>
 -}
 computeCorrespondEpilines
-    :: forall depth polyPoint point
-     . ( depth `In` [Float, Double, CFloat, CDouble]
-       , point ~ PointT 2 depth
-       , Convert polyPoint point
-       , WithPtr point
-       , CSizeOf      (C point)
-       , PlacementNew (C point)
-       )
-    => V.Vector polyPoint -- ^ Points.
+    :: (Convert point2d Point2d)
+    => V.Vector point2d -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
     -> Either CvException
-              (Mat ('S ['S 3, 'D]) ('S 1) ('S depth))
+              (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
 computeCorrespondEpilines points whichImage fm = unsafePerformIO $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
-      withArrayPtr (V.map convert points :: V.Vector point) $ \pointsPtr ->
+      withArrayPtr (V.map convert points :: V.Vector Point2d) $ \pointsPtr ->
       withMatPtr fm       $ \fmPtr       ->
       withMatPtr epilines $ \epilinesPtr -> do
         -- Destroy type information about the pointsPtr. We wan't to generate
         -- C++ code that works for any type of point. Specifically Point2f and
         -- Point2d.
-        let somePointsPtr = castPtr pointsPtr :: Ptr ()
         [cvExcept|
           cv::_InputArray points =
-            cv::_InputArray( $(void * somePointsPtr)
+            cv::_InputArray( $(Point2d * pointsPtr)
                            , $(int32_t c'numPoints)
                            );
           cv::computeCorrespondEpilines
