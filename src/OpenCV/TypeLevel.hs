@@ -13,9 +13,6 @@ module OpenCV.TypeLevel
     , Convert(convert)
 
       -- * Type functions
-    , Not
-    , And
-    , Or
     , Length
     , Elem
     , Relax
@@ -31,6 +28,7 @@ module OpenCV.TypeLevel
 
 import "base" Data.Int
 import "base" Data.Proxy
+import "base" Data.Type.Bool
 import "base" GHC.TypeLits
 import qualified "vector" Data.Vector as V
 
@@ -120,19 +118,6 @@ instance (Convert (Proxy a) b)
 -- Type functions
 --------------------------------------------------------------------------------
 
-type family Not (a :: Bool) :: Bool where
-    Not 'True  = 'False
-    Not 'False = 'True
-
-type family And (a :: Bool) (b :: Bool) :: Bool where
-    And 'True 'True = 'True
-    And a     b     = 'False
-
-type family Or (a :: Bool) (b :: Bool) :: Bool where
-    Or 'True b     = 'True
-    Or a     'True = 'True
-    Or a     b     = 'False
-
 type family Length (xs :: [a]) :: Nat where
     Length '[]        = 0
     Length (_x ': xs) = 1 + Length xs
@@ -168,7 +153,7 @@ type family ShapeT (a :: ka) :: DS [DS Nat] where
 
 type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
     Relax x      'D     = 'True
-    Relax ('S (x ': xs)) ('S (y ': ys)) = Relax x y `And` Relax ('S xs) ('S ys)
+    Relax ('S (x ': xs)) ('S (y ': ys)) = Relax x y && Relax ('S xs) ('S ys)
     Relax ('S x) ('S y) = 'True
     Relax x      y      = 'False
 
