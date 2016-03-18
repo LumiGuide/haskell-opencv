@@ -2,7 +2,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.ImgProc.StructuralAnalysis
-    ( pointPolygonTest
+    ( contourArea
+    , pointPolygonTest
     ) where
 
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -29,6 +30,41 @@ C.using "namespace cv"
 -- Structural Analysis and Shape Descriptors
 --------------------------------------------------------------------------------
 
+{- | Calculates a contour area.
+
+The function computes a contour area. Similarly to `moments`, the area is
+computed using the <https://en.wikipedia.org/wiki/Green%27s_theorem Green formula>.
+Thus, the returned area and the number of non-zero pixels, if you draw the
+contour using `drawContours` or `fillPoly`, can be different. Also, the function
+will most certainly give a wrong results for contours with self-intersections.
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#cv2.contourArea OpenCV Sphinx doc>
+-}
+contourArea
+    :: (Convert point2f Point2f)
+    => V.Vector point2f
+       -- ^ Input vector of 2D points (contour vertices).
+    -> Bool
+       -- ^ Oriented area flag. If it is true, the function returns a signed
+       -- area value, depending on the contour orientation (clockwise or
+       -- counter-clockwise). Using this feature you can determine orientation
+       -- of a contour by taking the sign of an area.
+    -> Either CvException Double
+contourArea contour oriented = unsafePerformIO $
+    withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
+    alloca $ \c'area ->
+    handleCvException (realToFrac <$> peek c'area) $
+      [cvExcept|
+        cv::_InputArray contour =
+          cv::_InputArray( $(Point2f * contourPtr)
+                         , $(int32_t c'numPoints)
+                         );
+        *$(double * c'area) = cv::contourArea(contour, $(bool c'oriented));
+      |]
+  where
+    c'numPoints = fromIntegral $ V.length contour
+    c'oriented = fromBool oriented
+
 -- | Performs a point-in-contour test.
 --
 -- The function determines whether the point is inside a contour, outside, or
@@ -53,7 +89,7 @@ pointPolygonTest
 pointPolygonTest contour pt measureDist = unsafePerformIO $
     withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
     withPtr (convert pt :: Point2f) $ \ptPtr ->
-    alloca $ \(c'resultPtr) ->
+    alloca $ \c'resultPtr ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
         cv::_InputArray contour =
