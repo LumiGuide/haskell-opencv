@@ -6,17 +6,15 @@
 
 module OpenCV.JSON ( ) where
 
+import "aeson" Data.Aeson
+import "aeson" Data.Aeson.Types ( Parser )
+import "aeson" Data.Aeson.TH
 import "base" Data.Int ( Int32 )
 import "base" Data.List ( intercalate )
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy ( Proxy(..) )
-import "aeson" Data.Aeson
-import "aeson" Data.Aeson.Types ( Parser )
-import "aeson" Data.Aeson.TH
 import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
 import "linear" Linear.V2 ( V2(..) )
-import "linear" Linear.V3 ( V3(..) )
-import "linear" Linear.V4 ( V4(..) )
 import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
@@ -36,14 +34,14 @@ instance FromJSON A where {                           \
 
 --------------------------------------------------------------------------------
 
-IsoJSON(Point2i, V2 Int32 , convert)
-IsoJSON(Point2f, V2 Float , convert)
-IsoJSON(Point2d, V2 Double, convert)
-IsoJSON(Point3i, V3 Int32 , convert)
-IsoJSON(Point3f, V3 Float , convert)
-IsoJSON(Point3d, V3 Double, convert)
-IsoJSON(Size2i , V2 Int32 , convert)
-IsoJSON(Size2f , V2 Float , convert)
+IsoJSON(Point2i, (Int32 , Int32 ), convert)
+IsoJSON(Point2f, (Float , Float ), convert)
+IsoJSON(Point2d, (Double, Double), convert)
+IsoJSON(Point3i, (Int32 , Int32 , Int32 ), convert)
+IsoJSON(Point3f, (Float , Float , Float ), convert)
+IsoJSON(Point3d, (Double, Double, Double), convert)
+IsoJSON(Size2i , (Int32 , Int32 ), convert)
+IsoJSON(Size2f , (Float , Float ), convert)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat
@@ -101,11 +99,9 @@ instance ToJSON Rect where
 
 instance FromJSON Rect where
     parseJSON = withObject "Rect" $ \obj ->
-                  mkRect <$> obj .: "pos" <*> obj .: "size"
+                  mkRect <$> (uncurry V2 <$> obj .: "pos")
+                         <*> (uncurry V2 <$> obj .: "size")
 
 --------------------------------------------------------------------------------
 
 deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
-deriveJSON defaultOptions ''V2
-deriveJSON defaultOptions ''V3
-deriveJSON defaultOptions ''V4
