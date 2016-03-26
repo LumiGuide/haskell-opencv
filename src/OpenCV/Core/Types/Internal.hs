@@ -59,7 +59,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
 import "base" Foreign.Storable ( sizeOf, peek, poke )
 import "base" GHC.TypeLits ( Nat )
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -540,20 +540,23 @@ type family PointT (dim :: Nat) (depth :: *) :: * where
 -- | Equivalent type in C
 --
 -- Actually a proxy type in Haskell that stands for the equivalent type in C.
-type family C (a :: *) :: * where
-    C Point2i      = C'Point2i
-    C Point2f      = C'Point2f
-    C Point2d      = C'Point2d
-    C Point3i      = C'Point3i
-    C Point3f      = C'Point3f
-    C Point3d      = C'Point3d
-    C Size2i       = C'Size2i
-    C Size2f       = C'Size2f
-    C Scalar       = C'Scalar
-    C Rect         = C'Rect
-    C RotatedRect  = C'RotatedRect
-    C TermCriteria = C'TermCriteria
-    C Range        = C'Range
+type family C (a :: *) :: *
+
+type instance C (Maybe a) = C a
+
+type instance C Point2i      = C'Point2i
+type instance C Point2f      = C'Point2f
+type instance C Point2d      = C'Point2d
+type instance C Point3i      = C'Point3i
+type instance C Point3f      = C'Point3f
+type instance C Point3d      = C'Point3d
+type instance C Size2i       = C'Size2i
+type instance C Size2f       = C'Size2f
+type instance C Scalar       = C'Scalar
+type instance C Rect         = C'Rect
+type instance C RotatedRect  = C'RotatedRect
+type instance C TermCriteria = C'TermCriteria
+type instance C Range        = C'Range
 
 --------------------------------------------------------------------------------
 
@@ -565,6 +568,10 @@ class WithPtr a where
     -- The pointer is not guaranteed to be usuable outside the scope of this
     -- function. The same warnings apply as for 'withForeignPtr'.
     withPtr :: a -> (Ptr (C a) -> IO b) -> IO b
+
+instance (WithPtr a) => WithPtr (Maybe a) where
+    withPtr Nothing    f = f nullPtr
+    withPtr (Just obj) f = withPtr obj f
 
 instance WithPtr Point2i      where withPtr = withForeignPtr . unPoint2i
 instance WithPtr Point2f      where withPtr = withForeignPtr . unPoint2f

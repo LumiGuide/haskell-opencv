@@ -16,7 +16,6 @@ import "this" OpenCV.TypeLevel
 #include "opencv2/imgproc.hpp"
 
 #include "namespace.hpp"
-#include "macros.hpp"
 
 #num INTER_NEAREST
 #num INTER_LINEAR

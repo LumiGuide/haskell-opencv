@@ -15,6 +15,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
 
@@ -104,9 +105,9 @@ matchTemplate
 matchTemplate image templ method normed = unsafePerformIO $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
-      withMatPtr result $ \resultPtr ->
-      withMatPtr image $ \imagePtr ->
-      withMatPtr templ $ \templPtr ->
+      withPtr result $ \resultPtr ->
+      withPtr image $ \imagePtr ->
+      withPtr templ $ \templPtr ->
         [cvExcept|
           cv::matchTemplate( *$(Mat * imagePtr)
                            , *$(Mat * templPtr)

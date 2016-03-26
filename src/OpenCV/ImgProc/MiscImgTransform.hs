@@ -127,6 +127,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgProc.MiscImgTransform.Internal
 import "this" OpenCV.TypeLevel
@@ -1063,8 +1064,8 @@ cvtColor :: forall (fromColor   :: ColorCode)
 cvtColor fromColor toColor src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src $ \srcPtr ->
-      withMatPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
         [cvExcept|
           cv::cvtColor( *$(Mat * srcPtr)
                       , *$(Mat * dstPtr)
@@ -1097,8 +1098,8 @@ threshold threshVal threshType src = unsafePerformIO $ do
     dst <- newEmptyMat
     alloca $ \calcThreshPtr ->
       handleCvException ((unsafeCoerceMat dst, ) . realToFrac <$> peek calcThreshPtr) $
-      withMatPtr src $ \srcPtr ->
-      withMatPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
         [cvExcept|
           *$(double * calcThreshPtr) =
             cv::threshold( *$(Mat * srcPtr)

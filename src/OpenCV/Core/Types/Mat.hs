@@ -64,6 +64,8 @@ C.using "namespace cv"
 emptyMat :: Mat ('S '[]) ('S 1) ('S Word8)
 emptyMat = unsafePerformIO newEmptyMat
 
+-- TODO (RvD): check for negative sizes
+-- This crashes OpenCV
 mkMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
@@ -78,6 +80,8 @@ mkMat
 mkMat shape channels depth defValue =
     unsafePerformIO $ newMat shape channels depth defValue
 
+-- TODO (RvD): check for negative sizes
+-- This crashes OpenCV
 mkMatM
     :: ( PrimMonad m
        , Convert shape    (V.Vector Int32)
@@ -109,7 +113,7 @@ eyeMat
     -> depth    -- ^
     -> Mat (ShapeT (height ::: width ::: Z)) (ChannelsT channels) (DepthT depth)
 eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
-    matFromPtr [CU.exp|Mat * {
+    fromPtr [CU.exp|Mat * {
       new Mat(Mat::eye( $(int32_t c'height)
                       , $(int32_t c'width)
                       , $(int32_t c'type)
@@ -135,7 +139,7 @@ cloneMatM = unsafePrimToPrim . cloneMatIO
 cloneMatIO :: Mat shape channels depth
            -> IO (Mat shape channels depth)
 cloneMatIO mat =
-    fmap unsafeCoerceMat $ matFromPtr $ withMatPtr mat $ \matPtr ->
+    fmap unsafeCoerceMat $ fromPtr $ withPtr mat $ \matPtr ->
       [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
 
 
@@ -169,9 +173,9 @@ matSubRect
 matSubRect matIn rect = unsafePerformIO $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
-      withMatPtr matIn $ \matInPtr ->
-      withMatPtr matOut $ \matOutPtr ->
-      withPtr rect $ \rectPtr ->
+      withPtr matIn  $ \matInPtr  ->
+      withPtr matOut $ \matOutPtr ->
+      withPtr rect   $ \rectPtr   ->
         [cvExceptU|
           *$(Mat * matOutPtr) =
             Mat( *$(Mat * matInPtr)
@@ -201,8 +205,8 @@ matCopyToM
     -> m (Either CvException ())
 matCopyToM dstMut (V2 x y) src =
     unsafePrimToPrim $ handleCvException (pure ()) $
-    withMatPtr (unMutMat dstMut) $ \dstPtr ->
-    withMatPtr src $ \srcPtr ->
+    withPtr (unMutMat dstMut) $ \dstPtr ->
+    withPtr src $ \srcPtr ->
       [cvExcept|
         const Mat * const srcPtr = $(const Mat * const srcPtr);
         const int32_t x = $(int32_t x);
@@ -235,8 +239,8 @@ matConvertTo
 matConvertTo alpha beta src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src $ \srcPtr ->
-      withMatPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
         [cvExcept|
           $(Mat * srcPtr)->
             convertTo( *$(Mat * dstPtr)

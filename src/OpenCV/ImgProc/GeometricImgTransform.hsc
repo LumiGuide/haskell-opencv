@@ -140,8 +140,8 @@ resize
 resize factor interpolationMethod src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src   $ \srcPtr   ->
-      withMatPtr dst   $ \dstPtr   ->
+      withPtr src   $ \srcPtr   ->
+      withPtr dst   $ \dstPtr   ->
       withPtr    dsize $ \dsizePtr ->
         [cvExcept|
           cv::resize
@@ -195,9 +195,9 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafePerformIO $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
-        withMatPtr src $ \srcPtr ->
-        withMatPtr dst $ \dstPtr ->
-        withMatPtr transform   $ \transformPtr ->
+        withPtr src $ \srcPtr ->
+        withPtr dst $ \dstPtr ->
+        withPtr transform   $ \transformPtr ->
         withPtr    borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
@@ -232,9 +232,9 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
     unsafePerformIO $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
-        withMatPtr src $ \srcPtr ->
-        withMatPtr dst $ \dstPtr ->
-        withMatPtr transform   $ \transformPtr   ->
+        withPtr src $ \srcPtr ->
+        withPtr dst $ \dstPtr ->
+        withPtr transform   $ \transformPtr   ->
         withPtr    borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
@@ -263,8 +263,8 @@ invertAffineTransform
 invertAffineTransform matIn = unsafePerformIO $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
-      withMatPtr matIn  $ \matInPtr ->
-      withMatPtr matOut $ \matOutPtr ->
+      withPtr matIn  $ \matInPtr ->
+      withPtr matOut $ \matOutPtr ->
         [cvExcept|
            cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
         |]
@@ -283,7 +283,7 @@ getRotationMatrix2D
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
     withPtr (convert center :: Point2f) $ \centerPtr ->
-      matFromPtr
+      fromPtr
       [CU.block| Mat * {
         return new cv::Mat
         ( cv::getRotationMatrix2D

@@ -29,6 +29,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" Language.C.Inline.OpenCV ( openCvCtx )
 import "this" OpenCV.Exception
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgCodecs.Internal
@@ -59,7 +60,7 @@ imdecode
     :: ImreadMode
     -> ByteString
     -> Mat ('S ['D, 'D]) 'D 'D
-imdecode imreadMode hbuf = unsafeCoerceMat $ unsafePerformIO $ matFromPtr
+imdecode imreadMode hbuf = unsafeCoerceMat $ unsafePerformIO $ fromPtr
     [C.block|Mat * {
       cv::_InputArray cbuf = cv::_InputArray($bs-ptr:hbuf, $bs-len:hbuf);
       return new cv::Mat(cv::imdecode(cbuf, $(int32_t c'imreadMode)));
@@ -86,7 +87,7 @@ imencode
     -> Mat shape channels depth
     -> Either CvException ByteString
 imencode format mat = unsafePerformIO $
-    withMatPtr mat $ \matPtr ->
+    withPtr mat $ \matPtr ->
     withCString ext $ \extPtr ->
     alloca $ \(bufPtrPtr :: Ptr (Ptr CUChar)) ->
     alloca $ \(vecPtrPtr :: Ptr (Ptr ())) ->

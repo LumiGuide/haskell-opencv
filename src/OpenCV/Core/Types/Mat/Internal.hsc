@@ -21,9 +21,6 @@ module OpenCV.Core.Types.Mat.Internal
     , unsafeCoerceMatM
     , relaxMat
 
-    , matFromPtr
-    , withMatPtr
-    , withMbMatPtr
     , keepMatAliveDuring
     , newEmptyMat
     , newMat
@@ -44,7 +41,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -164,6 +161,16 @@ newtype MutMat (shape    :: DS [DS Nat])
                (depth    :: DS *)
                (s        :: *)
       = MutMat {unMutMat :: Mat shape channels depth}
+
+type instance C (Mat shape channels depth) = C'Mat
+
+instance WithPtr (Mat shape channels depth) where
+    withPtr = withForeignPtr . unMat
+
+instance FromPtr (Mat shape channels depth) where
+    fromPtr = objFromPtr Mat $ \ptr ->
+                [CU.exp| void { delete $(Mat * ptr) }|]
+
 
 --------------------------------------------------------------------------------
 
@@ -300,19 +307,7 @@ relaxMat = unsafeCoerce
 
 --------------------------------------------------------------------------------
 
-matFromPtr :: IO (Ptr C'Mat) -> IO (Mat 'D 'D 'D)
-matFromPtr = objFromPtr Mat $ \ptr -> [CU.exp| void { delete $(Mat * ptr) }|]
-
-withMatPtr :: Mat shape channels depth -> (Ptr C'Mat -> IO a) -> IO a
-withMatPtr = withForeignPtr . unMat
-
-withMbMatPtr :: Maybe (Mat shape channels depth) -> (Ptr C'Mat -> IO a) -> IO a
-withMbMatPtr mbMat f =
-    case mbMat of
-      Just mat -> withMatPtr mat f
-      Nothing  -> f nullPtr
-
--- | Similar to 'withMatPtr' in that it keeps the 'ForeignPtr' alive
+-- | Similar to 'withPtr' in that it keeps the 'ForeignPtr' alive
 -- during the execution of the given action but it doesn't extract the 'Ptr'
 -- from the 'ForeignPtr'.
 keepMatAliveDuring :: Mat shape channels depth -> IO a -> IO a
@@ -322,7 +317,7 @@ keepMatAliveDuring mat m = do
     pure x
 
 newEmptyMat :: IO (Mat ('S '[]) ('S 1) ('S Word8))
-newEmptyMat = unsafeCoerceMat <$> matFromPtr [CU.exp|Mat * { new Mat() }|]
+newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
 
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
@@ -346,7 +341,7 @@ newMat
 newMat shape channels depth defValue = fmap unsafeCoerceMat $
     withVector shape' $ \shapePtr ->
     withPtr (convert defValue :: Scalar) $ \scalarPtr ->
-      matFromPtr [CU.exp|Mat * {
+      fromPtr [CU.exp|Mat * {
         new Mat( $(int32_t c'ndims)
                , $(int32_t * shapePtr)
                , $(int32_t c'type)
@@ -386,7 +381,7 @@ withMatData
     :: Mat shape channels depth
     -> ([CSize] -> Ptr Word8 -> IO a)
     -> IO a
-withMatData mat f = withMatPtr mat $ \matPtr ->
+withMatData mat f = withPtr mat $ \matPtr ->
     alloca $ \(dimsPtr  :: Ptr Int32      ) ->
     alloca $ \(stepPtr2 :: Ptr (Ptr CSize)) ->
     alloca $ \(dataPtr2 :: Ptr (Ptr Word8)) -> do
@@ -419,7 +414,7 @@ data MatInfo
 
 matInfo :: Mat shape channels depth -> MatInfo
 matInfo mat = unsafePerformIO $
-    withMatPtr mat $ \matPtr ->
+    withPtr mat $ \matPtr ->
     alloca $ \(flagsPtr :: Ptr Int32) ->
     alloca $ \(dimsPtr  :: Ptr Int32) ->
     alloca $ \(sizePtr  :: Ptr (Ptr Int32)) -> do

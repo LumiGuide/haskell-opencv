@@ -172,8 +172,8 @@ medianBlur
 medianBlur matIn ksize = unsafePerformIO $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
-      withMatPtr matOut $ \matOutPtr ->
-      withMatPtr matIn $ \matInPtr ->
+      withPtr matOut $ \matOutPtr ->
+      withPtr matIn $ \matInPtr ->
         [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int32_t ksize)); |]
 
 {- | Erodes an image by using a specific structuring element
@@ -225,9 +225,9 @@ erode
 erode src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src    $ \srcPtr    ->
-      withMatPtr dst    $ \dstPtr    ->
-      withMatPtr kernel $ \kernelPtr ->
+      withPtr src    $ \srcPtr    ->
+      withPtr dst    $ \dstPtr    ->
+      withPtr kernel $ \kernelPtr ->
       withPtr (convert anchor :: Point2i) $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
@@ -299,9 +299,9 @@ dilate
 dilate src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src    $ \srcPtr    ->
-      withMatPtr dst    $ \dstPtr    ->
-      withMatPtr kernel $ \kernelPtr ->
+      withPtr src    $ \srcPtr    ->
+      withPtr dst    $ \dstPtr    ->
+      withPtr kernel $ \kernelPtr ->
       withPtr (convert anchor :: Point2i) $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
@@ -341,9 +341,9 @@ morphologyEx
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src    $ \srcPtr    ->
-      withMatPtr dst    $ \dstPtr    ->
-      withMatPtr kernel $ \kernelPtr ->
+      withPtr src    $ \srcPtr    ->
+      withPtr dst    $ \dstPtr    ->
+      withPtr kernel $ \kernelPtr ->
       withPtr (convert anchor :: Point2i) $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
@@ -407,7 +407,7 @@ getStructuringElement morphShape height width = unsafePerformIO $ do
     handleCvException (pure $ unsafeCoerceMat element) $
       withPtr    ksize   $ \ksizePtr   ->
       withPtr    anchor  $ \anchorPtr  ->
-      withMatPtr element $ \elementPtr ->
+      withPtr element $ \elementPtr ->
        [cvExcept|
          *$(Mat * elementPtr) =
            cv::getStructuringElement

@@ -59,9 +59,9 @@ addWeighted
 addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src1 $ \src1Ptr ->
-      withMatPtr src2 $ \src2Ptr ->
-      withMatPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+      withPtr dst $ \dstPtr ->
       [cvExcept|
         cv::addWeighted
           ( *$(Mat * src1Ptr)
@@ -90,7 +90,7 @@ minMaxLoc
 minMaxLoc src = unsafePerformIO $ do
     minLoc <- newPoint2i zero
     maxLoc <- newPoint2i zero
-    withMatPtr src $ \srcPtr ->
+    withPtr src $ \srcPtr ->
       withPtr minLoc $ \minLocPtr ->
       withPtr maxLoc $ \maxLocPtr ->
       alloca $ \minValPtr ->
@@ -120,9 +120,9 @@ norm
     -> Mat shape channels depth -- ^ Input array.
     -> Either CvException Double  -- ^ Calculated norm.
 norm normType mbMask src = unsafePerformIO $
-    withMatPtr   src    $ \srcPtr  ->
-    withMbMatPtr mbMask $ \mskPtr  ->
-    alloca              $ \normPtr ->
+    withPtr src    $ \srcPtr  ->
+    withPtr mbMask $ \mskPtr  ->
+    alloca         $ \normPtr ->
     handleCvException (realToFrac <$> peek normPtr) $
       [cvExcept|
         Mat * mskPtr = $(Mat * mskPtr);
@@ -148,10 +148,10 @@ normDiff
     -> Mat shape channels depth -- ^ Second input array of the same size and type as the first.
     -> Either CvException Double -- ^ Calculated norm.
 normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
-    withMatPtr   src1   $ \src1Ptr ->
-    withMatPtr   src2   $ \src2Ptr ->
-    withMbMatPtr mbMask $ \mskPtr  ->
-    alloca              $ \normPtr ->
+    withPtr src1   $ \src1Ptr ->
+    withPtr src2   $ \src2Ptr ->
+    withPtr mbMask $ \mskPtr  ->
+    alloca         $ \normPtr ->
     handleCvException (realToFrac <$> peek normPtr) $
       [cvExcept|
         Mat * mskPtr = $(Mat * mskPtr);
@@ -184,9 +184,9 @@ normalize
 normalize alpha beta normType mbMask src = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr src      $ \srcPtr ->
-      withMatPtr dst      $ \dstPtr ->
-      withMbMatPtr mbMask $ \mskPtr ->
+      withPtr src    $ \srcPtr ->
+      withPtr dst    $ \dstPtr ->
+      withPtr mbMask $ \mskPtr ->
         [cvExcept|
           Mat * mskPtr = $(Mat * mskPtr);
           cv::normalize( *$(Mat * srcPtr)
@@ -215,8 +215,8 @@ matSum
 matSum src = unsafePerformIO $ do
     s <- newScalar zero
     handleCvException (pure s) $
-      withMatPtr src $ \srcPtr ->
-      withPtr s $ \sPtr ->
+      withPtr src $ \srcPtr ->
+      withPtr s   $ \sPtr   ->
         [cvExcept|
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
         |]
@@ -228,9 +228,9 @@ bitwise_not
 bitwise_not src mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr   src    $ \srcPtr ->
-      withMatPtr   dst    $ \dstPtr ->
-      withMbMatPtr mbMask $ \mskPtr ->
+      withPtr src    $ \srcPtr ->
+      withPtr dst    $ \dstPtr ->
+      withPtr mbMask $ \mskPtr ->
         [cvExcept|
           Mat * mskPtr = $(Mat * mskPtr);
           cv::bitwise_not
@@ -248,10 +248,10 @@ bitwise_and
 bitwise_and src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr   src1   $ \src1Ptr ->
-      withMatPtr   src2   $ \src2Ptr ->
-      withMatPtr   dst    $ \dstPtr  ->
-      withMbMatPtr mbMask $ \mskPtr  ->
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+      withPtr mbMask $ \mskPtr  ->
         [cvExcept|
           Mat * mskPtr = $(Mat * mskPtr);
           cv::bitwise_and
@@ -270,10 +270,10 @@ bitwise_or
 bitwise_or src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr   src1   $ \src1Ptr ->
-      withMatPtr   src2   $ \src2Ptr ->
-      withMatPtr   dst    $ \dstPtr  ->
-      withMbMatPtr mbMask $ \mskPtr  ->
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+      withPtr mbMask $ \mskPtr  ->
         [cvExcept|
           Mat * mskPtr = $(Mat * mskPtr);
           cv::bitwise_or
@@ -292,10 +292,10 @@ bitwise_xor
 bitwise_xor src1 src2 mbMask = unsafePerformIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-      withMatPtr   src1   $ \src1Ptr ->
-      withMatPtr   src2   $ \src2Ptr ->
-      withMatPtr   dst    $ \dstPtr  ->
-      withMbMatPtr mbMask $ \mskPtr  ->
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+      withPtr mbMask $ \mskPtr  ->
         [cvExcept|
           Mat * mskPtr = $(Mat * mskPtr);
           cv::bitwise_xor

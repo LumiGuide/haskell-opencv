@@ -51,7 +51,7 @@ estimateRigidTransform src dst fullAffine =
       handleCvException (pure matOut) $
         withArrayPtr (V.map convert src :: V.Vector Point2i) $ \srcPtr ->
         withArrayPtr (V.map convert dst :: V.Vector Point2i) $ \dstPtr ->
-        withMatPtr matOut $ \matOutPtr ->
+        withPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);
             *matOutPtr =

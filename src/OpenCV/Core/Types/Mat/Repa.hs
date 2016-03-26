@@ -32,6 +32,7 @@ import           "repa" Data.Array.Repa.Index ( (:.) )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 
 
@@ -71,7 +72,7 @@ toRepa
        )
     => Mat ('S shape) ('S channels) ('S depth) -- ^
     -> Repa.Array (M shape channels) sh depth
-toRepa mat = unsafePerformIO $ withMatPtr mat $ \matPtr ->
+toRepa mat = unsafePerformIO $ withPtr mat $ \matPtr ->
     alloca $ \(sizePtr    :: Ptr (Ptr Int32)) ->
     alloca $ \(stepPtr    :: Ptr (Ptr CSize)) ->
     alloca $ \(dataPtrPtr :: Ptr (Ptr Word8)) -> do

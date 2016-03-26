@@ -178,7 +178,7 @@ arrowedLine
     -> m ()
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
     withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
     withPtr (convert color :: Scalar)  $ \colorPtr ->
@@ -232,7 +232,7 @@ circle
     -> m ()
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPtr (convert center :: Point2i) $ \centerPtr ->
     withPtr (convert color  :: Scalar ) $ \colorPtr  ->
       [C.exp|void {
@@ -290,7 +290,7 @@ ellipse
     -> m ()
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPtr (convert center :: Point2i) $ \centerPtr ->
     withPtr (convert axes   :: Size2i ) $ \axesPtr   ->
     withPtr (convert color  :: Scalar ) $ \colorPtr  ->
@@ -337,7 +337,7 @@ fillConvexPoly
     -> m ()
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withArrayPtr (V.map convert points :: V.Vector Point2i) $ \pointsPtr ->
     withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {
@@ -416,7 +416,7 @@ fillPoly
     -> m ()
 fillPoly img polygons color lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (convert color :: Scalar) $ \colorPtr ->
@@ -480,7 +480,7 @@ polylines
     -> m ()
 polylines img curves isClosed color thickness lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (convert color :: Scalar) $ \colorPtr ->
@@ -541,7 +541,7 @@ line
     -> m ()
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
     withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
     withPtr (convert color :: Scalar ) $ \colorPtr ->
@@ -635,7 +635,7 @@ putText
     -> m ()
 putText img text org fontFace fontScale color thickness lineType bottomLeftOrigin =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
     withPtr (convert org   :: Point2i) $ \orgPtr   ->
     withPtr (convert color :: Scalar ) $ \colorPtr ->
@@ -688,7 +688,7 @@ rectangle
     -> m ()
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
-    withMatPtr (unMutMat img) $ \matPtr ->
+    withPtr (unMutMat img) $ \matPtr ->
     withPtr rect $ \rectPtr ->
     withPtr (convert color :: Scalar) $ \colorPtr ->
       [C.exp|void {

@@ -71,8 +71,8 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" Language.C.Inline.OpenCV
+import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
-import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe ( unsafeFreeze )
 
@@ -333,7 +333,7 @@ imshow
     -> IO ()
 imshow window mat =
     C.withCString (windowName window) $ \c'name ->
-      withMatPtr mat $ \matPtr ->
+      withPtr mat $ \matPtr ->
         [C.exp| void { cv::imshow($(char * c'name), *$(Mat * matPtr)); }|]
 
 imshowM

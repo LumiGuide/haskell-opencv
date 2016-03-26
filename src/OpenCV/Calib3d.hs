@@ -112,8 +112,8 @@ findFundamentalMat pts1 pts2 method = unsafePerformIO $ do
     fm   <- newEmptyMat
     pointMask <- newEmptyMat
     handleCvException (pure $ checkResult (fm, pointMask)) $
-      withMatPtr fm $ \fmPtr ->
-      withMatPtr pointMask $ \pointMaskPtr ->
+      withPtr fm $ \fmPtr ->
+      withPtr pointMask $ \pointMaskPtr ->
       withArrayPtr (V.map convert pts1 :: V.Vector Point2d) $ \pts1Ptr ->
       withArrayPtr (V.map convert pts2 :: V.Vector Point2d) $ \pts2Ptr ->
         [cvExcept|
@@ -154,8 +154,8 @@ computeCorrespondEpilines points whichImage fm = unsafePerformIO $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
       withArrayPtr (V.map convert points :: V.Vector Point2d) $ \pointsPtr ->
-      withMatPtr fm       $ \fmPtr       ->
-      withMatPtr epilines $ \epilinesPtr -> do
+      withPtr fm       $ \fmPtr       ->
+      withPtr epilines $ \epilinesPtr -> do
         -- Destroy type information about the pointsPtr. We wan't to generate
         -- C++ code that works for any type of point. Specifically Point2f and
         -- Point2d.
