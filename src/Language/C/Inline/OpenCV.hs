@@ -19,6 +19,17 @@ module Language.C.Inline.OpenCV
     , C'Scalar
     , C'Mat
 
+    , C'KeyPoint
+    , C'DMatch
+
+    -- , C'MSER
+    , C'Ptr_ORB
+    -- , C'BRISK
+    -- , C'KAZE
+    -- , C'AKAZE
+
+    , C'BFMatcher
+
     , C'MouseCallback
     , C'TrackbarCallback
 
@@ -65,6 +76,26 @@ data C'Scalar
 -- | Haskell representation of an OpenCV @cv::Mat@ object
 data C'Mat
 
+-- | Haskell representation of an OpenCV @cv::Keypoint@ object
+data C'KeyPoint
+-- | Haskell representation of an OpenCV @cv::DMatch@ object
+data C'DMatch
+
+-- -- | Haskell representation of an OpenCV @cv::MSER@ object
+-- data C'MSER
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::ORB>@ object
+data C'Ptr_ORB
+-- -- | Haskell representation of an OpenCV @cv::BRISK@ object
+-- data C'BRISK
+-- -- | Haskell representation of an OpenCV @cv::KAZE@ object
+-- data C'KAZE
+-- -- | Haskell representation of an OpenCV @cv::AKAZE@ object
+-- data C'AKAZE
+
+-- | Haskell representation of an OpenCV @cv::BFMatcher@ object
+data C'BFMatcher
+
+
 -- | Callback function for mouse events
 type C'MouseCallback
    =  Int32 -- ^ One of the @cv::MouseEvenTypes@ constants.
@@ -97,23 +128,34 @@ openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
 
 openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
-  [ ( C.TypeName "bool"        , [t| C.CInt |] )
+  [ ( C.TypeName "bool"            , [t| C.CInt                    |] )
 
-  , ( C.TypeName "Exception"   , [t| C'Exception    |] )
-  , ( C.TypeName "Point2i"     , [t| C'Point2i      |] )
-  , ( C.TypeName "Point2f"     , [t| C'Point2f      |] )
-  , ( C.TypeName "Point2d"     , [t| C'Point2d      |] )
-  , ( C.TypeName "Point3i"     , [t| C'Point3i      |] )
-  , ( C.TypeName "Point3f"     , [t| C'Point3f      |] )
-  , ( C.TypeName "Point3d"     , [t| C'Point3d      |] )
-  , ( C.TypeName "Size2i"      , [t| C'Size2i       |] )
-  , ( C.TypeName "Size2f"      , [t| C'Size2f       |] )
-  , ( C.TypeName "Rect"        , [t| C'Rect         |] )
-  , ( C.TypeName "RotatedRect" , [t| C'RotatedRect  |] )
-  , ( C.TypeName "TermCriteria", [t| C'TermCriteria |] )
-  , ( C.TypeName "Scalar"      , [t| C'Scalar       |] )
-  , ( C.TypeName "Mat"         , [t| C'Mat          |] )
-  , ( C.TypeName "Range"       , [t| C'Range        |] )
+  , ( C.TypeName "Exception"       , [t| C'Exception               |] )
+  , ( C.TypeName "Point2i"         , [t| C'Point2i                 |] )
+  , ( C.TypeName "Point2f"         , [t| C'Point2f                 |] )
+  , ( C.TypeName "Point2d"         , [t| C'Point2d                 |] )
+  , ( C.TypeName "Point3i"         , [t| C'Point3i                 |] )
+  , ( C.TypeName "Point3f"         , [t| C'Point3f                 |] )
+  , ( C.TypeName "Point3d"         , [t| C'Point3d                 |] )
+  , ( C.TypeName "Size2i"          , [t| C'Size2i                  |] )
+  , ( C.TypeName "Size2f"          , [t| C'Size2f                  |] )
+  , ( C.TypeName "Rect"            , [t| C'Rect                    |] )
+  , ( C.TypeName "RotatedRect"     , [t| C'RotatedRect             |] )
+  , ( C.TypeName "TermCriteria"    , [t| C'TermCriteria            |] )
+  , ( C.TypeName "Scalar"          , [t| C'Scalar                  |] )
+  , ( C.TypeName "Mat"             , [t| C'Mat                     |] )
+  , ( C.TypeName "Range"           , [t| C'Range                   |] )
+
+  , ( C.TypeName "KeyPoint"        , [t| C'KeyPoint                |] )
+  , ( C.TypeName "DMatch"          , [t| C'DMatch                  |] )
+
+--, ( C.TypeName "MSER"            , [t| C'MSER                    |] )
+  , ( C.TypeName "Ptr_ORB"         , [t| C'Ptr_ORB                 |] )
+--, ( C.TypeName "BRISK"           , [t| C'BRISK                   |] )
+--, ( C.TypeName "KAZE"            , [t| C'KAZE                    |] )
+--, ( C.TypeName "AKAZE"           , [t| C'AKAZE                   |] )
+
+  , ( C.TypeName "BFMatcher"       , [t| C'BFMatcher               |] )
 
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )

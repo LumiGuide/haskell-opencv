@@ -98,6 +98,9 @@ main = defaultMain $ testGroup "thea"
 -- !?!?!, HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)
         ]
       ]
+    , testGroup "Features2d"
+      [ HU.testCase "orbDetectAndCompute" testOrbDetectAndCompute
+      ]
     , testGroup "HighGui"
       [
       ]
@@ -237,6 +240,23 @@ encodeDecode outputFormat = do
 
     assertBool "imencode . imdecode failure"
                (bs2 == bs3)
+
+testOrbDetectAndCompute :: HU.Assertion
+testOrbDetectAndCompute = do
+    kikker <- loadImg ImreadUnchanged "kikker.jpg"
+    let (kpts, descs) = orbDetectAndCompute orb kikker Nothing
+        kptsRec  = V.map keyPointAsRec kpts
+        kpts2    = V.map mkKeyPoint    kptsRec
+        kptsRec2 = V.map keyPointAsRec kpts2
+        numDescs = head $ miShape $ matInfo descs
+    assertEqual "kpt conversion failure"
+                kptsRec
+                kptsRec2
+    assertEqual "number of kpts /= number of descriptors"
+                (fromIntegral $ V.length kpts)
+                numDescs
+  where
+    orb = mkOrb defaultOrbParams {orb_nfeatures = 10}
 
 loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
 loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)

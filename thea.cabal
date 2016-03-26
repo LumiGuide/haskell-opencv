@@ -17,23 +17,24 @@ extra-doc-files:
 library
   hs-source-dirs: src
   include-dirs: include
-  c-sources: src/OpenCV/Exception.cpp
-           , src/OpenCV/Calib3d.cpp
+  c-sources: src/OpenCV/Calib3d.cpp
+           , src/OpenCV/Core/ArrayOps.cpp
            , src/OpenCV/Core/Types.cpp
            , src/OpenCV/Core/Types/Internal.cpp
            , src/OpenCV/Core/Types/Mat.cpp
            , src/OpenCV/Core/Types/Mat/Internal.cpp
            , src/OpenCV/Core/Types/Mat/Repa.cpp
-           , src/OpenCV/Core/ArrayOps.cpp
-           , src/OpenCV/ImgProc/ImgFiltering.cpp
-           , src/OpenCV/ImgProc/GeometricImgTransform.cpp
-           , src/OpenCV/ImgProc/MiscImgTransform.cpp
-           , src/OpenCV/ImgProc/Drawing.cpp
-           , src/OpenCV/ImgProc/ColorMaps.cpp
-           , src/OpenCV/ImgProc/StructuralAnalysis.cpp
-           , src/OpenCV/ImgProc/ObjectDetection.cpp
-           , src/OpenCV/ImgCodecs.cpp
+           , src/OpenCV/Exception.cpp
+           , src/OpenCV/Features2d.cpp
            , src/OpenCV/HighGui.cpp
+           , src/OpenCV/ImgCodecs.cpp
+           , src/OpenCV/ImgProc/ColorMaps.cpp
+           , src/OpenCV/ImgProc/Drawing.cpp
+           , src/OpenCV/ImgProc/GeometricImgTransform.cpp
+           , src/OpenCV/ImgProc/ImgFiltering.cpp
+           , src/OpenCV/ImgProc/MiscImgTransform.cpp
+           , src/OpenCV/ImgProc/ObjectDetection.cpp
+           , src/OpenCV/ImgProc/StructuralAnalysis.cpp
            , src/OpenCV/Video.cpp
 
   cc-options: -Wall -O2 -std=c++11
@@ -58,12 +59,14 @@ library
   exposed-modules: OpenCV
                  , OpenCV.Calib3d
                  , OpenCV.Core
+                 , OpenCV.Core.ArrayOps
                  , OpenCV.Core.Types
                  , OpenCV.Core.Types.Mat
                  , OpenCV.Core.Types.Mat.HMat
                  , OpenCV.Core.Types.Mat.Repa
-                 , OpenCV.Core.ArrayOps
-                 , OpenCV.Unsafe
+                 , OpenCV.Features2d
+                 , OpenCV.HighGui
+                 , OpenCV.ImgCodecs
                  , OpenCV.ImgProc.ImgFiltering
                  , OpenCV.ImgProc.GeometricImgTransform
                  , OpenCV.ImgProc.MiscImgTransform
@@ -72,22 +75,21 @@ library
                  , OpenCV.ImgProc.StructuralAnalysis
                  , OpenCV.ImgProc.ObjectDetection
                  , OpenCV.ImgProc.Types
-                 , OpenCV.ImgCodecs
-                 , OpenCV.HighGui
-                 , OpenCV.Video
-                 , OpenCV.TypeLevel
                  , OpenCV.JSON
-  other-modules:   OpenCV.Calib3d.Constants
-                 , OpenCV.Exception
-                 , OpenCV.Internal
+                 , OpenCV.TypeLevel
+                 , OpenCV.Unsafe
+                 , OpenCV.Video
+  other-modules:   Language.C.Inline.OpenCV
+                 , OpenCV.Calib3d.Constants
                  , OpenCV.Core.ArrayOps.Internal
                  , OpenCV.Core.Types.Constants
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
-                 , OpenCV.ImgProc.Types.Internal
-                 , OpenCV.ImgProc.MiscImgTransform.Internal
+                 , OpenCV.Exception
                  , OpenCV.ImgCodecs.Internal
-                 , Language.C.Inline.OpenCV
+                 , OpenCV.ImgProc.MiscImgTransform.Internal
+                 , OpenCV.ImgProc.Types.Internal
+                 , OpenCV.Internal
 
   default-extensions: BangPatterns
                     , DataKinds

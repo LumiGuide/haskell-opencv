@@ -1,5 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- For Show instances
 
@@ -41,13 +43,22 @@ module OpenCV.Core.Types
     , Range
     , mkRange
     , wholeRange
+      -- * KeyPoint
+    , KeyPoint
+    , KeyPointRec(..)
+    , mkKeyPoint
+    , keyPointAsRec
+      -- * DMatch
+    , DMatch
+    , DMatchRec(..)
+    , mkDMatch
+    , dmatchAsRec
       -- * Matrix
     , module OpenCV.Core.Types.Mat
       -- * Exception
     , CvException
       -- * Polymorphic stuff
     , PointT
-    , C
     , WithPtr
     , FromPtr
     , CSizeOf
@@ -55,7 +66,10 @@ module OpenCV.Core.Types
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( toBool )
+import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -64,8 +78,10 @@ import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
 import "this" Language.C.Inline.OpenCV
 import "this" OpenCV.Exception
+import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -227,6 +243,7 @@ mkTermCriteria
 mkTermCriteria mbMaxCount mbEpsilon =
     unsafePerformIO $ newTermCriteria mbMaxCount mbEpsilon
 
+
 --------------------------------------------------------------------------------
 -- Range
 --------------------------------------------------------------------------------
@@ -236,3 +253,173 @@ mkRange start end = unsafePerformIO $ newRange start end
 
 wholeRange :: Range
 wholeRange = unsafePerformIO newWholeRange
+
+
+--------------------------------------------------------------------------------
+-- KeyPoint
+--------------------------------------------------------------------------------
+
+{- | Data structure for salient point detectors
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#keypoint OpenCV Sphinx doc>
+-}
+newtype KeyPoint = KeyPoint {unKeyPoint :: ForeignPtr C'KeyPoint}
+
+type instance C KeyPoint = C'KeyPoint
+
+instance WithPtr KeyPoint where
+    withPtr = withForeignPtr . unKeyPoint
+
+instance FromPtr KeyPoint where
+    fromPtr = objFromPtr KeyPoint $ \ptr ->
+                [CU.exp| void { delete $(KeyPoint * ptr) }|]
+
+instance CSizeOf C'KeyPoint where
+    cSizeOf _proxy = c'sizeof_KeyPoint
+
+data KeyPointRec
+   = KeyPointRec
+     { kptPoint :: !(V2 Float)
+       -- ^ Coordinates of the keypoints.
+     , kptSize :: !Float
+       -- ^ Diameter of the meaningful keypoint neighborhood.
+     , kptAngle :: !Float
+       -- ^ Computed orientation of the keypoint (-1 if not applicable); it's in
+       -- [0,360) degrees and measured relative to image coordinate system, ie
+       -- in clockwise.
+     , kptResponse :: !Float
+       -- ^ The response by which the most strong keypoints have been
+       -- selected. Can be used for the further sorting or subsampling.
+     , kptOctave :: !Int32
+       -- ^ Octave (pyramid layer) from which the keypoint has been extracted.
+     , kptClassId :: !Int32
+       -- ^ Object class (if the keypoints need to be clustered by an object
+       -- they belong to).
+     } deriving (Eq, Show)
+
+newKeyPoint :: KeyPointRec -> IO KeyPoint
+newKeyPoint KeyPointRec{..} = fromPtr $
+    [CU.exp|KeyPoint * {
+      new cv::KeyPoint
+          ( cv::Point2f($(float c'x), $(float c'y))
+          , $(float c'kptSize)
+          , $(float c'kptAngle)
+          , $(float c'kptResponse)
+          , $(int32_t kptOctave)
+          , $(int32_t kptClassId)
+          )
+    }|]
+  where
+    V2 c'x c'y = realToFrac <$> kptPoint
+    c'kptSize     = realToFrac kptSize
+    c'kptAngle    = realToFrac kptAngle
+    c'kptResponse = realToFrac kptResponse
+
+mkKeyPoint :: KeyPointRec -> KeyPoint
+mkKeyPoint = unsafePerformIO . newKeyPoint
+
+keyPointAsRec :: KeyPoint -> KeyPointRec
+keyPointAsRec kpt = unsafePerformIO $
+    withPtr kpt $ \kptPtr ->
+    alloca $ \xPtr        ->
+    alloca $ \yPtr        ->
+    alloca $ \sizePtr     ->
+    alloca $ \anglePtr    ->
+    alloca $ \responsePtr ->
+    alloca $ \octavePtr   ->
+    alloca $ \classIdPtr  -> do
+      [CU.block|void {
+        KeyPoint * kpt = $(KeyPoint * kptPtr);
+        *$(float   * xPtr       ) = kpt->pt.x    ;
+        *$(float   * yPtr       ) = kpt->pt.y    ;
+        *$(float   * sizePtr    ) = kpt->size    ;
+        *$(float   * anglePtr   ) = kpt->angle   ;
+        *$(float   * responsePtr) = kpt->response;
+        *$(int32_t * octavePtr  ) = kpt->octave  ;
+        *$(int32_t * classIdPtr ) = kpt->class_id;
+      }|]
+      KeyPointRec
+        <$> ( V2 <$> (realToFrac <$> peek xPtr)
+                 <*> (realToFrac <$> peek yPtr)
+            )
+        <*> (realToFrac <$> peek sizePtr    )
+        <*> (realToFrac <$> peek anglePtr   )
+        <*> (realToFrac <$> peek responsePtr)
+        <*> peek octavePtr
+        <*> peek classIdPtr
+
+instance Convert KeyPointRec KeyPoint where convert = mkKeyPoint
+instance Convert KeyPoint KeyPointRec where convert = keyPointAsRec
+
+--------------------------------------------------------------------------------
+-- DMatch
+--------------------------------------------------------------------------------
+
+{- | Class for matching keypoint descriptors: query descriptor index, train
+descriptor index, train image index, and distance between descriptors
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#dmatch OpenCV Sphinx Doc>
+-}
+newtype DMatch = DMatch {unDMatch :: ForeignPtr C'DMatch}
+
+type instance C DMatch = C'DMatch
+
+instance WithPtr DMatch where
+    withPtr = withForeignPtr . unDMatch
+
+instance FromPtr DMatch where
+    fromPtr = objFromPtr DMatch $ \ptr ->
+                [CU.exp| void { delete $(DMatch * ptr) }|]
+
+instance CSizeOf C'DMatch where
+    cSizeOf _proxy = c'sizeof_DMatch
+
+data DMatchRec
+   = DMatchRec
+     { dmatchQueryIdx :: !Int32
+       -- ^ Query descriptor index.
+     , dmatchTrainIdx :: !Int32
+       -- ^ Train descriptor index.
+     , dmatchImgIdx   :: !Int32
+       -- ^ Train image index.
+     , dmatchDistance :: !Float
+     } deriving (Eq, Show)
+
+newDMatch :: DMatchRec -> IO DMatch
+newDMatch DMatchRec{..} = fromPtr $
+    [CU.exp|DMatch * {
+      new cv::DMatch
+          ( $(int32_t dmatchQueryIdx)
+          , $(int32_t dmatchTrainIdx)
+          , $(int32_t dmatchImgIdx)
+          , $(float c'distance)
+          )
+    }|]
+  where
+    c'distance = realToFrac dmatchDistance
+
+mkDMatch :: DMatchRec -> DMatch
+mkDMatch = unsafePerformIO . newDMatch
+
+dmatchAsRec :: DMatch -> DMatchRec
+dmatchAsRec dmatch = unsafePerformIO $
+    withPtr dmatch $ \dmatchPtr ->
+    alloca $ \queryIdxPtr ->
+    alloca $ \trainIdxPtr ->
+    alloca $ \imgIdxPtr ->
+    alloca $ \distancePtr -> do
+      [CU.block|void {
+        DMatch * dmatch = $(DMatch * dmatchPtr);
+        *$(int32_t * queryIdxPtr) = dmatch->queryIdx;
+        *$(int32_t * trainIdxPtr) = dmatch->trainIdx;
+        *$(int32_t * imgIdxPtr  ) = dmatch->imgIdx  ;
+        *$(float   * distancePtr) = dmatch->distance;
+      }|]
+      DMatchRec
+        <$> peek queryIdxPtr
+        <*> peek trainIdxPtr
+        <*> peek imgIdxPtr
+        <*> (realToFrac <$> peek distancePtr)
+
+instance Convert DMatchRec DMatch where convert = mkDMatch
+instance Convert DMatch DMatchRec where convert = dmatchAsRec
