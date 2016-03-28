@@ -13,8 +13,7 @@ module OpenCV.Features2d
     , orbDetectAndCompute
 
       -- * DescriptorMatcher
-    , DescriptorMatcher
-    , match
+    , DescriptorMatcher(..)
       -- ** BFMatcher
     , BFMatcher
     , newBFMatcher
@@ -195,6 +194,35 @@ mkOrb = unsafePerformIO . newOrb
 
 --------------------------------------------------------------------------------
 
+{- | Detect keypoints and compute descriptors
+
+Example:
+
+@
+orbDetectAndComputeImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
+    => Mat (ShapeT [height, width]) ('S channels) ('S depth)
+orbDetectAndComputeImg = createMat $ do
+    imgM <- mkMatM (Proxy :: Proxy [height, width])
+                   (Proxy :: Proxy channels)
+                   (Proxy :: Proxy depth)
+                   white
+    void $ matCopyToM imgM (V2 0 0) frog
+    forM_ kpts $ \kpt -> do
+      let kptRec = keyPointAsRec kpt
+      circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
+    pure imgM
+  where
+    (kpts, _descs) = orbDetectAndCompute orb frog Nothing
+    orb = mkOrb defaultOrbParams
+@
+
+<<doc/generated/examples/orbDetectAndComputeImg.png orbDetectAndComputeImg>>
+-}
 orbDetectAndCompute
     :: Orb
     -> Mat ('S [height, width]) channels depth -- ^ Image.
@@ -274,6 +302,70 @@ class DescriptorMatcher a where
 -- BFMatcher
 --------------------------------------------------------------------------------
 
+{- | Brute-force descriptor matcher
+
+For each descriptor in the first set, this matcher finds the closest descriptor
+in the second set by trying each one. This descriptor matcher supports masking
+permissible matches of descriptor sets.
+
+Example:
+
+@
+bfMatcherImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
+       , width2 ~ (*) width 2
+       )
+    => IO (Mat (ShapeT [height, width2]) ('S channels) ('S depth))
+bfMatcherImg = do
+    bfmatcher <- newBFMatcher Norm_Hamming True
+    matches <- match bfmatcher
+                     descs1 -- Query descriptors
+                     descs2 -- Train descriptors
+                     Nothing
+    pure $ createMat $ do
+      imgM <- mkMatM (Proxy :: Proxy [height, width2])
+                     (Proxy :: Proxy channels)
+                     (Proxy :: Proxy depth)
+                     white
+      void $ matCopyToM imgM (V2 0     0) frog
+      void $ matCopyToM imgM (V2 width 0) rotatedFrog
+
+      -- Draw the matches as lines from the query image to the train image.
+      forM_ matches $ \dmatch -> do
+        let matchRec = dmatchAsRec dmatch
+            queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
+            trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
+            queryPtRec = keyPointAsRec queryPt
+            trainPtRec = keyPointAsRec trainPt
+
+        -- We translate the train point one width to the right in order to
+        -- match the rotatedFrog image in the composite image.
+        line imgM
+             (round \<$> kptPoint queryPtRec :: V2 Int32)
+             ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)
+             blue 1 LineType_AA 0
+      pure imgM
+  where
+    (kpts1, descs1) = orbDetectAndCompute orb frog        Nothing
+    (kpts2, descs2) = orbDetectAndCompute orb rotatedFrog Nothing
+    orb = mkOrb defaultOrbParams {orb_nfeatures = 50}
+
+    width = fromInteger $ natVal (Proxy :: Proxy width)
+
+    rotatedFrog = either throw id $
+                  warpAffine frog rotMat InterArea False False (BorderConstant black)
+    rotMat = getRotationMatrix2D (V2 250 195 :: V2 Float) 45 0.8
+@
+
+<<doc/generated/examples/bfMatcherImg.png bfMatcherImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/features2d/doc/common_interfaces_of_descriptor_matchers.html#bfmatcher OpenCV Sphinx doc>
+-}
 newtype BFMatcher = BFMatcher {unBFMatcher :: ForeignPtr C'BFMatcher}
 
 type instance C BFMatcher = C'BFMatcher
