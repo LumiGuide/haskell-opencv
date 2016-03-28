@@ -57,6 +57,7 @@ mkDerivation {
   ];
   testHaskellDepends = [
     base
+    containers
     directory
     Glob
     haskell-src-meta

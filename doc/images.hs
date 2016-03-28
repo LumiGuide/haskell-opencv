@@ -13,6 +13,7 @@ import "base" Data.Proxy
 import "base" Data.Word
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import "linear" Linear.Vector ( (^+^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
 import qualified "text" Data.Text as T
@@ -34,6 +35,7 @@ red         = convert (V4   0   0 255 255 :: V4 Double)
 
 type Birds_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Birds_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+type Frog          = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
 type Lambda        = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
 birds_768x512 :: Birds_768x512
@@ -45,6 +47,10 @@ birds_512x341 = either throw (either (error . concat) id . coerceMat) $
                   resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
                          InterArea
                          birds_768x512
+
+frog :: Frog
+frog = either (error . concat) id $ coerceMat $ unsafePerformIO $
+         imdecode ImreadColor <$> B.readFile "data/kikker.jpg"
 
 lambda :: Lambda
 lambda = either (error . concat) id $ coerceMat $ unsafePerformIO $
@@ -108,10 +114,10 @@ extractExampleImages "src"
 main :: IO ()
 main = do
     renderExampleImages
-    render birds_512x341 "birds_512x341.png"
+    render "birds_512x341.png" birds_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
-      render (lineTypeImg lineType) (show lineType <> ".png")
+      render (show lineType <> ".png") (lineTypeImg lineType)
     forM_ [minBound .. maxBound] $ \fontFace ->
-      render (fontFaceImg fontFace) (show fontFace <> ".png")
+      render (show fontFace <> ".png") (fontFaceImg fontFace)
 
 --------------------------------------------------------------------------------
