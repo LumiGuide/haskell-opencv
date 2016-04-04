@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Video
-    ( -- * Motion Analysys and Object Tracking
+    ( -- * Motion Analysis and Object Tracking
       estimateRigidTransform
     ) where
 

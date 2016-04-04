@@ -30,6 +30,9 @@ module Language.C.Inline.OpenCV
 
     , C'BFMatcher
 
+    , C'Ptr_BackgroundSubtractorKNN
+    , C'Ptr_BackgroundSubtractorMOG2
+
     , C'MouseCallback
     , C'TrackbarCallback
 
@@ -95,6 +98,10 @@ data C'Ptr_ORB
 -- | Haskell representation of an OpenCV @cv::BFMatcher@ object
 data C'BFMatcher
 
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorMOG2>@ object
+data C'Ptr_BackgroundSubtractorKNN
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
+data C'Ptr_BackgroundSubtractorMOG2
 
 -- | Callback function for mouse events
 type C'MouseCallback
@@ -128,34 +135,37 @@ openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
 
 openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
-  [ ( C.TypeName "bool"            , [t| C.CInt                    |] )
+  [ ( C.TypeName "bool"        , [t| C.CInt        |] )
 
-  , ( C.TypeName "Exception"       , [t| C'Exception               |] )
-  , ( C.TypeName "Point2i"         , [t| C'Point2i                 |] )
-  , ( C.TypeName "Point2f"         , [t| C'Point2f                 |] )
-  , ( C.TypeName "Point2d"         , [t| C'Point2d                 |] )
-  , ( C.TypeName "Point3i"         , [t| C'Point3i                 |] )
-  , ( C.TypeName "Point3f"         , [t| C'Point3f                 |] )
-  , ( C.TypeName "Point3d"         , [t| C'Point3d                 |] )
-  , ( C.TypeName "Size2i"          , [t| C'Size2i                  |] )
-  , ( C.TypeName "Size2f"          , [t| C'Size2f                  |] )
-  , ( C.TypeName "Rect"            , [t| C'Rect                    |] )
-  , ( C.TypeName "RotatedRect"     , [t| C'RotatedRect             |] )
-  , ( C.TypeName "TermCriteria"    , [t| C'TermCriteria            |] )
-  , ( C.TypeName "Scalar"          , [t| C'Scalar                  |] )
-  , ( C.TypeName "Mat"             , [t| C'Mat                     |] )
-  , ( C.TypeName "Range"           , [t| C'Range                   |] )
+  , ( C.TypeName "Exception"   , [t| C'Exception   |] )
+  , ( C.TypeName "Point2i"     , [t| C'Point2i     |] )
+  , ( C.TypeName "Point2f"     , [t| C'Point2f     |] )
+  , ( C.TypeName "Point2d"     , [t| C'Point2d     |] )
+  , ( C.TypeName "Point3i"     , [t| C'Point3i     |] )
+  , ( C.TypeName "Point3f"     , [t| C'Point3f     |] )
+  , ( C.TypeName "Point3d"     , [t| C'Point3d     |] )
+  , ( C.TypeName "Size2i"      , [t| C'Size2i      |] )
+  , ( C.TypeName "Size2f"      , [t| C'Size2f      |] )
+  , ( C.TypeName "Rect"        , [t| C'Rect        |] )
+  , ( C.TypeName "RotatedRect" , [t| C'RotatedRect |] )
+  , ( C.TypeName "TermCriteria", [t| C'TermCriteria|] )
+  , ( C.TypeName "Scalar"      , [t| C'Scalar      |] )
+  , ( C.TypeName "Mat"         , [t| C'Mat         |] )
+  , ( C.TypeName "Range"       , [t| C'Range       |] )
 
-  , ( C.TypeName "KeyPoint"        , [t| C'KeyPoint                |] )
-  , ( C.TypeName "DMatch"          , [t| C'DMatch                  |] )
+  , ( C.TypeName "KeyPoint"    , [t| C'KeyPoint    |] )
+  , ( C.TypeName "DMatch"      , [t| C'DMatch      |] )
 
---, ( C.TypeName "MSER"            , [t| C'MSER                    |] )
-  , ( C.TypeName "Ptr_ORB"         , [t| C'Ptr_ORB                 |] )
---, ( C.TypeName "BRISK"           , [t| C'BRISK                   |] )
---, ( C.TypeName "KAZE"            , [t| C'KAZE                    |] )
---, ( C.TypeName "AKAZE"           , [t| C'AKAZE                   |] )
+--, ( C.TypeName "MSER"        , [t| C'MSER        |] )
+  , ( C.TypeName "Ptr_ORB"     , [t| C'Ptr_ORB     |] )
+--, ( C.TypeName "BRISK"       , [t| C'BRISK       |] )
+--, ( C.TypeName "KAZE"        , [t| C'KAZE        |] )
+--, ( C.TypeName "AKAZE"       , [t| C'AKAZE       |] )
 
-  , ( C.TypeName "BFMatcher"       , [t| C'BFMatcher               |] )
+  , ( C.TypeName "BFMatcher"   , [t| C'BFMatcher   |] )
+
+  , ( C.TypeName "Ptr_BackgroundSubtractorKNN" , [t| C'Ptr_BackgroundSubtractorKNN  |] )
+  , ( C.TypeName "Ptr_BackgroundSubtractorMOG2", [t| C'Ptr_BackgroundSubtractorMOG2 |] )
 
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )

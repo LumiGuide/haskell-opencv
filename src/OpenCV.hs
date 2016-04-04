@@ -20,6 +20,7 @@ module OpenCV
     , module OpenCV.ImgProc.StructuralAnalysis
     , module OpenCV.ImgProc.Types
     , module OpenCV.Video
+    , module OpenCV.Video.MotionAnalysis
 
     , module OpenCV.TypeLevel
 
@@ -45,6 +46,7 @@ import OpenCV.ImgProc.ObjectDetection
 import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types
 import OpenCV.Video
+import OpenCV.Video.MotionAnalysis
 
 import OpenCV.TypeLevel
 

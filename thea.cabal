@@ -36,6 +36,7 @@ library
            , src/OpenCV/ImgProc/ObjectDetection.cpp
            , src/OpenCV/ImgProc/StructuralAnalysis.cpp
            , src/OpenCV/Video.cpp
+           , src/OpenCV/Video/MotionAnalysis.cpp
 
   cc-options: -Wall -O2 -std=c++11
   ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
@@ -79,6 +80,7 @@ library
                  , OpenCV.TypeLevel
                  , OpenCV.Unsafe
                  , OpenCV.Video
+                 , OpenCV.Video.MotionAnalysis
   other-modules:   Language.C.Inline.OpenCV
                  , OpenCV.Calib3d.Constants
                  , OpenCV.Core.ArrayOps.Internal

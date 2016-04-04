@@ -57,6 +57,8 @@ module OpenCV.Core.Types
     , module OpenCV.Core.Types.Mat
       -- * Exception
     , CvException
+      -- * Algorithm
+    , Algorithm(..)
       -- * Polymorphic stuff
     , PointT
     , WithPtr
@@ -423,3 +425,12 @@ dmatchAsRec dmatch = unsafePerformIO $
 
 instance Convert DMatchRec DMatch where convert = mkDMatch
 instance Convert DMatch DMatchRec where convert = dmatchAsRec
+
+
+--------------------------------------------------------------------------------
+-- Algorithm
+--------------------------------------------------------------------------------
+
+class Algorithm a m where
+    algorithmClearState :: a -> m ()
+    algorithmIsEmpty :: a -> m Bool
