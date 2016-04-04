@@ -23,5 +23,7 @@ module OpenCV.Core.Types.Constants where
 #sizeof KeyPoint
 #sizeof DMatch
 
+#sizeof Mat
+
 #num TERMCRITERIA_COUNT
 #num TERMCRITERIA_EPS

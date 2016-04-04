@@ -49,7 +49,8 @@ import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" Language.C.Inline.OpenCV
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
@@ -154,7 +155,7 @@ unmarshalFlags n =
 newtype Mat (shape    :: DS [DS Nat])
             (channels :: DS Nat)
             (depth    :: DS *)
-      = Mat {unMat :: ForeignPtr C'Mat}
+      = Mat {unMat :: ForeignPtr (C (Mat shape channels depth))}
 
 newtype MutMat (shape    :: DS [DS Nat])
                (channels :: DS Nat)
@@ -170,7 +171,6 @@ instance WithPtr (Mat shape channels depth) where
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr Mat $ \ptr ->
                 [CU.exp| void { delete $(Mat * ptr) }|]
-
 
 --------------------------------------------------------------------------------
 

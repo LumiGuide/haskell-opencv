@@ -18,6 +18,7 @@ library
   hs-source-dirs: src
   include-dirs: include
   c-sources: src/OpenCV/Calib3d.cpp
+           , src/OpenCV/C/PlacementNew.cpp
            , src/OpenCV/Core/ArrayOps.cpp
            , src/OpenCV/Core/Types.cpp
            , src/OpenCV/Core/Types/Internal.cpp
@@ -81,12 +82,14 @@ library
                  , OpenCV.Unsafe
                  , OpenCV.Video
                  , OpenCV.Video.MotionAnalysis
-  other-modules:   Language.C.Inline.OpenCV
-                 , OpenCV.Calib3d.Constants
+  other-modules:   OpenCV.Calib3d.Constants
                  , OpenCV.Core.ArrayOps.Internal
                  , OpenCV.Core.Types.Constants
                  , OpenCV.Core.Types.Internal
                  , OpenCV.Core.Types.Mat.Internal
+                 , OpenCV.C.Inline
+                 , OpenCV.C.PlacementNew
+                 , OpenCV.C.Types
                  , OpenCV.Exception
                  , OpenCV.ImgCodecs.Internal
                  , OpenCV.ImgProc.MiscImgTransform.Internal

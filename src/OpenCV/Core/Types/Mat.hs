@@ -41,7 +41,8 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" Language.C.Inline.OpenCV
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Exception
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
@@ -182,8 +183,6 @@ matSubRect matIn rect = unsafePerformIO $ do
                , *$(Rect * rectPtr)
                );
         |]
-
-
 
 matCopyTo
     :: Mat ('S [dstHeight, dstWidth]) channels depth -- ^

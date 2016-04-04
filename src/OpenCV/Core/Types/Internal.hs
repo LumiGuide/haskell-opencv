@@ -44,13 +44,9 @@ module OpenCV.Core.Types.Internal
     , withArrayPtr
       -- * Polymorphic stuff
     , PointT
-    , C
-    , WithPtr(..)
-    , FromPtr(..)
-    , CSizeOf(..)
-    , PlacementNew(..)
     ) where
 
+import "base" Control.Exception ( bracket_ )
 import "base" Data.Bits ( (.|.) )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int ( Int32 )
@@ -59,7 +55,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
-import "base" Foreign.Ptr ( Ptr, nullPtr, plusPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( sizeOf, peek, poke )
 import "base" GHC.TypeLits ( Nat )
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -69,9 +65,11 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
-import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Internal
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.PlacementNew
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Constants
+import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
@@ -506,11 +504,14 @@ withArrayPtr
     -> (Ptr (C a) -> IO b)
     -> IO b
 withArrayPtr arr act =
-    allocaBytes (elemSize * V.length arr) $ \arrPtr -> do
-      V.foldM'_ copyNext arrPtr arr
-      act arrPtr
+    allocaBytes arraySize $ \arrPtr ->
+      bracket_
+        (V.foldM'_ copyNext arrPtr arr)
+        (deconstructArray arrPtr )
+        (act arrPtr)
   where
     elemSize = cSizeOf (Proxy :: Proxy (C a))
+    arraySize = elemSize * V.length arr
 
     copyNext :: Ptr (C a) -> a -> IO (Ptr (C a))
     copyNext !ptr obj = copyObj ptr obj $> plusPtr ptr elemSize
@@ -519,6 +520,17 @@ withArrayPtr arr act =
     copyObj dstPtr src =
         withPtr src $ \srcPtr ->
           placementNew srcPtr dstPtr
+
+    deconstructArray :: Ptr (C a) -> IO ()
+    deconstructArray !begin = deconstructNext begin
+      where
+        deconstructNext !ptr
+            | ptr == end = pure ()
+            | otherwise = do placementDelete ptr
+                             deconstructNext $ ptr `plusPtr` elemSize
+
+        end :: Ptr (C a)
+        end = begin `plusPtr` arraySize
 
 --------------------------------------------------------------------------------
 -- Polymorphic stuff
@@ -537,12 +549,7 @@ type family PointT (dim :: Nat) (depth :: *) :: * where
     PointT 3 CFloat  = Point3f
     PointT 3 CDouble = Point3d
 
--- | Equivalent type in C
---
--- Actually a proxy type in Haskell that stands for the equivalent type in C.
-type family C (a :: *) :: *
-
-type instance C (Maybe a) = C a
+--------------------------------------------------------------------------------
 
 type instance C Point2i      = C'Point2i
 type instance C Point2f      = C'Point2f
@@ -560,19 +567,6 @@ type instance C Range        = C'Range
 
 --------------------------------------------------------------------------------
 
--- | Perform an IO action with a pointer to the C equivalent of a value
-class WithPtr a where
-    -- | Perform an action with a temporary pointer to the underlying
-    -- representation of @a@
-    --
-    -- The pointer is not guaranteed to be usuable outside the scope of this
-    -- function. The same warnings apply as for 'withForeignPtr'.
-    withPtr :: a -> (Ptr (C a) -> IO b) -> IO b
-
-instance (WithPtr a) => WithPtr (Maybe a) where
-    withPtr Nothing    f = f nullPtr
-    withPtr (Just obj) f = withPtr obj f
-
 instance WithPtr Point2i      where withPtr = withForeignPtr . unPoint2i
 instance WithPtr Point2f      where withPtr = withForeignPtr . unPoint2f
 instance WithPtr Point2d      where withPtr = withForeignPtr . unPoint2d
@@ -588,13 +582,6 @@ instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
 instance WithPtr Range        where withPtr = withForeignPtr . unRange
 
 --------------------------------------------------------------------------------
-
--- | Types of which a value can be constructed from a pointer to the C
--- equivalent of that value
---
--- Used to wrap values created in C.
-class FromPtr a where
-    fromPtr :: IO (Ptr (C a)) -> IO a
 
 instance FromPtr Point2i where
     fromPtr = objFromPtr Point2i $ \ptr ->
@@ -647,83 +634,3 @@ instance FromPtr TermCriteria where
 instance FromPtr Range where
     fromPtr = objFromPtr Range $ \ptr ->
                 [CU.exp| void { delete $(Range * ptr) }|]
-
-
---------------------------------------------------------------------------------
-
--- | Information about the storage requirements of values in C
---
--- This class assumes that the type @a@ is merely a symbol that corresponds with
--- a type in C.
-class CSizeOf a where
-    -- | Computes the storage requirements (in bytes) of values of
-    -- type @a@ in C.
-    cSizeOf :: proxy a -> Int
-
-instance CSizeOf C'Point2i where cSizeOf _proxy = c'sizeof_Point2i
-instance CSizeOf C'Point2f where cSizeOf _proxy = c'sizeof_Point2f
-instance CSizeOf C'Point2d where cSizeOf _proxy = c'sizeof_Point2d
-instance CSizeOf C'Point3i where cSizeOf _proxy = c'sizeof_Point3i
-instance CSizeOf C'Point3f where cSizeOf _proxy = c'sizeof_Point3f
-instance CSizeOf C'Point3d where cSizeOf _proxy = c'sizeof_Point3d
-instance CSizeOf C'Size2i  where cSizeOf _proxy = c'sizeof_Size2i
-instance CSizeOf C'Size2f  where cSizeOf _proxy = c'sizeof_Size2f
-instance CSizeOf C'Scalar  where cSizeOf _proxy = c'sizeof_Scalar
-instance CSizeOf C'Range   where cSizeOf _proxy = c'sizeof_Range
-
---------------------------------------------------------------------------------
-
--- | Copy source to destination using C++'s placement new feature
-class PlacementNew a where
-    -- | Copy source to destination using C++'s placement new feature
-    --
-    -- This method is intended for types that are proxies for actual
-    -- types in C++.
-    --
-    -- > new(dst) CType(*src)
-    --
-    -- The copy should be performed by constructing a new object in
-    -- the memory pointed to by @dst@. The new object is initialised
-    -- using the value of @src@. This design allow underlying
-    -- structures to be shared depending on the implementation of
-    -- @CType@.
-    placementNew
-        :: Ptr a -- ^ Source
-        -> Ptr a -- ^ Destination
-        -> IO ()
-
-instance PlacementNew C'Point2i where
-    placementNew src dst =
-        [C.exp| void { new($(Point2i * dst)) Point2i(*$(Point2i * src)) }|]
-
-instance PlacementNew C'Point2f where
-    placementNew src dst =
-        [C.exp| void { new($(Point2f * dst)) Point2f(*$(Point2f * src)) }|]
-
-instance PlacementNew C'Point2d where
-    placementNew src dst =
-        [C.exp| void { new($(Point2d * dst)) Point2d(*$(Point2d * src)) }|]
-
-instance PlacementNew C'Point3i where
-    placementNew src dst =
-        [C.exp| void { new($(Point3i * dst)) Point3i(*$(Point3i * src)) }|]
-
-instance PlacementNew C'Point3f where
-    placementNew src dst =
-        [C.exp| void { new($(Point3f * dst)) Point3f(*$(Point3f * src)) }|]
-
-instance PlacementNew C'Point3d where
-    placementNew src dst =
-        [C.exp| void { new($(Point3d * dst)) Point3d(*$(Point3d * src)) }|]
-
-instance PlacementNew C'Size2i where
-    placementNew src dst =
-        [C.exp| void { new($(Size2i * dst)) Size2i(*$(Size2i * src)) }|]
-
-instance PlacementNew C'Size2f where
-    placementNew src dst =
-        [C.exp| void { new($(Size2f * dst)) Size2f(*$(Size2f * src)) }|]
-
-instance PlacementNew C'Scalar where
-    placementNew src dst =
-        [C.exp| void { new($(Scalar * dst)) Scalar(*$(Scalar * src)) }|]

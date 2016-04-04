@@ -10,7 +10,8 @@ import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat

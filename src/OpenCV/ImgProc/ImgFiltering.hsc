@@ -42,11 +42,11 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
-import "this" Language.C.Inline.OpenCV ( openCvCtx )
-import "this" OpenCV.Exception
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.ImgProc.Types ( BorderMode )
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
 import "this" OpenCV.TypeLevel

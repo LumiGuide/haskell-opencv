@@ -9,6 +9,8 @@ module OpenCV.Core.ArrayOps
     , arrayAdd
     , arraySubtract
     , addWeighted
+    , arrayMerge
+    , arraySplit
     , minMaxLoc
     , NormType(..)
     , NormAbsRel(..)
@@ -24,19 +26,23 @@ module OpenCV.Core.ArrayOps
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
-import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
-import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Exception
-import "this" OpenCV.TypeLevel
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Core.ArrayOps.Internal
+import "this" OpenCV.Exception
+import "this" OpenCV.TypeLevel
+import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Mutable as VM
 
 --------------------------------------------------------------------------------
 
@@ -177,6 +183,57 @@ addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
     c'beta  = realToFrac beta
     c'gamma = realToFrac gamma
     c'dtype = maybe (-1) marshalDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+
+{- | Creates one multichannel array out of several single-channel ones.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#merge OpenCV Sphinx doc>
+-}
+arrayMerge
+    :: V.Vector (Mat shape ('S 1) depth) -- ^
+    -> Mat shape 'D depth
+arrayMerge srcVec = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withArrayPtr srcVec $ \srcVecPtr ->
+      withPtr dst $ \dstPtr ->
+        [C.block| void {
+          cv::merge
+          ( $(Mat * srcVecPtr)
+          , $(size_t c'srcVecLength)
+          , *$(Mat * dstPtr)
+          );
+        }|]
+    pure $ unsafeCoerceMat dst
+  where
+    c'srcVecLength = fromIntegral $ V.length srcVec
+
+{- | Divides a multi-channel array into several single-channel arrays.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#split OpenCV Sphinx doc>
+-}
+arraySplit
+    :: Mat shape channels depth -- ^
+    -> V.Vector (Mat shape ('S 1) depth)
+arraySplit src = unsafePerformIO $
+    withPtr src $ \srcPtr ->
+    allocaBytes (numChans * cSizeOfMat) $ \(mvBeginPtr :: Ptr C'Mat) -> do
+      [C.block| void {
+        cv::split
+        ( *$(Mat * srcPtr)
+        , $(Mat * mvBeginPtr)
+        );
+      }|]
+      dstVecM <- VM.unsafeNew numChans
+      let go !n | n == numChans - 1 = V.freeze dstVecM
+                | otherwise = do
+                    mat <- fromPtr $ pure $ mvBeginPtr `plusPtr` (n * cSizeOfMat)
+                    VM.unsafeWrite dstVecM n $ unsafeCoerceMat mat
+                    go $ n + 1
+      go 0
+  where
+    cSizeOfMat :: Int
+    cSizeOfMat = cSizeOf (Proxy :: Proxy C'Mat)
+
+    numChans = fromIntegral $ miChannels $ matInfo src
 
 -- | Finds the global minimum and maximum in an array
 --

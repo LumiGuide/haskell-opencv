@@ -27,9 +27,9 @@ import qualified "bytestring" Data.ByteString.Unsafe as BU
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
-import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Exception
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgCodecs.Internal
@@ -109,7 +109,7 @@ imencode format mat = unsafePerformIO $
       if ptrException /= nullPtr
       then do
         freeVec vecPtr
-        Left <$> cvExceptionFromPtr (pure ptrException)
+        Left <$> fromPtr (pure ptrException)
       else do
         bufSize <- peek c'bufSizePtr
         bufPtr  <- peek bufPtrPtr

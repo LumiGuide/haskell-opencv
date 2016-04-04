@@ -15,12 +15,13 @@ import "base" Foreign.C.Types
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Exception
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Calib3d.Constants
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 

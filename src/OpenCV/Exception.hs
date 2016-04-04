@@ -3,8 +3,6 @@
 
 module OpenCV.Exception
     ( CvException
-    , withCvExceptionPtr
-    , cvExceptionFromPtr
     , handleCvException
     , cvExcept
     , cvExceptU
@@ -20,7 +18,8 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
-import "this" Language.C.Inline.OpenCV
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Internal ( objFromPtr )
 
 
@@ -36,27 +35,30 @@ C.using "namespace cv"
 -- Exceptions
 --------------------------------------------------------------------------------
 
-newtype CvException = CvException { unCvException :: ForeignPtr C'Exception }
+newtype CvException = CvException { unCvException :: ForeignPtr (C CvException) }
+
+type instance C CvException = C'Exception
+
+instance WithPtr CvException where
+    withPtr = withForeignPtr . unCvException
+
+instance FromPtr CvException where
+    fromPtr = objFromPtr CvException $ \ptr ->
+                [CU.exp| void { delete $(Exception * ptr) }|]
 
 instance Exception CvException
 
 instance Show CvException where
     show cvException = unsafePerformIO $
-        withCvExceptionPtr cvException $ \cvExceptionPtr -> do
+        withPtr cvException $ \cvExceptionPtr -> do
           charPtr <- [CU.exp| const char * { $(Exception * cvExceptionPtr)->what() } |]
           peekCString charPtr
-
-withCvExceptionPtr :: CvException -> (Ptr C'Exception -> IO a) -> IO a
-withCvExceptionPtr = withForeignPtr . unCvException
-
-cvExceptionFromPtr :: IO (Ptr C'Exception) -> IO CvException
-cvExceptionFromPtr = objFromPtr CvException $ \ptr -> [CU.exp| void { delete $(Exception * ptr) }|]
 
 handleCvException :: IO a -> IO (Ptr C'Exception) -> IO (Either CvException a)
 handleCvException okAct act = mask_ $ do
     exceptionPtr <- act
     if exceptionPtr /= nullPtr
-      then Left <$> cvExceptionFromPtr (pure exceptionPtr)
+      then Left <$> fromPtr (pure exceptionPtr)
       else Right <$> okAct
 
 cvExcept :: QuasiQuoter

@@ -29,11 +29,11 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "repa" Data.Array.Repa as Repa
 import           "repa" Data.Array.Repa.Index ( (:.) )
-import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.TypeLevel
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.TypeLevel
 
 
 --------------------------------------------------------------------------------

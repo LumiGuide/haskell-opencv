@@ -70,8 +70,8 @@ import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimState )
-import "this" Language.C.Inline.OpenCV
-import "this" OpenCV.Core.Types.Internal
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe ( unsafeFreeze )

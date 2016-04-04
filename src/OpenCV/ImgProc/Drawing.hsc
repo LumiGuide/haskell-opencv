@@ -29,7 +29,8 @@ import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToP
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
-import "this" Language.C.Inline.OpenCV ( openCvCtx )
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
