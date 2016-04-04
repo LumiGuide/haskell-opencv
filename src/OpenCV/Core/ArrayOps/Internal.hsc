@@ -8,11 +8,14 @@ module OpenCV.Core.ArrayOps.Internal
 import "base" Data.Bits ( (.|.) )
 import "base" Data.Int
 
+--------------------------------------------------------------------------------
+
 #include <bindings.dsl.h>
 #include "opencv2/core.hpp"
 
 #include "namespace.hpp"
 
+--------------------------------------------------------------------------------
 
 -- | Normalization type
 data NormType

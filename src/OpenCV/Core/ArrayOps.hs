@@ -1,8 +1,14 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{- | Operations on arrays
+-}
 module OpenCV.Core.ArrayOps
-    ( addWeighted
+    ( arrayAbs
+    , arrayAbsDiff
+    , arrayAdd
+    , arraySubtract
+    , addWeighted
     , minMaxLoc
     , NormType(..)
     , NormAbsRel(..)
@@ -44,9 +50,102 @@ C.using "namespace cv"
 -- Operations on Arrays
 --------------------------------------------------------------------------------
 
+{- | Calculates an absolute value of each matrix element.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#abs OpenCV Sphinx doc>
+-}
+arrayAbs
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+arrayAbs src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          *$(Mat * dstPtr) = cv::abs(*$(Mat * srcPtr));
+        }|]
+    pure $ unsafeCoerceMat dst
+
+{- | Calculates the per-element absolute difference between two arrays.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#absdiff OpenCV Sphinx doc>
+-}
+arrayAbsDiff
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Mat shape channels depth
+arrayAbsDiff src1 src2 = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+        [C.block| void {
+          cv::absdiff( *$(Mat * src1Ptr)
+                     , *$(Mat * src2Ptr)
+                     , *$(Mat * dstPtr )
+                     );
+        }|]
+    pure $ unsafeCoerceMat dst
+
+-- TODO (RvD): handle different depths
+arrayAdd
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+       -- ^ Optional operation mask that specifies elements of the output array
+       -- to be changed.
+    -> Mat shape channels depth
+arrayAdd src1 src2 mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr mbMask $ \maskPtr ->
+        [C.block| void {
+          cv::Mat * maskPtr = $(Mat * maskPtr);
+          cv::add
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , maskPtr
+            ? cv::_InputArray(*maskPtr)
+            : cv::_InputArray(cv::noArray())
+          );
+        }|]
+    pure $ unsafeCoerceMat dst
+
+-- TODO (RvD): handle different depths
+arraySubtract
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+       -- ^ Optional operation mask that specifies elements of the output array
+       -- to be changed.
+    -> Mat shape channels depth
+arraySubtract src1 src2 mbMask = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr mbMask $ \maskPtr ->
+        [C.block| void {
+          cv::Mat * maskPtr = $(Mat * maskPtr);
+          cv::subtract
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , maskPtr
+            ? cv::_InputArray(*maskPtr)
+            : cv::_InputArray(cv::noArray())
+          );
+        }|]
+    pure $ unsafeCoerceMat dst
+
 -- | Calculates the weighted sum of two arrays
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
+
+-- TODO (RvD): handle different depths
 addWeighted
     :: forall shape channels srcDepth dstDepth
      . (Convert (Proxy dstDepth) (DS Depth))
