@@ -211,7 +211,7 @@ orbDetectAndComputeImg = createMat $ do
                    (Proxy :: Proxy channels)
                    (Proxy :: Proxy depth)
                    white
-    void $ matCopyToM imgM (V2 0 0) frog
+    void $ matCopyToM imgM (V2 0 0) frog Nothing
     forM_ kpts $ \kpt -> do
       let kptRec = keyPointAsRec kpt
       circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
@@ -332,8 +332,8 @@ bfMatcherImg = do
                      (Proxy :: Proxy channels)
                      (Proxy :: Proxy depth)
                      white
-      void $ matCopyToM imgM (V2 0     0) frog
-      void $ matCopyToM imgM (V2 width 0) rotatedFrog
+      void $ matCopyToM imgM (V2 0     0) frog        Nothing
+      void $ matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
       -- Draw the matches as lines from the query image to the train image.
       forM_ matches $ \dmatch -> do
@@ -344,7 +344,7 @@ bfMatcherImg = do
             trainPtRec = keyPointAsRec trainPt
 
         -- We translate the train point one width to the right in order to
-        -- match the rotatedFrog image in the composite image.
+        -- match the position of rotatedFrog in imgM.
         line imgM
              (round \<$> kptPoint queryPtRec :: V2 Int32)
              ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)

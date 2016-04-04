@@ -151,8 +151,8 @@ Example:
 matSubRectImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
 matSubRectImg = createMat $ do
     imgM <- mkMatM (h ::: 2 * w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341
-    void $ matCopyToM imgM (V2 w 0) subImg
+    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+    void $ matCopyToM imgM (V2 w 0) subImg        Nothing
     rectangle imgM subRect blue 1 LineType_4 0
     rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
     pure imgM
@@ -189,10 +189,11 @@ matCopyTo
     :: Mat ('S [dstHeight, dstWidth]) channels depth -- ^
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
+    -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
     -> Either CvException (Mat ('S [dstHeight, dstWidth]) channels depth)
-matCopyTo dst topLeft src = runST $ do
+matCopyTo dst topLeft src mbSrcMask = runST $ do
     dstMut <- thaw dst
-    eResult <- matCopyToM dstMut topLeft src
+    eResult <- matCopyToM dstMut topLeft src mbSrcMask
     case eResult of
       Left err -> pure $ Left err
       Right () -> Right <$> unsafeFreeze dstMut
@@ -202,18 +203,24 @@ matCopyToM
     => MutMat ('S [dstHeight, dstWidth]) channels depth (PrimState m) -- ^
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
+    -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
     -> m (Either CvException ())
-matCopyToM dstMut (V2 x y) src =
+matCopyToM dstMut (V2 x y) src mbSrcMask =
     unsafePrimToPrim $ handleCvException (pure ()) $
     withPtr (unMutMat dstMut) $ \dstPtr ->
     withPtr src $ \srcPtr ->
+    withPtr mbSrcMask $ \srcMaskPtr ->
       [cvExcept|
-        const Mat * const srcPtr = $(const Mat * const srcPtr);
+        const cv::Mat * const srcPtr = $(const Mat * const srcPtr);
         const int32_t x = $(int32_t x);
         const int32_t y = $(int32_t y);
+        cv::Mat * srcMaskPtr = $(Mat * srcMaskPtr);
         srcPtr->copyTo( $(Mat * dstPtr)
                       ->rowRange(y, y + srcPtr->rows)
                        .colRange(x, x + srcPtr->cols)
+                      , srcMaskPtr
+                        ? cv::_InputArray(*srcMaskPtr)
+                        : cv::_InputArray(cv::noArray())
                       );
       |]
 
@@ -256,6 +263,7 @@ matConvertTo alpha beta src = unsafePerformIO $ do
     c'rtype = maybe (-1) marshalDepth rtype
     c'alpha = maybe 1 realToFrac alpha
     c'beta  = maybe 0 realToFrac beta
+
 
 --------------------------------------------------------------------------------
 -- Mutable Matrix

@@ -1021,8 +1021,8 @@ cvtColorImg = createMat $ do
                    (Proxy :: Proxy channels)
                    (Proxy :: Proxy depth)
                    white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341
-    void $ matCopyToM imgM (V2 w 0) birds_gray
+    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+    void $ matCopyToM imgM (V2 w 0) birds_gray    Nothing
     arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
     pure imgM
   where

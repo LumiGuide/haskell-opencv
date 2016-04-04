@@ -115,8 +115,8 @@ resizeInterAreaImg = createMat $ do
                    (Proxy :: Proxy 3)
                    (Proxy :: Proxy Word8)
                    transparent
-    void $ matCopyToM imgM (V2 0 0) birds_768x512
-    void $ matCopyToM imgM (V2 w 0) birds_resized
+    void $ matCopyToM imgM (V2 0 0) birds_768x512 Nothing
+    void $ matCopyToM imgM (V2 w 0) birds_resized Nothing
     arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
     pure imgM
   where

@@ -142,8 +142,8 @@ medianBlurImg = createMat $ do
                    (Proxy :: Proxy channels)
                    (Proxy :: Proxy depth)
                    white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341
-    void $ matCopyToM imgM (V2 w 0) birdsBlurred
+    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+    void $ matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
     pure imgM
   where
     birdsBlurred = either throw id $ medianBlur birds_512x341 13
@@ -196,10 +196,12 @@ erodeImg = createMat $ do
                    (Proxy :: Proxy channels)
                    (Proxy :: Proxy depth)
                    white
-    void $ matCopyToM imgM (V2 0 0) lambda
+    void $ matCopyToM imgM (V2 0 0) lambda Nothing
     void $ matCopyToM imgM (V2 w 0)
-           $ either throw id
-           $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
+             ( either throw id
+             $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
+             )
+             Nothing
     pure imgM
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
@@ -269,10 +271,12 @@ dilateImg = createMat $ do
                    (Proxy :: Proxy channels)
                    (Proxy :: Proxy depth)
                    white
-    void $ matCopyToM imgM (V2 0 0) lambda
+    void $ matCopyToM imgM (V2 0 0) lambda Nothing
     void $ matCopyToM imgM (V2 w 0)
-           $ either throw id
-           $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
+             ( either throw id
+             $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
+             )
+             Nothing
     pure imgM
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
