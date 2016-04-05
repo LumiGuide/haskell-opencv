@@ -1,9 +1,8 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
 
 module ExampleExtractor ( render, extractExampleImages ) where
 
-import "base" Control.Exception
 import "base" Control.Arrow
 import "base" Control.Monad
 import "base" Data.Either
@@ -30,7 +29,7 @@ render
     -> CV.Mat ('CV.S [height, width]) channels depth
     -> IO ()
 render fp img = do
-    let bs = either throw id $ CV.imencode (CV.OutputPng CV.defaultPngParams) img
+    let bs = CV.exceptError $ CV.imencode (CV.OutputPng CV.defaultPngParams) img
         dest = "doc/generated/" <> fp
     putStr $ "Writing file " <> dest <> " ..."
     B.writeFile dest bs
@@ -38,11 +37,31 @@ render fp img = do
 
 --------------------------------------------------------------------------------
 
+data SrcLoc
+   = SrcLoc
+     { locFile :: !FilePath
+     , locLine :: !Int
+     }
+
 -- | Haskell source code containing 0, 1 or more examples.
-type ExampleSrc = T.Text
+data ExampleSrc
+   = ExampleSrc
+     { exsLoc :: !SrcLoc
+     , exsSrc :: !T.Text
+     }
+
+data ParsedExampleSrc
+   = ParsedExampleSrc
+     { pexsLoc   :: !SrcLoc
+     , pexsDecls :: ![Dec]
+     }
 
 -- | A single line of Haskell source code.
-type SrcLine = T.Text
+data SrcLine
+   = SrcLine
+     { srcLoc  :: !SrcLoc
+     , srcLine :: !T.Text
+     }
 
 data SymbolType
    = SymImage
@@ -63,44 +82,52 @@ data RenderTarget
 
 extractExampleImages :: FilePath -> Q [Dec]
 extractExampleImages srcDir = do
-    (extractedStuff :: [(FilePath, ([ExampleSrc], [RenderTarget]))]) <-
-        runIO $ mapM (\p -> (p, ) <$> findExamples p) =<< haskellPaths srcDir
+    ((exampleSrcs, renderTargets) :: ([ExampleSrc], [RenderTarget])) <- runIO $ do
+      haskellPaths <- findHaskellPaths srcDir
+      xs <- mapM findExamples haskellPaths
+      pure $ (concat *** concat) $ unzip xs
 
-    mapM_ (\(fp, _) -> addDependentFile =<< runIO (canonicalizePath fp)) extractedStuff
+    mapM_ (\fp -> addDependentFile =<< runIO (canonicalizePath fp)) $ map (locFile . exsLoc) exampleSrcs
 
-    let perFileExampleSrcs :: [(FilePath, [ExampleSrc])]
-        perFileExampleSrcs = [(fp, xs) | (fp, (xs, _)) <- extractedStuff]
-
-        perFileExampleDecls :: [(FilePath, ([String], [[Hse.Decl]]))]
-        perFileExampleDecls = map (second $ partitionEithers . map (parseDecsHse . T.unpack . haddockToHaskell)) perFileExampleSrcs
-
-        perFileErrors :: [(FilePath, [String])]
-        perFileErrors = mapMaybe (\(fp, (errs, _)) -> if null errs then Nothing else Just (fp, errs)) perFileExampleDecls
-
-        perFileExamples :: [(FilePath, [Hse.Decl])]
-        perFileExamples = map (\(fp, (_, ds)) -> (fp, concat ds)) perFileExampleDecls
-
-        examplesHSE :: [Hse.Decl]
-        examplesHSE = concatMap snd perFileExamples
+    let parseErrors       :: [String]
+        parsedExampleSrcs :: [ParsedExampleSrc]
+        (parseErrors, parsedExampleSrcs) = partitionEithers $ map parseExampleSrc exampleSrcs
 
         examplesTH :: [Dec]
-        examplesTH = toDecs examplesHSE
+        examplesTH = concatMap (\pexs -> parsedExampleLinePragma pexs : pexsDecls pexs)
+                               parsedExampleSrcs
 
         exampleMap :: M.Map Name Bool
-        exampleMap = M.map typeIsIO $ M.fromList $ catMaybes $ map asSigD examplesTH
+        exampleMap = M.map typeIsIO $ M.fromList $ mapMaybe asSigD examplesTH
 
-        renderTargets :: [RenderTarget]
-        renderTargets = do
-            (_, (_, xs)) <- extractedStuff
-            renderTarget <- xs
+        renderTargets' :: [RenderTarget]
+        renderTargets' = do
+            renderTarget <- renderTargets
             let isIO = M.findWithDefault False (rtSymbolName renderTarget) exampleMap
             pure renderTarget {rtSymbolIsIO = isIO}
 
-    unless (null perFileErrors) $
-      error $ show perFileErrors
+    unless (null parseErrors) $
+      error $ show parseErrors
 
-    mdecs <- mkRenderExampleImages renderTargets
+    mdecs <- mkRenderExampleImages renderTargets'
     pure $ examplesTH <> mdecs
+
+parsedExampleLinePragma :: ParsedExampleSrc -> Dec
+parsedExampleLinePragma pexs =
+    PragmaD $ LineP (locLine loc) (locFile loc)
+  where
+    loc = pexsLoc pexs
+
+parseExampleSrc :: ExampleSrc -> Either String ParsedExampleSrc
+parseExampleSrc exs =
+    case parseDecsHse (locFile $ exsLoc exs) $ T.unpack $ haddockToHaskell $ exsSrc exs of
+      Left errMsg -> Left $ (locFile $ exsLoc exs) <> ": " <> errMsg
+      Right decls -> Right
+                     ParsedExampleSrc
+                     { pexsLoc   = exsLoc exs
+                     , pexsDecls = toDecs decls
+                     }
+
 
 asSigD :: Dec -> Maybe (Name, Type)
 asSigD (SigD n t) = Just (n, t)
@@ -116,16 +143,16 @@ typeIsIO (ConT n) | nameBase n == nameBase ''IO = True
 typeIsIO (PromotedT _)   = False
 typeIsIO _               = False
 
-parseDecsHse :: String -> Either String [Hse.Decl]
-parseDecsHse str =
-    case Hse.parseModuleWithMode parseMode str of
+parseDecsHse :: String -> String -> Either String [Hse.Decl]
+parseDecsHse fileName str =
+    case Hse.parseModuleWithMode (parseMode fileName) str of
       Hse.ParseFailed _srcLoc err -> Left err
       Hse.ParseOk (Hse.Module _ _ _ _ _ _ decls) -> Right decls
 
-parseMode :: Hse.ParseMode
-parseMode =
+parseMode :: String -> Hse.ParseMode
+parseMode fileName =
     Hse.ParseMode
-    { Hse.parseFilename         = ""
+    { Hse.parseFilename         = fileName
     , Hse.baseLanguage          = Hse.Haskell2010
     , Hse.extensions            = map Hse.EnableExtension exts
     , Hse.ignoreLanguagePragmas = False
@@ -173,8 +200,8 @@ mkRenderExampleImages renderTargets = [d|
                          fp  = LitE $ StringL $ "examples/" <> rtDestination rt
                    ]
 
-haskellPaths :: FilePath -> IO [FilePath]
-haskellPaths srcDir = do
+findHaskellPaths :: FilePath -> IO [FilePath]
+findHaskellPaths srcDir = do
   (paths, _) <- G.globDir [G.compile "**/*.hs", G.compile "**/*.hsc"] srcDir
   pure $ concat paths
 
@@ -184,7 +211,17 @@ haddockToHaskell =
   . T.replace "\\<" "<"
 
 findExamples :: FilePath -> IO ([ExampleSrc], [RenderTarget])
-findExamples fp = ((parseExamples &&& parseGeneratedImages) . T.lines) <$> T.readFile fp
+findExamples fp = ((parseExamples &&& parseGeneratedImages) . textToSource fp) <$> T.readFile fp
+
+textToSource :: FilePath -> T.Text -> [SrcLine]
+textToSource fp txt = zipWith lineToSource [1..] (T.lines txt)
+  where
+    lineToSource :: Int -> T.Text -> SrcLine
+    lineToSource n line =
+        SrcLine
+        { srcLoc  = SrcLoc {locFile = fp, locLine = n}
+        , srcLine = line
+        }
 
 parseExamples :: [SrcLine] -> [ExampleSrc]
 parseExamples = findStart
@@ -193,18 +230,31 @@ parseExamples = findStart
     findStart      []  = []
     findStart   (_:[]) = []
     findStart (_:_:[]) = []
-    findStart ("Example:":"":"@":ls) = findEnd [] ls
+    findStart (a:b:c:ls)
+              |    srcLine a == "Example:"
+                && srcLine b == ""
+                && srcLine c == "@"
+                     = findEnd [] ls
     findStart (_:ls) = findStart ls
 
     findEnd :: [SrcLine] -> [SrcLine] -> [ExampleSrc]
     findEnd _acc [] = []
-    findEnd acc ("@":ls) = T.unlines (reverse acc) : findStart ls
-    findEnd acc (l  :ls) = findEnd (l:acc) ls
+    findEnd acc (l:ls)
+        | srcLine l == "@" =
+            case reverse acc of
+              []    -> findStart ls
+              revAcc@(firstLine:_) ->
+                  let exs = ExampleSrc
+                            { exsLoc = srcLoc firstLine
+                            , exsSrc = T.unlines (map srcLine revAcc)
+                            }
+                  in exs : findStart ls
+        | otherwise = findEnd (l:acc) ls
 
 parseGeneratedImages :: [SrcLine] -> [RenderTarget]
-parseGeneratedImages = concatMap parseLine
+parseGeneratedImages = concatMap $ parseLine . srcLine
   where
-    parseLine :: SrcLine -> [RenderTarget]
+    parseLine :: T.Text -> [RenderTarget]
     parseLine line = maybeToList $ do
       let fromPrefix = snd $ T.breakOn prefix line
       rest <- T.stripPrefix prefix fromPrefix
