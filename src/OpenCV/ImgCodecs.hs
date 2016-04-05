@@ -35,6 +35,7 @@ import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.ImgCodecs.Internal
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
+import "transformers" Control.Monad.Trans.Except
 
 
 --------------------------------------------------------------------------------
@@ -85,8 +86,8 @@ imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
 imencode
     :: OutputFormat
     -> Mat shape channels depth
-    -> Either CvException ByteString
-imencode format mat = unsafePerformIO $
+    -> CvExcept ByteString
+imencode format mat = unsafeWrapException $
     withPtr mat $ \matPtr ->
     withCString ext $ \extPtr ->
     alloca $ \(bufPtrPtr :: Ptr (Ptr CUChar)) ->
@@ -131,5 +132,6 @@ imencodeM
     :: (PrimMonad m)
     => OutputFormat
     -> MutMat shape channels depth (PrimState m)
-    -> m (Either CvException ByteString)
-imencodeM format matM =  imencode format <$> unsafeFreeze matM
+    -> CvExceptT m ByteString
+imencodeM format matM =
+    ExceptT . pure . runExcept =<< (imencode format <$> unsafeFreeze matM)

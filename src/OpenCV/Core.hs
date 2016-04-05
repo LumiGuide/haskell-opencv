@@ -19,6 +19,7 @@ import "linear" Linear.V4 ( V4 )
 import qualified "repa" Data.Array.Repa as Repa
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Repa
+import "this" OpenCV.Exception
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 
@@ -60,18 +61,17 @@ m23ToMat :: forall depth
 m23ToMat (V2 (V3 i00 i01 i02)
              (V3 i10 i11 i12)
          )
-    = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [2, 3])
-                   (Proxy :: Proxy 1)
-                   (Proxy :: Proxy depth)
-                   (pure 0 :: V4 Double)
-    unsafeWrite imgM [0, 0] i00
-    unsafeWrite imgM [1, 0] i10
-    unsafeWrite imgM [0, 1] i01
-    unsafeWrite imgM [1, 1] i11
-    unsafeWrite imgM [0, 2] i02
-    unsafeWrite imgM [1, 2] i12
-    pure imgM
+    = exceptError $ withMatM
+        (Proxy :: Proxy [2, 3])
+        (Proxy :: Proxy 1)
+        (Proxy :: Proxy depth)
+        (pure 0 :: V4 Double) $ \imgM -> do
+          unsafeWrite imgM [0, 0] i00
+          unsafeWrite imgM [1, 0] i10
+          unsafeWrite imgM [0, 1] i01
+          unsafeWrite imgM [1, 1] i11
+          unsafeWrite imgM [0, 2] i02
+          unsafeWrite imgM [1, 2] i12
 
 m33ToMat :: forall depth
           . ( Convert (Proxy depth) Depth
@@ -83,18 +83,17 @@ m33ToMat (V3 (V3 i00 i01 i02)
              (V3 i10 i11 i12)
              (V3 i20 i21 i22)
          )
-    = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [3, 3])
-                   (Proxy :: Proxy 1)
-                   (Proxy :: Proxy depth)
-                   (pure 0 :: V4 Double)
-    unsafeWrite imgM [0, 0] i00
-    unsafeWrite imgM [1, 0] i10
-    unsafeWrite imgM [2, 0] i20
-    unsafeWrite imgM [0, 1] i01
-    unsafeWrite imgM [1, 1] i11
-    unsafeWrite imgM [2, 1] i21
-    unsafeWrite imgM [0, 2] i02
-    unsafeWrite imgM [1, 2] i12
-    unsafeWrite imgM [2, 2] i22
-    pure imgM
+    = exceptError $ withMatM
+        (Proxy :: Proxy [3, 3])
+        (Proxy :: Proxy 1)
+        (Proxy :: Proxy depth)
+        (pure 0 :: V4 Double) $ \imgM -> do
+          unsafeWrite imgM [0, 0] i00
+          unsafeWrite imgM [1, 0] i10
+          unsafeWrite imgM [2, 0] i20
+          unsafeWrite imgM [0, 1] i01
+          unsafeWrite imgM [1, 1] i11
+          unsafeWrite imgM [2, 1] i21
+          unsafeWrite imgM [0, 2] i02
+          unsafeWrite imgM [1, 2] i12
+          unsafeWrite imgM [2, 2] i22

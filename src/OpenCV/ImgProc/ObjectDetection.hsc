@@ -9,7 +9,6 @@ module OpenCV.ImgProc.ObjectDetection
 import "base" Data.Int
 import "base" Data.Word
 import "base" GHC.TypeLits
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -94,7 +93,7 @@ matchTemplate
        -- ^ Parameter specifying the comparison method.
     -> Bool
        -- ^ Normalise. See 'MatchTemplateMethod'.
-    -> Either CvException (Mat ('S [rh, rw]) ('S 1) ('S Float))
+    -> CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
        -- ^ Map of comparison results. It must be single-channel 32-bit floating-point.
        -- If image is
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e4926c3d97c3f7434c6317ba24b8b9294a0aba64.png>>
@@ -102,7 +101,7 @@ matchTemplate
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/d47153257f0243694e5632bb23b85009eb9e5599.png>>
        -- , then result is
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
-matchTemplate image templ method normed = unsafePerformIO $ do
+matchTemplate image templ method normed = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
       withPtr result $ \resultPtr ->

@@ -2,13 +2,34 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Exception
-    ( CvException
+    ( -- * Exception type
+      CvException
+
+      -- * Handling C++ exceptions
     , handleCvException
+
+      -- * Quasi quoters
     , cvExcept
     , cvExceptU
+
+      -- * Monadic interface
+    , CvExcept
+    , CvExceptT
+    , pureExcept
+
+      -- * Promoting exceptions to errors
+    , exceptError
+    , exceptTError
+    , exceptTErrorM
+
+      -- * Unsafe stuff
+    , unsafeCvExcept
+    , unsafeWrapException
     ) where
 
-import "base" Control.Exception ( Exception, mask_ )
+import "base" Control.Exception ( Exception, mask_, throw, throwIO )
+import "base" Control.Monad ( (<=<) )
+import "base" Data.Functor.Identity
 import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
@@ -21,7 +42,7 @@ import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Internal ( objFromPtr )
-
+import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
 
@@ -37,7 +58,7 @@ C.using "namespace cv"
 
 newtype CvException = CvException { unCvException :: ForeignPtr (C CvException) }
 
-type instance C CvException = C'Exception
+type instance C CvException = C'CvException
 
 instance WithPtr CvException where
     withPtr = withForeignPtr . unCvException
@@ -54,7 +75,10 @@ instance Show CvException where
           charPtr <- [CU.exp| const char * { $(Exception * cvExceptionPtr)->what() } |]
           peekCString charPtr
 
-handleCvException :: IO a -> IO (Ptr C'Exception) -> IO (Either CvException a)
+handleCvException
+    :: IO a
+    -> IO (Ptr (C CvException))
+    -> IO (Either CvException a)
 handleCvException okAct act = mask_ $ do
     exceptionPtr <- act
     if exceptionPtr /= nullPtr
@@ -79,3 +103,24 @@ cvExceptWrap s =
     \    return new cv::Exception(e);\n\
     \  }\n\
     \}"
+
+type CvExcept    a = Except  CvException   a
+type CvExceptT m a = ExceptT CvException m a
+
+pureExcept :: (Applicative m) => CvExcept a -> CvExceptT m a
+pureExcept = mapExceptT (pure . runIdentity)
+
+exceptError :: CvExcept a -> a
+exceptError = either throw id . runExcept
+
+exceptTError :: CvExceptT IO a -> IO a
+exceptTError = either throwIO pure <=< runExceptT
+
+exceptTErrorM :: (Monad m) => CvExceptT m a -> m a
+exceptTErrorM = either throw pure <=< runExceptT
+
+unsafeCvExcept :: CvExceptT IO a -> CvExcept a
+unsafeCvExcept = mapExceptT (Identity . unsafePerformIO)
+
+unsafeWrapException :: IO (Either CvException a) -> CvExcept a
+unsafeWrapException = unsafeCvExcept . ExceptT

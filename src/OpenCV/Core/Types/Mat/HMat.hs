@@ -112,7 +112,7 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
 
 hMatToMat :: HMat -> Mat 'D 'D 'D
 hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
-    mat <- newMat sizes channels depth scalar
+    mat <- exceptTError $ newMat sizes channels depth scalar
     withMatData mat copyElems
     pure mat
   where

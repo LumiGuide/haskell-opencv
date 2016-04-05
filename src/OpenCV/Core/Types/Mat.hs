@@ -29,6 +29,7 @@ module OpenCV.Core.Types.Mat
     , freeze
     , thaw
     , createMat
+    , withMatM
     ) where
 
 import "base" Control.Monad.ST ( RealWorld, ST, runST )
@@ -48,6 +49,7 @@ import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -77,9 +79,9 @@ mkMat
     -> channels -- ^
     -> depth    -- ^
     -> scalar   -- ^
-    -> Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 mkMat shape channels depth defValue =
-    unsafePerformIO $ newMat shape channels depth defValue
+    unsafeCvExcept $ newMat shape channels depth defValue
 
 -- TODO (RvD): check for negative sizes
 -- This crashes OpenCV
@@ -94,9 +96,9 @@ mkMatM
     -> channels -- ^
     -> depth    -- ^
     -> scalar   -- ^
-    -> m (MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState m))
+    -> CvExceptT m (MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState m))
 mkMatM shape channels depth defValue = do
-    mat <- unsafePrimToPrim $ newMat shape channels depth defValue
+    mat <- mapExceptT unsafePrimToPrim $ newMat shape channels depth defValue
     unsafeThaw mat
 
 -- | Identity matrix
@@ -150,16 +152,18 @@ Example:
 
 @
 matSubRectImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
-matSubRectImg = createMat $ do
-    imgM <- mkMatM (h ::: 2 * w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
-    void $ matCopyToM imgM (V2 w 0) subImg        Nothing
-    rectangle imgM subRect blue 1 LineType_4 0
-    rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
-    pure imgM
+matSubRectImg = exceptError $
+    withMatM (h ::: 2 * w ::: Z)
+             (Proxy :: Proxy 3)
+             (Proxy :: Proxy Word8)
+             white $ \imgM -> do
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) subImg        Nothing
+      lift $ rectangle imgM subRect blue 1 LineType_4 0
+      lift $ rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
-    subImg = either throw id $
+    subImg = exceptError $
                resize (ResizeAbs $ convert (w, h)) InterCubic =<<
                matSubRect birds_512x341 subRect
     [h, w] = miShape $ matInfo birds_512x341
@@ -170,8 +174,8 @@ matSubRectImg = createMat $ do
 matSubRect
     :: Mat ('S [height, width]) channels depth
     -> Rect
-    -> Either CvException (Mat ('S ['D, 'D]) channels depth)
-matSubRect matIn rect = unsafePerformIO $ do
+    -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+matSubRect matIn rect = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
       withPtr matIn  $ \matInPtr  ->
@@ -189,13 +193,13 @@ matCopyTo
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
-    -> Either CvException (Mat ('S [dstHeight, dstWidth]) channels depth)
+    -> CvExcept (Mat ('S [dstHeight, dstWidth]) channels depth)
 matCopyTo dst topLeft src mbSrcMask = runST $ do
     dstMut <- thaw dst
-    eResult <- matCopyToM dstMut topLeft src mbSrcMask
+    eResult <- runExceptT $ matCopyToM dstMut topLeft src mbSrcMask
     case eResult of
-      Left err -> pure $ Left err
-      Right () -> Right <$> unsafeFreeze dstMut
+      Left err -> pure $ throwE err
+      Right () -> pure <$> unsafeFreeze dstMut
 
 matCopyToM
     :: (PrimMonad m)
@@ -203,8 +207,8 @@ matCopyToM
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
-    -> m (Either CvException ())
-matCopyToM dstMut (V2 x y) src mbSrcMask =
+    -> CvExceptT m ()
+matCopyToM dstMut (V2 x y) src mbSrcMask = ExceptT $
     unsafePrimToPrim $ handleCvException (pure ()) $
     withPtr (unMutMat dstMut) $ \dstPtr ->
     withPtr src $ \srcPtr ->
@@ -241,8 +245,8 @@ matConvertTo
     => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
     -> Mat shape channels srcDepth
-    -> Either CvException (Mat shape channels dstDepth)
-matConvertTo alpha beta src = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels dstDepth)
+matConvertTo alpha beta src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src $ \srcPtr ->
@@ -284,6 +288,26 @@ thaw
 thaw = fmap MutMat . cloneMatM
 
 createMat
-    :: (forall s. ST s (MutMat shape channels depth s)) -- ^
-    -> Mat shape channels depth
-createMat mk = runST $ unsafeFreeze =<< mk
+    :: (forall s. CvExceptT (ST s) (MutMat shape channels depth s)) -- ^
+    -> CvExcept (Mat shape channels depth)
+createMat mk = except $ runST $ runExceptT $ unsafeFreeze =<< mk
+
+withMatM
+    :: ( Convert shape    (V.Vector Int32)
+       , Convert channels Int32
+       , Convert depth    Depth
+       , Convert scalar   Scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> (  forall s
+       .  MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState (ST s))
+       -> CvExceptT (ST s) ()
+       )
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+withMatM shape channels depth defValue f = createMat $ do
+    mutMat <- mkMatM shape channels depth defValue
+    f mutMat
+    pure mutMat

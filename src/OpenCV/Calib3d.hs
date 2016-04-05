@@ -12,7 +12,6 @@ module OpenCV.Calib3d
 import "base" Data.Int
 import "base" Data.Word
 import "base" Foreign.C.Types
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -104,12 +103,11 @@ findFundamentalMat
     => V.Vector point2d -- ^ Points from the first image.
     -> V.Vector point2d -- ^ Points from the second image.
     -> FundamentalMatMethod
-    -> Either CvException
-              ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
-                      , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
-                      )
-              )
-findFundamentalMat pts1 pts2 method = unsafePerformIO $ do
+    -> CvExcept ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
+                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
+                        )
+                )
+findFundamentalMat pts1 pts2 method = unsafeWrapException $ do
     fm   <- newEmptyMat
     pointMask <- newEmptyMat
     handleCvException (pure $ checkResult (fm, pointMask)) $
@@ -149,9 +147,8 @@ computeCorrespondEpilines
     => V.Vector point2d -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
-    -> Either CvException
-              (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
-computeCorrespondEpilines points whichImage fm = unsafePerformIO $ do
+    -> CvExcept (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
+computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
       withArrayPtr (V.map convert points :: V.Vector Point2d) $ \pointsPtr ->

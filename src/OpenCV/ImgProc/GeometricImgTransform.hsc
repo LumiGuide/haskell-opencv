@@ -110,18 +110,17 @@ Example:
 
 @
 resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
-resizeInterAreaImg = createMat $ do
-    imgM <- mkMatM (h ::: w + (w \`div` 2) ::: Z)
-                   (Proxy :: Proxy 3)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    void $ matCopyToM imgM (V2 0 0) birds_768x512 Nothing
-    void $ matCopyToM imgM (V2 w 0) birds_resized Nothing
-    arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
-    pure imgM
+resizeInterAreaImg = exceptError $
+    withMatM (h ::: w + (w \`div` 2) ::: Z)
+             (Proxy :: Proxy 3)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      birds_resized <-
+        pureExcept $ resize (ResizeRel $ pure 0.5) InterArea birds_768x512
+      matCopyToM imgM (V2 0 0) birds_768x512 Nothing
+      matCopyToM imgM (V2 w 0) birds_resized Nothing
+      lift $ arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
   where
-    birds_resized = either throw id $ resize (ResizeRel $ pure 0.5) InterArea birds_768x512
-
     [h, w] = miShape $ matInfo birds_768x512
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
@@ -136,8 +135,8 @@ resize
     :: ResizeAbsRel
     -> InterpolationMethod
     -> Mat ('S [height, width]) channels depth
-    -> Either CvException (Mat ('S ['D, 'D]) channels depth)
-resize factor interpolationMethod src = unsafePerformIO $ do
+    -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+resize factor interpolationMethod src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src   $ \srcPtr   ->
@@ -169,11 +168,11 @@ rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
 rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 Float) 45 0.75
 
 warpAffineImg :: Birds_512x341
-warpAffineImg = either throw id $
+warpAffineImg = exceptError $
     warpAffine birds_512x341 rotateBirds InterArea False False (BorderConstant black)
 
 warpAffineInvImg :: Birds_512x341
-warpAffineInvImg = either throw id $
+warpAffineInvImg = exceptError $
     warpAffine warpAffineImg rotateBirds InterCubic True False (BorderConstant black)
 @
 
@@ -190,9 +189,9 @@ warpAffine
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> Either CvException (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
+    -> CvExcept (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
-    unsafePerformIO $ do
+    unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
         withPtr src $ \srcPtr ->
@@ -227,9 +226,9 @@ warpPerspective
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> Either CvException (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
+    -> CvExcept (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
-    unsafePerformIO $ do
+    unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
         withPtr src $ \srcPtr ->
@@ -258,9 +257,9 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#invertaffinetransform OpenCV Sphinx doc>
 invertAffineTransform
-    :: Mat (ShapeT [2, 3]) ('S 1) depth
-    -> Either CvException (Mat (ShapeT [2, 3]) ('S 1) depth)
-invertAffineTransform matIn = unsafePerformIO $ do
+    :: Mat (ShapeT [2, 3]) ('S 1) depth -- ^
+    -> CvExcept (Mat (ShapeT [2, 3]) ('S 1) depth)
+invertAffineTransform matIn = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
       withPtr matIn  $ \matInPtr ->

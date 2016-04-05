@@ -7,7 +7,6 @@ module OpenCV.Video
     ) where
 
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -43,11 +42,11 @@ estimateRigidTransform
     => V.Vector srcPoint2i -- ^ Source
     -> V.Vector dstPoint2i -- ^ Destination
     -> Bool -- ^ Full affine
-    -> Either CvException (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
+    -> CvExcept (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
 estimateRigidTransform src dst fullAffine =
     checkResult <$> c'estimateRigidTransform
   where
-    c'estimateRigidTransform = unsafePerformIO $ do
+    c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
         withArrayPtr (V.map convert src :: V.Vector Point2i) $ \srcPtr ->

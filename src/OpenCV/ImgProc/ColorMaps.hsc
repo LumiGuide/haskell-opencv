@@ -8,7 +8,6 @@ module OpenCV.ImgProc.ColorMaps
 
 import "base" Data.Int
 import "base" Data.Word
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -94,15 +93,14 @@ grayscaleImg
     :: forall (height :: Nat) (width :: Nat) depth
      . (height ~ 30, width ~ 256, depth ~ Word8)
     => Mat (ShapeT [height, width]) ('S 1) ('S depth)
-grayscaleImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [height, width])
-                   (Proxy :: Proxy 1)
-                   (Proxy :: Proxy depth)
-                   black
-    forM_ [0..w-1] $ \x ->
-      forM_ [0..h-1] $ \y ->
-        unsafeWrite imgM [y, x] (fromIntegral x :: depth)
-    pure imgM
+grayscaleImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width])
+             (Proxy :: Proxy 1)
+             (Proxy :: Proxy depth)
+             black $ \imgM -> do
+      forM_ [0..w-1] $ \x ->
+        forM_ [0..h-1] $ \y ->
+          unsafeWrite imgM [y, x] (fromIntegral x :: depth)
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
     h = fromInteger $ natVal (Proxy :: Proxy height)
@@ -110,7 +108,7 @@ grayscaleImg = createMat $ do
 type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
 
 mkColorMapImg :: ColorMap -> ColorMapImg
-mkColorMapImg cmap = either throw id $ applyColorMap cmap grayscaleImg
+mkColorMapImg cmap = exceptError $ applyColorMap cmap grayscaleImg
 
 colorMapAutumImg   :: ColorMapImg
 colorMapBoneImg    :: ColorMapImg
@@ -148,8 +146,8 @@ colorMapParulaImg  = mkColorMapImg ColorMapParula
 applyColorMap
     :: ColorMap
     -> Mat shape ('S 1) ('S Word8)
-    -> Either CvException (Mat shape ('S 3) ('S Word8))
-applyColorMap colorMap src = unsafePerformIO $ do
+    -> CvExcept (Mat shape ('S 3) ('S Word8))
+applyColorMap colorMap src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src $ \srcPtr ->

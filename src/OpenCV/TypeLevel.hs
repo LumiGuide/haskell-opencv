@@ -154,7 +154,8 @@ type family ShapeT (a :: ka) :: DS [DS Nat] where
 type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
     Relax x      'D     = 'True
     Relax ('S (x ': xs)) ('S (y ': ys)) = Relax x y && Relax ('S xs) ('S ys)
-    Relax ('S x) ('S y) = 'True
+    Relax ('S x) ('S y) = Relax x y
+    Relax x      x      = 'True
     Relax x      y      = 'False
 
 type MayRelax a b = Relax a b ~ 'True

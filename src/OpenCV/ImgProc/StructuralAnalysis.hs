@@ -9,12 +9,11 @@ module OpenCV.ImgProc.StructuralAnalysis
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Storable ( peek )
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Exception ( CvException, handleCvException, cvExcept )
+import "this" OpenCV.Exception
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
@@ -50,8 +49,8 @@ contourArea
        -- area value, depending on the contour orientation (clockwise or
        -- counter-clockwise). Using this feature you can determine orientation
        -- of a contour by taking the sign of an area.
-    -> Either CvException Double
-contourArea contour oriented = unsafePerformIO $
+    -> CvExcept Double
+contourArea contour oriented = unsafeWrapException $
     withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
     alloca $ \c'area ->
     handleCvException (realToFrac <$> peek c'area) $
@@ -86,8 +85,8 @@ pointPolygonTest
        -- ^ If true, the function estimates the signed distance from the point
        -- to the nearest contour edge. Otherwise, the function only checks if
        -- the point is inside a contour or not.
-    -> Either CvException Double
-pointPolygonTest contour pt measureDist = unsafePerformIO $
+    -> CvExcept Double
+pointPolygonTest contour pt measureDist = unsafeWrapException $
     withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
     withPtr (convert pt :: Point2f) $ \ptPtr ->
     alloca $ \c'resultPtr ->

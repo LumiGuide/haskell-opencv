@@ -2,7 +2,6 @@
 
 module Main where
 
-import "base" Control.Exception
 import "base" Data.Int
 import "base" Data.List
 import "base" Data.Monoid
@@ -23,6 +22,7 @@ import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import "thea" OpenCV
 import "thea" OpenCV.Unsafe
 import qualified "QuickCheck" Test.QuickCheck as QC
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 main :: IO ()
@@ -111,7 +111,7 @@ main = defaultMain $ testGroup "thea"
 
 testFindFundamentalMat_noPoints :: HU.Assertion
 testFindFundamentalMat_noPoints =
-    case findFundamentalMat points points (FM_Ransac Nothing Nothing) of
+    case runExcept $ findFundamentalMat points points (FM_Ransac Nothing Nothing) of
       Left err -> assertFailure (show err)
       Right Nothing -> pure ()
       Right (Just _) -> assertFailure "result despite lack of data"
@@ -121,7 +121,7 @@ testFindFundamentalMat_noPoints =
 
 testFindFundamentalMat :: HU.Assertion
 testFindFundamentalMat =
-    case findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
+    case runExcept $ findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
       Left err -> assertFailure (show err)
       Right Nothing -> assertFailure "couldn't find fundamental matrix"
       Right (Just (fm, pointsMask)) -> do
@@ -134,14 +134,14 @@ testFindFundamentalMat =
 
 testComputeCorrespondEpilines :: HU.Assertion
 testComputeCorrespondEpilines =
-    case findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
+    case runExcept $ findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
       Right (Just (fm, _pointsMask)) ->
           let fm' = unsafeCoerceMat fm
-          in case computeCorrespondEpilines points1 Image1 fm' of
+          in case runExcept $ computeCorrespondEpilines points1 Image1 fm' of
                Left err1 -> assertFailure (show err1)
                Right epilines1 -> do
                  assertNull (typeCheckMat epilines1) (("epilines1: " <>) . show)
-                 case computeCorrespondEpilines points2 Image2 fm' of
+                 case runExcept $ computeCorrespondEpilines points2 Image2 fm' of
                    Left err2 -> assertFailure (show err2)
                    Right epilines2 ->
                        assertNull (typeCheckMat epilines2) (("epilines2: " <>) . show)
@@ -233,10 +233,10 @@ encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
     mat1 <- loadImg ImreadUnchanged "Lenna.png"
 
-    let bs2  = either throw id $ imencode outputFormat mat1
+    let bs2  = exceptError $ imencode outputFormat mat1
         mat2 = imdecode ImreadUnchanged bs2
 
-        bs3  = either throw id $ imencode outputFormat mat2
+        bs3  = exceptError $ imencode outputFormat mat2
 
     assertBool "imencode . imdecode failure"
                (bs2 == bs3)

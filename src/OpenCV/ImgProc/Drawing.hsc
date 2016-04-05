@@ -147,14 +147,14 @@ Example:
 
 @
 arrowedLineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
-arrowedLineImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [200, 300])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    arrowedLine imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0 0.15
-    arrowedLine imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0 0.4
-    pure imgM
+arrowedLineImg = exceptError $
+    withMatM
+      (Proxy :: Proxy [200, 300])
+      (Proxy :: Proxy 4)
+      (Proxy :: Proxy Word8)
+      transparent $ \imgM -> do
+        arrowedLine imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0 0.15
+        arrowedLine imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0 0.4
 @
 
 <<doc/generated/examples/arrowedLineImg.png arrowedLineImg>>
@@ -204,14 +204,14 @@ Example:
 
 @
 circleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
-circleImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [200, 400])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    circle imgM (V2 100 100 :: V2 Int32) 90 blue  5  LineType_AA 0
-    circle imgM (V2 300 100 :: V2 Int32) 45 red (-1) LineType_AA 0
-    pure imgM
+circleImg = exceptError $
+    withMatM
+      (Proxy :: Proxy [200, 400])
+      (Proxy :: Proxy 4)
+      (Proxy :: Proxy Word8)
+      transparent $ \imgM -> do
+        lift $ circle imgM (V2 100 100 :: V2 Int32) 90 blue  5  LineType_AA 0
+        lift $ circle imgM (V2 300 100 :: V2 Int32) 45 red (-1) LineType_AA 0
 @
 
 <<doc/generated/examples/circleImg.png circleImg>>
@@ -255,14 +255,14 @@ Example:
 
 @
 ellipseImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
-ellipseImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [200, 400])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    ellipse imgM (V2 100 100 :: V2 Int32) (V2 90 60 :: V2 Int32)  30  0 360 blue  5  LineType_AA 0
-    ellipse imgM (V2 300 100 :: V2 Int32) (V2 80 40 :: V2 Int32) 160 40 290 red (-1) LineType_AA 0
-    pure imgM
+ellipseImg = exceptError $
+    withMatM
+      (Proxy :: Proxy [200, 400])
+      (Proxy :: Proxy 4)
+      (Proxy :: Proxy Word8)
+      transparent $ \imgM -> do
+        lift $ ellipse imgM (V2 100 100 :: V2 Int32) (V2 90 60 :: V2 Int32)  30  0 360 blue  5  LineType_AA 0
+        lift $ ellipse imgM (V2 300 100 :: V2 Int32) (V2 80 40 :: V2 Int32) 160 40 290 red (-1) LineType_AA 0
 @
 
 <<doc/generated/examples/ellipseImg.png ellipseImg>>
@@ -388,13 +388,12 @@ fillPolyImg
     :: forall (h :: Nat) (w :: Nat)
      . (h ~ 300, w ~ 300)
     => Mat (ShapeT [h, w]) ('S 4) ('S Word8)
-fillPolyImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [h, w])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    fillPoly imgM (rookPts w h) blue LineType_AA 0
-    pure imgM
+fillPolyImg = exceptError $
+    withMatM (Proxy :: Proxy [h, w])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      lift $ fillPoly imgM (rookPts w h) blue LineType_AA 0
   where
     h = fromInteger $ natVal (Proxy :: Proxy h)
     w = fromInteger $ natVal (Proxy :: Proxy w)
@@ -447,13 +446,12 @@ polylinesImg
     :: forall (h :: Nat) (w :: Nat)
      . (h ~ 300, w ~ 300)
     => Mat (ShapeT [h, w]) ('S 4) ('S Word8)
-polylinesImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [h, w])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    polylines imgM (rookPts w h) True blue 2 LineType_AA 0
-    pure imgM
+polylinesImg = exceptError $
+    withMatM (Proxy :: Proxy [h, w])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      lift $ polylines imgM (rookPts w h) True blue 2 LineType_AA 0
   where
     h = fromInteger $ natVal (Proxy :: Proxy h)
     w = fromInteger $ natVal (Proxy :: Proxy w)
@@ -512,14 +510,13 @@ Example:
 
 @
 lineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
-lineImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [200, 300])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    line imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0
-    line imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0
-    pure imgM
+lineImg = exceptError $
+    withMatM (Proxy :: Proxy [200, 300])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      lift $ line imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0
+      lift $ line imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0
 @
 
 <<doc/generated/examples/lineImg.png lineImg>>
@@ -602,14 +599,21 @@ Example:
 
 @
 putTextImg :: Mat ('S ['D, 'S 400]) ('S 4) ('S Word8)
-putTextImg = createMat $ do
-    imgM <- mkMatM (height ::: (Proxy :: Proxy 400) ::: Z)
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    forM_ (zip [0..] [minBound .. maxBound]) $ \(n, fontFace) ->
-      putText imgM (T.pack $ show fontFace) (V2 10 (35 + n * 30) :: V2 Int32) fontFace 1.0 black 1 LineType_AA False
-    pure imgM
+putTextImg = exceptError $
+    withMatM (height ::: (Proxy :: Proxy 400) ::: Z)
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      forM_ (zip [0..] [minBound .. maxBound]) $ \(n, fontFace) ->
+        lift $ putText imgM
+                       (T.pack $ show fontFace)
+                       (V2 10 (35 + n * 30) :: V2 Int32)
+                       fontFace
+                       1.0
+                       black
+                       1
+                       LineType_AA
+                       False
   where
     height :: Int32
     height = 50 + fromIntegral (30 * fromEnum (maxBound :: FontFace))
@@ -664,14 +668,13 @@ Example:
 
 @
 rectangleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
-rectangleImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [200, 400])
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    rectangle imgM (mkRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
-    rectangle imgM (mkRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
-    pure imgM
+rectangleImg = exceptError $
+    withMatM (Proxy :: Proxy [200, 400])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
 @
 
 <<doc/generated/examples/rectangleImg.png rectangleImg>>

@@ -38,7 +38,6 @@ module OpenCV.ImgProc.ImgFiltering
 
 import "base" Data.Int
 import "base" Data.Word
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
@@ -137,16 +136,15 @@ medianBlurImg
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
-medianBlurImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [height, width2])
-                   (Proxy :: Proxy channels)
-                   (Proxy :: Proxy depth)
-                   white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
-    void $ matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
-    pure imgM
+medianBlurImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      birdsBlurred <- pureExcept $ medianBlur birds_512x341 13
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
-    birdsBlurred = either throw id $ medianBlur birds_512x341 13
     w = fromInteger $ natVal (Proxy :: Proxy width)
 @
 
@@ -168,8 +166,8 @@ medianBlur
     -> Int32
        -- ^ Aperture linear size; it must be odd and greater than 1, for
        -- example: 3, 5, 7...
-    -> Either CvException (Mat shape ('S channels) ('S depth))
-medianBlur matIn ksize = unsafePerformIO $ do
+    -> CvExcept (Mat shape ('S channels) ('S depth))
+medianBlur matIn ksize = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
       withPtr matOut $ \matOutPtr ->
@@ -191,18 +189,15 @@ erodeImg
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
-erodeImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [height, width2])
-                   (Proxy :: Proxy channels)
-                   (Proxy :: Proxy depth)
-                   white
-    void $ matCopyToM imgM (V2 0 0) lambda Nothing
-    void $ matCopyToM imgM (V2 w 0)
-             ( either throw id
-             $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
-             )
-             Nothing
-    pure imgM
+erodeImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      erodedLambda <-
+        pureExcept $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
+      matCopyToM imgM (V2 0 0) lambda Nothing
+      matCopyToM imgM (V2 w 0) erodedLambda Nothing
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
 @
@@ -223,8 +218,8 @@ erode
     -> Maybe point2i -- ^ anchor
     -> Int           -- ^ iterations
     -> BorderMode
-    -> Either CvException (Mat shape channels ('S depth))
-erode src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels ('S depth))
+erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src    $ \srcPtr    ->
@@ -266,18 +261,15 @@ dilateImg
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
-dilateImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [height, width2])
-                   (Proxy :: Proxy channels)
-                   (Proxy :: Proxy depth)
-                   white
-    void $ matCopyToM imgM (V2 0 0) lambda Nothing
-    void $ matCopyToM imgM (V2 w 0)
-             ( either throw id
-             $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
-             )
-             Nothing
-    pure imgM
+dilateImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      dilatedLambda <-
+        pureExcept $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
+      matCopyToM imgM (V2 0 0) lambda Nothing
+      matCopyToM imgM (V2 w 0) dilatedLambda Nothing
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
 @
@@ -299,8 +291,8 @@ dilate
     -> Maybe point2i -- ^ anchor
     -> Int           -- ^ iterations
     -> BorderMode
-    -> Either CvException (Mat shape channels ('S depth))
-dilate src mbKernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels ('S depth))
+dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src    $ \srcPtr    ->
@@ -341,8 +333,8 @@ morphologyEx
     -> Maybe point2i   -- ^ Anchor position with the kernel.
     -> Int             -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
-    -> Either CvException (Mat shape channels ('S depth))
-morphologyEx src op kernel mbAnchor iterations borderMode = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels ('S depth))
+morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src    $ \srcPtr    ->
@@ -379,9 +371,9 @@ Example:
 type StructureImg = Mat (ShapeT [128, 128]) ('S 1) ('S Word8)
 
 structureImg :: MorphShape -> StructureImg
-structureImg shape = either throw id $ do
+structureImg shape = exceptError $ do
     mat <- getStructuringElement shape (Proxy :: Proxy 128) (Proxy :: Proxy 128)
-    img <- matConvertTo Nothing (Just 255) mat
+    img <- matConvertTo (Just 255) Nothing mat
     bitwise_not img Nothing
 
 morphRectImg :: StructureImg
@@ -394,23 +386,23 @@ morphCrossImg :: StructureImg
 morphCrossImg = structureImg (MorphCross $ convert $ (pure (-1) :: V2 Int32))
 @
 
+<<doc/generated/examples/morphRectImg.png morphRectImg>>
 <<doc/generated/examples/morphEllipseImg.png morphEllipseImg>>
 <<doc/generated/examples/morphCrossImg.png morphCrossImg>>
-<<doc/generated/examples/morphRectImg.png morphRectImg>>
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
 -}
 getStructuringElement
     :: (Convert height Int32, Convert width Int32)
-    => MorphShape
+    => MorphShape -- ^
     -> height
     -> width
-    -> Either CvException (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
-getStructuringElement morphShape height width = unsafePerformIO $ do
+    -> CvExcept (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
+getStructuringElement morphShape height width = unsafeWrapException $ do
     element <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat element) $
-      withPtr    ksize   $ \ksizePtr   ->
-      withPtr    anchor  $ \anchorPtr  ->
+      withPtr ksize   $ \ksizePtr   ->
+      withPtr anchor  $ \anchorPtr  ->
       withPtr element $ \elementPtr ->
        [cvExcept|
          *$(Mat * elementPtr) =

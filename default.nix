@@ -19,6 +19,7 @@
 , repa
 , template-haskell
 , text
+, transformers
 , vector
 
 # test dependencies
@@ -53,6 +54,7 @@ mkDerivation {
     repa
     template-haskell
     text
+    transformers
     vector
   ];
   testHaskellDepends = [

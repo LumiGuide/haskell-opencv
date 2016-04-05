@@ -56,6 +56,7 @@ library
                , repa
                , template-haskell
                , text
+               , transformers
                , vector
 
   exposed-modules: OpenCV
@@ -128,6 +129,7 @@ test-suite thea-doc-images
                , linear
                , template-haskell
                , text
+               , transformers
                , thea
                , vector
 
@@ -148,16 +150,17 @@ test-suite test-thea
   main-is:          test.hs
   default-language: Haskell2010
   ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
-  build-depends: thea
-               , base >= 4.8 && < 5
+  build-depends: base >= 4.8 && < 5
                , bytestring
+               , lens
+               , linear
+               , QuickCheck
                , repa
                , tasty
                , tasty-hunit
                , tasty-quickcheck
-               , QuickCheck
-               , lens
-               , linear
+               , thea
+               , transformers
                , vector
 
   default-extensions: DataKinds

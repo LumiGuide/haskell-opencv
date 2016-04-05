@@ -206,16 +206,15 @@ orbDetectAndComputeImg
               (depth    :: *)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
-orbDetectAndComputeImg = createMat $ do
-    imgM <- mkMatM (Proxy :: Proxy [height, width])
-                   (Proxy :: Proxy channels)
-                   (Proxy :: Proxy depth)
-                   white
-    void $ matCopyToM imgM (V2 0 0) frog Nothing
-    forM_ kpts $ \kpt -> do
-      let kptRec = keyPointAsRec kpt
-      circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
-    pure imgM
+orbDetectAndComputeImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      void $ matCopyToM imgM (V2 0 0) frog Nothing
+      forM_ kpts $ \kpt -> do
+        let kptRec = keyPointAsRec kpt
+        circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
   where
     (kpts, _descs) = orbDetectAndCompute orb frog Nothing
     orb = mkOrb defaultOrbParams
@@ -327,29 +326,28 @@ bfMatcherImg = do
                      descs1 -- Query descriptors
                      descs2 -- Train descriptors
                      Nothing
-    pure $ createMat $ do
-      imgM <- mkMatM (Proxy :: Proxy [height, width2])
-                     (Proxy :: Proxy channels)
-                     (Proxy :: Proxy depth)
-                     white
-      void $ matCopyToM imgM (V2 0     0) frog        Nothing
-      void $ matCopyToM imgM (V2 width 0) rotatedFrog Nothing
+    exceptTError $ pureExcept $
+      withMatM (Proxy :: Proxy [height, width2])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               white $ \imgM -> do
+        matCopyToM imgM (V2 0     0) frog        Nothing
+        matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
-      -- Draw the matches as lines from the query image to the train image.
-      forM_ matches $ \dmatch -> do
-        let matchRec = dmatchAsRec dmatch
-            queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
-            trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
-            queryPtRec = keyPointAsRec queryPt
-            trainPtRec = keyPointAsRec trainPt
+        -- Draw the matches as lines from the query image to the train image.
+        forM_ matches $ \dmatch -> do
+          let matchRec = dmatchAsRec dmatch
+              queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
+              trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
+              queryPtRec = keyPointAsRec queryPt
+              trainPtRec = keyPointAsRec trainPt
 
-        -- We translate the train point one width to the right in order to
-        -- match the position of rotatedFrog in imgM.
-        line imgM
-             (round \<$> kptPoint queryPtRec :: V2 Int32)
-             ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)
-             blue 1 LineType_AA 0
-      pure imgM
+          -- We translate the train point one width to the right in order to
+          -- match the position of rotatedFrog in imgM.
+          line imgM
+               (round \<$> kptPoint queryPtRec :: V2 Int32)
+               ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)
+               blue 1 LineType_AA 0
   where
     (kpts1, descs1) = orbDetectAndCompute orb frog        Nothing
     (kpts2, descs2) = orbDetectAndCompute orb rotatedFrog Nothing
@@ -357,7 +355,7 @@ bfMatcherImg = do
 
     width = fromInteger $ natVal (Proxy :: Proxy width)
 
-    rotatedFrog = either throw id $
+    rotatedFrog = exceptError $
                   warpAffine frog rotMat InterArea False False (BorderConstant black)
     rotMat = getRotationMatrix2D (V2 250 195 :: V2 Float) 45 0.8
 @

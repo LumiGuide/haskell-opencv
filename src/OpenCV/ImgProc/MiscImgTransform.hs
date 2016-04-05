@@ -121,7 +121,6 @@ import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" GHC.TypeLits
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -1016,18 +1015,17 @@ cvtColorImg
        , width2 ~ (width + width)
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
-cvtColorImg = createMat $ do
-    imgM <- mkMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
-                   (Proxy :: Proxy channels)
-                   (Proxy :: Proxy depth)
-                   white
-    void $ matCopyToM imgM (V2 0 0) birds_512x341 Nothing
-    void $ matCopyToM imgM (V2 w 0) birds_gray    Nothing
-    arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
-    pure imgM
+cvtColorImg = exceptError $
+    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      birds_gray <- pureExcept $   cvtColor gray bgr
+                               =<< cvtColor bgr gray birds_512x341
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) birds_gray    Nothing
+      lift $ arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
   where
-    birds_gray = either throw id $ cvtColor gray bgr =<< cvtColor bgr gray birds_512x341
-
     h, w :: Int32
     h = fromInteger $ natVal (Proxy :: Proxy height)
     w = fromInteger $ natVal (Proxy :: Proxy width)
@@ -1060,8 +1058,8 @@ cvtColor :: forall (fromColor   :: ColorCode)
          => Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
          -> Proxy toColor   -- ^ Convert to 'ColorCode'.
          -> Mat shape srcChannels srcDepth -- ^ Source image
-         -> Either CvException (Mat shape dstChannels dstDepth)
-cvtColor fromColor toColor src = unsafePerformIO $ do
+         -> CvExcept (Mat shape dstChannels dstDepth)
+cvtColor fromColor toColor src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src $ \srcPtr ->
@@ -1093,8 +1091,8 @@ threshold
     => ThreshValue -- ^
     -> ThreshType
     -> (Mat shape ('S 1) ('S depth))
-    -> Either CvException (Mat shape ('S 1) ('S depth), Double)
-threshold threshVal threshType src = unsafePerformIO $ do
+    -> CvExcept (Mat shape ('S 1) ('S depth), Double)
+threshold threshVal threshType src = unsafeWrapException $ do
     dst <- newEmptyMat
     alloca $ \calcThreshPtr ->
       handleCvException ((unsafeCoerceMat dst, ) . realToFrac <$> peek calcThreshPtr) $

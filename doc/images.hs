@@ -3,8 +3,6 @@
 
 module Main where
 
-import "base" Control.Exception ( throw )
-import "base" Control.Monad.ST ( runST )
 import "base" Data.Functor ( void )
 import "base" Data.Foldable ( forM_ )
 import "base" Data.Int
@@ -13,6 +11,7 @@ import "base" Data.Proxy
 import "base" Data.Word
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( (^+^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
@@ -20,7 +19,7 @@ import qualified "text" Data.Text as T
 import "thea" OpenCV
 import "thea" OpenCV.Unsafe
 import qualified "vector" Data.Vector as V
-import qualified "bytestring" Data.ByteString as B
+import "transformers" Control.Monad.Trans.Class ( lift )
 
 import "this" ExampleExtractor ( render, extractExampleImages )
 
@@ -43,7 +42,8 @@ birds_768x512 = either (error . concat) id $ coerceMat $ unsafePerformIO $
                   imdecode ImreadColor <$> B.readFile "data/kodim23.png"
 
 birds_512x341 :: Birds_512x341
-birds_512x341 = either throw (either (error . concat) id . coerceMat) $
+birds_512x341 = either (error . concat) id $ coerceMat $
+                  exceptError $
                   resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
                          InterArea
                          birds_768x512
@@ -69,15 +69,13 @@ lineTypeImg
        )
     => LineType
     -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
-lineTypeImg lineType = runST $ do
-    imgM <- mkMatM (h + 2 * p ::: w + 2 * p ::: Z)
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    line imgM (pure p + V2 0 h) (pure p + V2 w 0) black 1 lineType 0
-    img <- freeze imgM
-    pure $ either throw id
-         $ resize (ResizeRel $ pure zoom) InterNearest
+lineTypeImg lineType = exceptError $ do
+    img <- withMatM (h + 2 * p ::: w + 2 * p ::: Z)
+                    (Proxy :: Proxy 4)
+                    (Proxy :: Proxy Word8)
+                    transparent $ \imgM -> do
+             lift $ line imgM (pure p + V2 0 h) (pure p + V2 w 0) black 1 lineType 0
+    resize (ResizeRel $ pure zoom) InterNearest
            =<< matSubRect img (mkRect (pure p) (V2 w h))
   where
     w, h, p :: Int32
@@ -89,13 +87,12 @@ lineTypeImg lineType = runST $ do
 fontFaceImg
     :: FontFace
     -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
-fontFaceImg fontFace = createMat $ do
-    imgM <- mkMatM (th * 3 ::: tw ::: Z)
-                   (Proxy :: Proxy 4)
-                   (Proxy :: Proxy Word8)
-                   transparent
-    putText imgM txt (V2 0 (th * 2 - baseLine) :: V2 Int32) fontFace scale black thickness LineType_AA False
-    pure imgM
+fontFaceImg fontFace = exceptError $
+    withMatM (th * 3 ::: tw ::: Z)
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      putText imgM txt (V2 0 (th * 2 - baseLine) :: V2 Int32) fontFace scale black thickness LineType_AA False
   where
     txt = "The quick brown fox jumps over the lazy dog"
     (size2i, baseLine) = getTextSize txt fontFace scale thickness

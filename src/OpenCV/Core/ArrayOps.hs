@@ -160,8 +160,8 @@ addWeighted
     -> Mat shape channels srcDepth -- ^ src2
     -> Double -- ^ beta
     -> Double -- ^ gamma
-    -> Either CvException (Mat shape channels dstDepth)
-addWeighted src1 alpha src2 beta gamma = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels dstDepth)
+addWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src1 $ \src1Ptr ->
@@ -242,8 +242,8 @@ arraySplit src = unsafePerformIO $
 -- TODO (RvD): implement mask
 minMaxLoc
     :: Mat ('S [height, width]) channels depth -- ^
-    -> Either CvException (Double, Double, Point2i, Point2i)
-minMaxLoc src = unsafePerformIO $ do
+    -> CvExcept (Double, Double, Point2i, Point2i)
+minMaxLoc src = unsafeWrapException $ do
     minLoc <- newPoint2i zero
     maxLoc <- newPoint2i zero
     withPtr src $ \srcPtr ->
@@ -274,8 +274,8 @@ norm
        -- ^ Optional operation mask; it must have the same size as the input
        -- array, depth 'Depth_8U' and 1 channel.
     -> Mat shape channels depth -- ^ Input array.
-    -> Either CvException Double  -- ^ Calculated norm.
-norm normType mbMask src = unsafePerformIO $
+    -> CvExcept Double  -- ^ Calculated norm.
+norm normType mbMask src = unsafeWrapException $
     withPtr src    $ \srcPtr  ->
     withPtr mbMask $ \mskPtr  ->
     alloca         $ \normPtr ->
@@ -302,8 +302,8 @@ normDiff
        -- array, depth 'Depth_8U' and 1 channel.
     -> Mat shape channels depth -- ^ First input array.
     -> Mat shape channels depth -- ^ Second input array of the same size and type as the first.
-    -> Either CvException Double -- ^ Calculated norm.
-normDiff absRel normType mbMask src1 src2 = unsafePerformIO $
+    -> CvExcept Double -- ^ Calculated norm.
+normDiff absRel normType mbMask src1 src2 = unsafeWrapException $
     withPtr src1   $ \src1Ptr ->
     withPtr src2   $ \src2Ptr ->
     withPtr mbMask $ \mskPtr  ->
@@ -336,8 +336,8 @@ normalize
     -> NormType
     -> Maybe (Mat shape ('S 1) ('S Word8)) -- ^ Optional operation mask.
     -> Mat shape channels srcDepth -- ^ Input array.
-    -> Either CvException (Mat shape channels dstDepth)
-normalize alpha beta normType mbMask src = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels dstDepth)
+normalize alpha beta normType mbMask src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src    $ \srcPtr ->
@@ -367,8 +367,8 @@ matSum
     :: -- (1 <= channels, channels <= 4)
     -- =>
     Mat shape channels depth -- ^ Input array that must have from 1 to 4 channels.
-    -> Either CvException Scalar
-matSum src = unsafePerformIO $ do
+    -> CvExcept Scalar
+matSum src = unsafeWrapException $ do
     s <- newScalar zero
     handleCvException (pure s) $
       withPtr src $ \srcPtr ->
@@ -380,8 +380,8 @@ matSum src = unsafePerformIO $ do
 bitwise_not
     :: Mat shape channels depth -- ^
     -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> Either CvException (Mat shape channels depth)
-bitwise_not src mbMask = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+bitwise_not src mbMask = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src    $ \srcPtr ->
@@ -400,8 +400,8 @@ bitwise_and
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
     -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> Either CvException (Mat shape channels depth)
-bitwise_and src1 src2 mbMask = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+bitwise_and src1 src2 mbMask = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src1   $ \src1Ptr ->
@@ -422,8 +422,8 @@ bitwise_or
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
     -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> Either CvException (Mat shape channels depth)
-bitwise_or src1 src2 mbMask = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+bitwise_or src1 src2 mbMask = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src1   $ \src1Ptr ->
@@ -444,8 +444,8 @@ bitwise_xor
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
     -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> Either CvException (Mat shape channels depth)
-bitwise_xor src1 src2 mbMask = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+bitwise_xor src1 src2 mbMask = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src1   $ \src1Ptr ->

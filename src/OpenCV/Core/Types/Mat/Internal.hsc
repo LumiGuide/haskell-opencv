@@ -52,8 +52,10 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
+import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG
 
@@ -333,21 +335,25 @@ newMat
        -- , 1 <= channels
        -- , channels <= 512
        )
-    => shape
+    => shape -- ^
     -> channels
     -> depth
     -> scalar
-    -> IO (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
-newMat shape channels depth defValue = fmap unsafeCoerceMat $
-    withVector shape' $ \shapePtr ->
-    withPtr (convert defValue :: Scalar) $ \scalarPtr ->
-      fromPtr [CU.exp|Mat * {
-        new Mat( $(int32_t c'ndims)
+    -> CvExceptT IO (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+newMat shape channels depth defValue = ExceptT $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withVector shape' $ \shapePtr ->
+      withPtr (convert defValue :: Scalar) $ \scalarPtr ->
+      withPtr dst $ \dstPtr ->
+        [cvExcept|
+          *$(Mat * dstPtr) =
+            Mat( $(int32_t c'ndims)
                , $(int32_t * shapePtr)
                , $(int32_t c'type)
                , *$(Scalar * scalarPtr)
-               )
-      }|]
+               );
+        |]
   where
     c'ndims = fromIntegral $ VG.length shape'
     c'type  = marshalFlags depth' channels'
@@ -357,11 +363,10 @@ newMat shape channels depth defValue = fmap unsafeCoerceMat $
     channels' = convert channels
     depth'    = convert depth
 
-
 -- TODO (BvD): Move to some Utility module.
 withVector
     :: (VG.Vector v a, Storable a)
-    => v a
+    => v a -- ^
     -> (Ptr a -> IO b)
     -> IO b
 withVector v f =
@@ -378,7 +383,7 @@ withVector v f =
 --------------------------------------------------------------------------------
 
 withMatData
-    :: Mat shape channels depth
+    :: Mat shape channels depth -- ^
     -> ([CSize] -> Ptr Word8 -> IO a)
     -> IO a
 withMatData mat f = withPtr mat $ \matPtr ->
