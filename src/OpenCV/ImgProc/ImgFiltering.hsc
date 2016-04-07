@@ -29,6 +29,7 @@ module OpenCV.ImgProc.ImgFiltering
     ( MorphShape(..)
     , MorphOperation(..)
 
+    , laplacian
     , medianBlur
     , erode
     , dilate
@@ -37,6 +38,8 @@ module OpenCV.ImgProc.ImgFiltering
     ) where
 
 import "base" Data.Int
+import "base" Data.Maybe
+import "base" Data.Proxy
 import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -46,7 +49,7 @@ import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Exception.Internal
-import "this" OpenCV.ImgProc.Types ( BorderMode )
+import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
 import "this" OpenCV.TypeLevel
 
@@ -120,6 +123,66 @@ marshalMorphOperation = \case
 --------------------------------------------------------------------------------
 -- Image Filtering
 --------------------------------------------------------------------------------
+
+{- | Calculates the Laplacian of an image
+
+The function calculates the Laplacian of the source image by adding up
+the second x and y derivatives calculated using the Sobel operator.
+
+Example:
+
+@
+laplacianImg
+    :: forall shape channels depth
+     . (Mat shape channels depth ~ Birds_512x341)
+    => Mat shape ('S 1) ('S Double)
+laplacianImg = exceptError $ do
+    imgG <- cvtColor bgr gray birds_512x341
+    laplacian Nothing Nothing Nothing Nothing imgG
+@
+
+<<doc/generated/examples/laplacianImg.png laplacianImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#laplacian OpenCV Sphinx doc>
+-}
+laplacian
+    :: forall shape channels srcDepth dstDepth
+     . (Convert (Proxy dstDepth) Depth)
+    => Maybe Int32
+       -- ^ Aperture size used to compute the second-derivative filters. The
+       -- size must be positive and odd. Default value is 1.
+    -> Maybe Double
+       -- ^ Optional scale factor for the computed Laplacian values. Default
+       -- value is 1.
+    -> Maybe Double
+       -- ^ Optional delta value that is added to the results. Default value is
+       -- 0.
+    -> Maybe BorderMode
+       -- ^ Pixel extrapolation method.
+    -> Mat shape channels srcDepth
+    -> CvExcept (Mat shape channels ('S dstDepth))
+laplacian ksize scale delta borderType src = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
+      [cvExcept|
+        cv::Laplacian
+        ( *$(Mat *   srcPtr      )
+        , *$(Mat *   dstPtr      )
+        ,  $(int32_t c'ddepth    )
+        ,  $(int32_t c'ksize     )
+        ,  $(double  c'scale     )
+        ,  $(double  c'delta     )
+        ,  $(int32_t c'borderType)
+        );
+      |]
+  where
+    c'ksize = fromMaybe 1 ksize
+    c'scale = maybe 1 realToFrac scale
+    c'delta = maybe 0 realToFrac delta
+    c'ddepth = marshalDepth $ convert (Proxy :: Proxy dstDepth)
+    c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType
 
 {- | Blurs an image using the median filter
 

@@ -30,6 +30,7 @@ module OpenCV.Core.ArrayOps
     , normalize
     , matSum
     , matSumM
+    , meanStdDev
     ) where
 
 import "base" Data.Proxy ( Proxy(..) )
@@ -37,6 +38,7 @@ import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
+import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -730,4 +732,32 @@ matSumM srcM = ExceptT $ unsafePrimToPrim $ do
       withPtr s    $ \sPtr   ->
         [cvExcept|
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
+        |]
+
+{- | Calculates a mean and standard deviation of array elements
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev OpenCV Sphinx doc>
+-}
+meanStdDev
+    :: (1 <= channels, channels <= 4)
+    => Mat shape ('S channels) depth
+    -> Maybe (Mat shape ('S 1) ('S Word8))
+       -- ^ Optional operation mask.
+    -> CvExcept (Scalar, Scalar)
+meanStdDev src mask = unsafeWrapException $ do
+    mean   <- newScalar $ pure 0
+    stddev <- newScalar $ pure 0
+    handleCvException (pure (mean, stddev)) $
+      withPtr src    $ \srcPtr    ->
+      withPtr mask   $ \maskPtr   ->
+      withPtr mean   $ \meanPtr   ->
+      withPtr stddev $ \stddevPtr ->
+        [cvExcept|
+          cv::Mat * maskPtr = $(Mat * maskPtr);
+          cv::meanStdDev
+          ( *$(Mat * srcPtr)
+          , *$(Scalar * meanPtr)
+          , *$(Scalar * stddevPtr)
+          , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(cv::noArray())
+          );
         |]
