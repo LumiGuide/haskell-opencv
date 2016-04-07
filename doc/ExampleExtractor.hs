@@ -82,12 +82,12 @@ data RenderTarget
 
 extractExampleImages :: FilePath -> Q [Dec]
 extractExampleImages srcDir = do
+    haskellPaths <- runIO $ findHaskellPaths srcDir
+    mapM_ (addDependentFile <=< runIO . canonicalizePath) haskellPaths
+
     ((exampleSrcs, renderTargets) :: ([ExampleSrc], [RenderTarget])) <- runIO $ do
-      haskellPaths <- findHaskellPaths srcDir
       xs <- mapM findExamples haskellPaths
       pure $ (concat *** concat) $ unzip xs
-
-    mapM_ (\fp -> addDependentFile =<< runIO (canonicalizePath fp)) $ map (locFile . exsLoc) exampleSrcs
 
     let parseErrors       :: [String]
         parsedExampleSrcs :: [ParsedExampleSrc]
@@ -165,6 +165,7 @@ parseMode fileName =
     exts =
       [ Hse.BangPatterns
       , Hse.DataKinds
+      , Hse.FlexibleContexts
       , Hse.LambdaCase
       , Hse.OverloadedStrings
       , Hse.PackageImports
@@ -209,6 +210,7 @@ haddockToHaskell :: T.Text -> T.Text
 haddockToHaskell =
     T.replace "\\`" "`"
   . T.replace "\\<" "<"
+  . T.replace "\\/" "/"
 
 findExamples :: FilePath -> IO ([ExampleSrc], [RenderTarget])
 findExamples fp = ((parseExamples &&& parseGeneratedImages) . textToSource fp) <$> T.readFile fp
