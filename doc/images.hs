@@ -1,5 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# language TemplateHaskell #-}
+{-# language OverloadedStrings #-}
+{-# language FlexibleContexts #-}
 
 module Main where
 
@@ -15,6 +16,7 @@ import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( (^+^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import qualified "text" Data.Text as T
 import "thea" OpenCV
 import "thea" OpenCV.Unsafe
@@ -32,29 +34,58 @@ black       = convert (V4   0   0   0 255 :: V4 Double)
 blue        = convert (V4 255   0   0 255 :: V4 Double)
 red         = convert (V4   0   0 255 255 :: V4 Double)
 
-type Birds_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-type Birds_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-type Frog          = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
-type Lambda        = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
+type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
+type Flower_768x512   = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
+type Sailboat_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
+type Birds_512x341    = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+type Flower_512x341   = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+type Sailboat_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+type Frog             = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
+type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
 birds_768x512 :: Birds_768x512
-birds_768x512 = either (error . concat) id $ coerceMat $ unsafePerformIO $
-                  imdecode ImreadColor <$> B.readFile "data/kodim23.png"
+birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
+                  imdecode ImreadUnchanged <$> B.readFile "data/kodim23.png"
+
+flower_768x512 :: Flower_768x512
+flower_768x512 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/kodim07.png"
+
+sailboat_768x512 :: Sailboat_768x512
+sailboat_768x512 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/kodim06.png"
+
+smallerKodakImg
+    :: Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
+    -> Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+smallerKodakImg img =
+    exceptError $ coerceMat =<<
+      resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
+             InterArea
+             img
 
 birds_512x341 :: Birds_512x341
-birds_512x341 = either (error . concat) id $ coerceMat $
-                  exceptError $
-                  resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
-                         InterArea
-                         birds_768x512
+birds_512x341 = smallerKodakImg birds_768x512
+
+flower_512x341 :: Flower_512x341
+flower_512x341 = smallerKodakImg flower_768x512
+
+sailboat_512x341 :: Flower_512x341
+sailboat_512x341 = smallerKodakImg sailboat_768x512
 
 frog :: Frog
-frog = either (error . concat) id $ coerceMat $ unsafePerformIO $
-         imdecode ImreadColor <$> B.readFile "data/kikker.jpg"
+frog =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/kikker.jpg"
 
 lambda :: Lambda
-lambda = either (error . concat) id $ coerceMat $ unsafePerformIO $
-           imdecode ImreadGrayscale <$> B.readFile "data/lambda.png"
+lambda =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/lambda.png"
+
+
 
 --------------------------------------------------------------------------------
 
@@ -101,6 +132,23 @@ fontFaceImg fontFace = exceptError $
     scale     = 1
     thickness = 1
 
+vennCircleA
+    :: (PrimMonad m, Convert color Scalar)
+    => MutMat ('S [height, width]) channels depth (PrimState m)
+    -> color
+    -> Int32
+    -> m ()
+vennCircleA imgM color thickness =
+    circle imgM (V2 100 100 :: V2 Int32) 90 color thickness LineType_AA 0
+
+vennCircleB
+    :: (PrimMonad m, Convert color Scalar)
+    => MutMat ('S [height, width]) channels depth (PrimState m)
+    -> color
+    -> Int32
+    -> m ()
+vennCircleB imgM color thickness =
+    circle imgM (V2 220 100 :: V2 Int32) 90 color thickness LineType_AA 0
 
 --------------------------------------------------------------------------------
 
@@ -111,7 +159,9 @@ extractExampleImages "src"
 main :: IO ()
 main = do
     renderExampleImages
-    render "birds_512x341.png" birds_512x341
+    render "birds_512x341.png"    birds_512x341
+    render "flower_512x341.png"   flower_512x341
+    render "sailboat_512x341.png" sailboat_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
       render (show lineType <> ".png") (lineTypeImg lineType)
     forM_ [minBound .. maxBound] $ \fontFace ->

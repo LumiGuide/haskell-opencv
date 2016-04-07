@@ -25,7 +25,7 @@ library
            , src/OpenCV/Core/Types/Mat.cpp
            , src/OpenCV/Core/Types/Mat/Internal.cpp
            , src/OpenCV/Core/Types/Mat/Repa.cpp
-           , src/OpenCV/Exception.cpp
+           , src/OpenCV/Exception/Internal.cpp
            , src/OpenCV/Features2d.cpp
            , src/OpenCV/HighGui.cpp
            , src/OpenCV/ImgCodecs.cpp
@@ -67,6 +67,7 @@ library
                  , OpenCV.Core.Types.Mat
                  , OpenCV.Core.Types.Mat.HMat
                  , OpenCV.Core.Types.Mat.Repa
+                 , OpenCV.Exception
                  , OpenCV.Features2d
                  , OpenCV.HighGui
                  , OpenCV.ImgCodecs
@@ -87,11 +88,12 @@ library
                  , OpenCV.Core.ArrayOps.Internal
                  , OpenCV.Core.Types.Constants
                  , OpenCV.Core.Types.Internal
+                 , OpenCV.Core.Types.Mat.Depth
                  , OpenCV.Core.Types.Mat.Internal
                  , OpenCV.C.Inline
                  , OpenCV.C.PlacementNew
                  , OpenCV.C.Types
-                 , OpenCV.Exception
+                 , OpenCV.Exception.Internal
                  , OpenCV.ImgCodecs.Internal
                  , OpenCV.ImgProc.MiscImgTransform.Internal
                  , OpenCV.ImgProc.Types.Internal
@@ -127,6 +129,7 @@ test-suite thea-doc-images
                , haskell-src-meta
                , haskell-src-exts
                , linear
+               , primitive
                , template-haskell
                , text
                , transformers

@@ -4,13 +4,24 @@
 {- | Operations on arrays
 -}
 module OpenCV.Core.ArrayOps
-    ( arrayAbs
-    , arrayAbsDiff
-    , arrayAdd
-    , arraySubtract
-    , addWeighted
-    , arrayMerge
-    , arraySplit
+    ( -- * Per element operations
+      -- $per_element_intro
+      matAbs
+    , matAbsDiff
+    , matAdd
+    , matSubtract
+    , matAddWeighted
+    , matScaleAdd
+      -- ** Bitwise operations
+      -- $bitwise_intro
+    , bitwiseNot
+    , bitwiseAnd
+    , bitwiseOr
+    , bitwiseXor
+      -- * Channel operations
+    , matMerge
+    , matSplit
+      -- * Other
     , minMaxLoc
     , NormType(..)
     , NormAbsRel(..)
@@ -18,10 +29,7 @@ module OpenCV.Core.ArrayOps
     , normDiff
     , normalize
     , matSum
-    , bitwise_not
-    , bitwise_and
-    , bitwise_or
-    , bitwise_xor
+    , matSumM
     ) where
 
 import "base" Data.Proxy ( Proxy(..) )
@@ -33,14 +41,17 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Core.ArrayOps.Internal
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
+import "this" OpenCV.Unsafe ( unsafeThaw )
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Mutable as VM
 
@@ -53,17 +64,27 @@ C.using "namespace cv"
 
 
 --------------------------------------------------------------------------------
--- Operations on Arrays
+-- Per element operations
 --------------------------------------------------------------------------------
+
+{- $per_element_intro
+
+The following functions work on the individual elements of matrices.
+
+Examples are based on the following two images:
+
+<<doc/generated/flower_512x341.png Flower>>
+<<doc/generated/sailboat_512x341.png Sailboat>>
+-}
 
 {- | Calculates an absolute value of each matrix element.
 
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#abs OpenCV Sphinx doc>
 -}
-arrayAbs
+matAbs
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-arrayAbs src = unsafePerformIO $ do
+matAbs src = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr dst $ \dstPtr ->
       withPtr src $ \srcPtr ->
@@ -74,13 +95,22 @@ arrayAbs src = unsafePerformIO $ do
 
 {- | Calculates the per-element absolute difference between two arrays.
 
+Example:
+
+@
+matAbsDiffImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+matAbsDiffImg = matAbsDiff flower_512x341 sailboat_512x341
+@
+
+<<doc/generated/examples/matAbsDiffImg.png matAbsDiffImg>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#absdiff OpenCV Sphinx doc>
 -}
-arrayAbsDiff
+matAbsDiff
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
     -> Mat shape channels depth
-arrayAbsDiff src1 src2 = unsafePerformIO $ do
+matAbsDiff src1 src2 = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
@@ -93,66 +123,89 @@ arrayAbsDiff src1 src2 = unsafePerformIO $ do
         }|]
     pure $ unsafeCoerceMat dst
 
+{- | Calculates the per-element sum of two arrays.
+
+Example:
+
+@
+matAddImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+matAddImg = matAdd flower_512x341 sailboat_512x341
+@
+
+<<doc/generated/examples/matAddImg.png matAddImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#add OpenCV Sphinx doc>
+-}
 -- TODO (RvD): handle different depths
-arrayAdd
+matAdd
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-       -- ^ Optional operation mask that specifies elements of the output array
-       -- to be changed.
     -> Mat shape channels depth
-arrayAdd src1 src2 mbMask = unsafePerformIO $ do
+matAdd src1 src2 = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr dst $ \dstPtr ->
-      withPtr src1   $ \src1Ptr ->
-      withPtr src2   $ \src2Ptr ->
-      withPtr mbMask $ \maskPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
         [C.block| void {
-          cv::Mat * maskPtr = $(Mat * maskPtr);
           cv::add
           ( *$(Mat * src1Ptr)
           , *$(Mat * src2Ptr)
           , *$(Mat * dstPtr)
-          , maskPtr
-            ? cv::_InputArray(*maskPtr)
-            : cv::_InputArray(cv::noArray())
+          , cv::noArray()
           );
         }|]
     pure $ unsafeCoerceMat dst
 
+{- | Calculates the per-element difference between two arrays
+
+Example:
+
+@
+matSubtractImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+matSubtractImg = matSubtract flower_512x341 sailboat_512x341
+@
+
+<<doc/generated/examples/matSubtractImg.png matSubtractImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#subtract OpenCV Sphinx doc>
+-}
 -- TODO (RvD): handle different depths
-arraySubtract
+matSubtract
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-       -- ^ Optional operation mask that specifies elements of the output array
-       -- to be changed.
     -> Mat shape channels depth
-arraySubtract src1 src2 mbMask = unsafePerformIO $ do
+matSubtract src1 src2 = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr dst $ \dstPtr ->
-      withPtr src1   $ \src1Ptr ->
-      withPtr src2   $ \src2Ptr ->
-      withPtr mbMask $ \maskPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
         [C.block| void {
-          cv::Mat * maskPtr = $(Mat * maskPtr);
           cv::subtract
           ( *$(Mat * src1Ptr)
           , *$(Mat * src2Ptr)
           , *$(Mat * dstPtr)
-          , maskPtr
-            ? cv::_InputArray(*maskPtr)
-            : cv::_InputArray(cv::noArray())
+          , cv::noArray()
           );
         }|]
     pure $ unsafeCoerceMat dst
 
--- | Calculates the weighted sum of two arrays
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
+{- | Calculates the weighted sum of two arrays
+
+Example:
+
+@
+matAddWeightedImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+matAddWeightedImg = exceptError $
+    matAddWeighted flower_512x341 0.5 sailboat_512x341 0.5 0.0
+@
+
+<<doc/generated/examples/matAddWeightedImg.png matAddWeightedImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc>
+-}
 
 -- TODO (RvD): handle different depths
-addWeighted
+matAddWeighted
     :: forall shape channels srcDepth dstDepth
      . (Convert (Proxy dstDepth) (DS Depth))
     => Mat shape channels srcDepth -- ^ src1
@@ -161,7 +214,7 @@ addWeighted
     -> Double -- ^ beta
     -> Double -- ^ gamma
     -> CvExcept (Mat shape channels dstDepth)
-addWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do
+matAddWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src1 $ \src1Ptr ->
@@ -184,14 +237,234 @@ addWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do
     c'gamma = realToFrac gamma
     c'dtype = maybe (-1) marshalDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
 
+{- | Calculates the sum of a scaled array and another array.
+
+The function scaleAdd is one of the classical primitive linear algebra
+operations, known as DAXPY or SAXPY in BLAS. It calculates the sum of a scaled
+array and another array.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#scaleadd OpenCV Sphinx doc>
+-}
+matScaleAdd
+    :: Mat shape channels depth
+       -- ^ First input array.
+    -> Double
+       -- ^ Scale factor for the first array.
+    -> Mat shape channels depth
+       -- ^ Second input array.
+    -> CvExcept (Mat shape channels depth)
+matScaleAdd src1 scale src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+      withPtr dst  $ \dstPtr  ->
+      [cvExcept|
+        cv::scaleAdd
+          ( *$(Mat * src1Ptr)
+          , $(double c'scale)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          );
+      |]
+  where
+    c'scale = realToFrac scale
+
+
+--------------------------------------------------------------------------------
+-- Per element bitwise operations
+--------------------------------------------------------------------------------
+
+{- $bitwise_intro
+
+The examples for the bitwise operations make use of the following images:
+
+Example:
+
+@
+type VennShape = [200, 320]
+
+vennCircleAImg :: Mat (ShapeT VennShape) ('S 1) ('S Word8)
+vennCircleAImg = exceptError $
+    withMatM
+      (Proxy :: Proxy VennShape)
+      (Proxy :: Proxy 1)
+      (Proxy :: Proxy Word8)
+      black $ \imgM -> lift $ vennCircleA imgM white (-1)
+
+vennCircleBImg :: Mat (ShapeT VennShape) ('S 1) ('S Word8)
+vennCircleBImg = exceptError $
+    withMatM
+      (Proxy :: Proxy VennShape)
+      (Proxy :: Proxy 1)
+      (Proxy :: Proxy Word8)
+      black $ \imgM -> lift $ vennCircleB imgM white (-1)
+@
+
+<<doc/generated/examples/vennCircleAImg.png vennCircleAImg>>
+<<doc/generated/examples/vennCircleBImg.png vennCircleBImg>>
+-}
+
+{- |
+
+Example:
+
+@
+bitwiseNotImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+bitwiseNotImg = exceptError $ do
+    img <- bitwiseNot vennCircleAImg
+    imgBgr <- cvtColor gray bgr img
+    createMat $ do
+      imgM <- lift $ thaw imgBgr
+      lift $ vennCircleA imgM blue 2
+      pure imgM
+@
+
+<<doc/generated/examples/bitwiseNotImg.png bitwiseNotImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-not OpenCV Sphinx doc>
+-}
+bitwiseNot
+    :: Mat shape channels depth -- ^
+    -> CvExcept (Mat shape channels depth)
+bitwiseNot src = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src    $ \srcPtr ->
+      withPtr dst    $ \dstPtr ->
+        [cvExcept|
+          cv::bitwise_not
+          ( *$(Mat * srcPtr)
+          , *$(Mat * dstPtr)
+          , cv::noArray()
+          );
+        |]
+
+{- |
+
+Example:
+
+@
+bitwiseAndImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+bitwiseAndImg = exceptError $ do
+    img <- bitwiseAnd vennCircleAImg vennCircleBImg
+    imgBgr <- cvtColor gray bgr img
+    createMat $ do
+      imgM <- lift $ thaw imgBgr
+      lift $ vennCircleA imgM blue 2
+      lift $ vennCircleB imgM red  2
+      pure imgM
+@
+
+<<doc/generated/examples/bitwiseAndImg.png bitwiseAndImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-and OpenCV Sphinx doc>
+-}
+bitwiseAnd
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+bitwiseAnd src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+        [cvExcept|
+          cv::bitwise_and
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , cv::noArray()
+          );
+        |]
+
+{- |
+
+Example:
+
+@
+bitwiseOrImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+bitwiseOrImg = exceptError $ do
+    img <- bitwiseOr vennCircleAImg vennCircleBImg
+    imgBgr <- cvtColor gray bgr img
+    createMat $ do
+      imgM <- lift $ thaw imgBgr
+      lift $ vennCircleA imgM blue 2
+      lift $ vennCircleB imgM red  2
+      pure imgM
+@
+
+<<doc/generated/examples/bitwiseOrImg.png bitwiseOrImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-or OpenCV Sphinx doc>
+-}
+bitwiseOr
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+bitwiseOr src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+        [cvExcept|
+          cv::bitwise_or
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , cv::noArray()
+          );
+        |]
+
+{- |
+
+Example:
+
+@
+bitwiseXorImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+bitwiseXorImg = exceptError $ do
+    img <- bitwiseXor vennCircleAImg vennCircleBImg
+    imgBgr <- cvtColor gray bgr img
+    createMat $ do
+      imgM <- lift $ thaw imgBgr
+      lift $ vennCircleA imgM blue 2
+      lift $ vennCircleB imgM red  2
+      pure imgM
+@
+
+<<doc/generated/examples/bitwiseXorImg.png bitwiseXorImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-xor OpenCV Sphinx doc>
+-}
+bitwiseXor
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+bitwiseXor src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src1   $ \src1Ptr ->
+      withPtr src2   $ \src2Ptr ->
+      withPtr dst    $ \dstPtr  ->
+        [cvExcept|
+          cv::bitwise_xor
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          , cv::noArray()
+          );
+        |]
+
 {- | Creates one multichannel array out of several single-channel ones.
 
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#merge OpenCV Sphinx doc>
 -}
-arrayMerge
+matMerge
     :: V.Vector (Mat shape ('S 1) depth) -- ^
     -> Mat shape 'D depth
-arrayMerge srcVec = unsafePerformIO $ do
+matMerge srcVec = unsafePerformIO $ do
     dst <- newEmptyMat
     withArrayPtr srcVec $ \srcVecPtr ->
       withPtr dst $ \dstPtr ->
@@ -208,12 +481,50 @@ arrayMerge srcVec = unsafePerformIO $ do
 
 {- | Divides a multi-channel array into several single-channel arrays.
 
+Example:
+
+@
+matSplitImg
+    :: forall (width    :: Nat)
+              (width3   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width3 ~ ((*) width 3)
+       )
+    => Mat (ShapeT [height, width3]) ('S channels) ('S depth)
+matSplitImg = exceptError $ do
+    zeroImg <- mkMat (Proxy :: Proxy [height, width])
+                     (Proxy :: Proxy 1)
+                     (Proxy :: Proxy depth)
+                     black
+    let blueImg  = matMerge $ V.fromList [channelImgs V.! 0, zeroImg, zeroImg]
+        greenImg = matMerge $ V.fromList [zeroImg, channelImgs V.! 1, zeroImg]
+        redImg   = matMerge $ V.fromList [zeroImg, zeroImg, channelImgs V.! 2]
+
+    withMatM (Proxy :: Proxy [height, width3])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      matCopyToM imgM (V2 (w*0) 0) (unsafeCoerceMat blueImg)  Nothing
+      matCopyToM imgM (V2 (w*1) 0) (unsafeCoerceMat greenImg) Nothing
+      matCopyToM imgM (V2 (w*2) 0) (unsafeCoerceMat redImg)   Nothing
+  where
+    channelImgs = matSplit birds_512x341
+
+    w :: Int32
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/matSplitImg.png matSplitImg>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#split OpenCV Sphinx doc>
 -}
-arraySplit
+matSplit
     :: Mat shape channels depth -- ^
     -> V.Vector (Mat shape ('S 1) depth)
-arraySplit src = unsafePerformIO $
+matSplit src = unsafePerformIO $
     withPtr src $ \srcPtr ->
     allocaBytes (numChans * cSizeOfMat) $ \(mvBeginPtr :: Ptr C'Mat) -> do
       [C.block| void {
@@ -223,7 +534,7 @@ arraySplit src = unsafePerformIO $
         );
       }|]
       dstVecM <- VM.unsafeNew numChans
-      let go !n | n == numChans - 1 = V.freeze dstVecM
+      let go !n | n == numChans = V.freeze dstVecM
                 | otherwise = do
                     mat <- fromPtr $ pure $ mvBeginPtr `plusPtr` (n * cSizeOfMat)
                     VM.unsafeWrite dstVecM n $ unsafeCoerceMat mat
@@ -235,9 +546,10 @@ arraySplit src = unsafePerformIO $
 
     numChans = fromIntegral $ miChannels $ matInfo src
 
--- | Finds the global minimum and maximum in an array
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
+{- | Finds the global minimum and maximum in an array
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
+-}
 
 -- TODO (RvD): implement mask
 minMaxLoc
@@ -265,9 +577,10 @@ minMaxLoc src = unsafeWrapException $ do
                          );
           |]
 
--- | Calculates an absolute array norm
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+{- | Calculates an absolute array norm
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+-}
 norm
     :: NormType
     -> Maybe (Mat shape ('S 1) ('S Word8))
@@ -285,15 +598,16 @@ norm normType mbMask src = unsafeWrapException $
         *$(double * normPtr) =
           cv::norm( *$(Mat * srcPtr)
                   , $(int32_t c'normType)
-                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
                   );
       |]
   where
     c'normType = marshalNormType NormAbsolute normType
 
--- | Calculates an absolute difference norm, or a relative difference norm
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+{- | Calculates an absolute difference norm, or a relative difference norm
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc>
+-}
 normDiff
     :: NormAbsRel -- ^ Absolute or relative norm.
     -> NormType
@@ -315,15 +629,16 @@ normDiff absRel normType mbMask src1 src2 = unsafeWrapException $
           cv::norm( *$(Mat * src1Ptr)
                   , *$(Mat * src2Ptr)
                   , $(int32_t c'normType)
-                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                  , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
                   );
       |]
   where
     c'normType = marshalNormType absRel normType
 
--- | Normalizes the norm or value range of an array
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc>
+{- | Normalizes the norm or value range of an array
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc>
+-}
 normalize
     :: forall shape channels srcDepth dstDepth
      . (Convert (Proxy dstDepth) (DS Depth))
@@ -351,7 +666,7 @@ normalize alpha beta normType mbMask src = unsafeWrapException $ do
                        , $(double c'beta)
                        , $(int32_t c'normType)
                        , $(int32_t c'dtype)
-                       , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
+                       , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
                        );
         |]
   where
@@ -360,104 +675,59 @@ normalize alpha beta normType mbMask src = unsafeWrapException $ do
     c'normType = marshalNormType NormAbsolute normType
     c'dtype    = maybe (-1) marshalDepth $ dsToMaybe$ convert (Proxy :: Proxy dstDepth)
 
--- | Calculates the sum of array elements
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum OpenCV Sphinx doc>
+{- | Calculates the sum of array elements
+
+Example:
+
+@
+matSumImg :: Mat (ShapeT [201, 201]) ('S 3) ('S Word8)
+matSumImg = exceptError $
+    withMatM
+      (Proxy :: Proxy [201, 201])
+      (Proxy :: Proxy 3)
+      (Proxy :: Proxy Word8)
+      black $ \imgM -> do
+        -- Draw a filled circle. Each pixel has a value of (255,255,255)
+        lift $ circle imgM (pure radius :: V2 Int32) radius white (-1) LineType_8 0
+        -- Calculate the sum of all pixels.
+        scalar <- matSumM imgM
+        let V4 area _y _z _w = convert scalar :: V4 Double
+        -- Circle area = pi * radius * radius
+        let approxPi = area \/ 255 \/ (radius * radius)
+        lift $ putText imgM
+                       (T.pack $ show approxPi)
+                       (V2 40 110 :: V2 Int32)
+                       FontHersheyDuplex
+                       1.0
+                       blue
+                       1
+                       LineType_AA
+                       False
+  where
+    radius :: forall a. Num a => a
+    radius = 100
+@
+
+<<doc/generated/examples/matSumImg.png matSumImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum OpenCV Sphinx doc>
+-}
 matSum
-    :: -- (1 <= channels, channels <= 4)
-    -- =>
-    Mat shape channels depth -- ^ Input array that must have from 1 to 4 channels.
+    :: Mat shape channels depth
+       -- ^ Input array that must have from 1 to 4 channels.
     -> CvExcept Scalar
-matSum src = unsafeWrapException $ do
+matSum src = runCvExceptST $ matSumM =<< unsafeThaw src
+
+matSumM
+    :: (PrimMonad m)
+    => MutMat shape channels depth (PrimState m)
+       -- ^ Input array that must have from 1 to 4 channels.
+    -> CvExceptT m Scalar
+matSumM srcM = ExceptT $ unsafePrimToPrim $ do
     s <- newScalar zero
     handleCvException (pure s) $
-      withPtr src $ \srcPtr ->
-      withPtr s   $ \sPtr   ->
+      withPtr srcM $ \srcPtr ->
+      withPtr s    $ \sPtr   ->
         [cvExcept|
           *$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));
-        |]
-
-bitwise_not
-    :: Mat shape channels depth -- ^
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> CvExcept (Mat shape channels depth)
-bitwise_not src mbMask = unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withPtr src    $ \srcPtr ->
-      withPtr dst    $ \dstPtr ->
-      withPtr mbMask $ \mskPtr ->
-        [cvExcept|
-          Mat * mskPtr = $(Mat * mskPtr);
-          cv::bitwise_not
-          ( *$(Mat * srcPtr)
-          , *$(Mat * dstPtr)
-          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
-          );
-        |]
-
-bitwise_and
-    :: Mat shape channels depth -- ^
-    -> Mat shape channels depth
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> CvExcept (Mat shape channels depth)
-bitwise_and src1 src2 mbMask = unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withPtr src1   $ \src1Ptr ->
-      withPtr src2   $ \src2Ptr ->
-      withPtr dst    $ \dstPtr  ->
-      withPtr mbMask $ \mskPtr  ->
-        [cvExcept|
-          Mat * mskPtr = $(Mat * mskPtr);
-          cv::bitwise_and
-          ( *$(Mat * src1Ptr)
-          , *$(Mat * src2Ptr)
-          , *$(Mat * dstPtr)
-          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
-          );
-        |]
-
-bitwise_or
-    :: Mat shape channels depth -- ^
-    -> Mat shape channels depth
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> CvExcept (Mat shape channels depth)
-bitwise_or src1 src2 mbMask = unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withPtr src1   $ \src1Ptr ->
-      withPtr src2   $ \src2Ptr ->
-      withPtr dst    $ \dstPtr  ->
-      withPtr mbMask $ \mskPtr  ->
-        [cvExcept|
-          Mat * mskPtr = $(Mat * mskPtr);
-          cv::bitwise_or
-          ( *$(Mat * src1Ptr)
-          , *$(Mat * src2Ptr)
-          , *$(Mat * dstPtr)
-          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
-          );
-        |]
-
-bitwise_xor
-    :: Mat shape channels depth -- ^
-    -> Mat shape channels depth
-    -> Maybe (Mat shape ('S 1) ('S Word8))
-    -> CvExcept (Mat shape channels depth)
-bitwise_xor src1 src2 mbMask = unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withPtr src1   $ \src1Ptr ->
-      withPtr src2   $ \src2Ptr ->
-      withPtr dst    $ \dstPtr  ->
-      withPtr mbMask $ \mskPtr  ->
-        [cvExcept|
-          Mat * mskPtr = $(Mat * mskPtr);
-          cv::bitwise_xor
-          ( *$(Mat * src1Ptr)
-          , *$(Mat * src2Ptr)
-          , *$(Mat * dstPtr)
-          , mskPtr ? _InputArray(*mskPtr) : _InputArray(noArray())
-          );
         |]

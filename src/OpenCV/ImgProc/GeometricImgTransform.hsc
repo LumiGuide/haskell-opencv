@@ -64,7 +64,7 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
 import "this" OpenCV.TypeLevel

@@ -1,8 +1,8 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# language ConstraintKinds #-}
+{-# language MultiParamTypeClasses #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+{-# language UndecidableInstances #-}
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)
@@ -52,7 +52,8 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Exception
+import "this" OpenCV.Core.Types.Mat.Depth
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
@@ -71,33 +72,6 @@ C.using "namespace cv"
 #include "opencv2/core.hpp"
 
 #include "namespace.hpp"
-
---------------------------------------------------------------------------------
-
-data Depth =
-     Depth_8U
-   | Depth_8S
-   | Depth_16U
-   | Depth_16S
-   | Depth_32S
-   | Depth_32F
-   | Depth_64F
-   | Depth_USRTYPE1
-     deriving (Show, Eq)
-
-instance Convert (Proxy Word8 ) Depth where convert _p = Depth_8U
-instance Convert (Proxy Int8  ) Depth where convert _p = Depth_8S
-instance Convert (Proxy Word16) Depth where convert _p = Depth_16U
-instance Convert (Proxy Int16 ) Depth where convert _p = Depth_16S
-instance Convert (Proxy Int32 ) Depth where convert _p = Depth_32S
-instance Convert (Proxy Float ) Depth where convert _p = Depth_32F
-instance Convert (Proxy Double) Depth where convert _p = Depth_64F
--- TODO (BvD): instance ToDepth ? where toDepth = const Depth_USRTYPE1
--- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
-
-type family DepthT a :: DS * where
-    DepthT Depth     = 'D
-    DepthT (Proxy d) = 'S d
 
 --------------------------------------------------------------------------------
 
@@ -165,14 +139,19 @@ newtype MutMat (shape    :: DS [DS Nat])
                (s        :: *)
       = MutMat {unMutMat :: Mat shape channels depth}
 
-type instance C (Mat shape channels depth) = C'Mat
+type instance C (Mat    shape channels depth  ) = C'Mat
+type instance C (MutMat shape channels depth s) = C'Mat
 
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
+instance WithPtr (MutMat shape channels depth s) where
+    withPtr = withPtr . unMutMat
+
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr Mat $ \ptr ->
                 [CU.exp| void { delete $(Mat * ptr) }|]
+
 
 --------------------------------------------------------------------------------
 
@@ -200,7 +179,7 @@ typeCheckMat
        , Convert (Proxy depth)    (DS Depth)
        )
     => Mat shape channels depth -- ^ The matrix to be checked.
-    -> [String] -- ^ Error messages.
+    -> [CoerceMatError] -- ^ Error messages.
 typeCheckMat mat =
        fromMaybe [] (checkShape <$> dsToMaybe dsExpectedShape)
     <> maybeToList (dsToMaybe dsExpectedNumChannels >>= checkNumChannels)
@@ -217,51 +196,39 @@ typeCheckMat mat =
     dsExpectedDepth :: DS Depth
     dsExpectedDepth = convert (Proxy :: Proxy depth)
 
-    checkShape :: [DS Int32] -> [String]
+    checkShape :: [DS Int32] -> [CoerceMatError]
     checkShape expectedShape = maybe checkSizes (:[]) dimCheck
       where
-        dimCheck :: Maybe String
+        dimCheck :: Maybe CoerceMatError
         dimCheck | expectedDim == actualDim = Nothing
-                 | otherwise =
-                     Just $ "Expected dimension "
-                            <> show expectedDim
-                            <> " doesn't equal actual dimension "
-                            <> show actualDim
+                 | otherwise = Just $ ShapeError $ ExpectationError expectedDim actualDim
           where
             expectedDim = length expectedShape
             actualDim = length (miShape mi)
 
-        checkSizes :: [String]
+        checkSizes :: [CoerceMatError]
         checkSizes = catMaybes $ zipWith3 checkSize [1..] expectedShape (miShape mi)
           where
-            checkSize :: Int -> DS Int32 -> Int32 -> Maybe String
+            checkSize :: Int -> DS Int32 -> Int32 -> Maybe CoerceMatError
             checkSize dimIx dsExpected actual = dsToMaybe dsExpected >>= \expected ->
                 if expected == actual
                 then Nothing
-                else Just $ "Expected size "
-                            <> show expected
-                            <> " doesn't equal actual size "
-                            <> show actual
-                            <> " for the "
-                            <> show dimIx
-                            <> (if dimIx == 2 then "nd" else "th")
-                            <> " dimension"
+                else Just $ SizeError dimIx
+                          $ fromIntegral
+                            <$> ExpectationError expected actual
 
-    checkNumChannels :: Int32 -> Maybe String
+    checkNumChannels :: Int32 -> Maybe CoerceMatError
     checkNumChannels expectedNumChannels
         | miChannels mi == expectedNumChannels = Nothing
-        | otherwise = Just $ "Expected number of channels "
-                             <> show expectedNumChannels
-                             <> " doesn't equal actual number of channels "
-                             <> show (miChannels mi)
+        | otherwise = Just $ ChannelError
+                           $ fromIntegral
+                             <$> ExpectationError expectedNumChannels (miChannels mi)
 
-    checkDepth :: Depth -> Maybe String
+    checkDepth :: Depth -> Maybe CoerceMatError
     checkDepth expectedDepth
         | miDepth mi == expectedDepth = Nothing
-        | otherwise = Just $ "Expected depth "
-                             <> show expectedDepth
-                             <> " doesn't equal actual depth "
-                             <> show (miDepth mi)
+        | otherwise = Just $ DepthError
+                           $ ExpectationError expectedDepth (miDepth mi)
 
 
 coerceMat
@@ -270,9 +237,9 @@ coerceMat
        , Convert (Proxy depthOut)    (DS Depth)
        )
     => Mat shapeIn channelsIn depthIn -- ^
-    -> Either [String] (Mat shapeOut channelsOut depthOut)
-coerceMat matIn | null errors = Right matOut
-                | otherwise   = Left errors
+    -> CvExcept (Mat shapeOut channelsOut depthOut)
+coerceMat matIn | null errors = pure matOut
+                | otherwise   = throwE $ CoerceMatError errors
   where
     matOut = unsafeCoerceMat matIn
     errors = typeCheckMat matOut

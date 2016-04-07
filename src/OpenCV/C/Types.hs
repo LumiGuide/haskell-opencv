@@ -7,7 +7,7 @@ import "this" OpenCV.Core.Types.Constants
 --------------------------------------------------------------------------------
 
 -- | Haskell representation of an OpenCV exception
-data C'CvException
+data C'CvCppException
 -- | Haskell representation of an OpenCV @cv::Point_\<int>@ object
 data C'Point2i
 -- | Haskell representation of an OpenCV @cv::Point_\<float>@ object

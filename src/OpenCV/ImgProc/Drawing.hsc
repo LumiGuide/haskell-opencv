@@ -79,6 +79,7 @@ marshalLineType = \case
   LineType_4  -> c'LINE_4
   LineType_AA -> c'LINE_AA
 
+-- TODO (RvD): FontItalic is not a font but a flag!
 data FontFace
    = FontHersheySimplex
      -- ^ Normal size sans-serif font.

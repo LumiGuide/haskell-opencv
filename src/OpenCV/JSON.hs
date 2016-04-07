@@ -10,7 +10,6 @@ import "aeson" Data.Aeson
 import "aeson" Data.Aeson.Types ( Parser )
 import "aeson" Data.Aeson.TH
 import "base" Data.Int ( Int32 )
-import "base" Data.List ( intercalate )
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy ( Proxy(..) )
 import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
@@ -21,6 +20,7 @@ import qualified "text" Data.Text as T ( unpack )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.HMat
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
 
@@ -53,9 +53,9 @@ instance ( Convert (Proxy shape)    (DS [DS Int32])
       => FromJSON (Mat shape channels depth) where
     parseJSON value = do
       matDyn <- hMatToMat <$> parseJSON value
-      case coerceMat (matDyn :: Mat 'D 'D 'D) of
-        Left errors -> fail $ intercalate "\n" errors
-        Right mat   -> pure mat
+      case runExcept $ coerceMat (matDyn :: Mat 'D 'D 'D) of
+        Left err -> fail $ show err
+        Right mat -> pure mat
 
 
 --------------------------------------------------------------------------------

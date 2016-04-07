@@ -20,8 +20,9 @@ import "this" OpenCV.Calib3d.Constants
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -107,36 +108,41 @@ findFundamentalMat
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
                         )
                 )
-findFundamentalMat pts1 pts2 method = unsafeWrapException $ do
-    fm   <- newEmptyMat
-    pointMask <- newEmptyMat
-    handleCvException (pure $ checkResult (fm, pointMask)) $
-      withPtr fm $ \fmPtr ->
-      withPtr pointMask $ \pointMaskPtr ->
-      withArrayPtr (V.map convert pts1 :: V.Vector Point2d) $ \pts1Ptr ->
-      withArrayPtr (V.map convert pts2 :: V.Vector Point2d) $ \pts2Ptr ->
-        [cvExcept|
-          cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
-          cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
-          *$(Mat * fmPtr) =
-            cv::findFundamentalMat
-            ( pts1
-            , pts2
-            , $(int32_t c'method)
-            , $(double c'p1)
-            , $(double c'p2)
-            , *$(Mat * pointMaskPtr)
-            );
-        |]
+findFundamentalMat pts1 pts2 method = do
+    (fm, pointMask) <- c'findFundamentalMat
+    -- If the c++ function can't find a fundamental matrix it will
+    -- retrun an empty matrix. We check for this case by trying to
+    -- coerce the result to the desired type.
+    catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+           (\case CoerceMatError _msgs -> pure Nothing
+                  otherError -> throwE otherError
+           )
   where
+    c'findFundamentalMat = unsafeWrapException $ do
+      fm   <- newEmptyMat
+      pointMask <- newEmptyMat
+      handleCvException (pure (fm, pointMask)) $
+        withPtr fm $ \fmPtr ->
+        withPtr pointMask $ \pointMaskPtr ->
+        withArrayPtr (V.map convert pts1 :: V.Vector Point2d) $ \pts1Ptr ->
+        withArrayPtr (V.map convert pts2 :: V.Vector Point2d) $ \pts2Ptr ->
+          [cvExcept|
+            cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
+            cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
+            *$(Mat * fmPtr) =
+              cv::findFundamentalMat
+              ( pts1
+              , pts2
+              , $(int32_t c'method)
+              , $(double c'p1)
+              , $(double c'p2)
+              , *$(Mat * pointMaskPtr)
+              );
+          |]
+
     c'numPts1 = fromIntegral $ V.length pts1
     c'numPts2 = fromIntegral $ V.length pts2
     (c'method, c'p1, c'p2) = marshalFundamentalMatMethod method
-
-    checkResult (fm, pointMask) =
-        case coerceMat fm of
-          Left _errors -> Nothing
-          Right fm' -> Just (fm', unsafeCoerceMat pointMask)
 
 {- | For points in an image of a stereo pair, computes the corresponding epilines in the other image
 

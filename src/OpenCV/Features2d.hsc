@@ -326,7 +326,7 @@ bfMatcherImg = do
                      descs1 -- Query descriptors
                      descs2 -- Train descriptors
                      Nothing
-    exceptTError $ pureExcept $
+    exceptErrorIO $ pureExcept $
       withMatM (Proxy :: Proxy [height, width2])
                (Proxy :: Proxy channels)
                (Proxy :: Proxy depth)

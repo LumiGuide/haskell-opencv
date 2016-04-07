@@ -45,7 +45,7 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgProc.Types ( BorderMode )
 import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
 import "this" OpenCV.TypeLevel
@@ -374,7 +374,7 @@ structureImg :: MorphShape -> StructureImg
 structureImg shape = exceptError $ do
     mat <- getStructuringElement shape (Proxy :: Proxy 128) (Proxy :: Proxy 128)
     img <- matConvertTo (Just 255) Nothing mat
-    bitwise_not img Nothing
+    bitwiseNot img
 
 morphRectImg :: StructureImg
 morphRectImg = structureImg MorphRect

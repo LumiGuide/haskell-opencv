@@ -11,11 +11,12 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -43,8 +44,15 @@ estimateRigidTransform
     -> V.Vector dstPoint2i -- ^ Destination
     -> Bool -- ^ Full affine
     -> CvExcept (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
-estimateRigidTransform src dst fullAffine =
-    checkResult <$> c'estimateRigidTransform
+estimateRigidTransform src dst fullAffine = do
+    result <- c'estimateRigidTransform
+    -- If the c++ function can't estimate a rigid transform it will
+    -- return an empty matrix. We check for this case by trying to
+    -- coerce the result to the desired type.
+    catchE (Just <$> coerceMat result)
+           (\case CoerceMatError _msgs -> pure Nothing
+                  otherError -> throwE otherError
+           )
   where
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
@@ -65,5 +73,3 @@ estimateRigidTransform src dst fullAffine =
     c'srcLen     = fromIntegral $ V.length src
     c'dstLen     = fromIntegral $ V.length dst
     c'fullAffine = fromBool fullAffine
-
-    checkResult = either (const Nothing) Just . coerceMat

@@ -19,7 +19,7 @@ import "linear" Linear.V4 ( V4 )
 import qualified "repa" Data.Array.Repa as Repa
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Repa
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 

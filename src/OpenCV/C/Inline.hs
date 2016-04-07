@@ -32,7 +32,8 @@ openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
   [ ( C.TypeName "bool"        , [t| C.CInt        |] )
 
-  , ( C.TypeName "Exception"   , [t| C'CvException |] )
+  , ( C.TypeName "Exception"   , [t| C'CvCppException |] )
+
   , ( C.TypeName "Point2i"     , [t| C'Point2i     |] )
   , ( C.TypeName "Point2f"     , [t| C'Point2f     |] )
   , ( C.TypeName "Point2d"     , [t| C'Point2d     |] )

@@ -44,7 +44,7 @@ import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Exception
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
 import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
@@ -290,7 +290,7 @@ thaw = fmap MutMat . cloneMatM
 createMat
     :: (forall s. CvExceptT (ST s) (MutMat shape channels depth s)) -- ^
     -> CvExcept (Mat shape channels depth)
-createMat mk = except $ runST $ runExceptT $ unsafeFreeze =<< mk
+createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 
 withMatM
     :: ( Convert shape    (V.Vector Int32)

@@ -56,15 +56,7 @@ module OpenCV.Core.Types
       -- * Matrix
     , module OpenCV.Core.Types.Mat
       -- * Exception
-    , CvException
-      -- ** Monadic interface
-    , CvExcept
-    , CvExceptT
-    , pureExcept
-      -- ** Promoting exceptions to errors
-    , exceptError
-    , exceptTError
-    , exceptTErrorM
+    , module OpenCV.Exception
      -- * Algorithm
     , Algorithm(..)
       -- * Polymorphic stuff

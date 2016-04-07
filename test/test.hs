@@ -3,7 +3,6 @@
 module Main where
 
 import "base" Data.Int
-import "base" Data.List
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
@@ -198,7 +197,7 @@ testMatType
 testMatType mat =
     case typeCheckMat mat of
       [] -> pure ()
-      errors -> assertFailure (intercalate ", " errors)
+      errors -> assertFailure $ show errors
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
@@ -264,8 +263,8 @@ loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
 imgToRepa :: HU.Assertion
 imgToRepa = do
     mat <- loadImg ImreadUnchanged "kikker.jpg"
-    case coerceMat mat of
-      Left errors -> assertFailure (intercalate ", " errors)
+    case runExcept $ coerceMat mat of
+      Left err -> assertFailure $ show err
       Right (mat' :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)) -> do
         let repaArray :: Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8
             repaArray = toRepa mat'
