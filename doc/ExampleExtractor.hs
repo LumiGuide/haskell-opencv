@@ -15,9 +15,9 @@ import qualified "haskell-src-exts" Language.Haskell.Exts.Extension as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Parser as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Syntax as Hse
 import qualified "Glob" System.FilePath.Glob as G
+import qualified "opencv" OpenCV as CV
 import qualified "text" Data.Text as T
 import qualified "text" Data.Text.IO as T
-import qualified "thea" OpenCV as CV
 import qualified "bytestring" Data.ByteString as B ( writeFile )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Syntax

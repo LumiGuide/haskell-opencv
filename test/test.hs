@@ -13,19 +13,19 @@ import "linear" Linear.Vector ( (^+^), zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
+import "opencv" OpenCV
+import "opencv" OpenCV.Unsafe
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
 import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
-import "thea" OpenCV
-import "thea" OpenCV.Unsafe
 import qualified "QuickCheck" Test.QuickCheck as QC
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 main :: IO ()
-main = defaultMain $ testGroup "thea"
+main = defaultMain $ testGroup "opencv"
     [ testGroup "Calib3d"
       [ HU.testCase "findFundamentalMat - no points" testFindFundamentalMat_noPoints
       , HU.testCase "findFundamentalMat" testFindFundamentalMat

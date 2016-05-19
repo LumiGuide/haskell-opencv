@@ -1,7 +1,8 @@
-name:          thea
+name:          opencv
 version:       0.0.0
-homepage:      lumiguide.eu
-license:       AllRightsReserved
+homepage:      https://github.com/LumiGuide/haskell-opencv
+license:       BSD3
+license-file:  LICENSE
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Simple
@@ -115,7 +116,7 @@ library
   default-language:   Haskell2010
   pkgconfig-depends:  opencv
 
-test-suite thea-doc-images
+test-suite opencv-doc-images
   type: exitcode-stdio-1.0
   hs-source-dirs: doc
   main-is: images.hs
@@ -129,11 +130,11 @@ test-suite thea-doc-images
                , haskell-src-meta
                , haskell-src-exts
                , linear
+               , opencv
                , primitive
                , template-haskell
                , text
                , transformers
-               , thea
                , vector
 
   default-extensions: BangPatterns
@@ -147,7 +148,7 @@ test-suite thea-doc-images
                     , TypeFamilies
                     , TypeOperators
 
-test-suite test-thea
+test-suite test-opencv
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          test.hs
@@ -157,12 +158,12 @@ test-suite test-thea
                , bytestring
                , lens
                , linear
+               , opencv
                , QuickCheck
                , repa
                , tasty
                , tasty-hunit
                , tasty-quickcheck
-               , thea
                , transformers
                , vector
 
@@ -173,16 +174,16 @@ test-suite test-thea
                     , ScopedTypeVariables
                     , TypeOperators
 
-benchmark bench-thea
+benchmark bench-opencv
   type:             exitcode-stdio-1.0
   hs-source-dirs:   bench
   main-is:          bench.hs
   default-language: Haskell2010
   ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
-  build-depends:    thea
-                  , base >= 4.8 && < 5
+  build-depends:    base >= 4.8 && < 5
                   , bytestring
                   , criterion
+                  , opencv
                   , repa
 
   default-extensions: DataKinds

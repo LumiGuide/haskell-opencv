@@ -5,9 +5,9 @@ import "base" Data.Monoid
 import "base" Data.Word
 import qualified "bytestring" Data.ByteString as B
 import "criterion" Criterion.Main
+import "opencv" OpenCV
+import "opencv" OpenCV.Unsafe
 import qualified "repa" Data.Array.Repa as Repa
-import "thea" OpenCV
-import "thea" OpenCV.Unsafe
 
 main :: IO ()
 main = defaultMain

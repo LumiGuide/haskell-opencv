@@ -36,7 +36,7 @@
 , criterion
 }:
 mkDerivation {
-  pname = "thea";
+  pname = "opencv";
   version = "0.0.0";
   src = ./.;
   libraryHaskellDepends = [
@@ -79,7 +79,7 @@ mkDerivation {
   preConfigure = ''
     rm -rf dist
   '';
-  homepage = "lumiguide.eu";
-  license = stdenv.lib.licenses.unfree;
+  homepage = "https://github.com/LumiGuide/haskell-opencv";
+  license = stdenv.lib.licenses.bsd3;
   maintainers = [ lib.engineeringAtLumiGuide ];
 }

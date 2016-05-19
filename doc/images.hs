@@ -16,10 +16,10 @@ import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( (^+^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
+import "opencv" OpenCV
+import "opencv" OpenCV.Unsafe
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import qualified "text" Data.Text as T
-import "thea" OpenCV
-import "thea" OpenCV.Unsafe
 import qualified "vector" Data.Vector as V
 import "transformers" Control.Monad.Trans.Class ( lift )
 
