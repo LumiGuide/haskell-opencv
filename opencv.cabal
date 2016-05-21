@@ -127,7 +127,6 @@ test-suite opencv-doc-images
                , containers
                , directory
                , Glob
-               , haskell-src-meta
                , haskell-src-exts
                , linear
                , opencv

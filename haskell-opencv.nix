@@ -24,7 +24,6 @@
 # test dependencies
 , directory
 , Glob
-, haskell-src-meta
 , haskell-src-exts
 , QuickCheck
 , tasty
@@ -63,7 +62,6 @@ mkDerivation {
     containers
     directory
     Glob
-    haskell-src-meta
     haskell-src-exts
     QuickCheck
     tasty

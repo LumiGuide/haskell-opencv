@@ -10,7 +10,6 @@ import "base" Data.Maybe
 import "base" Data.Monoid
 import qualified "containers" Data.Map.Strict as M
 import "directory" System.Directory ( canonicalizePath )
-import "haskell-src-meta" Language.Haskell.Meta.Syntax.Translate ( toDecs )
 import qualified "haskell-src-exts" Language.Haskell.Exts.Extension as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Parser as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Syntax as Hse
@@ -21,6 +20,7 @@ import qualified "text" Data.Text.IO as T
 import qualified "bytestring" Data.ByteString as B ( writeFile )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Syntax
+import "this" Language.Haskell.Meta.Syntax.Translate ( toDecs )
 
 --------------------------------------------------------------------------------
 
