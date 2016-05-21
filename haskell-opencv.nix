@@ -1,6 +1,5 @@
 { mkDerivation
 , stdenv
-, lib
 
 , opencv3_1
 
@@ -39,6 +38,7 @@ mkDerivation {
   pname = "opencv";
   version = "0.0.0";
   src = ./.;
+
   libraryHaskellDepends = [
     aeson
     base
@@ -57,6 +57,7 @@ mkDerivation {
     transformers
     vector
   ];
+
   testHaskellDepends = [
     base
     containers
@@ -71,15 +72,19 @@ mkDerivation {
 
     criterion
   ];
+
   libraryPkgconfigDepends = [ opencv3_1 ];
+
   configureFlags =
     [ "--with-gcc=g++"
       "--with-ld=g++"
     ];
+
   preConfigure = ''
     rm -rf dist
   '';
+
   homepage = "https://github.com/LumiGuide/haskell-opencv";
   license = stdenv.lib.licenses.bsd3;
-  maintainers = [ lib.engineeringAtLumiGuide ];
+  maintainers = [ "engineering@lumi.guide" ];
 }
