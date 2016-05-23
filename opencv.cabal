@@ -16,174 +16,185 @@ extra-doc-files:
     doc/generated/examples/*.png
 
 library
-  hs-source-dirs: src
-  include-dirs: include
-  c-sources: src/OpenCV/Calib3d.cpp
-           , src/OpenCV/C/PlacementNew.cpp
-           , src/OpenCV/Core/ArrayOps.cpp
-           , src/OpenCV/Core/Types.cpp
-           , src/OpenCV/Core/Types/Internal.cpp
-           , src/OpenCV/Core/Types/Mat.cpp
-           , src/OpenCV/Core/Types/Mat/Internal.cpp
-           , src/OpenCV/Core/Types/Mat/Repa.cpp
-           , src/OpenCV/Exception/Internal.cpp
-           , src/OpenCV/Features2d.cpp
-           , src/OpenCV/HighGui.cpp
-           , src/OpenCV/ImgCodecs.cpp
-           , src/OpenCV/ImgProc/ColorMaps.cpp
-           , src/OpenCV/ImgProc/Drawing.cpp
-           , src/OpenCV/ImgProc/GeometricImgTransform.cpp
-           , src/OpenCV/ImgProc/ImgFiltering.cpp
-           , src/OpenCV/ImgProc/MiscImgTransform.cpp
-           , src/OpenCV/ImgProc/ObjectDetection.cpp
-           , src/OpenCV/ImgProc/StructuralAnalysis.cpp
-           , src/OpenCV/Video.cpp
-           , src/OpenCV/Video/MotionAnalysis.cpp
+    hs-source-dirs: src
+    include-dirs: include
+    c-sources:
+        src/OpenCV/Calib3d.cpp
+      , src/OpenCV/Core/ArrayOps.cpp
+      , src/OpenCV/Core/Types.cpp
+      , src/OpenCV/Core/Types/Internal.cpp
+      , src/OpenCV/Core/Types/Mat.cpp
+      , src/OpenCV/Core/Types/Mat/Internal.cpp
+      , src/OpenCV/Core/Types/Mat/Repa.cpp
+      , src/OpenCV/C/PlacementNew.cpp
+      , src/OpenCV/Exception/Internal.cpp
+      , src/OpenCV/Features2d.cpp
+      , src/OpenCV/HighGui.cpp
+      , src/OpenCV/ImgCodecs.cpp
+      , src/OpenCV/ImgProc/ColorMaps.cpp
+      , src/OpenCV/ImgProc/Drawing.cpp
+      , src/OpenCV/ImgProc/GeometricImgTransform.cpp
+      , src/OpenCV/ImgProc/ImgFiltering.cpp
+      , src/OpenCV/ImgProc/MiscImgTransform.cpp
+      , src/OpenCV/ImgProc/ObjectDetection.cpp
+      , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+      , src/OpenCV/Video.cpp
+      , src/OpenCV/Video/MotionAnalysis.cpp
 
-  cc-options: -Wall -O2 -std=c++11
-  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    cc-options: -Wall -O2 -std=c++11
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
 
-  build-depends: aeson
-               , base >=4.8 && <5
-               , base64-bytestring
-               , bindings-DSL
-               , bytestring
-               , containers
-               , deepseq
-               , inline-c
-               , inline-c-cpp
-               , linear
-               , primitive
-               , repa
-               , template-haskell
-               , text
-               , transformers
-               , vector
+    build-depends:
+        aeson             >=0.9.0.1
+      , base              >=4.8     && <5
+      , base64-bytestring >=1.0.0.1
+      , bindings-DSL      >=1.0.23
+      , bytestring        >=0.10.6
+      , containers        >=0.5.6.2
+      , deepseq           >=1.4.1.1
+      , inline-c          >=0.5.5.2
+      , inline-c-cpp      >=0.1
+      , linear            >=1.20.4
+      , primitive         >=0.6.1
+      , repa              >=3.4.0.2
+      , template-haskell  >=2.10
+      , text              >=1.2.2.1
+      , transformers      >=0.4.2
+      , vector            >=0.11
 
-  exposed-modules: OpenCV
-                 , OpenCV.Calib3d
-                 , OpenCV.Core
-                 , OpenCV.Core.ArrayOps
-                 , OpenCV.Core.Types
-                 , OpenCV.Core.Types.Mat
-                 , OpenCV.Core.Types.Mat.HMat
-                 , OpenCV.Core.Types.Mat.Repa
-                 , OpenCV.Exception
-                 , OpenCV.Features2d
-                 , OpenCV.HighGui
-                 , OpenCV.ImgCodecs
-                 , OpenCV.ImgProc.ImgFiltering
-                 , OpenCV.ImgProc.GeometricImgTransform
-                 , OpenCV.ImgProc.MiscImgTransform
-                 , OpenCV.ImgProc.Drawing
-                 , OpenCV.ImgProc.ColorMaps
-                 , OpenCV.ImgProc.StructuralAnalysis
-                 , OpenCV.ImgProc.ObjectDetection
-                 , OpenCV.ImgProc.Types
-                 , OpenCV.JSON
-                 , OpenCV.TypeLevel
-                 , OpenCV.Unsafe
-                 , OpenCV.Video
-                 , OpenCV.Video.MotionAnalysis
-  other-modules:   OpenCV.Calib3d.Constants
-                 , OpenCV.Core.ArrayOps.Internal
-                 , OpenCV.Core.Types.Constants
-                 , OpenCV.Core.Types.Internal
-                 , OpenCV.Core.Types.Mat.Depth
-                 , OpenCV.Core.Types.Mat.Internal
-                 , OpenCV.C.Inline
-                 , OpenCV.C.PlacementNew
-                 , OpenCV.C.Types
-                 , OpenCV.Exception.Internal
-                 , OpenCV.ImgCodecs.Internal
-                 , OpenCV.ImgProc.MiscImgTransform.Internal
-                 , OpenCV.ImgProc.Types.Internal
-                 , OpenCV.Internal
+    exposed-modules:
+        OpenCV
+        OpenCV.Calib3d
+        OpenCV.Core
+        OpenCV.Core.ArrayOps
+        OpenCV.Core.Types
+        OpenCV.Core.Types.Mat
+        OpenCV.Core.Types.Mat.HMat
+        OpenCV.Core.Types.Mat.Repa
+        OpenCV.Exception
+        OpenCV.Features2d
+        OpenCV.HighGui
+        OpenCV.ImgCodecs
+        OpenCV.ImgProc.ColorMaps
+        OpenCV.ImgProc.Drawing
+        OpenCV.ImgProc.GeometricImgTransform
+        OpenCV.ImgProc.ImgFiltering
+        OpenCV.ImgProc.MiscImgTransform
+        OpenCV.ImgProc.ObjectDetection
+        OpenCV.ImgProc.StructuralAnalysis
+        OpenCV.ImgProc.Types
+        OpenCV.JSON
+        OpenCV.TypeLevel
+        OpenCV.Unsafe
+        OpenCV.Video
+        OpenCV.Video.MotionAnalysis
+    other-modules:
+        OpenCV.Calib3d.Constants
+        OpenCV.C.Inline
+        OpenCV.Core.ArrayOps.Internal
+        OpenCV.Core.Types.Constants
+        OpenCV.Core.Types.Internal
+        OpenCV.Core.Types.Mat.Depth
+        OpenCV.Core.Types.Mat.Internal
+        OpenCV.C.PlacementNew
+        OpenCV.C.Types
+        OpenCV.Exception.Internal
+        OpenCV.ImgCodecs.Internal
+        OpenCV.ImgProc.MiscImgTransform.Internal
+        OpenCV.ImgProc.Types.Internal
+        OpenCV.Internal
 
-  default-extensions: BangPatterns
-                    , DataKinds
-                    , FlexibleContexts
-                    , FlexibleInstances
-                    , LambdaCase
-                    , OverloadedStrings
-                    , PackageImports
-                    , PolyKinds
-                    , ScopedTypeVariables
-                    , TupleSections
-                    , TypeFamilies
-                    , TypeOperators
+    default-extensions:
+        BangPatterns
+        DataKinds
+        FlexibleContexts
+        FlexibleInstances
+        LambdaCase
+        OverloadedStrings
+        PackageImports
+        PolyKinds
+        ScopedTypeVariables
+        TupleSections
+        TypeFamilies
+        TypeOperators
 
-  default-language:   Haskell2010
-  pkgconfig-depends:  opencv
+    default-language:   Haskell2010
+    pkgconfig-depends:  opencv
 
 test-suite opencv-doc-images
-  type: exitcode-stdio-1.0
-  hs-source-dirs: doc
-  main-is: images.hs
-  default-language: Haskell2010
-  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
-  build-depends: base >= 4.8 && < 5
-               , bytestring
-               , containers
-               , directory
-               , Glob
-               , haskell-src-exts
-               , linear
-               , opencv
-               , primitive
-               , template-haskell
-               , text
-               , transformers
-               , vector
+    type: exitcode-stdio-1.0
+    hs-source-dirs: doc
+    main-is: images.hs
+    default-language: Haskell2010
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    build-depends:
+        base              >= 4.8 && < 5
+      , bytestring        >= 0.10.6
+      , containers        >= 0.5.6.2
+      , directory         >= 1.2.2
+      , Glob              >= 0.7.5
+      , haskell-src-exts  >= 1.17.1
+      , linear            >= 1.20.4
+      , opencv            == 0.0.0
+      , primitive         >= 0.6.1
+      , template-haskell  >= 2.10
+      , text              >= 1.2.2.1
+      , transformers      >= 0.4.2
+      , vector            >= 0.11
 
-  default-extensions: BangPatterns
-                    , DataKinds
-                    , LambdaCase
-                    , OverloadedStrings
-                    , PackageImports
-                    , PolyKinds
-                    , ScopedTypeVariables
-                    , TupleSections
-                    , TypeFamilies
-                    , TypeOperators
+    default-extensions:
+        BangPatterns
+        DataKinds
+        LambdaCase
+        OverloadedStrings
+        PackageImports
+        PolyKinds
+        ScopedTypeVariables
+        TupleSections
+        TypeFamilies
+        TypeOperators
 
 test-suite test-opencv
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:   test
-  main-is:          test.hs
-  default-language: Haskell2010
-  ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
-  build-depends: base >= 4.8 && < 5
-               , bytestring
-               , lens
-               , linear
-               , opencv
-               , QuickCheck
-               , repa
-               , tasty
-               , tasty-hunit
-               , tasty-quickcheck
-               , transformers
-               , vector
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          test.hs
+    default-language: Haskell2010
+    ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    build-depends:
+        base              >= 4.8 && < 5
+      , bytestring        >= 0.10.6
+      , lens              >= 4.13
+      , linear            >= 1.20.4
+      , opencv            == 0.0.0
+      , QuickCheck        >= 2.8.2
+      , repa              >= 3.4.0.2
+      , tasty             >= 0.11.0.2
+      , tasty-hunit       >= 0.9.2
+      , tasty-quickcheck  >= 0.8.4
+      , transformers      >= 0.4.2
+      , vector            >= 0.11
 
-  default-extensions: DataKinds
-                    , FlexibleContexts
-                    , PackageImports
-                    , RankNTypes
-                    , ScopedTypeVariables
-                    , TypeOperators
+    default-extensions:
+        DataKinds
+        FlexibleContexts
+        PackageImports
+        RankNTypes
+        ScopedTypeVariables
+        TypeOperators
 
 benchmark bench-opencv
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:   bench
-  main-is:          bench.hs
-  default-language: Haskell2010
-  ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
-  build-depends:    base >= 4.8 && < 5
-                  , bytestring
-                  , criterion
-                  , opencv
-                  , repa
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   bench
+    main-is:          bench.hs
+    default-language: Haskell2010
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    build-depends:
+        base              >= 4.8 && < 5
+      , bytestring        >= 0.10.6
+      , criterion         >= 1.1.1
+      , opencv            == 0.0.0
+      , repa              >= 3.4.0.2
 
-  default-extensions: DataKinds
-                    , PackageImports
+    default-extensions:
+        DataKinds
+        PackageImports
