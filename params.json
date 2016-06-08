@@ -1,0 +1,6 @@
+{
+  "name": "haskell-opencv",
+  "tagline": "Haskell binding to OpenCV-3.1",
+  "body": "### Documentation\r\n[Haddock documentation](/doc/index.html)",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
