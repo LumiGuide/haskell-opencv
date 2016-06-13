@@ -78,6 +78,8 @@ stdenv.mkDerivation rec {
     homepage = http://opencv.org/;
     license = stdenv.lib.licenses.bsd3;
     maintainers = with stdenv.lib.maintainers; [viric flosse];
-    platforms = with stdenv.lib.platforms; linux;
+
+    # TODO (BvD): Lets see if we can get this to built on OS X.
+    #platforms = with stdenv.lib.platforms; linux;
   };
 }
