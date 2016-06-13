@@ -46,7 +46,7 @@ stdenv.mkDerivation rec {
   # We move ippicv from the public to the private libraries. This ensures that
   # our Haskell binding doesn't try to link with it. This is not fully tested
   # yet so we might get linking errors in the future.
-  postInstall = ''
+  postInstall = stdenv.lib.optionalString enableIpp ''
     sed -i "s|-lippicv||;s|Libs.private: |Libs.private: -L$out/share/OpenCV/3rdparty/lib -lippicv |" $out/lib/pkgconfig/opencv.pc
   '';
 
