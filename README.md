@@ -64,3 +64,9 @@ program. If you include your example program in the following way:
 then run `cabal test`, now your Haddock documentation will include a nice
 picture with the output of your program. Not only that, but your example program
 will at the same time function as a test for the function you just documented!
+
+
+Policies
+--------
+
+In haskell-opencv we use the most precise types for integer arguments. OpenCV uses int which is a 32-bit integer. So in Haskell we have to use Int32 instead of Int for, eg. width and height.
