@@ -97,9 +97,9 @@ type TrackbarState = (FunPtr C'TrackbarCallback, Ptr Int32)
 
 data Window
    = Window
-     { windowName          :: CString
-     , windowMouseCallback :: MVar (Maybe (FunPtr C'MouseCallback))
-     , windowTrackbars     :: MVar (Map TrackbarName TrackbarState)
+     { windowName          :: !CString
+     , windowMouseCallback :: !(MVar (Maybe (FunPtr C'MouseCallback)))
+     , windowTrackbars     :: !(MVar (Map TrackbarName TrackbarState))
      }
 
 freeTrackbar :: TrackbarState -> IO ()
