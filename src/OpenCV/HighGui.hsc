@@ -93,7 +93,11 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 -- Window management
 
-type TrackbarState = (FunPtr C'TrackbarCallback, Ptr Int32)
+data TrackbarState
+   = TrackbarState
+     { trackbarCallback :: !(FunPtr C'TrackbarCallback)
+     , trackbarValuePtr :: !(Ptr Int32)
+     }
 
 data Window
    = Window
@@ -103,9 +107,9 @@ data Window
      }
 
 freeTrackbar :: TrackbarState -> IO ()
-freeTrackbar (callback, value) = do
-    freeHaskellFunPtr callback
-    free value
+freeTrackbar trackbar = do
+    freeHaskellFunPtr $ trackbarCallback trackbar
+    free $ trackbarValuePtr trackbar
 
 -- #num WINDOW_NORMAL
 -- #num WINDOW_AUTOSIZE
@@ -318,9 +322,13 @@ createTrackbar window trackbarName value count callback =
       }|]
 
       let (mbPrevCallback, trackbars') =
-              M.updateLookupWithKey (\_k _v -> Just (callbackPtr, valuePtr))
+              M.updateLookupWithKey (\_k _v -> Just trackbar)
                                     trackbarName
                                     trackbars
+          trackbar = TrackbarState
+                     { trackbarCallback = callbackPtr
+                     , trackbarValuePtr = valuePtr
+                     }
       mapM_ freeTrackbar mbPrevCallback
       pure trackbars'
   where
