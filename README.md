@@ -69,4 +69,4 @@ will at the same time function as a test for the function you just documented!
 Policies
 --------
 
-In haskell-opencv we use the most precise types for integer arguments. OpenCV uses int which is a 32-bit integer. So in Haskell we have to use Int32 instead of Int for the width and height.
+In haskell-opencv we use the most precise types for integer arguments. OpenCV uses int which is a 32-bit integer. So in Haskell we have to use Int32 instead of Int for, eg. width and height.
