@@ -5,7 +5,7 @@
 While OpenCV was designed for use in full-scale applications and can be used
 within functionally rich UI frameworks (such as Qt*, WinForms*, or Cocoa*) or
 without any UI at all, sometimes there it is required to try functionality
-quickly and visualize the results. This is what the "OpenCV.HighGUI" module has
+quickly and visualize the results. This is what the "OpenCV.HighGui" module has
 been designed for.
 
 It provides easy interface to:
@@ -61,9 +61,11 @@ import "base" Data.Bits ( (.&.) )
 import "base" Data.Int ( Int32 )
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Unique ( newUnique, hashUnique )
-import qualified "base" Foreign.C.String as C
+import "base" Foreign.C.Types ( CChar )
+import "base" Foreign.C.String ( CString, newCString, withCString )
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )
-import "base" Foreign.Marshal.Alloc ( free )
+import "base" Foreign.ForeignPtr ( ForeignPtr, newForeignPtr, withForeignPtr )
+import "base" Foreign.Marshal.Alloc ( free, finalizerFree )
 import "base" Foreign.Marshal.Utils ( new )
 import "containers" Data.Map ( Map )
 import qualified "containers" Data.Map as M
@@ -95,15 +97,14 @@ C.using "namespace cv"
 -- Window management
 
 type WindowTitle = String
-type WindowName  = String
 
 type TrackbarState = (FunPtr C'TrackbarCallback, Ptr Int32)
 
 data Window
    = Window
-     { windowName          :: WindowName
-     , windowMouseCallback :: MVar (Maybe (FunPtr C'MouseCallback))
-     , windowTrackbars     :: MVar (Map TrackbarName TrackbarState)
+     { windowNameForeignPtr :: ForeignPtr CChar
+     , windowMouseCallback  :: MVar (Maybe (FunPtr C'MouseCallback))
+     , windowTrackbars      :: MVar (Map TrackbarName TrackbarState)
      }
 
 freeTrackbar :: TrackbarState -> IO ()
@@ -123,24 +124,30 @@ freeTrackbar (callback, value) = do
 makeWindow :: WindowTitle -> IO Window
 makeWindow title = do
     name <- show . hashUnique <$> newUnique
+    nameFp <- mask_ $ do
+      c'name <- newCString name
+      newForeignPtr finalizerFree c'name
     mouseCallback <- newMVar Nothing
     trackbars <- newMVar M.empty
-    C.withCString name $ \c'name ->
-      C.withCString title $ \c'title ->
+    withForeignPtr nameFp $ \c'name -> do
+      withCString title $ \c'title ->
         [C.block| void {
           char * cname = $(char * c'name);
           cv::namedWindow(cname, cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
           cv::setWindowTitle(cname, $(char * c'title));
         }|]
     pure Window
-         { windowName          = name
-         , windowMouseCallback = mouseCallback
-         , windowTrackbars     = trackbars
+         { windowNameForeignPtr = nameFp
+         , windowMouseCallback  = mouseCallback
+         , windowTrackbars      = trackbars
          }
+
+withWindow :: Window -> (CString -> IO a) -> IO a
+withWindow = withForeignPtr . windowNameForeignPtr
 
 destroyWindow :: Window -> IO ()
 destroyWindow window = mask_ $ do
-  C.withCString (windowName window) $ \c'name ->
+  withWindow window $ \c'name ->
     [C.exp| void { cv::destroyWindow($(char * c'name)); }|]
   modifyMVar_ (windowMouseCallback window) $ \mbMouseCallback -> do
     mapM_ freeHaskellFunPtr mbMouseCallback
@@ -268,7 +275,7 @@ type MouseCallback
 setMouseCallback :: Window -> MouseCallback -> IO ()
 setMouseCallback window callback =
     modifyMVar_ (windowMouseCallback window) $ \mbPrevCallback ->
-      C.withCString (windowName window) $ \c'name -> mask_ $ do
+      withWindow window $ \c'name -> mask_ $ do
         callbackPtr <- $(C.mkFunPtr [t| C'MouseCallback |]) c'callback
         [C.exp| void { cv::setMouseCallback($(char * c'name), $(MouseCallback callbackPtr)) }|]
         mapM_ freeHaskellFunPtr mbPrevCallback
@@ -299,8 +306,8 @@ createTrackbar
     -> IO ()
 createTrackbar window trackbarName value count callback =
     modifyMVar_ (windowTrackbars window) $ \trackbars ->
-    C.withCString trackbarName $ \c'tn ->
-    C.withCString (windowName window) $ \c'wn -> mask_ $ do
+    withCString trackbarName $ \c'tn ->
+    withWindow window $ \c'wn -> mask_ $ do
       valuePtr <- new value
       callbackPtr <- $(C.mkFunPtr [t| C'TrackbarCallback |]) c'callback
       [C.exp| void {
@@ -332,7 +339,7 @@ imshow
     -> Mat ('S [height, width]) channels depth
     -> IO ()
 imshow window mat =
-    C.withCString (windowName window) $ \c'name ->
+    withWindow window $ \c'name ->
       withPtr mat $ \matPtr ->
         [C.exp| void { cv::imshow($(char * c'name), *$(Mat * matPtr)); }|]
 
