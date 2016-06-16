@@ -21,6 +21,7 @@ module OpenCV.HighGui
       Window
     , makeWindow
     , destroyWindow
+    , withWindow
 
       -- * Event handling
 
@@ -55,7 +56,7 @@ module OpenCV.HighGui
     ) where
 
 import "base" Control.Concurrent.MVar
-import "base" Control.Exception ( mask_ )
+import "base" Control.Exception ( mask_, bracket )
 import "base" Data.Bits ( (.&.) )
 import "base" Data.Int ( Int32 )
 import "base" Data.Monoid ( (<>) )
@@ -122,7 +123,8 @@ freeTrackbar trackbar = do
 
 -- | Create a window with the specified title.
 --
--- Make sure to free the window when you're done with it using 'destroyWindow'.
+-- Make sure to free the window when you're done with it using 'destroyWindow'
+-- or better yet: use 'withWindow'.
 makeWindow :: String -> IO Window
 makeWindow title = do
     name <- show . hashUnique <$> newUnique
@@ -155,6 +157,14 @@ destroyWindow window = mask_ $ do
   where
     c'name :: CString
     c'name = windowName window
+
+-- | @withWindow title act@ makes a window with the specified @title@ and passes
+-- the resulting 'Window' to the computation @act@. The window will be destroyed
+-- on exit from @withWindow@ whether by normal termination or by raising an
+-- exception. Make sure not to use the @Window@ outside the @act@ computation!
+withWindow :: String -> (Window -> IO a) -> IO a
+withWindow title = bracket (makeWindow title) destroyWindow
+
 
 --------------------------------------------------------------------------------
 -- Keyboard
