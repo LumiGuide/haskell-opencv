@@ -46,7 +46,6 @@ module OpenCV.HighGui
     , setMouseCallback
 
       -- * Trackbars
-    , TrackbarName
     , TrackbarCallback
     , createTrackbar
 
@@ -104,7 +103,7 @@ data Window
    = Window
      { windowName          :: !CString
      , windowMouseCallback :: !(MVar (Maybe (FunPtr C'MouseCallback)))
-     , windowTrackbars     :: !(MVar (Map TrackbarName TrackbarState))
+     , windowTrackbars     :: !(MVar (Map String TrackbarState))
      }
 
 freeTrackbar :: TrackbarState -> IO ()
@@ -302,8 +301,6 @@ setMouseCallback window callback =
 --------------------------------------------------------------------------------
 -- Trackbars
 
-type TrackbarName = String
-
 -- | Callback function for trackbars
 type TrackbarCallback
    =  Int32 -- ^ Current position of the specified trackbar.
@@ -311,9 +308,9 @@ type TrackbarCallback
 
 createTrackbar
     :: Window
-    -> TrackbarName
-    -> Int32 -- ^ Initial value
-    -> Int32 -- ^ Maximum value
+    -> String -- ^ Trackbar name
+    -> Int32  -- ^ Initial value
+    -> Int32  -- ^ Maximum value
     -> TrackbarCallback
     -> IO ()
 createTrackbar window trackbarName value count callback =
