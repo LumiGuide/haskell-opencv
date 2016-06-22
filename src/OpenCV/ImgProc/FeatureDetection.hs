@@ -6,6 +6,7 @@ module OpenCV.ImgProc.FeatureDetection
     ) where
 
 import "base" Data.Int
+import "base" Data.Word
 import "base" Data.Maybe
 import "base" Foreign.Marshal.Utils ( fromBool )
 import qualified "inline-c" Language.C.Inline as C
@@ -59,9 +60,9 @@ canny
     -> Maybe Bool
        -- ^ A flag, indicating whether a more accurate L2 norm should be used.
        -- If 'False' or 'Nothing' the default L1 norm will be used.
-    -> Mat shape ('S 1) depth
+    -> Mat ('S [w, h]) ('S 1) ('S Word8)
        -- ^ Single-channel 8-bit input image.
-    -> CvExcept (Mat shape ('S 1) depth)
+    -> CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
 canny threshold1 threshold2 apertureSize l2gradient src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
