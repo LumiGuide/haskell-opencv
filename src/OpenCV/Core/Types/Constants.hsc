@@ -5,7 +5,7 @@ module OpenCV.Core.Types.Constants where
 #include "termcriteria.hpp"
 
 #include "namespace.hpp"
-#include "macros.hpp"
+#include "hsc_macros.hpp"
 
 #sizeof Point2i
 #sizeof Point2f

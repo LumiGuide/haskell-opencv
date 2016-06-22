@@ -66,7 +66,7 @@ C.using "namespace cv"
 #include "opencv2/imgproc.hpp"
 
 #include "namespace.hpp"
-#include "macros.hpp"
+#include "hsc_macros.hpp"
 
 
 --------------------------------------------------------------------------------

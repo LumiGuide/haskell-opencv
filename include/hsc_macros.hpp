@@ -1,5 +1,5 @@
-#ifndef __THEA_MACROS_H__
-#define __THEA_MACROS_H__
+#ifndef __HSC_MACROS_H__
+#define __HSC_MACROS_H__
 
 /*
 This files defines some hsc2hs macros. For documentation on how to construct custom macros see:
@@ -27,4 +27,4 @@ Results in the following Haskell code:
     bc_sizeof_varid(# name);printf(" = %lu\n", sizeof(name)); \
   }; \
 
-#endif /* __THEA_MACROS_H__ */
+#endif /* __HSC_MACROS_H__ */
