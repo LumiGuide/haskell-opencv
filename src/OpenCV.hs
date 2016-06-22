@@ -13,6 +13,7 @@ module OpenCV
     , module OpenCV.ImgCodecs
     , module OpenCV.ImgProc.ColorMaps
     , module OpenCV.ImgProc.Drawing
+    , module OpenCV.ImgProc.FeatureDetection
     , module OpenCV.ImgProc.GeometricImgTransform
     , module OpenCV.ImgProc.ImgFiltering
     , module OpenCV.ImgProc.MiscImgTransform
@@ -39,6 +40,7 @@ import OpenCV.HighGui
 import OpenCV.ImgCodecs
 import OpenCV.ImgProc.ColorMaps
 import OpenCV.ImgProc.Drawing
+import OpenCV.ImgProc.FeatureDetection
 import OpenCV.ImgProc.GeometricImgTransform
 import OpenCV.ImgProc.ImgFiltering
 import OpenCV.ImgProc.MiscImgTransform

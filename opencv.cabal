@@ -20,19 +20,20 @@ library
     include-dirs: include
     c-sources:
         src/OpenCV/Calib3d.cpp
+      , src/OpenCV/C/PlacementNew.cpp
       , src/OpenCV/Core/ArrayOps.cpp
       , src/OpenCV/Core/Types.cpp
       , src/OpenCV/Core/Types/Internal.cpp
       , src/OpenCV/Core/Types/Mat.cpp
       , src/OpenCV/Core/Types/Mat/Internal.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/C/PlacementNew.cpp
       , src/OpenCV/Exception/Internal.cpp
       , src/OpenCV/Features2d.cpp
       , src/OpenCV/HighGui.cpp
       , src/OpenCV/ImgCodecs.cpp
       , src/OpenCV/ImgProc/ColorMaps.cpp
       , src/OpenCV/ImgProc/Drawing.cpp
+      , src/OpenCV/ImgProc/FeatureDetection.cpp
       , src/OpenCV/ImgProc/GeometricImgTransform.cpp
       , src/OpenCV/ImgProc/ImgFiltering.cpp
       , src/OpenCV/ImgProc/MiscImgTransform.cpp
@@ -77,6 +78,7 @@ library
         OpenCV.ImgCodecs
         OpenCV.ImgProc.ColorMaps
         OpenCV.ImgProc.Drawing
+        OpenCV.ImgProc.FeatureDetection
         OpenCV.ImgProc.GeometricImgTransform
         OpenCV.ImgProc.ImgFiltering
         OpenCV.ImgProc.MiscImgTransform
