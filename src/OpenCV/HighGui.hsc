@@ -22,6 +22,7 @@ module OpenCV.HighGui
     , makeWindow
     , destroyWindow
     , withWindow
+    , resizeWindow
 
       -- * Event handling
 
@@ -163,6 +164,14 @@ destroyWindow window = mask_ $ do
 -- exception. Make sure not to use the @Window@ outside the @act@ computation!
 withWindow :: String -> (Window -> IO a) -> IO a
 withWindow title = bracket (makeWindow title) destroyWindow
+
+-- | Resize a window to the specified size.
+resizeWindow :: Window -> Int32 -> Int32 -> IO ()
+resizeWindow window width height =
+  [C.exp| void { cv::resizeWindow($(char * c'name), $(int32_t width), $(int32_t height)); }|]
+    where
+      c'name :: CString
+      c'name = windowName window
 
 
 --------------------------------------------------------------------------------
