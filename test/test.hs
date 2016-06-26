@@ -243,7 +243,7 @@ encodeDecode outputFormat = do
 testOrbDetectAndCompute :: HU.Assertion
 testOrbDetectAndCompute = do
     kikker <- loadImg ImreadUnchanged "kikker.jpg"
-    let (kpts, descs) = orbDetectAndCompute orb kikker Nothing
+    let (kpts, descs) = exceptError $ orbDetectAndCompute orb kikker Nothing
         kptsRec  = V.map keyPointAsRec kpts
         kpts2    = V.map mkKeyPoint    kptsRec
         kptsRec2 = V.map keyPointAsRec kpts2

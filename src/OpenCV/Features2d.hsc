@@ -26,7 +26,7 @@ import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Foreign.Ptr ( Ptr )
+import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -37,6 +37,7 @@ import "this" OpenCV.C.Types
 import "this" OpenCV.Core.ArrayOps.Internal
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Exception.Internal ( cvExcept, unsafeWrapException )
 import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
@@ -206,7 +207,8 @@ orbDetectAndComputeImg
               (depth    :: *)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
-orbDetectAndComputeImg = exceptError $
+orbDetectAndComputeImg = exceptError $ do
+    (kpts, _descs) <- orbDetectAndCompute orb frog Nothing
     withMatM (Proxy :: Proxy [height, width])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
@@ -216,7 +218,6 @@ orbDetectAndComputeImg = exceptError $
         let kptRec = keyPointAsRec kpt
         circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
   where
-    (kpts, _descs) = orbDetectAndCompute orb frog Nothing
     orb = mkOrb defaultOrbParams
 @
 
@@ -226,10 +227,10 @@ orbDetectAndCompute
     :: Orb
     -> Mat ('S [height, width]) channels depth -- ^ Image.
     -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8)) -- ^ Mask.
-    -> ( V.Vector KeyPoint
-       , Mat 'D 'D 'D
-       )
-orbDetectAndCompute orb img mbMask = unsafePerformIO $ do
+    -> CvExcept ( V.Vector KeyPoint
+                , Mat 'D 'D 'D
+                )
+orbDetectAndCompute orb img mbMask = unsafeWrapException $ do
     descriptors <- newEmptyMat
     withPtr orb $ \orbPtr ->
       withPtr img $ \imgPtr ->
@@ -237,7 +238,7 @@ orbDetectAndCompute orb img mbMask = unsafePerformIO $ do
       withPtr descriptors $ \descPtr ->
       alloca $ \(numPtsPtr :: Ptr Int32) ->
       alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'KeyPoint))) -> mask_ $ do
-        [C.block| void {
+        ptrException <- [cvExcept|
           cv::ORB * orb = *$(Ptr_ORB * orbPtr);
           cv::Mat * maskPtr = $(Mat * maskPtr);
 
@@ -270,17 +271,19 @@ orbDetectAndCompute orb img mbMask = unsafePerformIO $ do
                               );
             arrayPtr[ix] = newPt;
           }
-        }|]
+        |]
+        if ptrException /= nullPtr
+        then Left . BindingException <$> fromPtr (pure ptrException)
+        else do
+          numPts <- fromIntegral <$> peek numPtsPtr
+          arrayPtr <- peek arrayPtrPtr
+          keypoints <- mapM (fromPtr . pure) =<< peekArray numPts arrayPtr
 
-        numPts <- fromIntegral <$> peek numPtsPtr
-        arrayPtr <- peek arrayPtrPtr
-        keypoints <- mapM (fromPtr . pure) =<< peekArray numPts arrayPtr
+          [CU.block| void {
+            delete [] *$(KeyPoint * * * arrayPtrPtr);
+          }|]
 
-        [CU.block| void {
-          delete [] *$(KeyPoint * * * arrayPtrPtr);
-        }|]
-
-        pure (V.fromList keypoints, relaxMat descriptors)
+          pure $ Right (V.fromList keypoints, relaxMat descriptors)
 
 
 --------------------------------------------------------------------------------
@@ -321,6 +324,9 @@ bfMatcherImg
        )
     => IO (Mat (ShapeT [height, width2]) ('S channels) ('S depth))
 bfMatcherImg = do
+    let (kpts1, descs1) = exceptError $ orbDetectAndCompute orb frog        Nothing
+        (kpts2, descs2) = exceptError $ orbDetectAndCompute orb rotatedFrog Nothing
+
     bfmatcher <- newBFMatcher Norm_Hamming True
     matches <- match bfmatcher
                      descs1 -- Query descriptors
@@ -349,8 +355,6 @@ bfMatcherImg = do
                ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)
                blue 1 LineType_AA 0
   where
-    (kpts1, descs1) = orbDetectAndCompute orb frog        Nothing
-    (kpts2, descs2) = orbDetectAndCompute orb rotatedFrog Nothing
     orb = mkOrb defaultOrbParams {orb_nfeatures = 50}
 
     width = fromInteger $ natVal (Proxy :: Proxy width)
