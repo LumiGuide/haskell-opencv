@@ -40,6 +40,7 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "Point3i"     , [t| C'Point3i     |] )
   , ( C.TypeName "Point3f"     , [t| C'Point3f     |] )
   , ( C.TypeName "Point3d"     , [t| C'Point3d     |] )
+  , ( C.TypeName "Vec4i"       , [t| C'Vec4i       |] )
   , ( C.TypeName "Size2i"      , [t| C'Size2i      |] )
   , ( C.TypeName "Size2f"      , [t| C'Size2f      |] )
   , ( C.TypeName "Rect"        , [t| C'Rect        |] )

@@ -82,6 +82,9 @@ main = defaultMain $ testGroup "opencv"
       [ testGroup "GeometricImgTransform"
         [ HU.testCase "getRotationMatrix2D" testGetRotationMatrix2D
         ]
+      , testGroup "Structural Analysis and Shape Descriptors"
+        [ HU.testCase "findContours" testFindContours
+        ]
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
@@ -256,6 +259,24 @@ testOrbDetectAndCompute = do
                 numDescs
   where
     orb = mkOrb defaultOrbParams {orb_nfeatures = 10}
+
+testFindContours :: HU.Assertion
+testFindContours =
+  do lambda <- loadLambda
+     let contours =
+           findContours ContourRetrievalExternal
+                        ContourApproximationSimple
+                        (exceptError (canny 30 20 Nothing Nothing lambda))
+     assertEqual "Unexpected number of contours found"
+                 (fromIntegral (length contours))
+                 1
+
+type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
+
+loadLambda :: IO Lambda
+loadLambda =
+  fmap (exceptError . coerceMat . imdecode ImreadUnchanged)
+       (B.readFile "data/lambda.png")
 
 loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
 loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)

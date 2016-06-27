@@ -18,6 +18,9 @@ module OpenCV.Core.Types.Internal
     , newPoint3i
     , newPoint3f
     , newPoint3d
+      -- ** 4D types
+    , Vec4i(..)
+    , newVec4i
       -- * Size
     , Size2i(..)
     , Size2f(..)
@@ -115,6 +118,9 @@ newtype Point3f = Point3f {unPoint3f :: ForeignPtr (C Point3f)}
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
 newtype Point3d = Point3d {unPoint3d :: ForeignPtr (C Point3d)}
 
+-- | 4D vector with integer coordinates
+newtype Vec4i = Vec4i {unVec4i :: ForeignPtr (C Vec4i)}
+
 -- | Size of an image or rectangle with integer values
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
@@ -172,6 +178,7 @@ instance Convert (V2 CDouble) Point2d where convert = unsafePerformIO . newPoint
 instance Convert (V3 Int32  ) Point3i where convert = unsafePerformIO . newPoint3i
 instance Convert (V3 CFloat ) Point3f where convert = unsafePerformIO . newPoint3f
 instance Convert (V3 CDouble) Point3d where convert = unsafePerformIO . newPoint3d
+instance Convert (V4 Int32  ) Vec4i   where convert = unsafePerformIO . newVec4i
 instance Convert (V2 Int32  ) Size2i  where convert = unsafePerformIO . newSize2i
 instance Convert (V2 CFloat ) Size2f  where convert = unsafePerformIO . newSize2f
 instance Convert (V4 CDouble) Scalar  where convert = unsafePerformIO . newScalar
@@ -198,6 +205,7 @@ instance Convert (CDouble, CDouble, CDouble) Point3d where convert (x, y, z) = c
 instance Convert (Double , Double , Double ) Point3d where convert (x, y, z) = convert $ V3 x y z
 instance Convert (CDouble, CDouble, CDouble, CDouble) Scalar where convert (x, y, z, w) = convert $ V4 x y z w
 instance Convert (Double , Double , Double , Double ) Scalar where convert (x, y, z, w) = convert $ V4 x y z w
+instance Convert (Int32  , Int32  , Int32  , Int32  ) Vec4i where convert (x, y, z, w) = convert $ V4 x y z w
 
 instance Convert Point2i (V2 Int32  ) where
     convert pt = unsafePerformIO $
@@ -285,6 +293,25 @@ instance Convert Point3d (V3 CDouble) where
         V3 <$> peek xPtr
            <*> peek yPtr
            <*> peek zPtr
+
+instance Convert Vec4i (V4 Int32) where
+    convert vec = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      alloca $ \wPtr ->
+      withPtr vec $ \vecPtr -> do
+        [CU.block| void {
+          const Vec4i & p = *$(Vec4i * vecPtr);
+          *$(int32_t * xPtr) = p[0];
+          *$(int32_t * yPtr) = p[1];
+          *$(int32_t * zPtr) = p[2];
+          *$(int32_t * zPtr) = p[3];
+        }|]
+        V4 <$> peek xPtr
+           <*> peek yPtr
+           <*> peek zPtr
+           <*> peek wPtr
 
 instance Convert Size2i  (V2 Int32  ) where
     convert s = unsafePerformIO $
@@ -381,6 +408,10 @@ newPoint3f (V3 x y z) = fromPtr $
 newPoint3d :: V3 CDouble -> IO Point3d
 newPoint3d (V3 x y z) = fromPtr $
     [CU.exp|Point3d * { new cv::Point3d($(double x), $(double y), $(double z)) }|]
+
+newVec4i :: V4 Int32 -> IO Vec4i
+newVec4i (V4 x y z w) = fromPtr $
+    [CU.exp|Vec4i * { new cv::Vec4i($(int32_t x), $(int32_t y), $(int32_t z), $(int32_t w)) }|]
 
 newSize2i :: V2 Int32 -> IO Size2i
 newSize2i (V2 x y) = fromPtr $
@@ -557,6 +588,7 @@ type instance C Point2d      = C'Point2d
 type instance C Point3i      = C'Point3i
 type instance C Point3f      = C'Point3f
 type instance C Point3d      = C'Point3d
+type instance C Vec4i        = C'Vec4i
 type instance C Size2i       = C'Size2i
 type instance C Size2f       = C'Size2f
 type instance C Scalar       = C'Scalar
@@ -573,6 +605,7 @@ instance WithPtr Point2d      where withPtr = withForeignPtr . unPoint2d
 instance WithPtr Point3i      where withPtr = withForeignPtr . unPoint3i
 instance WithPtr Point3f      where withPtr = withForeignPtr . unPoint3f
 instance WithPtr Point3d      where withPtr = withForeignPtr . unPoint3d
+instance WithPtr Vec4i        where withPtr = withForeignPtr . unVec4i
 instance WithPtr Size2i       where withPtr = withForeignPtr . unSize2i
 instance WithPtr Size2f       where withPtr = withForeignPtr . unSize2f
 instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
@@ -606,6 +639,10 @@ instance FromPtr Point3f where
 instance FromPtr Point3d where
     fromPtr = objFromPtr Point3d $ \ptr ->
                 [CU.exp| void { delete $(Point3d * ptr) }|]
+
+instance FromPtr Vec4i where
+    fromPtr = objFromPtr Vec4i $ \ptr ->
+                [CU.exp| void { delete $(Vec4i * ptr) }|]
 
 instance FromPtr Size2i where
     fromPtr = objFromPtr Size2i $ \ptr ->
