@@ -5,6 +5,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     ( contourArea
     , pointPolygonTest
     , findContours
+    , Contour(..)
     , ContourRetrievalMode(..)
     , ContourApproximationMethod(..)
     ) where
