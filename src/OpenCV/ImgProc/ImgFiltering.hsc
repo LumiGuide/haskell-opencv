@@ -35,6 +35,7 @@ module OpenCV.ImgProc.ImgFiltering
     , dilate
     , morphologyEx
     , getStructuringElement
+    , blur
     ) where
 
 import "base" Data.Int
@@ -236,6 +237,30 @@ medianBlur matIn ksize = unsafeWrapException $ do
       withPtr matOut $ \matOutPtr ->
       withPtr matIn $ \matInPtr ->
         [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int32_t ksize)); |]
+
+blur :: (depth `In` '[Word8, Word16, Float],Convert height Int32,Convert width Int32)
+     => height
+     -> width
+     -> Mat shape ('S channels) ('S depth)
+     -> CvExcept (Mat shape ('S channels) ('S depth))
+blur height width matIn =
+  unsafeWrapException $
+  do matOut <- newEmptyMat
+     handleCvException (pure $ unsafeCoerceMat matOut) $
+       withPtr ksize $ \ksizePtr ->
+       withPtr matIn $ \matInPtr ->
+       withPtr matOut $ \matOutPtr ->
+       [cvExcept|
+           cv::blur
+           ( *$(Mat * matInPtr)
+           , *$(Mat * matOutPtr)
+           , *$(Size2i * ksizePtr)
+           );
+       |]
+  where ksize :: Size2i
+        ksize =
+          convert (V2 (convert width)
+                      (convert height) :: V2 Int32)
 
 {- | Erodes an image by using a specific structuring element
 
