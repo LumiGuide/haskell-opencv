@@ -247,6 +247,8 @@ findContours mode method src = unsafePerformIO $
     hierarchy <- peekArray numContours hierarchyPtr >>=
                  mapM (fmap (convert :: Vec4i -> V4 Int32) . fromPtr . pure)
 
+    print hierarchy
+
     let treeHierarchy =
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->
                 (Contour { contourPoints = points
@@ -256,7 +258,7 @@ findContours mode method src = unsafePerformIO $
                          } : if nextSibling < 0
                                then []
                                else map fst treeHierarchy !! fromIntegral nextSibling
-                ,previousSibling < 0)
+                ,parent < 0 && previousSibling < 0)
               )
               hierarchy
               allContours
