@@ -268,7 +268,7 @@ testFindContours =
                         ContourApproximationSimple
                         (exceptError (canny 30 20 Nothing Nothing lambda))
      assertEqual "Unexpected number of contours found"
-                 (fromIntegral (length contours))
+                 (length contours)
                  1
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
