@@ -238,6 +238,37 @@ medianBlur matIn ksize = unsafeWrapException $ do
       withPtr matIn $ \matInPtr ->
         [cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int32_t ksize)); |]
 
+{- | Blurs an image using a box filter.
+
+Example:
+
+@
+boxBlurImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+boxBlurImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      birdsBlurred <- pureExcept $ blur (13::Int32) (13::Int32) birds_512x341
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/boxBlurImg.png boxBlurImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
+-}
 blur :: (depth `In` '[Word8, Word16, Float],Convert height Int32,Convert width Int32)
      => height
      -> width
