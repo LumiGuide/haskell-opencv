@@ -10,6 +10,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , ContourApproximationMethod(..)
     ) where
 
+import "base" Control.Exception ( mask_ )
 import "base" Control.Monad (guard)
 import "base" Data.Functor (($>))
 import "base" Data.Int
@@ -182,7 +183,7 @@ findContours mode method src = unsafePerformIO $
   alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
   alloca $ \(contoursPtrPtr :: Ptr (Ptr (Ptr (Ptr C'Point2i)))) ->
   alloca $ \(hierarchyPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
-  alloca $ \(numContoursPtr :: Ptr Int32) -> do
+  alloca $ \(numContoursPtr :: Ptr Int32) -> mask_ $ do
     [C.block| void {
       std::vector<std::vector<cv::Point>> contours;
       std::vector<cv::Vec4i> hierarchy;
