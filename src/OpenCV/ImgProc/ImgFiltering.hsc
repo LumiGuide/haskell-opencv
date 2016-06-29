@@ -258,7 +258,7 @@ boxBlurImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \imgM -> do
-      birdsBlurred <- pureExcept $ blur (13 ::  Int32) birds_512x341
+      birdsBlurred <- pureExcept $ blur (V2 13 13 :: V2 Int32) birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
