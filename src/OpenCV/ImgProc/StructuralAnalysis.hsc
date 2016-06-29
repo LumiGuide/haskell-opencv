@@ -172,14 +172,14 @@ marshalContourApproximationMethod = \case
   ContourApproximationTC89KCOS -> c'CV_CHAIN_APPROX_TC89_KCOS
 
 data Contour =
-  Contour {contourPoints :: V.Vector Point2i
-          ,contourChildren :: [Contour]}
+  Contour {contourPoints :: !(V.Vector Point2i)
+          ,contourChildren :: !(V.Vector Contour)}
 
 findContours
   :: ContourRetrievalMode
   -> ContourApproximationMethod
   -> Mat ('S [h, w]) ('S 1) ('S Word8)
-  -> [Contour]
+  -> V.Vector Contour
 findContours mode method src = unsafePerformIO $
   withPtr src $ \srcPtr ->
   alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
@@ -254,8 +254,8 @@ findContours mode method src = unsafePerformIO $
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->
                 (Contour { contourPoints = points
                          , contourChildren = if firstChild < 0
-                                               then []
-                                               else map fst treeHierarchy !! fromIntegral firstChild
+                                               then mempty
+                                               else V.fromList (map fst treeHierarchy !! fromIntegral firstChild)
                          } : if nextSibling < 0
                                then []
                                else map fst treeHierarchy !! fromIntegral nextSibling
@@ -270,9 +270,8 @@ findContours mode method src = unsafePerformIO $
       delete [] *$(int32_t * * contourLengthsPtrPtr);
     } |]
 
-    return (concat (mapMaybe (\(contours,isRoot) -> guard isRoot $> contours)
-                             treeHierarchy))
-
+    return (V.fromList
+              (concat (mapMaybe (\(contours,isRoot) -> guard isRoot $> contours) treeHierarchy)))
   where
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method
