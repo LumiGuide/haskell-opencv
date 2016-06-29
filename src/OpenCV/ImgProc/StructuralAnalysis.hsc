@@ -14,16 +14,14 @@ import "base" Control.Monad (guard)
 import "base" Data.Functor (($>))
 import "base" Data.Int
 import "base" Data.Maybe (mapMaybe)
-import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Traversable (for)
 import qualified "vector" Data.Vector as V
 import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Array ( peekArray, withArray )
+import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
-import "base" GHC.TypeLits
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -31,7 +29,6 @@ import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat (mkMat)
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
