@@ -306,7 +306,7 @@ instance Convert Vec4i (V4 Int32) where
           *$(int32_t * xPtr) = p[0];
           *$(int32_t * yPtr) = p[1];
           *$(int32_t * zPtr) = p[2];
-          *$(int32_t * zPtr) = p[3];
+          *$(int32_t * wPtr) = p[3];
         }|]
         V4 <$> peek xPtr
            <*> peek yPtr
