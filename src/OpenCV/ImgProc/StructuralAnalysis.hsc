@@ -157,17 +157,19 @@ data ContourApproximationMethod
 
 marshalContourRetrievalMode
   :: ContourRetrievalMode -> Int32
-marshalContourRetrievalMode ContourRetrievalExternal = c'CV_RETR_EXTERNAL
-marshalContourRetrievalMode ContourRetrievalList = c'CV_RETR_LIST
-marshalContourRetrievalMode ContourRetrievalCComp = c'CV_RETR_CCOMP
-marshalContourRetrievalMode ContourRetrievalTree = c'CV_RETR_TREE
+marshalContourRetrievalMode = \case
+  ContourRetrievalExternal -> c'CV_RETR_EXTERNAL
+  ContourRetrievalList -> c'CV_RETR_LIST
+  ContourRetrievalCComp -> c'CV_RETR_CCOMP
+  ContourRetrievalTree -> c'CV_RETR_TREE
 
 marshalContourApproximationMethod
   :: ContourApproximationMethod -> Int32
-marshalContourApproximationMethod ContourApproximationNone = c'CV_CHAIN_APPROX_NONE
-marshalContourApproximationMethod ContourApproximationSimple = c'CV_CHAIN_APPROX_SIMPLE
-marshalContourApproximationMethod ContourApproximationTC89L1 = c'CV_CHAIN_APPROX_TC89_L1
-marshalContourApproximationMethod ContourApproximationTC89KCOS = c'CV_CHAIN_APPROX_TC89_KCOS
+marshalContourApproximationMethod = \case
+  ContourApproximationNone -> c'CV_CHAIN_APPROX_NONE
+  ContourApproximationSimple -> c'CV_CHAIN_APPROX_SIMPLE
+  ContourApproximationTC89L1 -> c'CV_CHAIN_APPROX_TC89_L1
+  ContourApproximationTC89KCOS -> c'CV_CHAIN_APPROX_TC89_KCOS
 
 data Contour =
   Contour {contourPoints :: V.Vector Point2i
