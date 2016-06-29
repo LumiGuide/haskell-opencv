@@ -62,7 +62,7 @@ canny
        -- If 'False' or 'Nothing' the default L1 norm will be used.
     -> Mat ('S [w, h]) ('S 1) ('S Word8)
        -- ^ Single-channel 8-bit input image.
-    -> CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
+    -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
 canny threshold1 threshold2 apertureSize l2gradient src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $

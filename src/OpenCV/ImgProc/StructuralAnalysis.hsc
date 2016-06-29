@@ -174,10 +174,9 @@ data Contour =
           ,contourChildren :: [Contour]}
 
 findContours
-  :: ()
-  => ContourRetrievalMode
+  :: ContourRetrievalMode
   -> ContourApproximationMethod
-  -> Mat ('S [w, h]) ('S 1) ('S Word8)
+  -> Mat ('S [h, w]) ('S 1) ('S Word8)
   -> [Contour]
 findContours mode method src = unsafePerformIO $
   withPtr src $ \srcPtr ->
