@@ -258,7 +258,7 @@ boxBlurImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \imgM -> do
-      birdsBlurred <- pureExcept $ blur (13::Int32) (13::Int32) birds_512x341
+      birdsBlurred <- pureExcept $ blur (13 ::  Int32) birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
@@ -269,12 +269,12 @@ boxBlurImg = exceptError $
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
-blur :: (depth `In` '[Word8, Word16, Float],Convert height Int32,Convert width Int32)
-     => height
-     -> width
-     -> Mat shape ('S channels) ('S depth)
-     -> CvExcept (Mat shape ('S channels) ('S depth))
-blur height width matIn =
+blur
+  :: (depth `In` '[Word8, Word16, Float],Convert size2i Size2i)
+  => size2i
+  -> Mat shape ('S channels) ('S depth)
+  -> CvExcept (Mat shape ('S channels) ('S depth))
+blur size matIn =
   unsafeWrapException $
   do matOut <- newEmptyMat
      handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -289,9 +289,7 @@ blur height width matIn =
            );
        |]
   where ksize :: Size2i
-        ksize =
-          convert (V2 (convert width)
-                      (convert height) :: V2 Int32)
+        ksize = convert size
 
 {- | Erodes an image by using a specific structuring element
 
