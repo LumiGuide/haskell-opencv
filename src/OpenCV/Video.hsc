@@ -37,8 +37,8 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/video/doc/motion_analysis_and_object_tracking.html#estimaterigidtransform OpenCV Sphinx doc>
 estimateRigidTransform
-    :: ( Convert srcPoint2i Point2i
-       , Convert dstPoint2i Point2i
+    :: ( ToPoint2i  srcPoint2i
+       , ToPoint2i  dstPoint2i
        )
     => V.Vector srcPoint2i -- ^ Source
     -> V.Vector dstPoint2i -- ^ Destination
@@ -57,8 +57,8 @@ estimateRigidTransform src dst fullAffine = do
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withArrayPtr (V.map convert src :: V.Vector Point2i) $ \srcPtr ->
-        withArrayPtr (V.map convert dst :: V.Vector Point2i) $ \dstPtr ->
+        withArrayPtr (V.map toPoint2i src) $ \srcPtr ->
+        withArrayPtr (V.map toPoint2i dst) $ \dstPtr ->
         withPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);

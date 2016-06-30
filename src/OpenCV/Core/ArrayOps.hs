@@ -693,7 +693,7 @@ matSumImg = exceptError $
         lift $ circle imgM (pure radius :: V2 Int32) radius white (-1) LineType_8 0
         -- Calculate the sum of all pixels.
         scalar <- matSumM imgM
-        let V4 area _y _z _w = convert scalar :: V4 Double
+        let V4 area _y _z _w = fromScalar scalar :: V4 Double
         -- Circle area = pi * radius * radius
         let approxPi = area \/ 255 \/ (radius * radius)
         lift $ putText imgM

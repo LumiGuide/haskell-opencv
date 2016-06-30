@@ -75,7 +75,7 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 defaultAnchor :: Point2i
-defaultAnchor = convert (pure (-1) :: V2 Int32)
+defaultAnchor = toPoint2i (pure (-1) :: V2 Int32)
 
 
 --------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ boxBlurImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
 blur
-  :: (depth `In` '[Word8, Word16, Float], Convert size2i Size2i)
+  :: (depth `In` '[Word8, Word16, Float], ToSize2i size2i)
   => size2i -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
   -> CvExcept (Mat shape ('S channels) ('S depth))
@@ -289,7 +289,7 @@ blur size matIn =
            );
        |]
   where ksize :: Size2i
-        ksize = convert size
+        ksize = toSize2i size
 
 {- | Erodes an image by using a specific structuring element
 
@@ -324,7 +324,7 @@ erodeImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
 -}
 erode
-    :: ( Convert point2i Point2i
+    :: ( ToPoint2i point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -342,7 +342,7 @@ erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
       withPtr src    $ \srcPtr    ->
       withPtr dst    $ \dstPtr    ->
       withPtr kernel $ \kernelPtr ->
-      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr anchor $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::erode
@@ -359,7 +359,9 @@ erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel :: Mat 'D 'D 'D
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
-    anchor = maybe defaultAnchor convert mbAnchor
+    anchor :: Point2i
+    anchor = maybe defaultAnchor toPoint2i mbAnchor
+
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -397,7 +399,7 @@ dilateImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
 -}
 dilate
-    :: ( Convert point2i Point2i
+    :: ( ToPoint2i point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -415,7 +417,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
       withPtr src    $ \srcPtr    ->
       withPtr dst    $ \dstPtr    ->
       withPtr kernel $ \kernelPtr ->
-      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr anchor $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::dilate
@@ -432,7 +434,9 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel :: Mat 'D 'D 'D
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
-    anchor = maybe defaultAnchor convert mbAnchor
+    anchor :: Point2i
+    anchor = maybe defaultAnchor toPoint2i mbAnchor
+
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -441,7 +445,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
-    :: ( Convert point2i Point2i
+    :: ( ToPoint2i point2i
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
      => Mat shape channels ('S depth) -- ^ Source image.
@@ -457,7 +461,7 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException 
       withPtr src    $ \srcPtr    ->
       withPtr dst    $ \dstPtr    ->
       withPtr kernel $ \kernelPtr ->
-      withPtr (convert anchor :: Point2i) $ \anchorPtr ->
+      withPtr anchor $ \anchorPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
           cv::morphologyEx
@@ -474,7 +478,10 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException 
 
   where
     c'op = marshalMorphOperation op
-    anchor = maybe defaultAnchor convert mbAnchor
+
+    anchor :: Point2i
+    anchor = maybe defaultAnchor toPoint2i mbAnchor
+
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
 
@@ -500,7 +507,7 @@ morphEllipseImg :: StructureImg
 morphEllipseImg = structureImg MorphEllipse
 
 morphCrossImg :: StructureImg
-morphCrossImg = structureImg (MorphCross $ convert $ (pure (-1) :: V2 Int32))
+morphCrossImg = structureImg $ MorphCross $ toPoint2i (pure (-1) :: V2 Int32)
 @
 
 <<doc/generated/examples/morphRectImg.png morphRectImg>>
@@ -531,5 +538,5 @@ getStructuringElement morphShape height width = unsafeWrapException $ do
        |]
   where
     ksize :: Size2i
-    ksize = convert (V2 (convert width) (convert height) :: V2 Int32)
+    ksize = toSize2i (V2 (convert width) (convert height) :: V2 Int32)
     (c'morphShape, anchor) = marshalMorphShape morphShape

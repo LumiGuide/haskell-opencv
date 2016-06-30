@@ -11,15 +11,27 @@ module OpenCV.Core.Types
       Point2i
     , Point2f
     , Point2d
+    , ToPoint2i(..), FromPoint2i(..)
+    , ToPoint2f(..), FromPoint2f(..)
+    , ToPoint2d(..), FromPoint2d(..)
       -- ** 3D types
     , Point3i
     , Point3f
     , Point3d
+    , ToPoint3i(..), FromPoint3i(..)
+    , ToPoint3f(..), FromPoint3f(..)
+    , ToPoint3d(..), FromPoint3d(..)
+      -- ** 4D types
+    , Vec4i(..)
+    , ToVec4i(..), FromVec4i(..)
       -- * Size
     , Size2i
     , Size2f
+    , ToSize2i(..), FromSize2i(..)
+    , ToSize2f(..), FromSize2f(..)
       -- * Scalar
     , Scalar
+    , ToScalar(..), FromScalar(..)
       -- * Rect
     , Rect
     , mkRect
@@ -109,12 +121,12 @@ C.using "namespace cv"
 instance Show Point2i where
     showsPrec prec point = showParen (prec >= 10) $
                                showString "fromPoint2i "
-                             . shows (convert point :: V2 Int32)
+                             . shows (fromPoint2i point :: V2 Int32)
 
 instance Show Size2i where
     showsPrec prec size = showParen (prec >= 10) $
                               showString "fromSize2i "
-                            . shows (convert size :: V2 Int32)
+                            . shows (fromSize2i size :: V2 Int32)
 
 
 --------------------------------------------------------------------------------
@@ -130,8 +142,8 @@ instance Show Rect where
                             . shows h
       where
         x, y, w, h :: Int32
-        V2 x y = convert $ rectTopLeft rect
-        V2 w h = convert $ rectSize    rect
+        V2 x y = fromPoint2i $ rectTopLeft rect
+        V2 w h = fromSize2i  $ rectSize    rect
 
 mkRect
     :: V2 Int32 -- ^ top left
@@ -161,11 +173,11 @@ rectArea rect = unsafePerformIO $ withPtr rect $ \rectPtr ->
 
 
 -- | Checks whether the rectangle contains the point
-rectContains :: (Convert point2i Point2i) => point2i -> Rect -> Bool
+rectContains :: (ToPoint2i point2i) => point2i -> Rect -> Bool
 rectContains point rect =
     toBool $
       unsafePerformIO $
-        withPtr (convert point :: Point2i) $ \pointPtr ->
+        withPtr (toPoint2i point) $ \pointPtr ->
           withPtr rect $ \rectPtr ->
             [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point2i * pointPtr)) }|]
 
@@ -175,8 +187,8 @@ rectContains point rect =
 --------------------------------------------------------------------------------
 
 mkRotatedRect
-    :: ( Convert point2f Point2f
-       , Convert size2f  Size2f
+    :: ( ToPoint2f point2f
+       , ToSize2f  size2f
        )
     => point2f -- ^ Rectangle mass center
     -> size2f -- ^ Width and height of the rectangle

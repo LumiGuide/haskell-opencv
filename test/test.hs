@@ -33,14 +33,14 @@ main = defaultMain $ testGroup "opencv"
       ]
     , testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (convert :: V2 Int32  -> Point2i) convert
-        , testIso "isoPoint2fV2" (convert :: V2 Float  -> Point2f) convert
-        , testIso "isoPoint2dV2" (convert :: V2 Double -> Point2d) convert
-        , testIso "isoPoint3iV3" (convert :: V3 Int32  -> Point3i) convert
-        , testIso "isoPoint3fV3" (convert :: V3 Float  -> Point3f) convert
-        , testIso "isoPoint3dV3" (convert :: V3 Double -> Point3d) convert
-        , testIso "isoSize2iV2"  (convert :: V2 Int32  -> Size2i ) convert
-        , testIso "isoSize2fV2"  (convert :: V2 Float  -> Size2f ) convert
+        [ testIso "isoPoint2iV2" (toPoint2i :: V2 Int32  -> Point2i) fromPoint2i
+        , testIso "isoPoint2fV2" (toPoint2f :: V2 Float  -> Point2f) fromPoint2f
+        , testIso "isoPoint2dV2" (toPoint2d :: V2 Double -> Point2d) fromPoint2d
+        , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
+        , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
+        , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
+        , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
+        , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -161,10 +161,10 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ convert (rectTopLeft     rect) == tl
-      , convert (rectBottomRight rect) == tl ^+^ size
-      , convert (rectSize        rect) == size
-      ,          rectArea        rect  == (w  *  h)
+      [ fromPoint2i (rectTopLeft     rect) == tl
+      , fromPoint2i (rectBottomRight rect) == tl ^+^ size
+      , fromSize2i  (rectSize        rect) == size
+      ,              rectArea        rect  == (w  *  h)
       ]
     where
       rect = mkRect tl size
@@ -182,13 +182,13 @@ myRectContains point rect =
         ]
   where
     px, py :: Int32
-    V2 px py = convert point
+    V2 px py = fromPoint2i point
 
     rx, ry :: Int32
-    V2 rx ry = convert $ rectTopLeft rect
+    V2 rx ry = fromPoint2i $ rectTopLeft rect
 
     w, h :: Int32
-    V2 w h = convert $ rectSize rect
+    V2 w h = fromSize2i $ rectSize rect
 
 testMatType
     :: ( Convert (Proxy shape)    (DS [DS Int32])
@@ -338,7 +338,7 @@ instance QC.Arbitrary Rect where
     arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where
-    arbitrary = convert <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+    arbitrary = toPoint2i <$> (QC.arbitrary :: QC.Gen (V2 Int32))
 
 --------------------------------------------------------------------------------
 

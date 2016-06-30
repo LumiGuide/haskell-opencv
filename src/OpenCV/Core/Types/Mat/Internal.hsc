@@ -294,7 +294,7 @@ newMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , Convert scalar   Scalar
+       , ToScalar scalar
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
        -- , channels .<=? 512
@@ -311,7 +311,7 @@ newMat shape channels depth defValue = ExceptT $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withVector shape' $ \shapePtr ->
-      withPtr (convert defValue :: Scalar) $ \scalarPtr ->
+      withPtr (toScalar defValue) $ \scalarPtr ->
       withPtr dst $ \dstPtr ->
         [cvExcept|
           *$(Mat * dstPtr) =

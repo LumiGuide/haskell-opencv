@@ -73,7 +73,7 @@ mkMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , Convert scalar   Scalar
+       , ToScalar scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -90,7 +90,7 @@ mkMatM
        , Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , Convert scalar   Scalar
+       , ToScalar scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -164,7 +164,7 @@ matSubRectImg = exceptError $
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
     subImg = exceptError $
-               resize (ResizeAbs $ convert (w, h)) InterCubic =<<
+               resize (ResizeAbs $ toSize2i (w, h)) InterCubic =<<
                matSubRect birds_512x341 subRect
     [h, w] = miShape $ matInfo birds_512x341
 @
@@ -296,7 +296,7 @@ withMatM
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
        , Convert depth    Depth
-       , Convert scalar   Scalar
+       , ToScalar scalar
        )
     => shape    -- ^
     -> channels -- ^
