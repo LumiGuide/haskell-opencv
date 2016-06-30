@@ -4,6 +4,7 @@
 module OpenCV.ImgProc.Drawing
     ( LineType(..)
     , FontFace(..)
+    , ContourDrawMode(..)
 
     , arrowedLine
     , circle
@@ -15,28 +16,30 @@ module OpenCV.ImgProc.Drawing
     , getTextSize
     , putText
     , rectangle
+    , drawContours
     ) where
 
-import "base" Data.Int
-import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Foreign.Ptr ( Ptr )
-import "base" Foreign.Storable ( peek )
-import "base" System.IO.Unsafe ( unsafePerformIO )
-import qualified "inline-c" Language.C.Inline as C
-import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+import "base" Data.Int
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
+import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
+import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Marshal.Array ( withArray )
+import "base" Foreign.Marshal.Utils ( fromBool )
+import "base" Foreign.Ptr ( Ptr )
+import "base" Foreign.Storable ( peek )
+import qualified "inline-c" Language.C.Inline as C
+import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
-import qualified "vector" Data.Vector as V
-import qualified "vector" Data.Vector.Storable as VS
+import "base" System.IO.Unsafe ( unsafePerformIO )
 
 --------------------------------------------------------------------------------
 
@@ -707,3 +710,84 @@ rectangle img rect color thickness lineType shift =
       }|]
   where
     c'lineType = marshalLineType lineType
+
+
+data ContourDrawMode
+  = OutlineContour LineType
+                   Int32 -- ^ Thickness of lines the contours are drawn with.
+  | FillContours -- ^ Draw the contour, filling in the area.
+
+marshalContourDrawMode
+  :: ContourDrawMode -> (Int32,Int32)
+marshalContourDrawMode = \case
+  OutlineContour lineType thickness -> (marshalLineType lineType, thickness)
+  FillContours -> (marshalLineType LineType_4, -1)
+
+{-|
+
+Draw contours onto a black image.
+
+Example:
+
+@
+flowerContours :: Mat ('S ['S 512, 'S 768]) ('S 3) ('S Word8)
+flowerContours = exceptError $
+  withMatM (Proxy :: Proxy [512,768])
+           (Proxy :: Proxy 3)
+           (Proxy :: Proxy Word8)
+           black $ \imgM -> do
+    let edges = exceptError $
+          cvtColor bgr gray flower_768x512 >>=
+          canny 30 20 Nothing Nothing
+    contours <-
+      thaw edges >>=
+      findContours ContourRetrievalList
+                   ContourApproximationSimple
+    lift ( drawContours (V.map contourPoints contours)
+                        red
+                        (OutlineContour LineType_AA 1)
+                        imgM)
+@
+
+<<doc/generated/examples/flowerContours.png flowerContours>>
+
+-}
+drawContours :: (Convert color Scalar,PrimMonad m)
+             => V.Vector (V.Vector Point2i)
+             -> color -- ^ Color of the contours.
+             -> ContourDrawMode
+             -> MutMat ('S [h, w]) channels depth (PrimState m) -- ^ Image.
+             -> m ()
+drawContours contours color drawMode img = unsafePrimToPrim $
+  withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
+  withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
+  withPtr (convert color :: Scalar) $ \colorPtr ->
+  withPtr (unMutMat img) $ \dstPtr ->
+    [C.exp|void {
+      int32_t *contourLengths = $(int32_t * contourLengthsPtr);
+      Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
+      std::vector<std::vector<cv::Point>> contours;
+      int32_t numContours = $(int32_t numContours);
+
+      int k = 0;
+      for(int i = 0; i < numContours; i++) {
+        std::vector<cv::Point> contour;
+        for(int j = 0; j < contourLengths[i]; j++) {
+          contour.push_back( contoursPtr[k] );
+          k++;
+        }
+        contours.push_back(contour);
+      }
+
+      cv::drawContours(
+        *$(Mat * dstPtr),
+        contours,
+        -1,
+        *$(Scalar * colorPtr),
+        $(int32_t c'thickness),
+        $(int32_t c'lineType)
+      );
+    }|]
+  where
+    numContours = fromIntegral (V.length contours)
+    (c'lineType,c'thickness) = marshalContourDrawMode drawMode

@@ -10,6 +10,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , ContourApproximationMethod(..)
     ) where
 
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "base" Control.Exception ( mask_ )
 import "base" Control.Monad (guard)
 import "base" Data.Functor (($>))
@@ -33,7 +34,6 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
-import "base" System.IO.Unsafe ( unsafePerformIO )
 
 --------------------------------------------------------------------------------
 
@@ -174,12 +174,13 @@ data Contour =
           ,contourChildren :: !(V.Vector Contour)}
 
 findContours
-  :: ContourRetrievalMode
+  :: (PrimMonad m)
+  => ContourRetrievalMode
   -> ContourApproximationMethod
-  -> Mat ('S [h, w]) ('S 1) ('S Word8)
-  -> V.Vector Contour
-findContours mode method src = unsafePerformIO $
-  withPtr src $ \srcPtr ->
+  -> MutMat ('S [h, w]) ('S 1) ('S Word8) (PrimState m)
+  -> m (V.Vector Contour)
+findContours mode method src = unsafePrimToPrim $
+  withPtr (unMutMat src) $ \srcPtr ->
   alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
   alloca $ \(contoursPtrPtr :: Ptr (Ptr (Ptr (Ptr C'Point2i)))) ->
   alloca $ \(hierarchyPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
@@ -247,8 +248,6 @@ findContours mode method src = unsafePerformIO $
     hierarchyPtr <- peek hierarchyPtrPtr
     hierarchy <- peekArray numContours hierarchyPtr >>=
                  mapM (fmap (convert :: Vec4i -> V4 Int32) . fromPtr . pure)
-
-    print hierarchy
 
     let treeHierarchy =
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->

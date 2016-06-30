@@ -262,11 +262,9 @@ testOrbDetectAndCompute = do
 
 testFindContours :: HU.Assertion
 testFindContours =
-  do lambda <- loadLambda
-     let contours =
-           findContours ContourRetrievalExternal
-                        ContourApproximationSimple
-                        (exceptError (canny 30 20 Nothing Nothing lambda))
+  do edges <- loadLambda >>= thaw . exceptError . canny 30 20 Nothing Nothing
+     contours <-
+       findContours ContourRetrievalExternal ContourApproximationSimple edges
      assertEqual "Unexpected number of contours found"
                  (length contours)
                  1
