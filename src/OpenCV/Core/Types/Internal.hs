@@ -11,6 +11,9 @@ module OpenCV.Core.Types.Internal
     , newPoint2i
     , newPoint2f
     , newPoint2d
+    , ToPoint2i(..), FromPoint2i(..)
+    , ToPoint2f(..), FromPoint2f(..)
+    , ToPoint2d(..), FromPoint2d(..)
       -- ** 3D types
     , Point3i(..)
     , Point3f(..)
@@ -18,17 +21,24 @@ module OpenCV.Core.Types.Internal
     , newPoint3i
     , newPoint3f
     , newPoint3d
+    , ToPoint3i(..), FromPoint3i(..)
+    , ToPoint3f(..), FromPoint3f(..)
+    , ToPoint3d(..), FromPoint3d(..)
       -- ** 4D types
     , Vec4i(..)
     , newVec4i
+    , ToVec4i(..), FromVec4i(..)
       -- * Size
     , Size2i(..)
     , Size2f(..)
     , newSize2i
     , newSize2f
+    , ToSize2i(..), FromSize2i(..)
+    , ToSize2f(..), FromSize2f(..)
       -- * Scalar
     , Scalar(..)
     , newScalar
+    , ToScalar(..), FromScalar(..)
       -- * Rect
     , Rect(..)
     , newRect
@@ -73,7 +83,6 @@ import "this" OpenCV.C.PlacementNew
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Internal
-import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -172,43 +181,87 @@ newtype Range = Range {unRange :: ForeignPtr (C Range)}
 -- Conversions
 --------------------------------------------------------------------------------
 
-instance Convert (V2 Int32  ) Point2i where convert = unsafePerformIO . newPoint2i
-instance Convert (V2 CFloat ) Point2f where convert = unsafePerformIO . newPoint2f
-instance Convert (V2 CDouble) Point2d where convert = unsafePerformIO . newPoint2d
-instance Convert (V3 Int32  ) Point3i where convert = unsafePerformIO . newPoint3i
-instance Convert (V3 CFloat ) Point3f where convert = unsafePerformIO . newPoint3f
-instance Convert (V3 CDouble) Point3d where convert = unsafePerformIO . newPoint3d
-instance Convert (V4 Int32  ) Vec4i   where convert = unsafePerformIO . newVec4i
-instance Convert (V2 Int32  ) Size2i  where convert = unsafePerformIO . newSize2i
-instance Convert (V2 CFloat ) Size2f  where convert = unsafePerformIO . newSize2f
-instance Convert (V4 CDouble) Scalar  where convert = unsafePerformIO . newScalar
+class ToPoint2i a where toPoint2i :: a -> Point2i
+class ToPoint2f a where toPoint2f :: a -> Point2f
+class ToPoint2d a where toPoint2d :: a -> Point2d
+class ToPoint3i a where toPoint3i :: a -> Point3i
+class ToPoint3f a where toPoint3f :: a -> Point3f
+class ToPoint3d a where toPoint3d :: a -> Point3d
+class ToVec4i   a where toVec4i   :: a -> Vec4i
+class ToSize2i  a where toSize2i  :: a -> Size2i
+class ToSize2f  a where toSize2f  :: a -> Size2f
+class ToScalar  a where toScalar  :: a -> Scalar
 
-instance Convert (V2 Float  ) Point2f where convert = convert . fmap (realToFrac :: Float  -> CFloat )
-instance Convert (V2 Double ) Point2d where convert = convert . fmap (realToFrac :: Double -> CDouble)
-instance Convert (V3 Float  ) Point3f where convert = convert . fmap (realToFrac :: Float  -> CFloat )
-instance Convert (V3 Double ) Point3d where convert = convert . fmap (realToFrac :: Double -> CDouble)
-instance Convert (V2 Float  ) Size2f  where convert = convert . fmap (realToFrac :: Float  -> CFloat )
-instance Convert (V4 Double ) Scalar  where convert = convert . fmap (realToFrac :: Double -> CDouble)
+instance ToPoint2i Point2i where toPoint2i = id
+instance ToPoint2f Point2f where toPoint2f = id
+instance ToPoint2d Point2d where toPoint2d = id
+instance ToPoint3i Point3i where toPoint3i = id
+instance ToPoint3f Point3f where toPoint3f = id
+instance ToPoint3d Point3d where toPoint3d = id
+instance ToVec4i   Vec4i   where toVec4i   = id
+instance ToSize2i  Size2i  where toSize2i  = id
+instance ToSize2f  Size2f  where toSize2f  = id
+instance ToScalar  Scalar  where toScalar  = id
 
-instance Convert (Int32  , Int32  ) Point2i where convert (x, y) = convert $ V2 x y
-instance Convert (CFloat , CFloat ) Point2f where convert (x, y) = convert $ V2 x y
-instance Convert (Float  , Float  ) Point2f where convert (x, y) = convert $ V2 x y
-instance Convert (CDouble, CDouble) Point2d where convert (x, y) = convert $ V2 x y
-instance Convert (Double , Double ) Point2d where convert (x, y) = convert $ V2 x y
-instance Convert (Int32  , Int32  ) Size2i  where convert (x, y) = convert $ V2 x y
-instance Convert (CFloat , CFloat ) Size2f  where convert (x, y) = convert $ V2 x y
-instance Convert (Float  , Float  ) Size2f  where convert (x, y) = convert $ V2 x y
-instance Convert (Int32  , Int32  , Int32  ) Point3i where convert (x, y, z) = convert $ V3 x y z
-instance Convert (CFloat , CFloat , CFloat ) Point3f where convert (x, y, z) = convert $ V3 x y z
-instance Convert (Float  , Float  , Float  ) Point3f where convert (x, y, z) = convert $ V3 x y z
-instance Convert (CDouble, CDouble, CDouble) Point3d where convert (x, y, z) = convert $ V3 x y z
-instance Convert (Double , Double , Double ) Point3d where convert (x, y, z) = convert $ V3 x y z
-instance Convert (CDouble, CDouble, CDouble, CDouble) Scalar where convert (x, y, z, w) = convert $ V4 x y z w
-instance Convert (Double , Double , Double , Double ) Scalar where convert (x, y, z, w) = convert $ V4 x y z w
-instance Convert (Int32  , Int32  , Int32  , Int32  ) Vec4i where convert (x, y, z, w) = convert $ V4 x y z w
+instance ToPoint2i (V2 Int32  ) where toPoint2i = unsafePerformIO . newPoint2i
+instance ToPoint2f (V2 CFloat ) where toPoint2f = unsafePerformIO . newPoint2f
+instance ToPoint2d (V2 CDouble) where toPoint2d = unsafePerformIO . newPoint2d
+instance ToPoint3i (V3 Int32  ) where toPoint3i = unsafePerformIO . newPoint3i
+instance ToPoint3f (V3 CFloat ) where toPoint3f = unsafePerformIO . newPoint3f
+instance ToPoint3d (V3 CDouble) where toPoint3d = unsafePerformIO . newPoint3d
+instance ToVec4i   (V4 Int32  ) where toVec4i   = unsafePerformIO . newVec4i
+instance ToSize2i  (V2 Int32  ) where toSize2i  = unsafePerformIO . newSize2i
+instance ToSize2f  (V2 CFloat ) where toSize2f  = unsafePerformIO . newSize2f
+instance ToScalar  (V4 CDouble) where toScalar  = unsafePerformIO . newScalar
 
-instance Convert Point2i (V2 Int32  ) where
-    convert pt = unsafePerformIO $
+instance ToPoint2f (V2 Float  ) where toPoint2f = toPoint2f . fmap (realToFrac :: Float  -> CFloat )
+instance ToPoint2d (V2 Double ) where toPoint2d = toPoint2d . fmap (realToFrac :: Double -> CDouble)
+instance ToPoint3f (V3 Float  ) where toPoint3f = toPoint3f . fmap (realToFrac :: Float  -> CFloat )
+instance ToPoint3d (V3 Double ) where toPoint3d = toPoint3d . fmap (realToFrac :: Double -> CDouble)
+instance ToSize2f  (V2 Float  ) where toSize2f  = toSize2f  . fmap (realToFrac :: Float  -> CFloat )
+instance ToScalar  (V4 Double ) where toScalar  = toScalar  . fmap (realToFrac :: Double -> CDouble)
+
+instance ToPoint2i (Int32  , Int32  ) where toPoint2i = toPoint2i . toV2
+instance ToPoint2f (CFloat , CFloat ) where toPoint2f = toPoint2f . toV2
+instance ToPoint2f (Float  , Float  ) where toPoint2f = toPoint2f . toV2
+instance ToPoint2d (CDouble, CDouble) where toPoint2d = toPoint2d . toV2
+instance ToPoint2d (Double , Double ) where toPoint2d = toPoint2d . toV2
+instance ToSize2i  (Int32  , Int32  ) where toSize2i  = toSize2i  . toV2
+instance ToSize2f  (CFloat , CFloat ) where toSize2f  = toSize2f  . toV2
+instance ToSize2f  (Float  , Float  ) where toSize2f  = toSize2f  . toV2
+instance ToPoint3i (Int32  , Int32  , Int32  ) where toPoint3i = toPoint3i . toV3
+instance ToPoint3f (CFloat , CFloat , CFloat ) where toPoint3f = toPoint3f . toV3
+instance ToPoint3f (Float  , Float  , Float  ) where toPoint3f = toPoint3f . toV3
+instance ToPoint3d (CDouble, CDouble, CDouble) where toPoint3d = toPoint3d . toV3
+instance ToPoint3d (Double , Double , Double ) where toPoint3d = toPoint3d . toV3
+instance ToScalar  (CDouble, CDouble, CDouble, CDouble) where toScalar = toScalar . toV4
+instance ToScalar  (Double , Double , Double , Double ) where toScalar = toScalar . toV4
+instance ToVec4i   (Int32  , Int32  , Int32  , Int32  ) where toVec4i  = toVec4i  . toV4
+
+class FromPoint2i a where fromPoint2i :: Point2i -> a
+class FromPoint2f a where fromPoint2f :: Point2f -> a
+class FromPoint2d a where fromPoint2d :: Point2d -> a
+class FromPoint3i a where fromPoint3i :: Point3i -> a
+class FromPoint3f a where fromPoint3f :: Point3f -> a
+class FromPoint3d a where fromPoint3d :: Point3d -> a
+class FromVec4i   a where fromVec4i   :: Vec4i   -> a
+class FromSize2i  a where fromSize2i  :: Size2i  -> a
+class FromSize2f  a where fromSize2f  :: Size2f  -> a
+class FromScalar  a where fromScalar  :: Scalar  -> a
+
+instance FromPoint2i Point2i where fromPoint2i = id
+instance FromPoint2f Point2f where fromPoint2f = id
+instance FromPoint2d Point2d where fromPoint2d = id
+instance FromPoint3i Point3i where fromPoint3i = id
+instance FromPoint3f Point3f where fromPoint3f = id
+instance FromPoint3d Point3d where fromPoint3d = id
+instance FromVec4i   Vec4i   where fromVec4i   = id
+instance FromSize2i  Size2i  where fromSize2i  = id
+instance FromSize2f  Size2f  where fromSize2f  = id
+instance FromScalar  Scalar  where fromScalar  = id
+
+instance FromPoint2i (V2 Int32) where
+    fromPoint2i pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       withPtr pt $ \ptPtr -> do
@@ -220,8 +273,8 @@ instance Convert Point2i (V2 Int32  ) where
         V2 <$> peek xPtr
            <*> peek yPtr
 
-instance Convert Point2f (V2 CFloat ) where
-    convert pt = unsafePerformIO $
+instance FromPoint2f (V2 CFloat) where
+    fromPoint2f pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       withPtr pt $ \ptPtr -> do
@@ -233,8 +286,8 @@ instance Convert Point2f (V2 CFloat ) where
         V2 <$> peek xPtr
            <*> peek yPtr
 
-instance Convert Point2d (V2 CDouble) where
-    convert pt = unsafePerformIO $
+instance FromPoint2d (V2 CDouble) where
+    fromPoint2d pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       withPtr pt $ \ptPtr -> do
@@ -246,8 +299,8 @@ instance Convert Point2d (V2 CDouble) where
         V2 <$> peek xPtr
            <*> peek yPtr
 
-instance Convert Point3i (V3 Int32  ) where
-    convert pt = unsafePerformIO $
+instance FromPoint3i (V3 Int32) where
+    fromPoint3i pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       alloca $ \zPtr ->
@@ -262,8 +315,8 @@ instance Convert Point3i (V3 Int32  ) where
            <*> peek yPtr
            <*> peek zPtr
 
-instance Convert Point3f (V3 CFloat ) where
-    convert pt = unsafePerformIO $
+instance FromPoint3f (V3 CFloat) where
+    fromPoint3f pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       alloca $ \zPtr ->
@@ -278,8 +331,8 @@ instance Convert Point3f (V3 CFloat ) where
            <*> peek yPtr
            <*> peek zPtr
 
-instance Convert Point3d (V3 CDouble) where
-    convert pt = unsafePerformIO $
+instance FromPoint3d (V3 CDouble) where
+    fromPoint3d pt = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       alloca $ \zPtr ->
@@ -294,8 +347,8 @@ instance Convert Point3d (V3 CDouble) where
            <*> peek yPtr
            <*> peek zPtr
 
-instance Convert Vec4i (V4 Int32) where
-    convert vec = unsafePerformIO $
+instance FromVec4i (V4 Int32) where
+    fromVec4i vec = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       alloca $ \zPtr ->
@@ -313,8 +366,8 @@ instance Convert Vec4i (V4 Int32) where
            <*> peek zPtr
            <*> peek wPtr
 
-instance Convert Size2i  (V2 Int32  ) where
-    convert s = unsafePerformIO $
+instance FromSize2i (V2 Int32) where
+    fromSize2i s = unsafePerformIO $
       alloca $ \wPtr ->
       alloca $ \hPtr ->
       withPtr s $ \sPtr -> do
@@ -326,8 +379,8 @@ instance Convert Size2i  (V2 Int32  ) where
         V2 <$> peek wPtr
            <*> peek hPtr
 
-instance Convert Size2f  (V2 CFloat ) where
-    convert s = unsafePerformIO $
+instance FromSize2f (V2 CFloat) where
+    fromSize2f s = unsafePerformIO $
       alloca $ \wPtr ->
       alloca $ \hPtr ->
       withPtr s $ \sPtr -> do
@@ -339,8 +392,8 @@ instance Convert Size2f  (V2 CFloat ) where
         V2 <$> peek wPtr
            <*> peek hPtr
 
-instance Convert Scalar  (V4 CDouble) where
-    convert s = unsafePerformIO $
+instance FromScalar (V4 CDouble) where
+    fromScalar s = unsafePerformIO $
       alloca $ \xPtr ->
       alloca $ \yPtr ->
       alloca $ \zPtr ->
@@ -358,28 +411,48 @@ instance Convert Scalar  (V4 CDouble) where
            <*> peek zPtr
            <*> peek wPtr
 
-instance Convert Point2f (V2 Float ) where convert = fmap (realToFrac :: CFloat  -> Float ) . convert
-instance Convert Point2d (V2 Double) where convert = fmap (realToFrac :: CDouble -> Double) . convert
-instance Convert Point3f (V3 Float ) where convert = fmap (realToFrac :: CFloat  -> Float ) . convert
-instance Convert Point3d (V3 Double) where convert = fmap (realToFrac :: CDouble -> Double) . convert
-instance Convert Size2f  (V2 Float ) where convert = fmap (realToFrac :: CFloat  -> Float ) . convert
-instance Convert Scalar  (V4 Double) where convert = fmap (realToFrac :: CDouble -> Double) . convert
+instance FromPoint2f (V2 Float ) where fromPoint2f = fmap (realToFrac :: CFloat  -> Float ) . fromPoint2f
+instance FromPoint2d (V2 Double) where fromPoint2d = fmap (realToFrac :: CDouble -> Double) . fromPoint2d
+instance FromPoint3f (V3 Float ) where fromPoint3f = fmap (realToFrac :: CFloat  -> Float ) . fromPoint3f
+instance FromPoint3d (V3 Double) where fromPoint3d = fmap (realToFrac :: CDouble -> Double) . fromPoint3d
+instance FromSize2f  (V2 Float ) where fromSize2f  = fmap (realToFrac :: CFloat  -> Float ) . fromSize2f
+instance FromScalar  (V4 Double) where fromScalar  = fmap (realToFrac :: CDouble -> Double) . fromScalar
 
-instance Convert Point2i (Int32  , Int32  ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Point2f (CFloat , CFloat ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Point2f (Float  , Float  ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Point2d (CDouble, CDouble) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Point2d (Double , Double ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Size2i  (Int32  , Int32  ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Size2f  (CFloat , CFloat ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Size2f  (Float  , Float  ) where convert a = let V2 x y = convert a in (x, y)
-instance Convert Point3i (Int32  , Int32  , Int32  ) where convert a = let V3 x y z = convert a in (x, y, z)
-instance Convert Point3f (CFloat , CFloat , CFloat ) where convert a = let V3 x y z = convert a in (x, y, z)
-instance Convert Point3f (Float  , Float  , Float  ) where convert a = let V3 x y z = convert a in (x, y, z)
-instance Convert Point3d (CDouble, CDouble, CDouble) where convert a = let V3 x y z = convert a in (x, y, z)
-instance Convert Point3d (Double , Double , Double ) where convert a = let V3 x y z = convert a in (x, y, z)
-instance Convert Scalar  (CDouble, CDouble, CDouble, CDouble) where convert a = let V4 x y z w = convert a in (x, y, z, w)
-instance Convert Scalar  (Double , Double , Double , Double ) where convert a = let V4 x y z w = convert a in (x, y, z, w)
+instance FromPoint2i (Int32  , Int32  )                   where fromPoint2i = fromV2 . fromPoint2i
+instance FromPoint2f (CFloat , CFloat )                   where fromPoint2f = fromV2 . fromPoint2f
+instance FromPoint2f (Float  , Float  )                   where fromPoint2f = fromV2 . fromPoint2f
+instance FromPoint2d (CDouble, CDouble)                   where fromPoint2d = fromV2 . fromPoint2d
+instance FromPoint2d (Double , Double )                   where fromPoint2d = fromV2 . fromPoint2d
+instance FromSize2i  (Int32  , Int32  )                   where fromSize2i  = fromV2 . fromSize2i
+instance FromSize2f  (CFloat , CFloat )                   where fromSize2f  = fromV2 . fromSize2f
+instance FromSize2f  (Float  , Float  )                   where fromSize2f  = fromV2 . fromSize2f
+instance FromPoint3i (Int32  , Int32  , Int32  )          where fromPoint3i = fromV3 . fromPoint3i
+instance FromPoint3f (CFloat , CFloat , CFloat )          where fromPoint3f = fromV3 . fromPoint3f
+instance FromPoint3f (Float  , Float  , Float  )          where fromPoint3f = fromV3 . fromPoint3f
+instance FromPoint3d (CDouble, CDouble, CDouble)          where fromPoint3d = fromV3 . fromPoint3d
+instance FromPoint3d (Double , Double , Double )          where fromPoint3d = fromV3 . fromPoint3d
+instance FromScalar  (CDouble, CDouble, CDouble, CDouble) where fromScalar  = fromV4 . fromScalar
+instance FromScalar  (Double , Double , Double , Double ) where fromScalar  = fromV4 . fromScalar
+
+--------------------------------------------------------------------------------
+-- Converting V2, V3 and V4s
+--------------------------------------------------------------------------------
+
+toV2 :: (a, a)       -> V2 a
+toV3 :: (a, a, a)    -> V3 a
+toV4 :: (a, a, a, a) -> V4 a
+
+toV2 (x, y)       = V2 x y
+toV3 (x, y, z)    = V3 x y z
+toV4 (x, y, z, w) = V4 x y z w
+
+fromV2 :: V2 a -> (a, a)
+fromV3 :: V3 a -> (a, a, a)
+fromV4 :: V4 a -> (a, a, a, a)
+
+fromV2 (V2 x y)     = (x, y)
+fromV3 (V3 x y z)   = (x, y, z)
+fromV4 (V4 x y z w) = (x, y, z, w)
 
 --------------------------------------------------------------------------------
 -- Constructing new values
@@ -443,25 +516,24 @@ newRect (V2 x y) (V2 width height) = fromPtr $
                    }|]
 
 newRotatedRect
-    :: ( Convert point2f Point2f
-       , Convert size2f  Size2f
+    :: ( ToPoint2f point2f
+       , ToSize2f  size2f
        )
     => point2f -- ^ Rectangle mass center
-    -> size2f -- ^ Width and height of the rectangle
+    -> size2f  -- ^ Width and height of the rectangle
     -> CFloat
        -- ^ The rotation angle (in degrees). When the angle is 0, 90,
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
     -> IO RotatedRect
 newRotatedRect center size angle = fromPtr $
-    withPtr (convert center :: Point2f) $ \centerPtr ->
-    withPtr (convert size   :: Size2f ) $ \sizePtr ->
+    withPtr (toPoint2f center) $ \centerPtr ->
+    withPtr (toSize2f  size)   $ \sizePtr   ->
       [CU.exp| RotatedRect * {
           new cv::RotatedRect( *$(Point2f * centerPtr)
                              , *$(Size2f * sizePtr)
                              , $(float angle)
                              )
       }|]
-
 
 newTermCriteria
     :: Maybe Int    -- ^ Optionally the maximum number of iterations/elements.
@@ -502,7 +574,7 @@ newWholeRange = fromPtr $
 
 withPolygons
     :: forall a point2i
-     . (Convert point2i Point2i)
+     . (ToPoint2i point2i)
     => V.Vector (V.Vector point2i)
     -> (Ptr (Ptr (C Point2i)) -> IO a)
     -> IO a
@@ -511,7 +583,7 @@ withPolygons polygons act =
       let go :: Ptr (Ptr (C Point2i)) -> Int -> IO a
           go !acc !ix
             | ix < V.length polygons =
-                let pts = V.map convert $ V.unsafeIndex polygons ix :: V.Vector Point2i
+                let pts = V.map toPoint2i $ V.unsafeIndex polygons ix
                 in withArrayPtr pts $ \ptsPtr -> do
                      poke acc ptsPtr
                      go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr (C Point2i)))) (ix + 1)

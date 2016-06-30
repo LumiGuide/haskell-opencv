@@ -24,24 +24,24 @@ import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
 
-#define IsoJSON(A, B, CONVERT)                        \
-instance ToJSON A where {                             \
-    toJSON = toJSON . (CONVERT :: A -> B);            \
-};                                                    \
-instance FromJSON A where {                           \
-    parseJSON = fmap (CONVERT :: B -> A) . parseJSON; \
+#define IsoJSON(A, B, A_to_B, B_to_A)                \
+instance ToJSON A where {                            \
+    toJSON = toJSON . (A_to_B :: A -> B);            \
+};                                                   \
+instance FromJSON A where {                          \
+    parseJSON = fmap (B_to_A :: B -> A) . parseJSON; \
 }
 
 --------------------------------------------------------------------------------
 
-IsoJSON(Point2i, (Int32 , Int32 ), convert)
-IsoJSON(Point2f, (Float , Float ), convert)
-IsoJSON(Point2d, (Double, Double), convert)
-IsoJSON(Point3i, (Int32 , Int32 , Int32 ), convert)
-IsoJSON(Point3f, (Float , Float , Float ), convert)
-IsoJSON(Point3d, (Double, Double, Double), convert)
-IsoJSON(Size2i , (Int32 , Int32 ), convert)
-IsoJSON(Size2f , (Float , Float ), convert)
+IsoJSON(Point2i, (Int32 , Int32 ),         fromPoint2i, toPoint2i)
+IsoJSON(Point2f, (Float , Float ),         fromPoint2f, toPoint2f)
+IsoJSON(Point2d, (Double, Double),         fromPoint2d, toPoint2d)
+IsoJSON(Point3i, (Int32 , Int32 , Int32 ), fromPoint3i, toPoint3i)
+IsoJSON(Point3f, (Float , Float , Float ), fromPoint3f, toPoint3f)
+IsoJSON(Point3d, (Double, Double, Double), fromPoint3d, toPoint3d)
+IsoJSON(Size2i , (Int32 , Int32 ),         fromSize2i,  toSize2i)
+IsoJSON(Size2f , (Float , Float ),         fromSize2f,  toSize2f)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat

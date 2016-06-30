@@ -167,9 +167,9 @@ arrowedLineImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 -}
 arrowedLine
-    :: ( Convert fromPoint2i Point2i
-       , Convert toPoint2i   Point2i
-       , Convert color       Scalar
+    :: ( ToPoint2i fromPoint2i
+       , ToPoint2i toPoint2i
+       , ToScalar  color
        , PrimMonad m
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
@@ -184,9 +184,9 @@ arrowedLine
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
-    withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
-    withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
-    withPtr (convert color :: Scalar)  $ \colorPtr ->
+    withPtr (toPoint2i pt1) $ \pt1Ptr   ->
+    withPtr (toPoint2i pt2) $ \pt2Ptr   ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::arrowedLine( *$(Mat * matPtr)
                        , *$(Point2i * pt1Ptr)
@@ -224,8 +224,8 @@ circleImg = exceptError $
 -}
 circle
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToScalar color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image where the circle is drawn.
     -> point2i -- ^ Center of the circle.
@@ -238,8 +238,8 @@ circle
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
-    withPtr (convert center :: Point2i) $ \centerPtr ->
-    withPtr (convert color  :: Scalar ) $ \colorPtr  ->
+    withPtr (toPoint2i center) $ \centerPtr ->
+    withPtr (toScalar color ) $ \colorPtr  ->
       [C.exp|void {
         cv::circle( *$(Mat * matPtr)
                   , *$(Point2i * centerPtr)
@@ -275,9 +275,9 @@ ellipseImg = exceptError $
 -}
 ellipse
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert size2i  Size2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToSize2i  size2i
+       , ToScalar  color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> point2i -- ^ Center of the ellipse.
@@ -296,9 +296,9 @@ ellipse
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
-    withPtr (convert center :: Point2i) $ \centerPtr ->
-    withPtr (convert axes   :: Size2i ) $ \axesPtr   ->
-    withPtr (convert color  :: Scalar ) $ \colorPtr  ->
+    withPtr (toPoint2i center) $ \centerPtr ->
+    withPtr (toSize2i axes) $ \axesPtr   ->
+    withPtr (toScalar color) $ \colorPtr  ->
       [C.exp|void {
         cv::ellipse( *$(Mat * matPtr)
                    , *$(Point2i * centerPtr)
@@ -331,8 +331,8 @@ top-most and/or the bottom edge could be horizontal).
 -}
 fillConvexPoly
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToScalar  color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector point2i -- ^ Polygon vertices.
@@ -343,8 +343,8 @@ fillConvexPoly
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
-    withArrayPtr (V.map convert points :: V.Vector Point2i) $ \pointsPtr ->
-    withPtr (convert color :: Scalar) $ \colorPtr ->
+    withArrayPtr (V.map toPoint2i points) $ \pointsPtr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
                           , $(Point2i * pointsPtr)
@@ -409,8 +409,8 @@ fillPolyImg = exceptError $
 -}
 fillPoly
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToScalar  color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Polygons.
@@ -423,7 +423,7 @@ fillPoly img polygons color lineType shift =
     withPtr (unMutMat img) $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
-    withPtr (convert color :: Scalar) $ \colorPtr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::fillPoly( *$(Mat * matPtr)
                     , $(const Point2i * * polygonsPtr)
@@ -467,8 +467,8 @@ polylinesImg = exceptError $
 -}
 polylines
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToScalar color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Vertices.
@@ -486,7 +486,7 @@ polylines img curves isClosed color thickness lineType shift =
     withPtr (unMutMat img) $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
-    withPtr (convert color :: Scalar) $ \colorPtr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::polylines
         ( *$(Mat * matPtr)
@@ -529,9 +529,9 @@ lineImg = exceptError $
 -}
 line
     :: ( PrimMonad m
-       , Convert fromPoint2i Point2i
-       , Convert toPoint2i   Point2i
-       , Convert color       Scalar
+       , ToPoint2i fromPoint2i
+       , ToPoint2i toPoint2i
+       , ToScalar  color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ First point of the line segment.
@@ -544,9 +544,9 @@ line
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
-    withPtr (convert pt1   :: Point2i) $ \pt1Ptr   ->
-    withPtr (convert pt2   :: Point2i) $ \pt2Ptr   ->
-    withPtr (convert color :: Scalar ) $ \colorPtr ->
+    withPtr (toPoint2i pt1) $ \pt1Ptr ->
+    withPtr (toPoint2i pt2) $ \pt2Ptr ->
+    withPtr (toScalar  color) $ \colorPtr ->
       [C.exp|void {
         cv::line( *$(Mat * matPtr)
                 , *$(Point2i * pt1Ptr)
@@ -629,8 +629,8 @@ putTextImg = exceptError $
 -}
 putText
     :: ( PrimMonad m
-       , Convert point2i Point2i
-       , Convert color   Scalar
+       , ToPoint2i point2i
+       , ToScalar color
        )
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
@@ -646,8 +646,8 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    withPtr (convert org   :: Point2i) $ \orgPtr   ->
-    withPtr (convert color :: Scalar ) $ \colorPtr ->
+    withPtr (toPoint2i org) $ \orgPtr   ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::putText( *$(Mat * matPtr)
                    , $(char * c'text)
@@ -686,7 +686,7 @@ rectangleImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
-    :: (PrimMonad m, Convert color Scalar)
+    :: (PrimMonad m, ToScalar color)
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Rect
     -> color -- ^ Rectangle color or brightness (grayscale image).
@@ -698,7 +698,7 @@ rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
     withPtr rect $ \rectPtr ->
-    withPtr (convert color :: Scalar) $ \colorPtr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::rectangle( *$(Mat * matPtr)
                      , *$(Rect * rectPtr)
@@ -718,7 +718,7 @@ data ContourDrawMode
   | FillContours -- ^ Draw the contour, filling in the area.
 
 marshalContourDrawMode
-  :: ContourDrawMode -> (Int32,Int32)
+  :: ContourDrawMode -> (Int32, Int32)
 marshalContourDrawMode = \case
   OutlineContour lineType thickness -> (marshalLineType lineType, thickness)
   FillContours -> (marshalLineType LineType_4, -1)
@@ -752,7 +752,7 @@ flowerContours = exceptError $
 <<doc/generated/examples/flowerContours.png flowerContours>>
 
 -}
-drawContours :: (Convert color Scalar,PrimMonad m)
+drawContours :: (ToScalar color, PrimMonad m)
              => V.Vector (V.Vector Point2i)
              -> color -- ^ Color of the contours.
              -> ContourDrawMode
@@ -761,7 +761,7 @@ drawContours :: (Convert color Scalar,PrimMonad m)
 drawContours contours color drawMode img = unsafePrimToPrim $
   withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
   withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
-  withPtr (convert color :: Scalar) $ \colorPtr ->
+  withPtr (toScalar color) $ \colorPtr ->
   withPtr (unMutMat img) $ \dstPtr ->
     [C.exp|void {
       int32_t *contourLengths = $(int32_t * contourLengthsPtr);
@@ -790,4 +790,4 @@ drawContours contours color drawMode img = unsafePrimToPrim $
     }|]
   where
     numContours = fromIntegral (V.length contours)
-    (c'lineType,c'thickness) = marshalContourDrawMode drawMode
+    (c'lineType, c'thickness) = marshalContourDrawMode drawMode

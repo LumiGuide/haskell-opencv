@@ -61,7 +61,7 @@ will most certainly give a wrong results for contours with self-intersections.
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#cv2.contourArea OpenCV Sphinx doc>
 -}
 contourArea
-    :: (Convert point2f Point2f)
+    :: (ToPoint2f point2f)
     => V.Vector point2f
        -- ^ Input vector of 2D points (contour vertices).
     -> Bool
@@ -71,7 +71,7 @@ contourArea
        -- of a contour by taking the sign of an area.
     -> CvExcept Double
 contourArea contour oriented = unsafeWrapException $
-    withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
+    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
     alloca $ \c'area ->
     handleCvException (realToFrac <$> peek c'area) $
       [cvExcept|
@@ -96,8 +96,8 @@ contourArea contour oriented = unsafeWrapException $
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
 pointPolygonTest
-    :: ( Convert contourPoint2f Point2f
-       , Convert testPoint2f    Point2f
+    :: ( ToPoint2f contourPoint2f
+       , ToPoint2f testPoint2f
        )
     => V.Vector contourPoint2f -- ^ Contour.
     -> testPoint2f -- ^ Point tested against the contour.
@@ -107,8 +107,8 @@ pointPolygonTest
        -- the point is inside a contour or not.
     -> CvExcept Double
 pointPolygonTest contour pt measureDist = unsafeWrapException $
-    withArrayPtr (V.map convert contour :: V.Vector Point2f) $ \contourPtr ->
-    withPtr (convert pt :: Point2f) $ \ptPtr ->
+    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
+    withPtr (toPoint2f pt) $ \ptPtr ->
     alloca $ \c'resultPtr ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
@@ -246,8 +246,8 @@ findContours mode method src = unsafePrimToPrim $
            (peekArray (fromIntegral n) contourPointsPtr >>= mapM (fromPtr . pure))
 
     hierarchyPtr <- peek hierarchyPtrPtr
-    hierarchy <- peekArray numContours hierarchyPtr >>=
-                 mapM (fmap (convert :: Vec4i -> V4 Int32) . fromPtr . pure)
+    (hierarchy :: [V4 Int32]) <- peekArray numContours hierarchyPtr >>=
+                 mapM (fmap fromVec4i . fromPtr . pure)
 
     let treeHierarchy =
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->

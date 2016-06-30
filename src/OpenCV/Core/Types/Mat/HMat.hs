@@ -120,7 +120,7 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
     depth = hElemsDepth elems
 
     scalar :: Scalar
-    scalar = convert (zero :: V4 CDouble)
+    scalar = toScalar (zero :: V4 CDouble)
 
     copyElems :: [CSize] -> Ptr Word8 -> IO ()
     copyElems step dataPtr = case elems of

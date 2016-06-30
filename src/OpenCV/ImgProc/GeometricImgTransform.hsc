@@ -97,7 +97,9 @@ marshalResizeAbsRel
 marshalResizeAbsRel (ResizeAbs s) = (s, 0   , 0   )
 marshalResizeAbsRel (ResizeRel f) = (s, c'fx, c'fy)
   where
-    s = convert (zero :: V2 Int32)
+    s :: Size2i
+    s = toSize2i (zero :: V2 Int32)
+
     (V2 c'fx c'fy) = realToFrac <$> f
 
 {- | Resizes an image
@@ -273,7 +275,7 @@ invertAffineTransform matIn = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
 -}
 getRotationMatrix2D
-    :: (Convert point2f Point2f)
+    :: (ToPoint2f point2f)
     => point2f -- ^ Center of the rotation in the source image.
     -> Double
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
@@ -281,7 +283,7 @@ getRotationMatrix2D
     -> Double -- ^ Isotropic scale factor.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
-    withPtr (convert center :: Point2f) $ \centerPtr ->
+    withPtr (toPoint2f center) $ \centerPtr ->
       fromPtr
       [CU.block| Mat * {
         return new cv::Mat

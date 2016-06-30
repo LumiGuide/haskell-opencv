@@ -99,8 +99,7 @@ contains 3 rows.
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc>
 -}
 findFundamentalMat
-    :: ( Convert point2d Point2d
-       )
+    :: ( ToPoint2d point2d)
     => V.Vector point2d -- ^ Points from the first image.
     -> V.Vector point2d -- ^ Points from the second image.
     -> FundamentalMatMethod
@@ -124,8 +123,8 @@ findFundamentalMat pts1 pts2 method = do
       handleCvException (pure (fm, pointMask)) $
         withPtr fm $ \fmPtr ->
         withPtr pointMask $ \pointMaskPtr ->
-        withArrayPtr (V.map convert pts1 :: V.Vector Point2d) $ \pts1Ptr ->
-        withArrayPtr (V.map convert pts2 :: V.Vector Point2d) $ \pts2Ptr ->
+        withArrayPtr (V.map toPoint2d pts1) $ \pts1Ptr ->
+        withArrayPtr (V.map toPoint2d pts2) $ \pts2Ptr ->
           [cvExcept|
             cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
             cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
@@ -149,7 +148,7 @@ findFundamentalMat pts1 pts2 method = do
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc>
 -}
 computeCorrespondEpilines
-    :: (Convert point2d Point2d)
+    :: (ToPoint2d point2d)
     => V.Vector point2d -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
@@ -157,7 +156,7 @@ computeCorrespondEpilines
 computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
-      withArrayPtr (V.map convert points :: V.Vector Point2d) $ \pointsPtr ->
+      withArrayPtr (V.map toPoint2d points) $ \pointsPtr ->
       withPtr fm       $ \fmPtr       ->
       withPtr epilines $ \epilinesPtr -> do
         -- Destroy type information about the pointsPtr. We wan't to generate

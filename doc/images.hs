@@ -28,11 +28,11 @@ import "this" ExampleExtractor ( render, extractExampleImages )
 --------------------------------------------------------------------------------
 
 transparent, white, black, blue, red :: Scalar
-transparent = convert (V4 255 255 255   0 :: V4 Double)
-white       = convert (V4 255 255 255 255 :: V4 Double)
-black       = convert (V4   0   0   0 255 :: V4 Double)
-blue        = convert (V4 255   0   0 255 :: V4 Double)
-red         = convert (V4   0   0 255 255 :: V4 Double)
+transparent = toScalar (V4 255 255 255   0 :: V4 Double)
+white       = toScalar (V4 255 255 255 255 :: V4 Double)
+black       = toScalar (V4   0   0   0 255 :: V4 Double)
+blue        = toScalar (V4 255   0   0 255 :: V4 Double)
+red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
 type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Flower_768x512   = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
@@ -62,7 +62,7 @@ smallerKodakImg
     -> Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 smallerKodakImg img =
     exceptError $ coerceMat =<<
-      resize (ResizeAbs $ convert (V2 512 341 :: V2 Int32))
+      resize (ResizeAbs $ toSize2i (V2 512 341 :: V2 Int32))
              InterArea
              img
 
@@ -128,12 +128,12 @@ fontFaceImg fontFace = exceptError $
     txt = "The quick brown fox jumps over the lazy dog"
     (size2i, baseLine) = getTextSize txt fontFace scale thickness
     tw, th :: Int32
-    V2 tw th = convert size2i
+    V2 tw th = fromSize2i size2i
     scale     = 1
     thickness = 1
 
 vennCircleA
-    :: (PrimMonad m, Convert color Scalar)
+    :: (PrimMonad m, ToScalar color)
     => MutMat ('S [height, width]) channels depth (PrimState m)
     -> color
     -> Int32
@@ -142,7 +142,7 @@ vennCircleA imgM color thickness =
     circle imgM (V2 100 100 :: V2 Int32) 90 color thickness LineType_AA 0
 
 vennCircleB
-    :: (PrimMonad m, Convert color Scalar)
+    :: (PrimMonad m, ToScalar color)
     => MutMat ('S [height, width]) channels depth (PrimState m)
     -> color
     -> Int32
