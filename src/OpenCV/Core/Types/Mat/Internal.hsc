@@ -6,6 +6,7 @@
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)
+    , ToDepth(toDepth)
     , DepthT
     , marshalDepth
     , marshalFlags
@@ -293,7 +294,7 @@ newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
 newMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    Depth
+       , ToDepth depth
        , ToScalar scalar
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
@@ -328,7 +329,7 @@ newMat shape channels depth defValue = ExceptT $ do
     shape' :: V.Vector Int32
     shape'    = convert shape
     channels' = convert channels
-    depth'    = convert depth
+    depth'    = toDepth depth
 
 -- TODO (BvD): Move to some Utility module.
 withVector

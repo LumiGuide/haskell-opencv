@@ -53,7 +53,7 @@ repaToM33 a =
     i row col = Repa.unsafeIndex a $ Repa.ix3 0 col row
 
 m23ToMat :: forall depth
-          . ( Convert (Proxy depth) Depth
+          . ( ToDepth (Proxy depth)
             , Storable depth
             )
          => M23 depth
@@ -74,7 +74,7 @@ m23ToMat (V2 (V3 i00 i01 i02)
           unsafeWrite imgM [1, 2] i12
 
 m33ToMat :: forall depth
-          . ( Convert (Proxy depth) Depth
+          . ( ToDepth (Proxy depth)
             , Storable depth
             )
          => M33 depth

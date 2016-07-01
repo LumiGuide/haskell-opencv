@@ -11,6 +11,7 @@ module OpenCV.Core.Types.Mat
 
     , Mat
     , Depth(..)
+    , ToDepth(toDepth)
     , emptyMat
     , mkMat
     , mkMatM
@@ -72,7 +73,7 @@ emptyMat = unsafePerformIO newEmptyMat
 mkMat
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    Depth
+       , ToDepth depth
        , ToScalar scalar
        )
     => shape    -- ^
@@ -89,7 +90,7 @@ mkMatM
     :: ( PrimMonad m
        , Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    Depth
+       , ToDepth depth
        , ToScalar scalar
        )
     => shape    -- ^
@@ -108,7 +109,7 @@ eyeMat
     :: ( Convert height   Int32
        , Convert width    Int32
        , Convert channels Int32
-       , Convert depth    Depth
+       , ToDepth depth
        )
     => height   -- ^
     -> width    -- ^
@@ -128,7 +129,7 @@ eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
     c'height  = convert height
     c'width   = convert width
     channels' = convert channels
-    depth'    = convert depth
+    depth'    = toDepth depth
 
 cloneMat :: Mat shape channels depth
          -> Mat shape channels depth
@@ -295,7 +296,7 @@ createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 withMatM
     :: ( Convert shape    (V.Vector Int32)
        , Convert channels Int32
-       , Convert depth    Depth
+       , ToDepth depth
        , ToScalar scalar
        )
     => shape    -- ^
