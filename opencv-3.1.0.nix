@@ -11,12 +11,6 @@
 let
   v = "3.1.0";
 
-  contribSrc = fetchzip {
-    url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
-    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
-    name = "opencv-contrib-${v}-src";
-  };
-
   enabled = condition : if condition then "ON" else "OFF";
 
 in
@@ -26,6 +20,11 @@ stdenv.mkDerivation rec {
   src = fetchurl {
     url = "https://github.com/Itseez/opencv/archive/${v}.zip";
     sha256 = "1912wrsb6nfl9fp7w9z3n0x04jcrv6k6zsa0zx7q10nvkwj90s8z";
+  };
+  contribSrc = fetchzip {
+    url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
+    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
+    name = "opencv-contrib-${v}-src";
   };
 
   postPatch =
