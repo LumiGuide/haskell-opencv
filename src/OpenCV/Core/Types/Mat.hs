@@ -13,6 +13,7 @@ module OpenCV.Core.Types.Mat
     , Depth(..)
     , ToDepth(toDepth)
     , ToChannels(toChannels)
+    , ToShape(toShape)
     , emptyMat
     , mkMat
     , mkMatM
@@ -52,7 +53,6 @@ import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "transformers" Control.Monad.Trans.Except
-import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ emptyMat = unsafePerformIO newEmptyMat
 -- TODO (RvD): check for negative sizes
 -- This crashes OpenCV
 mkMat
-    :: ( Convert    shape (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -89,7 +89,7 @@ mkMat shape channels depth defValue =
 -- This crashes OpenCV
 mkMatM
     :: ( PrimMonad m
-       , Convert    shape    (V.Vector Int32)
+       , ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -295,7 +295,7 @@ createMat
 createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 
 withMatM
-    :: ( Convert    shape (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar

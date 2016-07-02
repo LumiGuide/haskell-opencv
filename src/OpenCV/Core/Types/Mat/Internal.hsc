@@ -6,14 +6,15 @@
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)
-    , ToDepth(toDepth)
     , DepthT
     , marshalDepth
     , marshalFlags
     , unmarshalDepth
     , unmarshalFlags
 
+    , ToDepth(toDepth)
     , ToChannels(toChannels)
+    , ToShape(toShape)
 
     , Mat(..)
     , MutMat(..)
@@ -139,6 +140,44 @@ instance ToChannels Int32 where
 
 instance (KnownNat n) => ToChannels (proxy n) where
     toChannels = fromInteger . natVal
+
+--------------------------------------------------------------------------------
+
+class ToShape a where
+    toShape :: a -> V.Vector Int32
+
+-- | identity
+instance ToShape (V.Vector Int32) where
+    toShape = id
+
+-- | direct conversion to 'V.Vector'
+instance ToShape [Int32] where
+    toShape = V.fromList
+
+-- | empty 'V.Vector'
+instance ToShape (Proxy '[]) where
+    toShape _proxy = V.empty
+
+-- | fold over the type level list
+instance (KnownNat a, ToShape (Proxy as))
+      => ToShape (Proxy (a ': as)) where
+    toShape _proxy =
+        V.cons
+          (fromInteger $ natVal (Proxy :: Proxy a))
+          (toShape (Proxy :: Proxy as))
+
+-- | empty 'V.Vector'
+instance ToShape Z where
+    toShape _z = V.empty
+
+-- | fold over ':::'
+instance (KnownNat a, ToShape as) => ToShape (Proxy a ::: as) where
+    toShape (a ::: as) = V.cons (fromInteger (natVal a))
+                                (toShape as)
+
+-- | fold over ':::'
+instance (ToShape as) => ToShape (Int32 ::: as) where
+    toShape (a ::: as) = V.cons a (toShape as)
 
 --------------------------------------------------------------------------------
 
@@ -305,7 +344,7 @@ newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
 newMat
-    :: ( Convert    shape    (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -339,8 +378,7 @@ newMat shape channels depth defValue = ExceptT $ do
     c'ndims = fromIntegral $ VG.length shape'
     c'type  = marshalFlags depth' channels'
 
-    shape' :: V.Vector Int32
-    shape'    = convert shape
+    shape'    = toShape shape
     channels' = toChannels channels
     depth'    = toDepth depth
 
