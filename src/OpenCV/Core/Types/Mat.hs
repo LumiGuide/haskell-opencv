@@ -12,6 +12,7 @@ module OpenCV.Core.Types.Mat
     , Mat
     , Depth(..)
     , ToDepth(toDepth)
+    , ToChannels(toChannels)
     , emptyMat
     , mkMat
     , mkMatM
@@ -71,10 +72,10 @@ emptyMat = unsafePerformIO newEmptyMat
 -- TODO (RvD): check for negative sizes
 -- This crashes OpenCV
 mkMat
-    :: ( Convert shape    (V.Vector Int32)
-       , Convert channels Int32
-       , ToDepth depth
-       , ToScalar scalar
+    :: ( Convert    shape (V.Vector Int32)
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -88,10 +89,10 @@ mkMat shape channels depth defValue =
 -- This crashes OpenCV
 mkMatM
     :: ( PrimMonad m
-       , Convert shape    (V.Vector Int32)
-       , Convert channels Int32
-       , ToDepth depth
-       , ToScalar scalar
+       , Convert    shape    (V.Vector Int32)
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
        )
     => shape    -- ^
     -> channels -- ^
@@ -106,10 +107,10 @@ mkMatM shape channels depth defValue = do
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
 eyeMat
-    :: ( Convert height   Int32
-       , Convert width    Int32
-       , Convert channels Int32
-       , ToDepth depth
+    :: ( Convert    height Int32
+       , Convert    width  Int32
+       , ToChannels channels
+       , ToDepth    depth
        )
     => height   -- ^
     -> width    -- ^
@@ -128,7 +129,7 @@ eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
 
     c'height  = convert height
     c'width   = convert width
-    channels' = convert channels
+    channels' = toChannels channels
     depth'    = toDepth depth
 
 cloneMat :: Mat shape channels depth
@@ -294,10 +295,10 @@ createMat
 createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 
 withMatM
-    :: ( Convert shape    (V.Vector Int32)
-       , Convert channels Int32
-       , ToDepth depth
-       , ToScalar scalar
+    :: ( Convert    shape (V.Vector Int32)
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
        )
     => shape    -- ^
     -> channels -- ^
