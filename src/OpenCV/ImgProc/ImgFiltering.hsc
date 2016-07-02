@@ -148,7 +148,7 @@ laplacianImg = exceptError $ do
 -}
 laplacian
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) Depth)
+     . (ToDepth (Proxy dstDepth))
     => Maybe Int32
        -- ^ Aperture size used to compute the second-derivative filters. The
        -- size must be positive and odd. Default value is 1.

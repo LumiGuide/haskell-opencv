@@ -6,11 +6,14 @@
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)
+    , ToDepth(toDepth)
     , DepthT
     , marshalDepth
     , marshalFlags
     , unmarshalDepth
     , unmarshalFlags
+
+    , ToChannels(toChannels)
 
     , Mat(..)
     , MutMat(..)
@@ -125,6 +128,17 @@ unmarshalFlags n =
     ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
     , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
     )
+
+--------------------------------------------------------------------------------
+
+class ToChannels a where
+    toChannels :: a -> Int32
+
+instance ToChannels Int32 where
+    toChannels = id
+
+instance (KnownNat n) => ToChannels (proxy n) where
+    toChannels = fromInteger . natVal
 
 --------------------------------------------------------------------------------
 
@@ -291,10 +305,10 @@ newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
 newMat
-    :: ( Convert shape    (V.Vector Int32)
-       , Convert channels Int32
-       , Convert depth    Depth
-       , ToScalar scalar
+    :: ( Convert    shape    (V.Vector Int32)
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
        -- , channels .<=? 512
@@ -327,8 +341,8 @@ newMat shape channels depth defValue = ExceptT $ do
 
     shape' :: V.Vector Int32
     shape'    = convert shape
-    channels' = convert channels
-    depth'    = convert depth
+    channels' = toChannels channels
+    depth'    = toDepth depth
 
 -- TODO (BvD): Move to some Utility module.
 withVector
