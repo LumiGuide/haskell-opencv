@@ -10,7 +10,7 @@ module OpenCV.TypeLevel
     , (:::)((:::))
 
       -- * Type level to value level conversions
-    , Convert(convert)
+    , ToInt32(toInt32)
     , ToNatDS(toNatDS)
     , ToNatListDS(toNatListDS)
 
@@ -71,49 +71,14 @@ infixr 5 :::
 -- Type level to value level conversions
 --------------------------------------------------------------------------------
 
-class Convert a b where
-    convert :: a -> b
+class ToInt32 a where
+    toInt32 :: a -> Int32
 
-instance Convert (a :: *) (a :: *) where
-    convert = id
+instance ToInt32 Int32 where
+    toInt32 = id
 
-instance (Convert a b) => Convert [a] [b] where
-    convert = map convert
-
-instance (KnownNat n) => Convert (Proxy n) Integer where
-    convert = natVal
-
-instance (KnownNat n) => Convert (Proxy n) Int32 where
-    convert = fromInteger . convert
-
-instance Convert Z [b] where
-    convert Z = []
-
-instance (Convert a b, Convert as [b]) => Convert (a ::: as) [b] where
-    convert (a ::: as) = convert a : convert as
-
-instance (Convert (a ::: as) [b]) => Convert (a ::: as) (V.Vector b) where
-    convert = V.fromList . convert
-
-instance Convert (Proxy '[]) [b] where
-    convert _proxy = []
-
-instance ( Convert (Proxy a )  b
-         , Convert (Proxy as) [b]
-         )
-      => Convert (Proxy (a ': as)) [b] where
-    convert _proxy = convert (Proxy :: Proxy a) : convert (Proxy :: Proxy as)
-
-instance (Convert (Proxy a) b, Convert (Proxy as) [b])
-      => Convert (Proxy (a ': as)) (V.Vector b) where
-    convert = V.fromList . convert
-
-instance Convert (Proxy 'D) (DS b) where
-    convert _proxy = D
-
-instance (Convert (Proxy a) b)
-      => Convert (Proxy ('S a)) (DS b) where
-    convert _proxy = S $ convert (Proxy :: Proxy a)
+instance (KnownNat n) => ToInt32 (proxy n) where
+    toInt32 = fromInteger . natVal
 
 --------------------------------------------------------------------------------
 

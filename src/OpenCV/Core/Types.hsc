@@ -98,7 +98,6 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
-import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
@@ -364,9 +363,6 @@ keyPointAsRec kpt = unsafePerformIO $
         <*> peek octavePtr
         <*> peek classIdPtr
 
-instance Convert KeyPointRec KeyPoint where convert = mkKeyPoint
-instance Convert KeyPoint KeyPointRec where convert = keyPointAsRec
-
 --------------------------------------------------------------------------------
 -- DMatch
 --------------------------------------------------------------------------------
@@ -436,10 +432,6 @@ dmatchAsRec dmatch = unsafePerformIO $
         <*> peek trainIdxPtr
         <*> peek imgIdxPtr
         <*> (realToFrac <$> peek distancePtr)
-
-instance Convert DMatchRec DMatch where convert = mkDMatch
-instance Convert DMatch DMatchRec where convert = dmatchAsRec
-
 
 --------------------------------------------------------------------------------
 -- Algorithm

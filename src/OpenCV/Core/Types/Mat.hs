@@ -110,8 +110,8 @@ mkMatM shape channels depth defValue = do
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
 eyeMat
-    :: ( Convert    height Int32
-       , Convert    width  Int32
+    :: ( ToInt32    height
+       , ToInt32    width
        , ToChannels channels
        , ToDepth    depth
        )
@@ -130,10 +130,10 @@ eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
   where
     c'type = marshalFlags depth' channels'
 
-    c'height  = convert height
-    c'width   = convert width
+    c'height  = toInt32    height
+    c'width   = toInt32    width
     channels' = toChannels channels
-    depth'    = toDepth depth
+    depth'    = toDepth    depth
 
 cloneMat :: Mat shape channels depth
          -> Mat shape channels depth
