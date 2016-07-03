@@ -209,7 +209,7 @@ matAddWeightedImg = exceptError $
 -- TODO (RvD): handle different depths
 matAddWeighted
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS Depth))
+     . (ToDepthDS (Proxy dstDepth))
     => Mat shape channels srcDepth -- ^ src1
     -> Double -- ^ alpha
     -> Mat shape channels srcDepth -- ^ src2
@@ -237,7 +237,7 @@ matAddWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do
     c'alpha = realToFrac alpha
     c'beta  = realToFrac beta
     c'gamma = realToFrac gamma
-    c'dtype = maybe (-1) marshalDepth $ dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+    c'dtype = maybe (-1) marshalDepth $ dsToMaybe $ toDepthDS (Proxy :: Proxy dstDepth)
 
 {- | Calculates the sum of a scaled array and another array.
 
@@ -643,7 +643,7 @@ normDiff absRel normType mbMask src1 src2 = unsafeWrapException $
 -}
 normalize
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS Depth))
+     . (ToDepthDS (Proxy dstDepth))
     => Double
        -- ^ Norm value to normalize to or the lower range boundary in case of
        -- the range normalization.
@@ -675,7 +675,7 @@ normalize alpha beta normType mbMask src = unsafeWrapException $ do
     c'alpha    = realToFrac alpha
     c'beta     = realToFrac beta
     c'normType = marshalNormType NormAbsolute normType
-    c'dtype    = maybe (-1) marshalDepth $ dsToMaybe$ convert (Proxy :: Proxy dstDepth)
+    c'dtype    = maybe (-1) marshalDepth $ dsToMaybe $ toDepthDS (Proxy :: Proxy dstDepth)
 
 {- | Calculates the sum of array elements
 

@@ -12,8 +12,11 @@ module OpenCV.Core.Types.Mat
     , Mat
     , Depth(..)
     , ToDepth(toDepth)
+    , ToDepthDS(toDepthDS)
     , ToChannels(toChannels)
+    , ToChannelsDS, toChannelsDS
     , ToShape(toShape)
+    , ToShapeDS(toShapeDS)
     , emptyMat
     , mkMat
     , mkMatM
@@ -243,7 +246,7 @@ matCopyToM dstMut (V2 x y) src mbSrcMask = ExceptT $
 -}
 matConvertTo
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS Depth))
+     . (ToDepthDS (Proxy dstDepth))
     => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
     -> Mat shape channels srcDepth
@@ -263,7 +266,7 @@ matConvertTo alpha beta src = unsafeWrapException $ do
         |]
   where
     rtype :: Maybe Depth
-    rtype = dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+    rtype = dsToMaybe $ toDepthDS (Proxy :: Proxy dstDepth)
 
     c'rtype = maybe (-1) marshalDepth rtype
     c'alpha = maybe 1 realToFrac alpha

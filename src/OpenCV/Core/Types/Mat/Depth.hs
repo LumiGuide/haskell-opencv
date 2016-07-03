@@ -3,10 +3,12 @@
 module OpenCV.Core.Types.Mat.Depth
     ( Depth(..)
     , ToDepth(toDepth)
+    , ToDepthDS(toDepthDS)
     , DepthT
     ) where
 
 import "base" Data.Int
+import "base" Data.Proxy
 import "base" Data.Word
 import "this" OpenCV.TypeLevel
 
@@ -23,8 +25,8 @@ data Depth =
    | Depth_USRTYPE1
      deriving (Show, Eq)
 
--- TODO (RvD): should users be allowed to make instances of ToDepth
--- for their own types?
+--------------------------------------------------------------------------------
+
 class ToDepth a where
     toDepth :: a -> Depth
 
@@ -39,8 +41,22 @@ instance ToDepth (proxy Double) where toDepth _proxy = Depth_64F
 -- TODO (BvD): instance ToDepth ? where toDepth = const Depth_USRTYPE1
 -- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
 
-instance (ToDepth a) => Convert a Depth where
-    convert = toDepth
+--------------------------------------------------------------------------------
+
+class ToDepthDS a where
+    toDepthDS :: a -> DS Depth
+
+instance ToDepthDS Depth where toDepthDS = const D
+
+instance ToDepthDS (proxy ('S Word8 )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Word8 )
+instance ToDepthDS (proxy ('S Int8  )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Int8  )
+instance ToDepthDS (proxy ('S Word16)) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Word16)
+instance ToDepthDS (proxy ('S Int16 )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Int16 )
+instance ToDepthDS (proxy ('S Int32 )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Int32 )
+instance ToDepthDS (proxy ('S Float )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Float )
+instance ToDepthDS (proxy ('S Double)) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Double)
+
+--------------------------------------------------------------------------------
 
 type family DepthT a :: DS * where
     DepthT Depth     = 'D

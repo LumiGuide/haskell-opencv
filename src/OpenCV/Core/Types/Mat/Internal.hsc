@@ -13,8 +13,11 @@ module OpenCV.Core.Types.Mat.Internal
     , unmarshalFlags
 
     , ToDepth(toDepth)
+    , ToDepthDS(toDepthDS)
     , ToChannels(toChannels)
+    , ToChannelsDS, toChannelsDS
     , ToShape(toShape)
+    , ToShapeDS(toShapeDS)
 
     , Mat(..)
     , MutMat(..)
@@ -135,11 +138,18 @@ unmarshalFlags n =
 class ToChannels a where
     toChannels :: a -> Int32
 
+-- | value level: identity
 instance ToChannels Int32 where
     toChannels = id
 
+-- | type level: reify the known natural number @n@
 instance (KnownNat n) => ToChannels (proxy n) where
     toChannels = fromInteger . natVal
+
+type ToChannelsDS a = ToNatDS a
+
+toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
+toChannelsDS = toNatDS
 
 --------------------------------------------------------------------------------
 
@@ -168,7 +178,7 @@ instance (KnownNat a, ToShape (Proxy as))
 
 -- | empty 'V.Vector'
 instance ToShape Z where
-    toShape _z = V.empty
+    toShape Z = V.empty
 
 -- | fold over ':::'
 instance (KnownNat a, ToShape as) => ToShape (Proxy a ::: as) where
@@ -178,6 +188,17 @@ instance (KnownNat a, ToShape as) => ToShape (Proxy a ::: as) where
 -- | fold over ':::'
 instance (ToShape as) => ToShape (Int32 ::: as) where
     toShape (a ::: as) = V.cons a (toShape as)
+
+--------------------------------------------------------------------------------
+
+class ToShapeDS a where
+    toShapeDS :: a -> DS [DS Int32]
+
+instance ToShapeDS (proxy 'D) where
+    toShapeDS _proxy = D
+
+instance (ToNatListDS (Proxy as)) => ToShapeDS (Proxy ('S as)) where
+    toShapeDS _proxy = S $ toNatListDS (Proxy :: Proxy as)
 
 --------------------------------------------------------------------------------
 
@@ -227,9 +248,9 @@ it will not be checked.
 -}
 typeCheckMat
     :: forall shape channels depth
-     . ( Convert (Proxy shape)    (DS [DS Int32])
-       , Convert (Proxy channels) (DS Int32)
-       , Convert (Proxy depth)    (DS Depth)
+     . ( ToShapeDS    (Proxy shape)
+       , ToChannelsDS (Proxy channels)
+       , ToDepthDS    (Proxy depth)
        )
     => Mat shape channels depth -- ^ The matrix to be checked.
     -> [CoerceMatError] -- ^ Error messages.
@@ -241,13 +262,13 @@ typeCheckMat mat =
     mi = matInfo mat
 
     dsExpectedShape :: DS [DS Int32]
-    dsExpectedShape = convert (Proxy :: Proxy shape)
+    dsExpectedShape = toShapeDS (Proxy :: Proxy shape)
 
     dsExpectedNumChannels :: DS Int32
-    dsExpectedNumChannels = convert (Proxy :: Proxy channels)
+    dsExpectedNumChannels = toChannelsDS (Proxy :: Proxy channels)
 
     dsExpectedDepth :: DS Depth
-    dsExpectedDepth = convert (Proxy :: Proxy depth)
+    dsExpectedDepth = toDepthDS (Proxy :: Proxy depth)
 
     checkShape :: [DS Int32] -> [CoerceMatError]
     checkShape expectedShape = maybe checkSizes (:[]) dimCheck
@@ -285,9 +306,9 @@ typeCheckMat mat =
 
 
 coerceMat
-    :: ( Convert (Proxy shapeOut)    (DS [DS Int32])
-       , Convert (Proxy channelsOut) (DS Int32)
-       , Convert (Proxy depthOut)    (DS Depth)
+    :: ( ToShapeDS    (Proxy shapeOut)
+       , ToChannelsDS (Proxy channelsOut)
+       , ToDepthDS    (Proxy depthOut)
        )
     => Mat shapeIn channelsIn depthIn -- ^
     -> CvExcept (Mat shapeOut channelsOut depthOut)

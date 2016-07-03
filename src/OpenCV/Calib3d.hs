@@ -99,7 +99,7 @@ contains 3 rows.
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc>
 -}
 findFundamentalMat
-    :: ( ToPoint2d point2d)
+    :: (ToPoint2d point2d)
     => V.Vector point2d -- ^ Points from the first image.
     -> V.Vector point2d -- ^ Points from the second image.
     -> FundamentalMatMethod

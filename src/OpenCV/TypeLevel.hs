@@ -11,6 +11,8 @@ module OpenCV.TypeLevel
 
       -- * Type level to value level conversions
     , Convert(convert)
+    , ToNatDS(toNatDS)
+    , ToNatListDS(toNatListDS)
 
       -- * Type functions
     , Length
@@ -113,6 +115,36 @@ instance (Convert (Proxy a) b)
       => Convert (Proxy ('S a)) (DS b) where
     convert _proxy = S $ convert (Proxy :: Proxy a)
 
+--------------------------------------------------------------------------------
+
+-- | Type level to value level conversion of numbers that are either
+-- 'D'ynamically or 'S'tatically known.
+--
+-- > toNatDS (Proxy ('S 42)) == S 42
+-- > toNatDS (Proxy 'D) == D
+class ToNatDS a where
+    toNatDS :: a -> DS Int32
+
+-- | value level numbers are dynamically known
+instance ToNatDS (proxy 'D) where
+    toNatDS _proxy = D
+
+-- | type level numbers are statically known
+instance (KnownNat n) => ToNatDS (proxy ('S n)) where
+    toNatDS _proxy = S $ fromInteger $ natVal (Proxy :: Proxy n)
+
+--------------------------------------------------------------------------------
+
+class ToNatListDS a where
+    toNatListDS :: a -> [DS Int32]
+
+instance ToNatListDS (proxy '[]) where
+    toNatListDS _proxy = []
+
+instance (ToNatDS (Proxy a), ToNatListDS (Proxy as))
+      => ToNatListDS (Proxy (a ': as)) where
+    toNatListDS _proxy = (toNatDS     (Proxy :: Proxy a ))
+                       : (toNatListDS (Proxy :: Proxy as))
 
 --------------------------------------------------------------------------------
 -- Type functions

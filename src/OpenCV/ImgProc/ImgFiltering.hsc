@@ -182,7 +182,7 @@ laplacian ksize scale delta borderType src = unsafeWrapException $ do
     c'ksize = fromMaybe 1 ksize
     c'scale = maybe 1 realToFrac scale
     c'delta = maybe 0 realToFrac delta
-    c'ddepth = marshalDepth $ convert (Proxy :: Proxy dstDepth)
+    c'ddepth = marshalDepth $ toDepth (Proxy :: Proxy dstDepth)
     c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType
 
 {- | Blurs an image using the median filter
