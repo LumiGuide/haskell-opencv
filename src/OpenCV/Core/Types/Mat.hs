@@ -13,7 +13,7 @@ module OpenCV.Core.Types.Mat
     , Depth(..)
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
-    , ToChannels(toChannels)
+    , ToChannels, toChannels
     , ToChannelsDS, toChannelsDS
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)

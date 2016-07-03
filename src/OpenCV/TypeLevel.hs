@@ -74,9 +74,11 @@ infixr 5 :::
 class ToInt32 a where
     toInt32 :: a -> Int32
 
+-- | value level: identity
 instance ToInt32 Int32 where
     toInt32 = id
 
+-- | type level: reify the known natural number @n@
 instance (KnownNat n) => ToInt32 (proxy n) where
     toInt32 = fromInteger . natVal
 
@@ -95,8 +97,8 @@ instance ToNatDS (proxy 'D) where
     toNatDS _proxy = D
 
 -- | type level numbers are statically known
-instance (KnownNat n) => ToNatDS (proxy ('S n)) where
-    toNatDS _proxy = S $ fromInteger $ natVal (Proxy :: Proxy n)
+instance (ToInt32 (Proxy n)) => ToNatDS (Proxy ('S n)) where
+    toNatDS _proxy = S $ toInt32 (Proxy :: Proxy n)
 
 --------------------------------------------------------------------------------
 

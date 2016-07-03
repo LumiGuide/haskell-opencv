@@ -14,7 +14,7 @@ module OpenCV.Core.Types.Mat.Internal
 
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
-    , ToChannels(toChannels)
+    , ToChannels, toChannels
     , ToChannelsDS, toChannelsDS
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)
@@ -135,16 +135,10 @@ unmarshalFlags n =
 
 --------------------------------------------------------------------------------
 
-class ToChannels a where
-    toChannels :: a -> Int32
+type ToChannels a = ToInt32 a
 
--- | value level: identity
-instance ToChannels Int32 where
-    toChannels = id
-
--- | type level: reify the known natural number @n@
-instance (KnownNat n) => ToChannels (proxy n) where
-    toChannels = fromInteger . natVal
+toChannels :: (ToInt32 a) => a -> Int32
+toChannels = toInt32
 
 type ToChannelsDS a = ToNatDS a
 
@@ -169,11 +163,11 @@ instance ToShape (Proxy '[]) where
     toShape _proxy = V.empty
 
 -- | fold over the type level list
-instance (KnownNat a, ToShape (Proxy as))
+instance (ToInt32 (Proxy a), ToShape (Proxy as))
       => ToShape (Proxy (a ': as)) where
     toShape _proxy =
         V.cons
-          (fromInteger $ natVal (Proxy :: Proxy a))
+          (toInt32 (Proxy :: Proxy a))
           (toShape (Proxy :: Proxy as))
 
 -- | empty 'V.Vector'
@@ -181,13 +175,8 @@ instance ToShape Z where
     toShape Z = V.empty
 
 -- | fold over ':::'
-instance (KnownNat a, ToShape as) => ToShape (Proxy a ::: as) where
-    toShape (a ::: as) = V.cons (fromInteger (natVal a))
-                                (toShape as)
-
--- | fold over ':::'
-instance (ToShape as) => ToShape (Int32 ::: as) where
-    toShape (a ::: as) = V.cons a (toShape as)
+instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
+    toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
 
 --------------------------------------------------------------------------------
 
