@@ -8,6 +8,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , Contour(..)
     , ContourRetrievalMode(..)
     , ContourApproximationMethod(..)
+    , minAreaRect
     ) where
 
 import "base" Control.Exception ( mask_ )
@@ -274,3 +275,19 @@ findContours mode method src = unsafePerformIO $
   where
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method
+
+minAreaRect :: (ToPoint2i point2i)
+            => V.Vector point2i -> RotatedRect
+minAreaRect points =
+  unsafePerformIO $ fromPtr $
+  withArrayPtr (V.map toPoint2i points) $
+  \pointsPtr ->
+    [CU.exp|
+      RotatedRect * {
+        new RotatedRect(
+          cv::minAreaRect(
+              cv::_InputArray( $(Point2i * pointsPtr)
+                             , $(int32_t c'numPoints))))
+      }
+    |]
+  where c'numPoints = fromIntegral (V.length points)
