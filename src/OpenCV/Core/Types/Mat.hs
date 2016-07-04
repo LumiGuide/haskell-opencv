@@ -12,7 +12,11 @@ module OpenCV.Core.Types.Mat
     , Mat
     , Depth(..)
     , ToDepth(toDepth)
-    , ToChannels(toChannels)
+    , ToDepthDS(toDepthDS)
+    , ToChannels, toChannels
+    , ToChannelsDS, toChannelsDS
+    , ToShape(toShape)
+    , ToShapeDS(toShapeDS)
     , emptyMat
     , mkMat
     , mkMatM
@@ -52,7 +56,6 @@ import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "transformers" Control.Monad.Trans.Except
-import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
@@ -72,7 +75,7 @@ emptyMat = unsafePerformIO newEmptyMat
 -- TODO (RvD): check for negative sizes
 -- This crashes OpenCV
 mkMat
-    :: ( Convert    shape (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -89,7 +92,7 @@ mkMat shape channels depth defValue =
 -- This crashes OpenCV
 mkMatM
     :: ( PrimMonad m
-       , Convert    shape    (V.Vector Int32)
+       , ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -107,8 +110,8 @@ mkMatM shape channels depth defValue = do
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#mat-eye OpenCV Sphinx doc>
 eyeMat
-    :: ( Convert    height Int32
-       , Convert    width  Int32
+    :: ( ToInt32    height
+       , ToInt32    width
        , ToChannels channels
        , ToDepth    depth
        )
@@ -127,10 +130,10 @@ eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
   where
     c'type = marshalFlags depth' channels'
 
-    c'height  = convert height
-    c'width   = convert width
+    c'height  = toInt32    height
+    c'width   = toInt32    width
     channels' = toChannels channels
-    depth'    = toDepth depth
+    depth'    = toDepth    depth
 
 cloneMat :: Mat shape channels depth
          -> Mat shape channels depth
@@ -243,7 +246,7 @@ matCopyToM dstMut (V2 x y) src mbSrcMask = ExceptT $
 -}
 matConvertTo
     :: forall shape channels srcDepth dstDepth
-     . (Convert (Proxy dstDepth) (DS Depth))
+     . (ToDepthDS (Proxy dstDepth))
     => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
     -> Mat shape channels srcDepth
@@ -263,7 +266,7 @@ matConvertTo alpha beta src = unsafeWrapException $ do
         |]
   where
     rtype :: Maybe Depth
-    rtype = dsToMaybe $ convert (Proxy :: Proxy dstDepth)
+    rtype = dsToMaybe $ toDepthDS (Proxy :: Proxy dstDepth)
 
     c'rtype = maybe (-1) marshalDepth rtype
     c'alpha = maybe 1 realToFrac alpha
@@ -295,7 +298,7 @@ createMat
 createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 
 withMatM
-    :: ( Convert    shape (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar

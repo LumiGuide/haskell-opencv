@@ -191,9 +191,9 @@ myRectContains point rect =
     V2 w h = fromSize2i $ rectSize rect
 
 testMatType
-    :: ( Convert (Proxy shape)    (DS [DS Int32])
-       , Convert (Proxy channels) (DS Int32)
-       , Convert (Proxy depth)    (DS Depth)
+    :: ( ToShapeDS    (Proxy shape)
+       , ToChannelsDS (Proxy channels)
+       , ToDepthDS    (Proxy depth)
        )
     => Mat shape channels depth
     -> HU.Assertion

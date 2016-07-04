@@ -182,7 +182,7 @@ laplacian ksize scale delta borderType src = unsafeWrapException $ do
     c'ksize = fromMaybe 1 ksize
     c'scale = maybe 1 realToFrac scale
     c'delta = maybe 0 realToFrac delta
-    c'ddepth = marshalDepth $ convert (Proxy :: Proxy dstDepth)
+    c'ddepth = marshalDepth $ toDepth (Proxy :: Proxy dstDepth)
     c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType
 
 {- | Blurs an image using the median filter
@@ -517,7 +517,7 @@ morphCrossImg = structureImg $ MorphCross $ toPoint2i (pure (-1) :: V2 Int32)
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
 -}
 getStructuringElement
-    :: (Convert height Int32, Convert width Int32)
+    :: (ToInt32 height, ToInt32 width)
     => MorphShape -- ^
     -> height
     -> width
@@ -538,5 +538,5 @@ getStructuringElement morphShape height width = unsafeWrapException $ do
        |]
   where
     ksize :: Size2i
-    ksize = toSize2i (V2 (convert width) (convert height) :: V2 Int32)
+    ksize = toSize2i $ V2 (toInt32 width) (toInt32 height)
     (c'morphShape, anchor) = marshalMorphShape morphShape

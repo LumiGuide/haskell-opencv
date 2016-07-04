@@ -10,7 +10,9 @@ module OpenCV.TypeLevel
     , (:::)((:::))
 
       -- * Type level to value level conversions
-    , Convert(convert)
+    , ToInt32(toInt32)
+    , ToNatDS(toNatDS)
+    , ToNatListDS(toNatListDS)
 
       -- * Type functions
     , Length
@@ -69,50 +71,47 @@ infixr 5 :::
 -- Type level to value level conversions
 --------------------------------------------------------------------------------
 
-class Convert a b where
-    convert :: a -> b
+class ToInt32 a where
+    toInt32 :: a -> Int32
 
-instance Convert (a :: *) (a :: *) where
-    convert = id
+-- | value level: identity
+instance ToInt32 Int32 where
+    toInt32 = id
 
-instance (Convert a b) => Convert [a] [b] where
-    convert = map convert
+-- | type level: reify the known natural number @n@
+instance (KnownNat n) => ToInt32 (proxy n) where
+    toInt32 = fromInteger . natVal
 
-instance (KnownNat n) => Convert (Proxy n) Integer where
-    convert = natVal
+--------------------------------------------------------------------------------
 
-instance (KnownNat n) => Convert (Proxy n) Int32 where
-    convert = fromInteger . convert
+-- | Type level to value level conversion of numbers that are either
+-- 'D'ynamically or 'S'tatically known.
+--
+-- > toNatDS (Proxy ('S 42)) == S 42
+-- > toNatDS (Proxy 'D) == D
+class ToNatDS a where
+    toNatDS :: a -> DS Int32
 
-instance Convert Z [b] where
-    convert Z = []
+-- | value level numbers are dynamically known
+instance ToNatDS (proxy 'D) where
+    toNatDS _proxy = D
 
-instance (Convert a b, Convert as [b]) => Convert (a ::: as) [b] where
-    convert (a ::: as) = convert a : convert as
+-- | type level numbers are statically known
+instance (ToInt32 (Proxy n)) => ToNatDS (Proxy ('S n)) where
+    toNatDS _proxy = S $ toInt32 (Proxy :: Proxy n)
 
-instance (Convert (a ::: as) [b]) => Convert (a ::: as) (V.Vector b) where
-    convert = V.fromList . convert
+--------------------------------------------------------------------------------
 
-instance Convert (Proxy '[]) [b] where
-    convert _proxy = []
+class ToNatListDS a where
+    toNatListDS :: a -> [DS Int32]
 
-instance ( Convert (Proxy a )  b
-         , Convert (Proxy as) [b]
-         )
-      => Convert (Proxy (a ': as)) [b] where
-    convert _proxy = convert (Proxy :: Proxy a) : convert (Proxy :: Proxy as)
+instance ToNatListDS (proxy '[]) where
+    toNatListDS _proxy = []
 
-instance (Convert (Proxy a) b, Convert (Proxy as) [b])
-      => Convert (Proxy (a ': as)) (V.Vector b) where
-    convert = V.fromList . convert
-
-instance Convert (Proxy 'D) (DS b) where
-    convert _proxy = D
-
-instance (Convert (Proxy a) b)
-      => Convert (Proxy ('S a)) (DS b) where
-    convert _proxy = S $ convert (Proxy :: Proxy a)
-
+instance (ToNatDS (Proxy a), ToNatListDS (Proxy as))
+      => ToNatListDS (Proxy (a ': as)) where
+    toNatListDS _proxy = (toNatDS     (Proxy :: Proxy a ))
+                       : (toNatListDS (Proxy :: Proxy as))
 
 --------------------------------------------------------------------------------
 -- Type functions

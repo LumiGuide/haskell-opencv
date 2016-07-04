@@ -6,14 +6,18 @@
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)
-    , ToDepth(toDepth)
     , DepthT
     , marshalDepth
     , marshalFlags
     , unmarshalDepth
     , unmarshalFlags
 
-    , ToChannels(toChannels)
+    , ToDepth(toDepth)
+    , ToDepthDS(toDepthDS)
+    , ToChannels, toChannels
+    , ToChannelsDS, toChannelsDS
+    , ToShape(toShape)
+    , ToShapeDS(toShapeDS)
 
     , Mat(..)
     , MutMat(..)
@@ -131,14 +135,59 @@ unmarshalFlags n =
 
 --------------------------------------------------------------------------------
 
-class ToChannels a where
-    toChannels :: a -> Int32
+type ToChannels a = ToInt32 a
 
-instance ToChannels Int32 where
-    toChannels = id
+toChannels :: (ToInt32 a) => a -> Int32
+toChannels = toInt32
 
-instance (KnownNat n) => ToChannels (proxy n) where
-    toChannels = fromInteger . natVal
+type ToChannelsDS a = ToNatDS a
+
+toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
+toChannelsDS = toNatDS
+
+--------------------------------------------------------------------------------
+
+class ToShape a where
+    toShape :: a -> V.Vector Int32
+
+-- | identity
+instance ToShape (V.Vector Int32) where
+    toShape = id
+
+-- | direct conversion to 'V.Vector'
+instance ToShape [Int32] where
+    toShape = V.fromList
+
+-- | empty 'V.Vector'
+instance ToShape (Proxy '[]) where
+    toShape _proxy = V.empty
+
+-- | fold over the type level list
+instance (ToInt32 (Proxy a), ToShape (Proxy as))
+      => ToShape (Proxy (a ': as)) where
+    toShape _proxy =
+        V.cons
+          (toInt32 (Proxy :: Proxy a))
+          (toShape (Proxy :: Proxy as))
+
+-- | empty 'V.Vector'
+instance ToShape Z where
+    toShape Z = V.empty
+
+-- | fold over ':::'
+instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
+    toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
+
+--------------------------------------------------------------------------------
+
+class ToShapeDS a where
+    toShapeDS :: a -> DS [DS Int32]
+
+instance ToShapeDS (proxy 'D) where
+    toShapeDS _proxy = D
+
+instance (ToNatListDS (Proxy as)) => ToShapeDS (Proxy ('S as)) where
+    toShapeDS _proxy = S $ toNatListDS (Proxy :: Proxy as)
 
 --------------------------------------------------------------------------------
 
@@ -188,9 +237,9 @@ it will not be checked.
 -}
 typeCheckMat
     :: forall shape channels depth
-     . ( Convert (Proxy shape)    (DS [DS Int32])
-       , Convert (Proxy channels) (DS Int32)
-       , Convert (Proxy depth)    (DS Depth)
+     . ( ToShapeDS    (Proxy shape)
+       , ToChannelsDS (Proxy channels)
+       , ToDepthDS    (Proxy depth)
        )
     => Mat shape channels depth -- ^ The matrix to be checked.
     -> [CoerceMatError] -- ^ Error messages.
@@ -202,13 +251,13 @@ typeCheckMat mat =
     mi = matInfo mat
 
     dsExpectedShape :: DS [DS Int32]
-    dsExpectedShape = convert (Proxy :: Proxy shape)
+    dsExpectedShape = toShapeDS (Proxy :: Proxy shape)
 
     dsExpectedNumChannels :: DS Int32
-    dsExpectedNumChannels = convert (Proxy :: Proxy channels)
+    dsExpectedNumChannels = toChannelsDS (Proxy :: Proxy channels)
 
     dsExpectedDepth :: DS Depth
-    dsExpectedDepth = convert (Proxy :: Proxy depth)
+    dsExpectedDepth = toDepthDS (Proxy :: Proxy depth)
 
     checkShape :: [DS Int32] -> [CoerceMatError]
     checkShape expectedShape = maybe checkSizes (:[]) dimCheck
@@ -246,9 +295,9 @@ typeCheckMat mat =
 
 
 coerceMat
-    :: ( Convert (Proxy shapeOut)    (DS [DS Int32])
-       , Convert (Proxy channelsOut) (DS Int32)
-       , Convert (Proxy depthOut)    (DS Depth)
+    :: ( ToShapeDS    (Proxy shapeOut)
+       , ToChannelsDS (Proxy channelsOut)
+       , ToDepthDS    (Proxy depthOut)
        )
     => Mat shapeIn channelsIn depthIn -- ^
     -> CvExcept (Mat shapeOut channelsOut depthOut)
@@ -305,7 +354,7 @@ newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
 newMat
-    :: ( Convert    shape    (V.Vector Int32)
+    :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
@@ -339,8 +388,7 @@ newMat shape channels depth defValue = ExceptT $ do
     c'ndims = fromIntegral $ VG.length shape'
     c'type  = marshalFlags depth' channels'
 
-    shape' :: V.Vector Int32
-    shape'    = convert shape
+    shape'    = toShape shape
     channels' = toChannels channels
     depth'    = toDepth depth
 

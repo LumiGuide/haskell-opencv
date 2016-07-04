@@ -46,9 +46,9 @@ IsoJSON(Size2f , (Float , Float ),         fromSize2f,  toSize2f)
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat
 
-instance ( Convert (Proxy shape)    (DS [DS Int32])
-         , Convert (Proxy channels) (DS Int32)
-         , Convert (Proxy depth)    (DS Depth)
+instance ( ToShapeDS    (Proxy shape)
+         , ToChannelsDS (Proxy channels)
+         , ToDepthDS    (Proxy depth)
          )
       => FromJSON (Mat shape channels depth) where
     parseJSON value = do
