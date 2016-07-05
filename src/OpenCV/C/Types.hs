@@ -20,6 +20,8 @@ data C'Point3i
 data C'Point3f
 -- | Haskell representation of an OpenCV @cv::Point3_\<double>@ object
 data C'Point3d
+-- | Haskell representation of an OpenCV @cv::Vec3f@ object
+data C'Vec3f
 -- | Haskell representation of an OpenCV @cv::Vec4i@ object
 data C'Vec4i
 -- | Haskell representation of an OpenCV @cv::Size_\<int>@ object

@@ -24,6 +24,8 @@ module OpenCV.Core.Types.Internal
     , ToPoint3i(..), FromPoint3i(..)
     , ToPoint3f(..), FromPoint3f(..)
     , ToPoint3d(..), FromPoint3d(..)
+    , Vec3f(..)
+    , FromVec3f(..)
       -- ** 4D types
     , Vec4i(..)
     , newVec4i
@@ -126,6 +128,9 @@ newtype Point3f = Point3f {unPoint3f :: ForeignPtr (C Point3f)}
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
 newtype Point3d = Point3d {unPoint3d :: ForeignPtr (C Point3d)}
+
+-- | 3D vector with 32 bit floating point coordinates
+newtype Vec3f = Vec3f {unVec3f :: ForeignPtr (C Vec3f)}
 
 -- | 4D vector with integer coordinates
 newtype Vec4i = Vec4i {unVec4i :: ForeignPtr (C Vec4i)}
@@ -244,6 +249,7 @@ class FromPoint2d a where fromPoint2d :: Point2d -> a
 class FromPoint3i a where fromPoint3i :: Point3i -> a
 class FromPoint3f a where fromPoint3f :: Point3f -> a
 class FromPoint3d a where fromPoint3d :: Point3d -> a
+class FromVec3f   a where fromVec3f   :: Vec3f   -> a
 class FromVec4i   a where fromVec4i   :: Vec4i   -> a
 class FromSize2i  a where fromSize2i  :: Size2i  -> a
 class FromSize2f  a where fromSize2f  :: Size2f  -> a
@@ -255,6 +261,7 @@ instance FromPoint2d Point2d where fromPoint2d = id
 instance FromPoint3i Point3i where fromPoint3i = id
 instance FromPoint3f Point3f where fromPoint3f = id
 instance FromPoint3d Point3d where fromPoint3d = id
+instance FromVec3f   Vec3f   where fromVec3f   = id
 instance FromVec4i   Vec4i   where fromVec4i   = id
 instance FromSize2i  Size2i  where fromSize2i  = id
 instance FromSize2f  Size2f  where fromSize2f  = id
@@ -342,6 +349,22 @@ instance FromPoint3d (V3 CDouble) where
           *$(double * xPtr) = p->x;
           *$(double * yPtr) = p->y;
           *$(double * zPtr) = p->z;
+        }|]
+        V3 <$> peek xPtr
+           <*> peek yPtr
+           <*> peek zPtr
+
+instance FromVec3f (V3 CFloat) where
+    fromVec3f vec = unsafePerformIO $
+      alloca $ \xPtr ->
+      alloca $ \yPtr ->
+      alloca $ \zPtr ->
+      withPtr vec $ \vecPtr -> do
+        [CU.block| void {
+          const Vec3f & p = *$(Vec3f * vecPtr);
+          *$(float * xPtr) = p[0];
+          *$(float * yPtr) = p[1];
+          *$(float * zPtr) = p[2];
         }|]
         V3 <$> peek xPtr
            <*> peek yPtr
@@ -660,6 +683,7 @@ type instance C Point2d      = C'Point2d
 type instance C Point3i      = C'Point3i
 type instance C Point3f      = C'Point3f
 type instance C Point3d      = C'Point3d
+type instance C Vec3f        = C'Vec3f
 type instance C Vec4i        = C'Vec4i
 type instance C Size2i       = C'Size2i
 type instance C Size2f       = C'Size2f
@@ -677,6 +701,7 @@ instance WithPtr Point2d      where withPtr = withForeignPtr . unPoint2d
 instance WithPtr Point3i      where withPtr = withForeignPtr . unPoint3i
 instance WithPtr Point3f      where withPtr = withForeignPtr . unPoint3f
 instance WithPtr Point3d      where withPtr = withForeignPtr . unPoint3d
+instance WithPtr Vec3f        where withPtr = withForeignPtr . unVec3f
 instance WithPtr Vec4i        where withPtr = withForeignPtr . unVec4i
 instance WithPtr Size2i       where withPtr = withForeignPtr . unSize2i
 instance WithPtr Size2f       where withPtr = withForeignPtr . unSize2f
@@ -711,6 +736,10 @@ instance FromPtr Point3f where
 instance FromPtr Point3d where
     fromPtr = objFromPtr Point3d $ \ptr ->
                 [CU.exp| void { delete $(Point3d * ptr) }|]
+
+instance FromPtr Vec3f where
+    fromPtr = objFromPtr Vec3f $ \ptr ->
+                [CU.exp| void { delete $(Vec3f * ptr) }|]
 
 instance FromPtr Vec4i where
     fromPtr = objFromPtr Vec4i $ \ptr ->

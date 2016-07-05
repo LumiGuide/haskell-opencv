@@ -21,6 +21,8 @@ module OpenCV.Core.Types
     , ToPoint3i(..), FromPoint3i(..)
     , ToPoint3f(..), FromPoint3f(..)
     , ToPoint3d(..), FromPoint3d(..)
+    , Vec3f(..)
+    , FromVec3f(..)
       -- ** 4D types
     , Vec4i(..)
     , ToVec4i(..), FromVec4i(..)
