@@ -55,6 +55,7 @@ instance ToDepthDS (proxy ('S Int16 )) where toDepthDS _proxy = S $ toDepth (Pro
 instance ToDepthDS (proxy ('S Int32 )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Int32 )
 instance ToDepthDS (proxy ('S Float )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Float )
 instance ToDepthDS (proxy ('S Double)) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Double)
+instance ToDepthDS (proxy 'D) where toDepthDS _proxy = D
 
 --------------------------------------------------------------------------------
 

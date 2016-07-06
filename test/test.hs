@@ -76,6 +76,8 @@ main = defaultMain $ testGroup "opencv"
             , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
             ]
           ]
+        , testGroup "RotatedRect"
+          [ HU.testCase "rotatedRectIntersection" testRotatedRectIntersection ]
         ]
       ]
     , testGroup "ImgProc"
@@ -304,6 +306,22 @@ testMatToM33
     -> V3 (V3 e)
     -> HU.Assertion
 testMatToM33 m v = assertEqual "" v $ matToM33 m
+
+--------------------------------------------------------------------------------
+
+testRotatedRectIntersection :: HU.Assertion
+testRotatedRectIntersection =
+  do let r1 =
+           mkRotatedRect (V2 0 0 :: V2 Float)
+                         (V2 1 1 :: V2 Float)
+                         0
+         r2 =
+           mkRotatedRect (V2 0 0 :: V2 Float)
+                         (V2 5 5 :: V2 Float)
+                         0
+     assertEqual "Full containment"
+                 (rotatedRectIntersection r2 r1)
+                 (Just (RotatedRectIntersection FullIntersection))
 
 --------------------------------------------------------------------------------
 

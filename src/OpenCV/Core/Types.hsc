@@ -50,6 +50,9 @@ module OpenCV.Core.Types
     , rotatedRectAngle
     , rotatedRectBoundingRect
     , rotatedRectPoints
+    , RectangleIntersectionType(..)
+    , RotatedRectIntersection(..)
+    , rotatedRectIntersection
       -- * TermCriteria
     , TermCriteria
     , mkTermCriteria
@@ -82,6 +85,7 @@ module OpenCV.Core.Types
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( toBool )
@@ -106,10 +110,12 @@ import "this" OpenCV.Internal
 C.context openCvCtx
 
 C.include "opencv2/core.hpp"
+C.include "opencv2/imgproc.hpp"
 C.using "namespace cv"
 
 #include <bindings.dsl.h>
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include "namespace.hpp"
 
@@ -248,6 +254,38 @@ rotatedRectPoints rotRect = unsafePerformIO $ do
         }|]
     pure (p1, p2, p3, p4)
 
+data RectangleIntersectionType
+  = FullIntersection
+  | PartialIntersection
+  deriving (Eq, Show)
+
+data RotatedRectIntersection =
+  RotatedRectIntersection {rotatedRectIntersectionType :: RectangleIntersectionType}
+  deriving (Eq, Show)
+
+#num INTERSECT_PARTIAL
+#num INTERSECT_FULL
+#num INTERSECT_NONE
+
+rotatedRectIntersection
+  :: RotatedRect -> RotatedRect -> Maybe RotatedRectIntersection
+rotatedRectIntersection r1 r2 = unsafePerformIO $
+  alloca $ \(typePtr :: Ptr Int32) ->
+  withPtr r1 $ \r1Ptr ->
+  withPtr r2 $ \r2Ptr -> do
+    [C.block| void {
+        std::vector<cv::Point2f> intersectionPoints;
+        *$(int32_t * typePtr) = cv::rotatedRectangleIntersection(
+          *$(RotatedRect * r1Ptr),
+          *$(RotatedRect * r2Ptr),
+          intersectionPoints
+        );
+    }|]
+    type_ <- peek typePtr
+    case type_ of
+      x | x == c'INTERSECT_PARTIAL -> return (Just (RotatedRectIntersection PartialIntersection))
+        | x == c'INTERSECT_FULL -> return (Just (RotatedRectIntersection FullIntersection))
+        | x == c'INTERSECT_NONE -> return Nothing
 
 --------------------------------------------------------------------------------
 --  TermCriteria

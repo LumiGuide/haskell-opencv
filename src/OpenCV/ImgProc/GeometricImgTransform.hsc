@@ -50,14 +50,16 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpPerspective
     , invertAffineTransform
     , getRotationMatrix2D
+    , undistort
     ) where
 
 import "base" Data.Int ( Int32 )
+import qualified "vector" Data.Vector as V
 import "base" Foreign.C.Types ( CDouble )
-import "base" System.IO.Unsafe ( unsafePerformIO )
+import "base" Foreign.Marshal.Array ( withArray )
 import qualified "inline-c" Language.C.Inline as C
-import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -68,6 +70,7 @@ import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.ImgProc.Types.Internal
 import "this" OpenCV.TypeLevel
+import "base" System.IO.Unsafe ( unsafePerformIO )
 
 --------------------------------------------------------------------------------
 
@@ -297,3 +300,64 @@ getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
   where
     c'angle = realToFrac angle
     c'scale = realToFrac scale
+
+{- |
+
+Transforms an image to compensate for lens distortion.
+
+The function transforms an image to compensate radial and tangential lens
+distortion.
+
+The function is simply a combination of @cv::initUndistortRectifyMap@ (with
+unity R) and @cv::remap@ (with bilinear interpolation). See the former function
+for details of the transformation being performed.
+
+Those pixels in the destination image, for which there is no correspondent
+pixels in the source image, are filled with zeros (black color).
+
+A particular subset of the source image that will be visible in the corrected
+image can be regulated by newCameraMatrix. You can use
+@cv::getOptimalNewCameraMatrix@ to compute the appropriate @newCameraMatrix@
+depending on your requirements.
+
+The camera matrix and the distortion parameters can be determined using
+@cv::calibrateCamera@. If the resolution of images is different from the
+resolution used at the calibration stage, @(fx, fy, cx)@ and @(cy)@ need to
+be scaled accordingly, while the distortion coefficients remain the same.
+
+Example:
+
+@
+undistortExample :: Birds_512x341
+undistortExample = exceptError $
+  undistort (m33ToMat (V3 (V3 (-5.42417) 359.145 0)
+                          (V3 (-1.76792) 359.737 0)
+                          (V3 433.08 0.951573 1)))
+            (V.fromList [2799.45, 2.94849e7, -0.134384, 0.0677477, -2.18822e12])
+            birds_512x341
+@
+
+<<doc/generated/examples/undistortExample.png undistortExample>>
+
+-}
+undistort :: Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Camera matrix
+          -> V.Vector Float
+          -> Mat shape channels depth
+          -> CvExcept (Mat shape channels depth)
+undistort cameraMatrix distCoeffs src = unsafeWrapException $ do
+  dst <- newEmptyMat
+  handleCvException (pure $ unsafeCoerceMat dst) $
+    withPtr cameraMatrix $ \cameraMatrixPtr ->
+    withPtr src $ \srcPtr ->
+    withPtr dst $ \dstPtr ->
+    withArray (fmap realToFrac (V.toList distCoeffs)) $ \coeffsPtr ->
+      [cvExcept|
+        cv::_InputArray coeffs = cv::_InputArray($(float * coeffsPtr), $(int32_t c'numCoeffs));
+        cv::undistort
+          ( *$(Mat * srcPtr)
+          , *$(Mat * dstPtr)
+          , *$(Mat * cameraMatrixPtr)
+          , coeffs
+          );
+      |]
+  where c'numCoeffs = fromIntegral (V.length distCoeffs)
