@@ -218,7 +218,7 @@
 <a name="line-209"></a><a name="matAddWeighted"></a><span class='hs-comment'>-- TODO (RvD): handle different depths</span>
 <a name="line-210"></a><span class='hs-definition'>matAddWeighted</span>
 <a name="line-211"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>srcDepth</span> <span class='hs-varid'>dstDepth</span>
-<a name="line-212"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>Convert</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>DS</span> <span class='hs-conid'>Depth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-212"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>ToDepthDS</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
 <a name="line-213"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>srcDepth</span> <span class='hs-comment'>-- ^ src1</span>
 <a name="line-214"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ alpha</span>
 <a name="line-215"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>srcDepth</span> <span class='hs-comment'>-- ^ src2</span>
@@ -246,7 +246,7 @@
 <a name="line-237"></a>    <span class='hs-varid'>c'alpha</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>alpha</span>
 <a name="line-238"></a>    <span class='hs-varid'>c'beta</span>  <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>beta</span>
 <a name="line-239"></a>    <span class='hs-varid'>c'gamma</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>gamma</span>
-<a name="line-240"></a>    <span class='hs-varid'>c'dtype</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-layout'>(</span><span class='hs-comment'>-</span><span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>marshalDepth</span> <span class='hs-varop'>$</span> <span class='hs-varid'>dsToMaybe</span> <span class='hs-varop'>$</span> <span class='hs-varid'>convert</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span>
+<a name="line-240"></a>    <span class='hs-varid'>c'dtype</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-layout'>(</span><span class='hs-comment'>-</span><span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>marshalDepth</span> <span class='hs-varop'>$</span> <span class='hs-varid'>dsToMaybe</span> <span class='hs-varop'>$</span> <span class='hs-varid'>toDepthDS</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span>
 <a name="line-241"></a>
 <a name="line-242"></a><a name="matScaleAdd"></a><span class='hs-comment'>{- | Calculates the sum of a scaled array and another array.
 <a name="line-243"></a>
@@ -652,7 +652,7 @@
 <a name="line-643"></a>-}</span>
 <a name="line-644"></a><span class='hs-definition'>normalize</span>
 <a name="line-645"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>srcDepth</span> <span class='hs-varid'>dstDepth</span>
-<a name="line-646"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>Convert</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>DS</span> <span class='hs-conid'>Depth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-646"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>ToDepthDS</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
 <a name="line-647"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Double</span>
 <a name="line-648"></a>       <span class='hs-comment'>-- ^ Norm value to normalize to or the lower range boundary in case of</span>
 <a name="line-649"></a>       <span class='hs-comment'>-- the range normalization.</span>
@@ -684,7 +684,7 @@
 <a name="line-675"></a>    <span class='hs-varid'>c'alpha</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>alpha</span>
 <a name="line-676"></a>    <span class='hs-varid'>c'beta</span>     <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>beta</span>
 <a name="line-677"></a>    <span class='hs-varid'>c'normType</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalNormType</span> <span class='hs-conid'>NormAbsolute</span> <span class='hs-varid'>normType</span>
-<a name="line-678"></a>    <span class='hs-varid'>c'dtype</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-layout'>(</span><span class='hs-comment'>-</span><span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>marshalDepth</span> <span class='hs-varop'>$</span> <span class='hs-varid'>dsToMaybe</span><span class='hs-varop'>$</span> <span class='hs-varid'>convert</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span>
+<a name="line-678"></a>    <span class='hs-varid'>c'dtype</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-layout'>(</span><span class='hs-comment'>-</span><span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>marshalDepth</span> <span class='hs-varop'>$</span> <span class='hs-varid'>dsToMaybe</span> <span class='hs-varop'>$</span> <span class='hs-varid'>toDepthDS</span> <span class='hs-layout'>(</span><span class='hs-conid'>Proxy</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Proxy</span> <span class='hs-varid'>dstDepth</span><span class='hs-layout'>)</span>
 <a name="line-679"></a>
 <a name="line-680"></a><a name="matSum"></a><span class='hs-comment'>{- | Calculates the sum of array elements
 <a name="line-681"></a>
@@ -702,73 +702,72 @@
 <a name="line-693"></a>        lift $ circle imgM (pure radius :: V2 Int32) radius white (-1) LineType_8 0
 <a name="line-694"></a>        -- Calculate the sum of all pixels.
 <a name="line-695"></a>        scalar &lt;- matSumM imgM
-<a name="line-696"></a>        let V4 area _y _z _w = convert scalar :: V4 Double
+<a name="line-696"></a>        let V4 area _y _z _w = fromScalar scalar :: V4 Double
 <a name="line-697"></a>        -- Circle area = pi * radius * radius
 <a name="line-698"></a>        let approxPi = area \/ 255 \/ (radius * radius)
 <a name="line-699"></a>        lift $ putText imgM
 <a name="line-700"></a>                       (T.pack $ show approxPi)
 <a name="line-701"></a>                       (V2 40 110 :: V2 Int32)
-<a name="line-702"></a>                       FontHersheyDuplex
-<a name="line-703"></a>                       1.0
-<a name="line-704"></a>                       blue
-<a name="line-705"></a>                       1
-<a name="line-706"></a>                       LineType_AA
-<a name="line-707"></a>                       False
-<a name="line-708"></a>  where
-<a name="line-709"></a>    radius :: forall a. Num a =&gt; a
-<a name="line-710"></a>    radius = 100
-<a name="line-711"></a>@
-<a name="line-712"></a>
-<a name="line-713"></a>&lt;&lt;doc/generated/examples/matSumImg.png matSumImg&gt;&gt;
-<a name="line-714"></a>
-<a name="line-715"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum">http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum</a> OpenCV Sphinx doc&gt;
-<a name="line-716"></a>-}</span>
-<a name="line-717"></a><span class='hs-definition'>matSum</span>
-<a name="line-718"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span>
-<a name="line-719"></a>       <span class='hs-comment'>-- ^ Input array that must have from 1 to 4 channels.</span>
-<a name="line-720"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-conid'>Scalar</span>
-<a name="line-721"></a><span class='hs-definition'>matSum</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>runCvExceptST</span> <span class='hs-varop'>$</span> <span class='hs-varid'>matSumM</span> <span class='hs-varop'>=&lt;&lt;</span> <span class='hs-varid'>unsafeThaw</span> <span class='hs-varid'>src</span>
-<a name="line-722"></a>
-<a name="line-723"></a><a name="matSumM"></a><span class='hs-definition'>matSumM</span>
-<a name="line-724"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
-<a name="line-725"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>MutMat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
-<a name="line-726"></a>       <span class='hs-comment'>-- ^ Input array that must have from 1 to 4 channels.</span>
-<a name="line-727"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExceptT</span> <span class='hs-varid'>m</span> <span class='hs-conid'>Scalar</span>
-<a name="line-728"></a><span class='hs-definition'>matSumM</span> <span class='hs-varid'>srcM</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>ExceptT</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-729"></a>    <span class='hs-varid'>s</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varid'>zero</span>
-<a name="line-730"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varid'>s</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
-<a name="line-731"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>srcM</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-732"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>s</span>    <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>sPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-733"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-734"></a>          <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>sPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>sum</span><span class='hs-layout'>(</span><span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-735"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-736"></a>
-<a name="line-737"></a><a name="meanStdDev"></a><span class='hs-comment'>{- | Calculates a mean and standard deviation of array elements
-<a name="line-738"></a>
-<a name="line-739"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev">http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev</a> OpenCV Sphinx doc&gt;
-<a name="line-740"></a>-}</span>
-<a name="line-741"></a><span class='hs-definition'>meanStdDev</span>
-<a name="line-742"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-num'>1</span> <span class='hs-varop'>&lt;=</span> <span class='hs-varid'>channels</span><span class='hs-layout'>,</span> <span class='hs-varid'>channels</span> <span class='hs-varop'>&lt;=</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span>
-<a name="line-743"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>channels</span><span class='hs-layout'>)</span> <span class='hs-varid'>depth</span>
-<a name="line-744"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-745"></a>       <span class='hs-comment'>-- ^ Optional operation mask.</span>
-<a name="line-746"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span><span class='hs-layout'>,</span> <span class='hs-conid'>Scalar</span><span class='hs-layout'>)</span>
-<a name="line-747"></a><span class='hs-definition'>meanStdDev</span> <span class='hs-varid'>src</span> <span class='hs-varid'>mask</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-748"></a>    <span class='hs-varid'>mean</span>   <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varop'>$</span> <span class='hs-varid'>pure</span> <span class='hs-num'>0</span>
-<a name="line-749"></a>    <span class='hs-varid'>stddev</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varop'>$</span> <span class='hs-varid'>pure</span> <span class='hs-num'>0</span>
-<a name="line-750"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-varid'>mean</span><span class='hs-layout'>,</span> <span class='hs-varid'>stddev</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
-<a name="line-751"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span>    <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span>    <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-752"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mask</span>   <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>maskPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-753"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mean</span>   <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>meanPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-754"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>stddev</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>stddevPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-755"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-756"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>maskPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>maskPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-757"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>meanStdDev</span>
-<a name="line-758"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-759"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>meanPtr</span><span class='hs-layout'>)</span>
-<a name="line-760"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>stddevPtr</span><span class='hs-layout'>)</span>
-<a name="line-761"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>maskPtr</span> <span class='hs-varop'>?</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varop'>*</span><span class='hs-varid'>maskPtr</span><span class='hs-layout'>)</span> <span class='hs-conop'>:</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>noArray</span><span class='hs-conid'>()</span><span class='hs-layout'>)</span>
-<a name="line-762"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-763"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-702"></a>                       (Font FontHersheyDuplex NotSlanted 1)
+<a name="line-703"></a>                       blue
+<a name="line-704"></a>                       1
+<a name="line-705"></a>                       LineType_AA
+<a name="line-706"></a>                       False
+<a name="line-707"></a>  where
+<a name="line-708"></a>    radius :: forall a. Num a =&gt; a
+<a name="line-709"></a>    radius = 100
+<a name="line-710"></a>@
+<a name="line-711"></a>
+<a name="line-712"></a>&lt;&lt;doc/generated/examples/matSumImg.png matSumImg&gt;&gt;
+<a name="line-713"></a>
+<a name="line-714"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum">http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum</a> OpenCV Sphinx doc&gt;
+<a name="line-715"></a>-}</span>
+<a name="line-716"></a><span class='hs-definition'>matSum</span>
+<a name="line-717"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span>
+<a name="line-718"></a>       <span class='hs-comment'>-- ^ Input array that must have from 1 to 4 channels.</span>
+<a name="line-719"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-conid'>Scalar</span>
+<a name="line-720"></a><span class='hs-definition'>matSum</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>runCvExceptST</span> <span class='hs-varop'>$</span> <span class='hs-varid'>matSumM</span> <span class='hs-varop'>=&lt;&lt;</span> <span class='hs-varid'>unsafeThaw</span> <span class='hs-varid'>src</span>
+<a name="line-721"></a>
+<a name="line-722"></a><a name="matSumM"></a><span class='hs-definition'>matSumM</span>
+<a name="line-723"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
+<a name="line-724"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>MutMat</span> <span class='hs-varid'>shape</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
+<a name="line-725"></a>       <span class='hs-comment'>-- ^ Input array that must have from 1 to 4 channels.</span>
+<a name="line-726"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExceptT</span> <span class='hs-varid'>m</span> <span class='hs-conid'>Scalar</span>
+<a name="line-727"></a><span class='hs-definition'>matSumM</span> <span class='hs-varid'>srcM</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>ExceptT</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-728"></a>    <span class='hs-varid'>s</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varid'>zero</span>
+<a name="line-729"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varid'>s</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<a name="line-730"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>srcM</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-731"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>s</span>    <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>sPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-732"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-733"></a>          <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>sPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>sum</span><span class='hs-layout'>(</span><span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-734"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-735"></a>
+<a name="line-736"></a><a name="meanStdDev"></a><span class='hs-comment'>{- | Calculates a mean and standard deviation of array elements
+<a name="line-737"></a>
+<a name="line-738"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev">http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev</a> OpenCV Sphinx doc&gt;
+<a name="line-739"></a>-}</span>
+<a name="line-740"></a><span class='hs-definition'>meanStdDev</span>
+<a name="line-741"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-num'>1</span> <span class='hs-varop'>&lt;=</span> <span class='hs-varid'>channels</span><span class='hs-layout'>,</span> <span class='hs-varid'>channels</span> <span class='hs-varop'>&lt;=</span> <span class='hs-num'>4</span><span class='hs-layout'>)</span>
+<a name="line-742"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>channels</span><span class='hs-layout'>)</span> <span class='hs-varid'>depth</span>
+<a name="line-743"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-744"></a>       <span class='hs-comment'>-- ^ Optional operation mask.</span>
+<a name="line-745"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span><span class='hs-layout'>,</span> <span class='hs-conid'>Scalar</span><span class='hs-layout'>)</span>
+<a name="line-746"></a><span class='hs-definition'>meanStdDev</span> <span class='hs-varid'>src</span> <span class='hs-varid'>mask</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-747"></a>    <span class='hs-varid'>mean</span>   <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varop'>$</span> <span class='hs-varid'>pure</span> <span class='hs-num'>0</span>
+<a name="line-748"></a>    <span class='hs-varid'>stddev</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newScalar</span> <span class='hs-varop'>$</span> <span class='hs-varid'>pure</span> <span class='hs-num'>0</span>
+<a name="line-749"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-varid'>mean</span><span class='hs-layout'>,</span> <span class='hs-varid'>stddev</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<a name="line-750"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span>    <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span>    <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-751"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mask</span>   <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>maskPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-752"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mean</span>   <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>meanPtr</span>   <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-753"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>stddev</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>stddevPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-754"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-755"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>maskPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>maskPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-756"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>meanStdDev</span>
+<a name="line-757"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-758"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>meanPtr</span><span class='hs-layout'>)</span>
+<a name="line-759"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Scalar</span> <span class='hs-varop'>*</span> <span class='hs-varid'>stddevPtr</span><span class='hs-layout'>)</span>
+<a name="line-760"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>maskPtr</span> <span class='hs-varop'>?</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varop'>*</span><span class='hs-varid'>maskPtr</span><span class='hs-layout'>)</span> <span class='hs-conop'>:</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>noArray</span><span class='hs-conid'>()</span><span class='hs-layout'>)</span>
+<a name="line-761"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-762"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
 </pre></body>
 </html>

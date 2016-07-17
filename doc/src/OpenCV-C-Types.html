@@ -29,114 +29,118 @@
 <a name="line-20"></a><a name="C'Point3f"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Point3f</span>
 <a name="line-21"></a><a name="C'Point3d"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Point3_\&lt;double&gt;@ object</span>
 <a name="line-22"></a><a name="C'Point3d"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Point3d</span>
-<a name="line-23"></a><a name="C'Size2i"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Size_\&lt;int&gt;@ object</span>
-<a name="line-24"></a><a name="C'Size2i"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Size2i</span>
-<a name="line-25"></a><a name="C'Size2f"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Size_\&lt;float&gt;@ object</span>
-<a name="line-26"></a><a name="C'Size2f"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Size2f</span>
-<a name="line-27"></a><a name="C'Rect"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Rect_\&lt;int&gt;@ object</span>
-<a name="line-28"></a><a name="C'Rect"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Rect</span>
-<a name="line-29"></a><a name="C'RotatedRect"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::RotatedRect@ object</span>
-<a name="line-30"></a><a name="C'RotatedRect"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'RotatedRect</span>
-<a name="line-31"></a><a name="C'TermCriteria"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::TermCriteria@ object</span>
-<a name="line-32"></a><a name="C'TermCriteria"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'TermCriteria</span>
-<a name="line-33"></a><a name="C'Range"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Range@ object</span>
-<a name="line-34"></a><a name="C'Range"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Range</span>
-<a name="line-35"></a><a name="C'Scalar"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Scalar_\&lt;double&gt;@ object</span>
-<a name="line-36"></a><a name="C'Scalar"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Scalar</span>
-<a name="line-37"></a><a name="C'Mat"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Mat@ object</span>
-<a name="line-38"></a><a name="C'Mat"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Mat</span>
-<a name="line-39"></a>
-<a name="line-40"></a><a name="C'KeyPoint"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Keypoint@ object</span>
-<a name="line-41"></a><a name="C'KeyPoint"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'KeyPoint</span>
-<a name="line-42"></a><a name="C'DMatch"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::DMatch@ object</span>
-<a name="line-43"></a><a name="C'DMatch"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'DMatch</span>
-<a name="line-44"></a>
-<a name="line-45"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::MSER@ object</span>
-<a name="line-46"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- data C'MSER</span>
-<a name="line-47"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::ORB&gt;@ object</span>
-<a name="line-48"></a><a name="C'Ptr_ORB"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_ORB</span>
-<a name="line-49"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::BRISK@ object</span>
-<a name="line-50"></a><span class='hs-comment'>-- data C'BRISK</span>
-<a name="line-51"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::KAZE@ object</span>
-<a name="line-52"></a><span class='hs-comment'>-- data C'KAZE</span>
-<a name="line-53"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::AKAZE@ object</span>
-<a name="line-54"></a><span class='hs-comment'>-- data C'AKAZE</span>
-<a name="line-55"></a>
-<a name="line-56"></a><a name="C'BFMatcher"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::BFMatcher@ object</span>
-<a name="line-57"></a><a name="C'BFMatcher"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'BFMatcher</span>
-<a name="line-58"></a>
-<a name="line-59"></a><a name="C'Ptr_BackgroundSubtractorKNN"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::BackgroundSubtractorMOG2&gt;@ object</span>
-<a name="line-60"></a><a name="C'Ptr_BackgroundSubtractorKNN"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_BackgroundSubtractorKNN</span>
-<a name="line-61"></a><a name="C'Ptr_BackgroundSubtractorMOG2"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::BackgroundSubtractorKNN&gt;@ object</span>
-<a name="line-62"></a><a name="C'Ptr_BackgroundSubtractorMOG2"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_BackgroundSubtractorMOG2</span>
-<a name="line-63"></a>
-<a name="line-64"></a><a name="C'MouseCallback"></a><span class='hs-comment'>-- | Callback function for mouse events</span>
-<a name="line-65"></a><a name="C'MouseCallback"></a><span class='hs-keyword'>type</span> <span class='hs-conid'>C'MouseCallback</span>
-<a name="line-66"></a>   <span class='hs-keyglyph'>=</span>  <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ One of the @cv::MouseEvenTypes@ constants.</span>
-<a name="line-67"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The x-coordinate of the mouse event.</span>
-<a name="line-68"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The y-coordinate of the mouse event.</span>
-<a name="line-69"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ One of the @cv::MouseEventFlags@ constants.</span>
-<a name="line-70"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>()</span> <span class='hs-comment'>-- ^ Optional pointer to user data.</span>
-<a name="line-71"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-conid'>()</span>
-<a name="line-72"></a>
-<a name="line-73"></a><a name="C'TrackbarCallback"></a><span class='hs-comment'>-- | Callback function for trackbars</span>
-<a name="line-74"></a><a name="C'TrackbarCallback"></a><span class='hs-keyword'>type</span> <span class='hs-conid'>C'TrackbarCallback</span>
-<a name="line-75"></a>   <span class='hs-keyglyph'>=</span>  <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Current position of the specified trackbar.</span>
-<a name="line-76"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>()</span> <span class='hs-comment'>-- ^ Optional pointer to user data.</span>
-<a name="line-77"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-conid'>()</span>
-<a name="line-78"></a>
-<a name="line-79"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
-<a name="line-80"></a>
-<a name="line-81"></a><a name="CSizeOf"></a><span class='hs-comment'>-- | Information about the storage requirements of values in C</span>
-<a name="line-82"></a><a name="CSizeOf"></a><span class='hs-comment'>--</span>
-<a name="line-83"></a><a name="CSizeOf"></a><span class='hs-comment'>-- This class assumes that the type @a@ is merely a symbol that corresponds with</span>
-<a name="line-84"></a><a name="CSizeOf"></a><span class='hs-comment'>-- a type in C.</span>
-<a name="line-85"></a><a name="CSizeOf"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
-<a name="line-86"></a>    <span class='hs-comment'>-- | Computes the storage requirements (in bytes) of values of</span>
-<a name="line-87"></a>    <span class='hs-comment'>-- type @a@ in C.</span>
-<a name="line-88"></a>    <span class='hs-varid'>cSizeOf</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>proxy</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
-<a name="line-89"></a>
-<a name="line-90"></a><a name="instance%20CSizeOf%20C'Point2i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2i</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2i</span>
-<a name="line-91"></a><a name="instance%20CSizeOf%20C'Point2f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2f</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2f</span>
-<a name="line-92"></a><a name="instance%20CSizeOf%20C'Point2d"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2d</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2d</span>
-<a name="line-93"></a><a name="instance%20CSizeOf%20C'Point3i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3i</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3i</span>
-<a name="line-94"></a><a name="instance%20CSizeOf%20C'Point3f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3f</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3f</span>
-<a name="line-95"></a><a name="instance%20CSizeOf%20C'Point3d"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3d</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3d</span>
-<a name="line-96"></a><a name="instance%20CSizeOf%20C'Size2i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Size2i</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Size2i</span>
-<a name="line-97"></a><a name="instance%20CSizeOf%20C'Size2f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Size2f</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Size2f</span>
-<a name="line-98"></a><a name="instance%20CSizeOf%20C'Scalar"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Scalar</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Scalar</span>
-<a name="line-99"></a><a name="instance%20CSizeOf%20C'Range"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Range</span>   <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Range</span>
-<a name="line-100"></a><a name="instance%20CSizeOf%20C'Mat"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Mat</span>     <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Mat</span>
-<a name="line-101"></a>
-<a name="line-102"></a><a name="C"></a><span class='hs-comment'>-- | Equivalent type in C</span>
-<a name="line-103"></a><a name="C"></a><span class='hs-comment'>--</span>
-<a name="line-104"></a><a name="C"></a><span class='hs-comment'>-- Actually a proxy type in Haskell that stands for the equivalent type in C.</span>
-<a name="line-105"></a><a name="C"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>family</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>*</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>*</span>
-<a name="line-106"></a>
-<a name="line-107"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>instance</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span><span class='hs-conid'>Maybe</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>C</span> <span class='hs-varid'>a</span>
-<a name="line-108"></a>
-<a name="line-109"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-23"></a><a name="C'Vec3f"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Vec3f@ object</span>
+<a name="line-24"></a><a name="C'Vec3f"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Vec3f</span>
+<a name="line-25"></a><a name="C'Vec4i"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Vec4i@ object</span>
+<a name="line-26"></a><a name="C'Vec4i"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Vec4i</span>
+<a name="line-27"></a><a name="C'Size2i"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Size_\&lt;int&gt;@ object</span>
+<a name="line-28"></a><a name="C'Size2i"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Size2i</span>
+<a name="line-29"></a><a name="C'Size2f"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Size_\&lt;float&gt;@ object</span>
+<a name="line-30"></a><a name="C'Size2f"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Size2f</span>
+<a name="line-31"></a><a name="C'Rect"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Rect_\&lt;int&gt;@ object</span>
+<a name="line-32"></a><a name="C'Rect"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Rect</span>
+<a name="line-33"></a><a name="C'RotatedRect"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::RotatedRect@ object</span>
+<a name="line-34"></a><a name="C'RotatedRect"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'RotatedRect</span>
+<a name="line-35"></a><a name="C'TermCriteria"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::TermCriteria@ object</span>
+<a name="line-36"></a><a name="C'TermCriteria"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'TermCriteria</span>
+<a name="line-37"></a><a name="C'Range"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Range@ object</span>
+<a name="line-38"></a><a name="C'Range"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Range</span>
+<a name="line-39"></a><a name="C'Scalar"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Scalar_\&lt;double&gt;@ object</span>
+<a name="line-40"></a><a name="C'Scalar"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Scalar</span>
+<a name="line-41"></a><a name="C'Mat"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Mat@ object</span>
+<a name="line-42"></a><a name="C'Mat"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Mat</span>
+<a name="line-43"></a>
+<a name="line-44"></a><a name="C'KeyPoint"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Keypoint@ object</span>
+<a name="line-45"></a><a name="C'KeyPoint"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'KeyPoint</span>
+<a name="line-46"></a><a name="C'DMatch"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::DMatch@ object</span>
+<a name="line-47"></a><a name="C'DMatch"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'DMatch</span>
+<a name="line-48"></a>
+<a name="line-49"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::MSER@ object</span>
+<a name="line-50"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- data C'MSER</span>
+<a name="line-51"></a><a name="C'Ptr_ORB"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::ORB&gt;@ object</span>
+<a name="line-52"></a><a name="C'Ptr_ORB"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_ORB</span>
+<a name="line-53"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::BRISK@ object</span>
+<a name="line-54"></a><span class='hs-comment'>-- data C'BRISK</span>
+<a name="line-55"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::KAZE@ object</span>
+<a name="line-56"></a><span class='hs-comment'>-- data C'KAZE</span>
+<a name="line-57"></a><span class='hs-comment'>-- -- | Haskell representation of an OpenCV @cv::AKAZE@ object</span>
+<a name="line-58"></a><span class='hs-comment'>-- data C'AKAZE</span>
+<a name="line-59"></a>
+<a name="line-60"></a><a name="C'BFMatcher"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::BFMatcher@ object</span>
+<a name="line-61"></a><a name="C'BFMatcher"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'BFMatcher</span>
+<a name="line-62"></a>
+<a name="line-63"></a><a name="C'Ptr_BackgroundSubtractorKNN"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::BackgroundSubtractorMOG2&gt;@ object</span>
+<a name="line-64"></a><a name="C'Ptr_BackgroundSubtractorKNN"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_BackgroundSubtractorKNN</span>
+<a name="line-65"></a><a name="C'Ptr_BackgroundSubtractorMOG2"></a><span class='hs-comment'>-- | Haskell representation of an OpenCV @cv::Ptr&lt;cv::BackgroundSubtractorKNN&gt;@ object</span>
+<a name="line-66"></a><a name="C'Ptr_BackgroundSubtractorMOG2"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>C'Ptr_BackgroundSubtractorMOG2</span>
+<a name="line-67"></a>
+<a name="line-68"></a><a name="C'MouseCallback"></a><span class='hs-comment'>-- | Callback function for mouse events</span>
+<a name="line-69"></a><a name="C'MouseCallback"></a><span class='hs-keyword'>type</span> <span class='hs-conid'>C'MouseCallback</span>
+<a name="line-70"></a>   <span class='hs-keyglyph'>=</span>  <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ One of the @cv::MouseEvenTypes@ constants.</span>
+<a name="line-71"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The x-coordinate of the mouse event.</span>
+<a name="line-72"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The y-coordinate of the mouse event.</span>
+<a name="line-73"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ One of the @cv::MouseEventFlags@ constants.</span>
+<a name="line-74"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>()</span> <span class='hs-comment'>-- ^ Optional pointer to user data.</span>
+<a name="line-75"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-conid'>()</span>
+<a name="line-76"></a>
+<a name="line-77"></a><a name="C'TrackbarCallback"></a><span class='hs-comment'>-- | Callback function for trackbars</span>
+<a name="line-78"></a><a name="C'TrackbarCallback"></a><span class='hs-keyword'>type</span> <span class='hs-conid'>C'TrackbarCallback</span>
+<a name="line-79"></a>   <span class='hs-keyglyph'>=</span>  <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Current position of the specified trackbar.</span>
+<a name="line-80"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>()</span> <span class='hs-comment'>-- ^ Optional pointer to user data.</span>
+<a name="line-81"></a>   <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-conid'>()</span>
+<a name="line-82"></a>
+<a name="line-83"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-84"></a>
+<a name="line-85"></a><a name="CSizeOf"></a><span class='hs-comment'>-- | Information about the storage requirements of values in C</span>
+<a name="line-86"></a><a name="CSizeOf"></a><span class='hs-comment'>--</span>
+<a name="line-87"></a><a name="CSizeOf"></a><span class='hs-comment'>-- This class assumes that the type @a@ is merely a symbol that corresponds with</span>
+<a name="line-88"></a><a name="CSizeOf"></a><span class='hs-comment'>-- a type in C.</span>
+<a name="line-89"></a><a name="CSizeOf"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
+<a name="line-90"></a>    <span class='hs-comment'>-- | Computes the storage requirements (in bytes) of values of</span>
+<a name="line-91"></a>    <span class='hs-comment'>-- type @a@ in C.</span>
+<a name="line-92"></a>    <span class='hs-varid'>cSizeOf</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>proxy</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span>
+<a name="line-93"></a>
+<a name="line-94"></a><a name="instance%20CSizeOf%20C'Point2i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2i</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2i</span>
+<a name="line-95"></a><a name="instance%20CSizeOf%20C'Point2f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2f</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2f</span>
+<a name="line-96"></a><a name="instance%20CSizeOf%20C'Point2d"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point2d</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point2d</span>
+<a name="line-97"></a><a name="instance%20CSizeOf%20C'Point3i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3i</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3i</span>
+<a name="line-98"></a><a name="instance%20CSizeOf%20C'Point3f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3f</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3f</span>
+<a name="line-99"></a><a name="instance%20CSizeOf%20C'Point3d"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Point3d</span> <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Point3d</span>
+<a name="line-100"></a><a name="instance%20CSizeOf%20C'Size2i"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Size2i</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Size2i</span>
+<a name="line-101"></a><a name="instance%20CSizeOf%20C'Size2f"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Size2f</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Size2f</span>
+<a name="line-102"></a><a name="instance%20CSizeOf%20C'Scalar"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Scalar</span>  <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Scalar</span>
+<a name="line-103"></a><a name="instance%20CSizeOf%20C'Range"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Range</span>   <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Range</span>
+<a name="line-104"></a><a name="instance%20CSizeOf%20C'Mat"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>CSizeOf</span> <span class='hs-conid'>C'Mat</span>     <span class='hs-keyword'>where</span> <span class='hs-varid'>cSizeOf</span> <span class='hs-sel'>_proxy</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'sizeof_Mat</span>
+<a name="line-105"></a>
+<a name="line-106"></a><a name="C"></a><span class='hs-comment'>-- | Equivalent type in C</span>
+<a name="line-107"></a><a name="C"></a><span class='hs-comment'>--</span>
+<a name="line-108"></a><a name="C"></a><span class='hs-comment'>-- Actually a proxy type in Haskell that stands for the equivalent type in C.</span>
+<a name="line-109"></a><a name="C"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>family</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>*</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>*</span>
 <a name="line-110"></a>
-<a name="line-111"></a><a name="WithPtr"></a><span class='hs-comment'>-- | Perform an IO action with a pointer to the C equivalent of a value</span>
-<a name="line-112"></a><a name="WithPtr"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>WithPtr</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
-<a name="line-113"></a>    <span class='hs-comment'>-- | Perform an action with a temporary pointer to the underlying</span>
-<a name="line-114"></a>    <span class='hs-comment'>-- representation of @a@</span>
-<a name="line-115"></a>    <span class='hs-comment'>--</span>
-<a name="line-116"></a>    <span class='hs-comment'>-- The pointer is not guaranteed to be usuable outside the scope of this</span>
-<a name="line-117"></a>    <span class='hs-comment'>-- function. The same warnings apply as for 'withForeignPtr'.</span>
-<a name="line-118"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>C</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>b</span>
-<a name="line-119"></a>
-<a name="line-120"></a><a name="instance%20WithPtr%20(Maybe%20a)"></a><span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>WithPtr</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>WithPtr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Maybe</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
-<a name="line-121"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-conid'>Nothing</span>    <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>f</span> <span class='hs-varid'>nullPtr</span>
-<a name="line-122"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Just</span> <span class='hs-varid'>obj</span><span class='hs-layout'>)</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>withPtr</span> <span class='hs-varid'>obj</span> <span class='hs-varid'>f</span>
+<a name="line-111"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>instance</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span><span class='hs-conid'>Maybe</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>C</span> <span class='hs-varid'>a</span>
+<a name="line-112"></a>
+<a name="line-113"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-114"></a>
+<a name="line-115"></a><a name="WithPtr"></a><span class='hs-comment'>-- | Perform an IO action with a pointer to the C equivalent of a value</span>
+<a name="line-116"></a><a name="WithPtr"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>WithPtr</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
+<a name="line-117"></a>    <span class='hs-comment'>-- | Perform an action with a temporary pointer to the underlying</span>
+<a name="line-118"></a>    <span class='hs-comment'>-- representation of @a@</span>
+<a name="line-119"></a>    <span class='hs-comment'>--</span>
+<a name="line-120"></a>    <span class='hs-comment'>-- The pointer is not guaranteed to be usuable outside the scope of this</span>
+<a name="line-121"></a>    <span class='hs-comment'>-- function. The same warnings apply as for 'withForeignPtr'.</span>
+<a name="line-122"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>C</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>b</span>
 <a name="line-123"></a>
-<a name="line-124"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
-<a name="line-125"></a>
-<a name="line-126"></a><span class='hs-comment'>-- | Types of which a value can be constructed from a pointer to the C</span>
-<a name="line-127"></a><span class='hs-comment'>-- equivalent of that value</span>
-<a name="line-128"></a><span class='hs-comment'>--</span>
-<a name="line-129"></a><span class='hs-comment'>-- Used to wrap values created in C.</span>
-<a name="line-130"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>FromPtr</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
-<a name="line-131"></a>    <span class='hs-varid'>fromPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>IO</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>C</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span>
+<a name="line-124"></a><a name="instance%20WithPtr%20(Maybe%20a)"></a><span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>WithPtr</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>WithPtr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Maybe</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
+<a name="line-125"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-conid'>Nothing</span>    <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>f</span> <span class='hs-varid'>nullPtr</span>
+<a name="line-126"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Just</span> <span class='hs-varid'>obj</span><span class='hs-layout'>)</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>withPtr</span> <span class='hs-varid'>obj</span> <span class='hs-varid'>f</span>
+<a name="line-127"></a>
+<a name="line-128"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-129"></a>
+<a name="line-130"></a><span class='hs-comment'>-- | Types of which a value can be constructed from a pointer to the C</span>
+<a name="line-131"></a><span class='hs-comment'>-- equivalent of that value</span>
+<a name="line-132"></a><span class='hs-comment'>--</span>
+<a name="line-133"></a><span class='hs-comment'>-- Used to wrap values created in C.</span>
+<a name="line-134"></a><span class='hs-keyword'>class</span> <span class='hs-conid'>FromPtr</span> <span class='hs-varid'>a</span> <span class='hs-keyword'>where</span>
+<a name="line-135"></a>    <span class='hs-varid'>fromPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>IO</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>C</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span>
 </pre></body>
 </html>

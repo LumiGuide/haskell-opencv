@@ -129,7 +129,7 @@
 <a name="line-120"></a>    <span class='hs-varid'>depth</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>hElemsDepth</span> <span class='hs-varid'>elems</span>
 <a name="line-121"></a>
 <a name="line-122"></a>    <span class='hs-varid'>scalar</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Scalar</span>
-<a name="line-123"></a>    <span class='hs-varid'>scalar</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>convert</span> <span class='hs-layout'>(</span><span class='hs-varid'>zero</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>V4</span> <span class='hs-conid'>CDouble</span><span class='hs-layout'>)</span>
+<a name="line-123"></a>    <span class='hs-varid'>scalar</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>toScalar</span> <span class='hs-layout'>(</span><span class='hs-varid'>zero</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>V4</span> <span class='hs-conid'>CDouble</span><span class='hs-layout'>)</span>
 <a name="line-124"></a>
 <a name="line-125"></a>    <span class='hs-varid'>copyElems</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>CSize</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Word8</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-conid'>()</span>
 <a name="line-126"></a>    <span class='hs-varid'>copyElems</span> <span class='hs-varid'>step</span> <span class='hs-varid'>dataPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>case</span> <span class='hs-varid'>elems</span> <span class='hs-keyword'>of</span>
