@@ -83,9 +83,9 @@ marshalLineType = \case
 
 data Font
    = Font
-     { fontFace  :: !FontFace
-     , fontSlant :: !FontSlant
-     , fontScale :: !Double
+     { _fontFace  :: !FontFace
+     , _fontSlant :: !FontSlant
+     , _fontScale :: !Double
      } deriving (Show)
 
 data FontFace
