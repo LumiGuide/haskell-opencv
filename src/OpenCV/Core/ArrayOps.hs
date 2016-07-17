@@ -699,8 +699,7 @@ matSumImg = exceptError $
         lift $ putText imgM
                        (T.pack $ show approxPi)
                        (V2 40 110 :: V2 Int32)
-                       FontHersheyDuplex
-                       1.0
+                       (Font FontHersheyDuplex NotSlanted 1)
                        blue
                        1
                        LineType_AA

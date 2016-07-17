@@ -121,21 +121,27 @@ lineTypeImg lineType = exceptError $ do
     p = fromInteger $ natVal (Proxy :: Proxy p)
     zoom = 8
 
-fontFaceImg
-    :: FontFace
+fontImg
+    :: Font
     -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
-fontFaceImg fontFace = exceptError $
+fontImg font = exceptError $
     withMatM (th * 3 ::: tw ::: Z)
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \imgM -> do
-      putText imgM txt (V2 0 (th * 2 - baseLine) :: V2 Int32) fontFace scale black thickness LineType_AA False
+      putText
+        imgM
+        txt
+        (V2 0 (th * 2 - baseLine) :: V2 Int32)
+        font
+        black
+        thickness
+        LineType_AA False
   where
     txt = "The quick brown fox jumps over the lazy dog"
-    (size2i, baseLine) = getTextSize txt fontFace scale thickness
+    (size2i, baseLine) = getTextSize txt font thickness
     tw, th :: Int32
     V2 tw th = fromSize2i size2i
-    scale     = 1
     thickness = 1
 
 vennCircleA
@@ -170,7 +176,8 @@ main = do
     render "sailboat_512x341.png" sailboat_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
       render (show lineType <> ".png") (lineTypeImg lineType)
-    forM_ [minBound .. maxBound] $ \fontFace ->
-      render (show fontFace <> ".png") (fontFaceImg fontFace)
+    forM_ [minBound .. maxBound] $ \fontFace -> do
+      render (show fontFace <> ".png")         (fontImg $ Font fontFace NotSlanted 1)
+      render (show fontFace <> "_slanted.png") (fontImg $ Font fontFace Slanted    1)
 
 --------------------------------------------------------------------------------

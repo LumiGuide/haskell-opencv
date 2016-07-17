@@ -3,7 +3,9 @@
 
 module OpenCV.ImgProc.Drawing
     ( LineType(..)
+    , Font(..)
     , FontFace(..)
+    , FontSlant(..)
 
     , arrowedLine
     , circle
@@ -79,45 +81,75 @@ marshalLineType = \case
   LineType_4  -> c'LINE_4
   LineType_AA -> c'LINE_AA
 
--- TODO (RvD): FontItalic is not a font but a flag!
+data Font
+   = Font
+     { fontFace  :: !FontFace
+     , fontSlant :: !FontSlant
+     , fontScale :: !Double
+     } deriving (Show)
+
 data FontFace
    = FontHersheySimplex
-     -- ^ Normal size sans-serif font.
+     -- ^ Normal size sans-serif font. Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheySimplex.png FontHersheySimplex>>
    | FontHersheyPlain
      -- ^ Small size sans-serif font.
      --
      -- <<doc/generated/FontHersheyPlain.png FontHersheyPlain>>
+     --
+     -- <<doc/generated/FontHersheyPlain_slanted.png FontHersheyPlain>>
    | FontHersheyDuplex
-     -- ^ Normal size sans-serif font (more complex than 'FontHersheySimplex').
+     -- ^ Normal size sans-serif font (more complex than
+     -- 'FontHersheySimplex'). Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyDuplex.png FontHersheyDuplex>>
    | FontHersheyComplex
      -- ^ Normal size serif font.
      --
      -- <<doc/generated/FontHersheyComplex.png FontHersheyComplex>>
+     --
+     -- <<doc/generated/FontHersheyComplex_slanted.png FontHersheyComplex>>
    | FontHersheyTriplex
      -- ^ Normal size serif font (more complex than 'FontHersheyComplex').
      --
      -- <<doc/generated/FontHersheyTriplex.png FontHersheyTriplex>>
+     --
+     -- <<doc/generated/FontHersheyTriplex_slanted.png FontHersheyTriplex>>
    | FontHersheyComplexSmall
      -- ^ Smaller version of 'FontHersheyComplex'.
      --
      -- <<doc/generated/FontHersheyComplexSmall.png FontHersheyComplexSmall>>
+     --
+     -- <<doc/generated/FontHersheyComplexSmall_slanted.png FontHersheyComplexSmall>>
    | FontHersheyScriptSimplex
-     -- ^ Hand-writing style font.
+     -- ^ Hand-writing style font. Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyScriptSimplex.png FontHersheyScriptSimplex>>
    | FontHersheyScriptComplex
-     -- ^ More complex variant of 'FontHersheyScriptSimplex'.
+     -- ^ More complex variant of 'FontHersheyScriptSimplex'. Does not have a
+     -- 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyScriptComplex.png FontHersheyScriptComplex>>
-   | FontItalic
-     -- ^ Flag for italic font.
-     --
-     -- <<doc/generated/FontItalic.png FontItalic>>
      deriving (Show, Enum, Bounded)
+
+data FontSlant
+   = NotSlanted
+   | Slanted
+     deriving (Show)
+
+marshalFont :: Font -> (Int32, C.CDouble)
+marshalFont (Font face slant scale) =
+    ( marshalFontFace face + marshalFontSlant slant
+    , realToFrac scale
+    )
+
+#num FONT_ITALIC
+
+marshalFontSlant :: FontSlant -> Int32
+marshalFontSlant = \case
+   NotSlanted -> 0
+   Slanted    -> c'FONT_ITALIC
 
 #num FONT_HERSHEY_SIMPLEX
 #num FONT_HERSHEY_PLAIN
@@ -127,7 +159,6 @@ data FontFace
 #num FONT_HERSHEY_COMPLEX_SMALL
 #num FONT_HERSHEY_SCRIPT_SIMPLEX
 #num FONT_HERSHEY_SCRIPT_COMPLEX
-#num FONT_ITALIC
 
 marshalFontFace :: FontFace -> Int32
 marshalFontFace = \case
@@ -139,7 +170,6 @@ marshalFontFace = \case
    FontHersheyComplexSmall  -> c'FONT_HERSHEY_COMPLEX_SMALL
    FontHersheyScriptSimplex -> c'FONT_HERSHEY_SCRIPT_SIMPLEX
    FontHersheyScriptComplex -> c'FONT_HERSHEY_SCRIPT_COMPLEX
-   FontItalic               -> c'FONT_ITALIC
 
 
 {- | Draws a arrow segment pointing from the first point to the second one
@@ -563,14 +593,13 @@ line img pt1 pt2 color thickness lineType shift =
 -}
 getTextSize
     :: Text
-    -> FontFace
-    -> Double  -- ^ Font scale.
+    -> Font
     -> Int32 -- ^ Thickness of lines used to render the text.
     -> (Size2i, Int32)
        -- ^ (size, baseLine) =
        -- (The size of a box that contains the specified text.
        -- , y-coordinate of the baseline relative to the bottom-most text point)
-getTextSize text fontFace fontScale thickness = unsafePerformIO $
+getTextSize text font thickness = unsafePerformIO $
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
     alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
       size <- fromPtr $
@@ -586,9 +615,7 @@ getTextSize text fontFace fontScale thickness = unsafePerformIO $
       baseLine <- peek c'baseLinePtr
       pure (size, baseLine)
   where
-    c'fontFace  = marshalFontFace fontFace
-    c'fontScale = realToFrac fontScale
-
+    (c'fontFace, c'fontScale) = marshalFont font
 
 {- | Draws a text string.
 
@@ -609,8 +636,7 @@ putTextImg = exceptError $
         lift $ putText imgM
                        (T.pack $ show fontFace)
                        (V2 10 (35 + n * 30) :: V2 Int32)
-                       fontFace
-                       1.0
+                       (Font fontFace NotSlanted 1.0)
                        black
                        1
                        LineType_AA
@@ -632,14 +658,13 @@ putText
     => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
     -> point2i -- ^ Bottom-left corner of the text string in the image.
-    -> FontFace
-    -> Double -- ^ Font scale factor that is multiplied by the font-specific base size.
+    -> Font
     -> color -- ^ Text color.
     -> Int32 -- ^ Thickness of the lines used to draw a text.
     -> LineType
     -> Bool -- ^ When 'True', the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner.
     -> m ()
-putText img text org fontFace fontScale color thickness lineType bottomLeftOrigin =
+putText img text org font color thickness lineType bottomLeftOrigin =
     unsafePrimToPrim $
     withPtr (unMutMat img) $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
@@ -658,9 +683,8 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
                    )
       }|]
   where
-    c'fontFace         = marshalFontFace fontFace
-    c'fontScale        = realToFrac fontScale
-    c'lineType         = marshalLineType lineType
+    (c'fontFace, c'fontScale) = marshalFont font
+    c'lineType = marshalLineType lineType
     c'bottomLeftOrigin = fromBool bottomLeftOrigin
 
 {- | Draws a simple, thick, or filled up-right rectangle
