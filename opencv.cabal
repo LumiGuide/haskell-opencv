@@ -43,7 +43,7 @@ library
       , src/OpenCV/Video/MotionAnalysis.cpp
 
     cc-options: -Wall -O2 -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
 
     build-depends:
         aeson             >=0.9.0.1
