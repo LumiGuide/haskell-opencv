@@ -43,6 +43,7 @@ type Sailboat_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Frog             = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
 type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
+type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -57,11 +58,6 @@ sailboat_768x512 :: Sailboat_768x512
 sailboat_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim06.png"
-
-circles_1000x625 :: Circles_1000x625
-circles_1000x625 =
-    exceptError $ coerceMat $ unsafePerformIO $
-      imdecode ImreadUnchanged <$> B.readFile "data/circles.png"
 
 smallerKodakImg
     :: Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
@@ -91,7 +87,15 @@ lambda =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/lambda.png"
 
+circles_1000x625 :: Circles_1000x625
+circles_1000x625 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/circles.png"
 
+building_868x600 :: Building_868x600
+building_868x600 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/building.jpg"
 
 --------------------------------------------------------------------------------
 
