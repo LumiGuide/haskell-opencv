@@ -23,10 +23,13 @@ module OpenCV.Core.Types.Mat.Internal
     , MutMat(..)
 
     , typeCheckMat
+    , typeCheckMatM
     , coerceMat
+    , coerceMatM
     , unsafeCoerceMat
     , unsafeCoerceMatM
     , relaxMat
+    , relaxMatM
 
     , keepMatAliveDuring
     , newEmptyMat
@@ -293,6 +296,15 @@ typeCheckMat mat =
         | otherwise = Just $ DepthError
                            $ ExpectationError expectedDepth (miDepth mi)
 
+typeCheckMatM
+    :: forall shape channels depth s
+     . ( ToShapeDS    (Proxy shape)
+       , ToChannelsDS (Proxy channels)
+       , ToDepthDS    (Proxy depth)
+       )
+    => MutMat shape channels depth s -- ^ The matrix to be checked.
+    -> [CoerceMatError] -- ^ Error messages.
+typeCheckMatM = typeCheckMat . unMutMat
 
 coerceMat
     :: ( ToShapeDS    (Proxy shapeOut)
@@ -306,6 +318,15 @@ coerceMat matIn | null errors = pure matOut
   where
     matOut = unsafeCoerceMat matIn
     errors = typeCheckMat matOut
+
+coerceMatM
+    :: ( ToShapeDS    (Proxy shapeOut)
+       , ToChannelsDS (Proxy channelsOut)
+       , ToDepthDS    (Proxy depthOut)
+       )
+    => MutMat shapeIn channelsIn depthIn s -- ^
+    -> CvExcept (MutMat shapeOut channelsOut depthOut s)
+coerceMatM = fmap MutMat . coerceMat . unMutMat
 
 unsafeCoerceMat
     :: Mat shapeIn  channelsIn  depthIn
@@ -336,6 +357,15 @@ relaxMat
     => Mat shapeIn  channelsIn  depthIn  -- ^ Original 'Mat'.
     -> Mat shapeOut channelsOut depthOut -- ^ 'Mat' with relaxed constraints.
 relaxMat = unsafeCoerce
+
+relaxMatM
+    :: ( MayRelax shapeIn    shapeOut
+       , MayRelax channelsIn channelsOut
+       , MayRelax depthIn    depthOut
+       )
+    => MutMat shapeIn  channelsIn  depthIn  s -- ^ Original 'Mat'.
+    -> MutMat shapeOut channelsOut depthOut s -- ^ 'Mat' with relaxed constraints.
+relaxMatM = unsafeCoerce
 
 --------------------------------------------------------------------------------
 

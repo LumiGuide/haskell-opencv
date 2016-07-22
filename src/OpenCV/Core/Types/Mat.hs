@@ -5,8 +5,11 @@
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
       coerceMat
+    , coerceMatM
     , relaxMat
+    , relaxMatM
     , typeCheckMat
+    , typeCheckMatM
     , DepthT
 
     , Mat
