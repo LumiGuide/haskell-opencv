@@ -4,7 +4,7 @@ homepage:      lumiguide.eu
 license:       BSD3
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
-build-type:    Custom
+build-type:    Simple
 cabal-version: >=1.10
 
 extra-source-files:
