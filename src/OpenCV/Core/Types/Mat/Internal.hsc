@@ -1,8 +1,13 @@
+{-# language CPP #-}
 {-# language ConstraintKinds #-}
 {-# language MultiParamTypeClasses #-}
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.Core.Types.Mat.Internal
     ( Depth(..)

@@ -1,10 +1,15 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language InstanceSigs #-}
+{-# language ConstraintKinds #-}
+{-# language TemplateHaskell #-}
+{-# language UndecidableInstances #-}
+{-# language MultiParamTypeClasses #-}
+{-# language ExistentialQuantification #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.Core.Types.Mat.Repa
     ( M

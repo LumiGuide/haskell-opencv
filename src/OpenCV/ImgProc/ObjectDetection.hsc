@@ -1,5 +1,10 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.ImgProc.ObjectDetection
     ( MatchTemplateMethod(..)

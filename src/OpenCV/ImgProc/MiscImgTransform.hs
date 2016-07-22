@@ -1,6 +1,11 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+{-# language MultiParamTypeClasses #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.ImgProc.MiscImgTransform
     ( -- * Color conversion
