@@ -82,6 +82,7 @@ import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.PlacementNew
+import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Internal
@@ -710,6 +711,20 @@ instance WithPtr Rect         where withPtr = withForeignPtr . unRect
 instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
 instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
 instance WithPtr Range        where withPtr = withForeignPtr . unRange
+
+--------------------------------------------------------------------------------
+
+mkPlacementNewInstance ''Point2i
+mkPlacementNewInstance ''Point2f
+mkPlacementNewInstance ''Point2d
+mkPlacementNewInstance ''Point3i
+mkPlacementNewInstance ''Point3f
+mkPlacementNewInstance ''Point3d
+mkPlacementNewInstance ''Vec4i
+mkPlacementNewInstance ''Size2i
+mkPlacementNewInstance ''Size2f
+mkPlacementNewInstance ''Scalar
+mkPlacementNewInstance ''Mat
 
 --------------------------------------------------------------------------------
 
