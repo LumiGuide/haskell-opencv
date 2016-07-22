@@ -369,9 +369,9 @@ instance ToType Hs.Type where
 toStrictType :: Hs.Type -> StrictType
 toStrictType t@(Hs.TyBang _ Hs.TyBang{}) =
   nonsense "toStrictType" "double strictness annotation" t
-toStrictType (Hs.TyBang Hs.BangedTy t) = (IsStrict, toType t)
-toStrictType (Hs.TyBang Hs.UnpackedTy t) = (Unpacked, toType t)
-toStrictType t = (NotStrict, toType t)
+toStrictType (Hs.TyBang Hs.BangedTy t) = (Bang NoSourceUnpackedness SourceStrict, toType t)
+toStrictType (Hs.TyBang Hs.UnpackedTy t) = (Bang SourceUnpack NoSourceStrictness, toType t)
+toStrictType t = (Bang NoSourceUnpackedness NoSourceStrictness, toType t)
 
 
 
@@ -422,8 +422,9 @@ instance ToDec Hs.Decl where
         Hs.DataType -> DataD (toCxt cxt)
                              (toName n)
                              (fmap toTyVar ns)
+                             Nothing
                              (fmap qualConDeclToCon qcds)
-                             (fmap (toName . fst) qns)
+                             (fmap (ConT . toName . fst) qns)
         Hs.NewType  -> let qcd = case qcds of
                                   [x] -> x
                                   _   -> nonsense "toDec" ("newtype with " ++
@@ -431,8 +432,9 @@ instance ToDec Hs.Decl where
                         in NewtypeD (toCxt cxt)
                                     (toName n)
                                     (fmap toTyVar ns)
+                                    Nothing
                                     (qualConDeclToCon qcd)
-                                    (fmap (toName . fst) qns)
+                                    (fmap (ConT . toName . fst) qns)
 
   -- This type-signature conversion is just wrong.
   -- Type variables need to be dealt with. /Jonas
@@ -459,12 +461,15 @@ instance ToDec Hs.Decl where
 
 #endif /* MIN_VERSION_template_haskell(2,8,0) */
 
-  toDec (Hs.TypeFamDecl _ n ns k)
-    = FamilyD TypeFam (toName n) (fmap toTyVar ns) (fmap toKind k)
+  toDec (Hs.TypeFamDecl _ n ns Nothing)
+    = OpenTypeFamilyD (TypeFamilyHead (toName n) (map toTyVar ns) NoSig Nothing)
+
+  toDec (Hs.TypeFamDecl _ n ns (Just k))
+    = OpenTypeFamilyD (TypeFamilyHead (toName n) (map toTyVar ns) (KindSig (toKind k)) Nothing)
 
   -- TODO: do something with context?
-  toDec (Hs.DataFamDecl _ _ n ns k)
-    = FamilyD DataFam (toName n) (fmap toTyVar ns) (fmap toKind k)
+  toDec (Hs.DataFamDecl _ _ n ns mk)
+    = DataFamilyD (toName n) (fmap toTyVar ns) (fmap toKind mk)
 
   toDec a@(Hs.FunBind mtchs)                           = hsMatchesToFunD mtchs
   toDec (Hs.PatBind _ p rhs bnds)                      = ValD (toPat p)
@@ -478,6 +483,7 @@ instance ToDec Hs.Decl where
   -- TH's own parser seems to flat-out ignore them, and honestly I can't see
   -- that it's obviously wrong to do so.
   toDec (Hs.InstDecl _ Nothing _vars cxt qname ts ids) = InstanceD
+    Nothing
     (toCxt cxt)
     (foldl AppT (ConT (toName qname)) (map toType ts))
     (toDecs ids)
