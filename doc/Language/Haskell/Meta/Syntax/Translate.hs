@@ -14,7 +14,6 @@ module Language.Haskell.Meta.Syntax.Translate (
 ) where
 
 import Data.Char (ord, isUpper)
-import Data.Typeable
 import Data.List (foldl', nub, (\\))
 import Language.Haskell.TH.Syntax
 import qualified Language.Haskell.Exts.Syntax as Hs
@@ -34,6 +33,7 @@ class ToStmt a where toStmt :: a -> Stmt
 class ToLoc  a where toLoc  :: a -> Loc
 
 -- for error messages
+moduleName :: String
 moduleName = "Language.Haskell.Meta.Syntax.Translate"
 
 -- When to use each of these isn't always clear: prefer 'todo' if unsure.
@@ -122,6 +122,7 @@ instance ToName Hs.SpecialCon where
       let x = maybe [] (++".") (nameModule '(,))
       in mkName . concat $ x : ["(",replicate (n-1) ',',")"]
   toName Hs.Cons    = '(:)
+  toName sc         = todo "toName" $ show sc
 
 
 instance ToName Hs.QName where
@@ -187,7 +188,8 @@ instance ToPat Hs.Pat where
   toPat (Hs.PTuple Hs.Unboxed ps) = UnboxedTupP (fmap toPat ps)
   toPat (Hs.PList ps) = ListP (fmap toPat ps)
   toPat (Hs.PParen p) = ParensP (toPat p)
-  toPat (Hs.PRec n pfs) = let toFieldPat (Hs.PFieldPat n p) = (toName n, toPat p)
+  toPat (Hs.PRec n pfs) = let toFieldPat (Hs.PFieldPat fpn p) = (toName fpn, toPat p)
+                              toFieldPat fp = todo "toPat" $ show fp
                           in RecP (toName n) (fmap toFieldPat pfs)
   toPat (Hs.PAsPat n p) = AsP (toName n) (toPat p)
   toPat (Hs.PWildCard) = WildP
@@ -214,6 +216,7 @@ instance ToExp Hs.QOp where
 
 toFieldExp :: Hs.FieldUpdate -> FieldExp
 toFieldExp (Hs.FieldUpdate n e) = (toName n, toExp e)
+toFieldExp fu = todo "toFieldExp" $ show fu
 
 
 
@@ -265,6 +268,7 @@ toBody :: Hs.Rhs -> Body
 toBody (Hs.UnGuardedRhs e) = NormalB $ toExp e
 toBody (Hs.GuardedRhss rhss) = GuardedB $ map toGuard rhss
 
+toGuard :: Hs.GuardedRhs -> (Guard, Exp)
 toGuard (Hs.GuardedRhs _ stmts e) = (g, toExp e)
   where
     g = case map toStmt stmts of
@@ -364,6 +368,7 @@ instance ToType Hs.Type where
   toType t@Hs.TyBang{} =
       nonsense "toType" "type cannot have strictness annotations in this context" t
   toType t@(Hs.TyWildCard _) = noTH "toType" t
+  toType t = todo "toType" $ show t
 
 
 toStrictType :: Hs.Type -> StrictType
@@ -409,7 +414,7 @@ foldAppT t ts = foldl' AppT t ts
 instance ToStmt Hs.Stmt where
   toStmt (Hs.Generator _ p e)  = BindS (toPat p) (toExp e)
   toStmt (Hs.Qualifier e)      = NoBindS (toExp e)
-  toStmt a@(Hs.LetStmt bnds)   = LetS (toDecs bnds)
+  toStmt (Hs.LetStmt bnds)     = LetS (toDecs bnds)
   toStmt s@Hs.RecStmt{}        = noTH "toStmt" s
 
 
@@ -452,7 +457,7 @@ instance ToDec Hs.Decl where
 
   -- This type-signature conversion is just wrong.
   -- Type variables need to be dealt with. /Jonas
-  toDec a@(Hs.TypeSig _ ns t)
+  toDec (Hs.TypeSig _ ns t)
     -- XXXXXXXXXXXXXX: oh crap, we can't return a [Dec] from this class!
     = let xs = fmap (flip SigD (toType t) . toName) ns
       in case xs of x:_ -> x; [] -> error "toDec: malformed TypeSig!"
@@ -492,7 +497,7 @@ instance ToDec Hs.Decl where
     = FamilyD DataFam (toName n) (fmap toTyVar ns) (fmap toKind k)
 #endif
 
-  toDec a@(Hs.FunBind mtchs)                           = hsMatchesToFunD mtchs
+  toDec (Hs.FunBind mtchs)                             = hsMatchesToFunD mtchs
   toDec (Hs.PatBind _ p rhs bnds)                      = ValD (toPat p)
                                                               (hsRhsToBody rhs)
                                                               (toDecs bnds)
@@ -552,6 +557,7 @@ conDeclToCon (Hs.RecDecl n fieldDecls)
     convField (fields, t) =
       let (strict, ty) = toStrictType t
       in map (\field -> (toName field, strict, ty)) fields
+conDeclToCon cd = todo "conDeclToCon" $ show cd
 
 
 hsMatchesToFunD :: [Hs.Match] -> Dec
@@ -570,10 +576,10 @@ hsMatchToClause (Hs.Match _ _ ps _ rhs bnds) = Clause
 hsRhsToBody :: Hs.Rhs -> Body
 hsRhsToBody (Hs.UnGuardedRhs e) = NormalB (toExp e)
 hsRhsToBody (Hs.GuardedRhss hsgrhs) = let fromGuardedB (GuardedB a) = a
+                                          fromGuardedB x = todo "fromGuardedB" $ show x
                                       in GuardedB . concat
                                           . fmap (fromGuardedB . hsGuardedRhsToBody)
                                               $ hsgrhs
-
 
 
 hsGuardedRhsToBody :: Hs.GuardedRhs -> Body
@@ -593,6 +599,7 @@ hsStmtToGuard :: Hs.Stmt -> Guard
 hsStmtToGuard (Hs.Generator _ p e) = PatG [BindS (toPat p) (toExp e)]
 hsStmtToGuard (Hs.Qualifier e)     = NormalG (toExp e)
 hsStmtToGuard (Hs.LetStmt bs)      = PatG [LetS (toDecs bs)]
+hsStmtToGuard stmt                 = todo "hsStmtToGuard" $ show stmt
 
 
 -----------------------------------------------------------------------------
@@ -605,7 +612,7 @@ instance ToDecs Hs.InstDecl where
 -- * ToDecs HsDecl HsBinds
 
 instance ToDecs Hs.Decl where
-  toDecs a@(Hs.TypeSig _ ns t)
+  toDecs (Hs.TypeSig _ ns t)
     = let xs = fmap (flip SigD (fixForall $ toType t) . toName) ns
        in xs
 
@@ -621,12 +628,14 @@ instance ToDecs Hs.Decl where
 
   toDecs a = [toDec a]
 
+collectVars :: Type -> [TyVarBndr]
 collectVars e = case e of
   VarT n -> [PlainTV n]
   AppT t1 t2 -> nub $ collectVars t1 ++ collectVars t2
   ForallT ns _ t -> collectVars t \\ ns
   _          -> []
 
+fixForall :: Type -> Type
 fixForall t@(ForallT _ _ _) = t
 fixForall t = case vs of
   [] -> t
@@ -643,6 +652,7 @@ instance ToDecs Hs.Binds where
 instance ToDecs (Maybe Hs.Binds) where
   toDecs Nothing               = []
   toDecs (Just (Hs.BDecls ds)) = toDecs ds
+  toDecs binds                 = todo "toDecs" $ show binds
 
 
 -----------------------------------------------------------------------------
