@@ -24,15 +24,12 @@ module OpenCV.TypeLevel
       -- ** Type conversions
     , DSNat
     , DSNats
-    , ChannelsT
-    , ShapeT
     ) where
 
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Type.Bool
 import "base" GHC.TypeLits
-import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 -- Kinds and types
@@ -140,15 +137,6 @@ type family DSNats (a :: ka) :: [DS Nat] where
 
     DSNats ('[] :: [Nat]) = '[]
     DSNats (x ': xs)      = DSNat x ': DSNats xs
-
-type ChannelsT a = DSNat a
-
-type family ShapeT (a :: ka) :: DS [DS Nat] where
-    ShapeT [Int32]          = 'D
-    ShapeT (V.Vector Int32) = 'D
-    ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
-    ShapeT (xs :: [Nat])    = 'S (DSNats xs)
-    ShapeT (Proxy a)        = ShapeT a
 
 type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
     Relax x      'D     = 'True

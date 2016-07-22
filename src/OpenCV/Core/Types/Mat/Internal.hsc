@@ -10,31 +10,13 @@
 #endif
 
 module OpenCV.Core.Types.Mat.Internal
-    ( Depth(..)
-    , DepthT
-    , marshalDepth
-    , marshalFlags
-    , unmarshalDepth
-    , unmarshalFlags
-
-    , ToDepth(toDepth)
-    , ToDepthDS(toDepthDS)
-    , ToChannels, toChannels
-    , ToChannelsDS, toChannelsDS
-    , ToShape(toShape)
-    , ToShapeDS(toShapeDS)
-
-    , Mat(..)
-    , MutMat(..)
+    ( -- * Matrix
+      Mat(..)
 
     , typeCheckMat
-    , typeCheckMatM
-    , coerceMat
-    , coerceMatM
-    , unsafeCoerceMat
-    , unsafeCoerceMatM
     , relaxMat
-    , relaxMatM
+    , coerceMat
+    , unsafeCoerceMat
 
     , keepMatAliveDuring
     , newEmptyMat
@@ -42,8 +24,34 @@ module OpenCV.Core.Types.Mat.Internal
     , withMatData
     , matElemAddress
 
+      -- * Mutable matrix
+    , MutMat(..)
+
+    , typeCheckMatM
+    , relaxMatM
+    , coerceMatM
+    , unsafeCoerceMatM
+
+      -- * Meta information
     , MatInfo(..)
     , matInfo
+
+    , Depth(..)
+    , marshalDepth
+    , unmarshalDepth
+    , marshalFlags
+    , unmarshalFlags
+
+    , ShapeT
+    , ChannelsT
+    , DepthT
+
+    , ToShape(toShape)
+    , ToShapeDS(toShapeDS)
+    , ToChannels, toChannels
+    , ToChannelsDS, toChannelsDS
+    , ToDepth(toDepth)
+    , ToDepthDS(toDepthDS)
     ) where
 
 import "base" Data.Bits
@@ -75,7 +83,6 @@ import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG
 
-
 --------------------------------------------------------------------------------
 
 C.context openCvCtx
@@ -89,114 +96,7 @@ C.using "namespace cv"
 #include "namespace.hpp"
 
 --------------------------------------------------------------------------------
-
-#num CV_CN_MAX
-#num CV_CN_SHIFT
-
-#num CV_8U
-#num CV_8S
-#num CV_16U
-#num CV_16S
-#num CV_32S
-#num CV_32F
-#num CV_64F
-#num CV_USRTYPE1
-
-#num CV_MAT_DEPTH_MASK
-
-marshalDepth :: Depth -> Int32
-marshalDepth = \case
-    Depth_8U       -> c'CV_8U
-    Depth_8S       -> c'CV_8S
-    Depth_16U      -> c'CV_16U
-    Depth_16S      -> c'CV_16S
-    Depth_32S      -> c'CV_32S
-    Depth_32F      -> c'CV_32F
-    Depth_64F      -> c'CV_64F
-    Depth_USRTYPE1 -> c'CV_USRTYPE1
-
-marshalFlags
-    :: Depth
-    -> Int32 -- ^ Number of channels
-    -> Int32
-marshalFlags depth cn =
-    marshalDepth depth
-      .|. ((cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
-
-unmarshalDepth :: Int32 -> Depth
-unmarshalDepth n
-    | n == c'CV_8U       = Depth_8U
-    | n == c'CV_8S       = Depth_8S
-    | n == c'CV_16U      = Depth_16U
-    | n == c'CV_16S      = Depth_16S
-    | n == c'CV_32S      = Depth_32S
-    | n == c'CV_32F      = Depth_32F
-    | n == c'CV_64F      = Depth_64F
-    | n == c'CV_USRTYPE1 = Depth_USRTYPE1
-    | otherwise          = error $ "unknown depth " <> show n
-
-unmarshalFlags :: Int32 -> (Depth, Int32)
-unmarshalFlags n =
-    ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
-    , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
-    )
-
---------------------------------------------------------------------------------
-
-type ToChannels a = ToInt32 a
-
-toChannels :: (ToInt32 a) => a -> Int32
-toChannels = toInt32
-
-type ToChannelsDS a = ToNatDS a
-
-toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
-toChannelsDS = toNatDS
-
---------------------------------------------------------------------------------
-
-class ToShape a where
-    toShape :: a -> V.Vector Int32
-
--- | identity
-instance ToShape (V.Vector Int32) where
-    toShape = id
-
--- | direct conversion to 'V.Vector'
-instance ToShape [Int32] where
-    toShape = V.fromList
-
--- | empty 'V.Vector'
-instance ToShape (Proxy '[]) where
-    toShape _proxy = V.empty
-
--- | fold over the type level list
-instance (ToInt32 (Proxy a), ToShape (Proxy as))
-      => ToShape (Proxy (a ': as)) where
-    toShape _proxy =
-        V.cons
-          (toInt32 (Proxy :: Proxy a))
-          (toShape (Proxy :: Proxy as))
-
--- | empty 'V.Vector'
-instance ToShape Z where
-    toShape Z = V.empty
-
--- | fold over ':::'
-instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
-    toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
-
---------------------------------------------------------------------------------
-
-class ToShapeDS a where
-    toShapeDS :: a -> DS [DS Int32]
-
-instance ToShapeDS (proxy 'D) where
-    toShapeDS _proxy = D
-
-instance (ToNatListDS (Proxy as)) => ToShapeDS (Proxy ('S as)) where
-    toShapeDS _proxy = S $ toNatListDS (Proxy :: Proxy as)
-
+-- Matrix
 --------------------------------------------------------------------------------
 
 newtype Mat (shape    :: DS [DS Nat])
@@ -204,27 +104,14 @@ newtype Mat (shape    :: DS [DS Nat])
             (depth    :: DS *)
       = Mat {unMat :: ForeignPtr (C (Mat shape channels depth))}
 
-newtype MutMat (shape    :: DS [DS Nat])
-               (channels :: DS Nat)
-               (depth    :: DS *)
-               (s        :: *)
-      = MutMat {unMutMat :: Mat shape channels depth}
-
 type instance C (Mat    shape channels depth  ) = C'Mat
-type instance C (MutMat shape channels depth s) = C'Mat
 
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
-instance WithPtr (MutMat shape channels depth s) where
-    withPtr = withPtr . unMutMat
-
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr Mat $ \ptr ->
                 [CU.exp| void { delete $(Mat * ptr) }|]
-
-
---------------------------------------------------------------------------------
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 
@@ -301,48 +188,6 @@ typeCheckMat mat =
         | otherwise = Just $ DepthError
                            $ ExpectationError expectedDepth (miDepth mi)
 
-typeCheckMatM
-    :: forall shape channels depth s
-     . ( ToShapeDS    (Proxy shape)
-       , ToChannelsDS (Proxy channels)
-       , ToDepthDS    (Proxy depth)
-       )
-    => MutMat shape channels depth s -- ^ The matrix to be checked.
-    -> [CoerceMatError] -- ^ Error messages.
-typeCheckMatM = typeCheckMat . unMutMat
-
-coerceMat
-    :: ( ToShapeDS    (Proxy shapeOut)
-       , ToChannelsDS (Proxy channelsOut)
-       , ToDepthDS    (Proxy depthOut)
-       )
-    => Mat shapeIn channelsIn depthIn -- ^
-    -> CvExcept (Mat shapeOut channelsOut depthOut)
-coerceMat matIn | null errors = pure matOut
-                | otherwise   = throwE $ CoerceMatError errors
-  where
-    matOut = unsafeCoerceMat matIn
-    errors = typeCheckMat matOut
-
-coerceMatM
-    :: ( ToShapeDS    (Proxy shapeOut)
-       , ToChannelsDS (Proxy channelsOut)
-       , ToDepthDS    (Proxy depthOut)
-       )
-    => MutMat shapeIn channelsIn depthIn s -- ^
-    -> CvExcept (MutMat shapeOut channelsOut depthOut s)
-coerceMatM = fmap MutMat . coerceMat . unMutMat
-
-unsafeCoerceMat
-    :: Mat shapeIn  channelsIn  depthIn
-    -> Mat shapeOut channelsOut depthOut
-unsafeCoerceMat = unsafeCoerce
-
-unsafeCoerceMatM
-    :: MutMat shapeIn  channelsIn  depthIn  s
-    -> MutMat shapeOut channelsOut depthOut s
-unsafeCoerceMatM = unsafeCoerce
-
 -- | Relaxes the type level constraints
 --
 -- Only identical or looser constraints are allowed. For tighter
@@ -363,16 +208,23 @@ relaxMat
     -> Mat shapeOut channelsOut depthOut -- ^ 'Mat' with relaxed constraints.
 relaxMat = unsafeCoerce
 
-relaxMatM
-    :: ( MayRelax shapeIn    shapeOut
-       , MayRelax channelsIn channelsOut
-       , MayRelax depthIn    depthOut
+coerceMat
+    :: ( ToShapeDS    (Proxy shapeOut)
+       , ToChannelsDS (Proxy channelsOut)
+       , ToDepthDS    (Proxy depthOut)
        )
-    => MutMat shapeIn  channelsIn  depthIn  s -- ^ Original 'Mat'.
-    -> MutMat shapeOut channelsOut depthOut s -- ^ 'Mat' with relaxed constraints.
-relaxMatM = unsafeCoerce
+    => Mat shapeIn channelsIn depthIn -- ^
+    -> CvExcept (Mat shapeOut channelsOut depthOut)
+coerceMat matIn | null errors = pure matOut
+                | otherwise   = throwE $ CoerceMatError errors
+  where
+    matOut = unsafeCoerceMat matIn
+    errors = typeCheckMat matOut
 
---------------------------------------------------------------------------------
+unsafeCoerceMat
+    :: Mat shapeIn  channelsIn  depthIn
+    -> Mat shapeOut channelsOut depthOut
+unsafeCoerceMat = unsafeCoerce
 
 -- | Similar to 'withPtr' in that it keeps the 'ForeignPtr' alive
 -- during the execution of the given action but it doesn't extract the 'Ptr'
@@ -444,8 +296,6 @@ withVector v f =
   where
     n = VG.length v
 
---------------------------------------------------------------------------------
-
 withMatData
     :: Mat shape channels depth -- ^
     -> ([CSize] -> Ptr Word8 -> IO a)
@@ -471,6 +321,57 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
       offset = sum $ zipWith (*) step pos
 
+--------------------------------------------------------------------------------
+-- Mutable matrix
+--------------------------------------------------------------------------------
+
+newtype MutMat (shape    :: DS [DS Nat])
+               (channels :: DS Nat)
+               (depth    :: DS *)
+               (s        :: *)
+      = MutMat {unMutMat :: Mat shape channels depth}
+
+type instance C (MutMat shape channels depth s) = C'Mat
+
+instance WithPtr (MutMat shape channels depth s) where
+    withPtr = withPtr . unMutMat
+
+typeCheckMatM
+    :: forall shape channels depth s
+     . ( ToShapeDS    (Proxy shape)
+       , ToChannelsDS (Proxy channels)
+       , ToDepthDS    (Proxy depth)
+       )
+    => MutMat shape channels depth s -- ^ The matrix to be checked.
+    -> [CoerceMatError] -- ^ Error messages.
+typeCheckMatM = typeCheckMat . unMutMat
+
+relaxMatM
+    :: ( MayRelax shapeIn    shapeOut
+       , MayRelax channelsIn channelsOut
+       , MayRelax depthIn    depthOut
+       )
+    => MutMat shapeIn  channelsIn  depthIn  s -- ^ Original 'Mat'.
+    -> MutMat shapeOut channelsOut depthOut s -- ^ 'Mat' with relaxed constraints.
+relaxMatM = unsafeCoerce
+
+coerceMatM
+    :: ( ToShapeDS    (Proxy shapeOut)
+       , ToChannelsDS (Proxy channelsOut)
+       , ToDepthDS    (Proxy depthOut)
+       )
+    => MutMat shapeIn channelsIn depthIn s -- ^
+    -> CvExcept (MutMat shapeOut channelsOut depthOut s)
+coerceMatM = fmap MutMat . coerceMat . unMutMat
+
+unsafeCoerceMatM
+    :: MutMat shapeIn  channelsIn  depthIn  s
+    -> MutMat shapeOut channelsOut depthOut s
+unsafeCoerceMatM = unsafeCoerce
+
+
+--------------------------------------------------------------------------------
+-- Meta information
 --------------------------------------------------------------------------------
 
 data MatInfo
@@ -502,3 +403,121 @@ matInfo mat = unsafePerformIO $
            , miDepth    = depth
            , miChannels = channels
            }
+
+#num CV_8U
+#num CV_8S
+#num CV_16U
+#num CV_16S
+#num CV_32S
+#num CV_32F
+#num CV_64F
+#num CV_USRTYPE1
+
+marshalDepth :: Depth -> Int32
+marshalDepth = \case
+    Depth_8U       -> c'CV_8U
+    Depth_8S       -> c'CV_8S
+    Depth_16U      -> c'CV_16U
+    Depth_16S      -> c'CV_16S
+    Depth_32S      -> c'CV_32S
+    Depth_32F      -> c'CV_32F
+    Depth_64F      -> c'CV_64F
+    Depth_USRTYPE1 -> c'CV_USRTYPE1
+
+unmarshalDepth :: Int32 -> Depth
+unmarshalDepth n
+    | n == c'CV_8U       = Depth_8U
+    | n == c'CV_8S       = Depth_8S
+    | n == c'CV_16U      = Depth_16U
+    | n == c'CV_16S      = Depth_16S
+    | n == c'CV_32S      = Depth_32S
+    | n == c'CV_32F      = Depth_32F
+    | n == c'CV_64F      = Depth_64F
+    | n == c'CV_USRTYPE1 = Depth_USRTYPE1
+    | otherwise          = error $ "unknown depth " <> show n
+
+#num CV_CN_SHIFT
+
+marshalFlags
+    :: Depth
+    -> Int32 -- ^ Number of channels
+    -> Int32
+marshalFlags depth cn =
+    marshalDepth depth
+      .|. ((cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
+
+#num CV_CN_MAX
+#num CV_MAT_DEPTH_MASK
+
+unmarshalFlags :: Int32 -> (Depth, Int32)
+unmarshalFlags n =
+    ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
+    , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
+    )
+
+--------------------------------------------------------------------------------
+
+type family ShapeT (a :: ka) :: DS [DS Nat] where
+    ShapeT [Int32]          = 'D
+    ShapeT (V.Vector Int32) = 'D
+    ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
+    ShapeT (xs :: [Nat])    = 'S (DSNats xs)
+    ShapeT (Proxy a)        = ShapeT a
+
+type ChannelsT a = DSNat a
+
+--------------------------------------------------------------------------------
+
+class ToShape a where
+    toShape :: a -> V.Vector Int32
+
+-- | identity
+instance ToShape (V.Vector Int32) where
+    toShape = id
+
+-- | direct conversion to 'V.Vector'
+instance ToShape [Int32] where
+    toShape = V.fromList
+
+-- | empty 'V.Vector'
+instance ToShape (Proxy '[]) where
+    toShape _proxy = V.empty
+
+-- | fold over the type level list
+instance (ToInt32 (Proxy a), ToShape (Proxy as))
+      => ToShape (Proxy (a ': as)) where
+    toShape _proxy =
+        V.cons
+          (toInt32 (Proxy :: Proxy a))
+          (toShape (Proxy :: Proxy as))
+
+-- | empty 'V.Vector'
+instance ToShape Z where
+    toShape Z = V.empty
+
+-- | fold over ':::'
+instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
+    toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
+
+--------------------------------------------------------------------------------
+
+class ToShapeDS a where
+    toShapeDS :: a -> DS [DS Int32]
+
+instance ToShapeDS (proxy 'D) where
+    toShapeDS _proxy = D
+
+instance (ToNatListDS (Proxy as)) => ToShapeDS (Proxy ('S as)) where
+    toShapeDS _proxy = S $ toNatListDS (Proxy :: Proxy as)
+
+--------------------------------------------------------------------------------
+
+type ToChannels a = ToInt32 a
+
+toChannels :: (ToInt32 a) => a -> Int32
+toChannels = toInt32
+
+type ToChannelsDS a = ToNatDS a
+
+toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
+toChannelsDS = toNatDS
