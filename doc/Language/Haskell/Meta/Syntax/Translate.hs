@@ -369,11 +369,15 @@ instance ToType Hs.Type where
 toStrictType :: Hs.Type -> StrictType
 toStrictType t@(Hs.TyBang _ Hs.TyBang{}) =
   nonsense "toStrictType" "double strictness annotation" t
+#if MIN_VERSION_template_haskell(2,11,0)
 toStrictType (Hs.TyBang Hs.BangedTy t) = (Bang NoSourceUnpackedness SourceStrict, toType t)
 toStrictType (Hs.TyBang Hs.UnpackedTy t) = (Bang SourceUnpack NoSourceStrictness, toType t)
 toStrictType t = (Bang NoSourceUnpackedness NoSourceStrictness, toType t)
-
-
+#else
+toStrictType (Hs.TyBang Hs.BangedTy t) = (IsStrict, toType t)
+toStrictType (Hs.TyBang Hs.UnpackedTy t) = (Unpacked, toType t)
+toStrictType t = (NotStrict, toType t)
+#endif
 
 (.->.) :: Type -> Type -> Type
 a .->. b = AppT (AppT ArrowT a) b
@@ -422,9 +426,14 @@ instance ToDec Hs.Decl where
         Hs.DataType -> DataD (toCxt cxt)
                              (toName n)
                              (fmap toTyVar ns)
+#if MIN_VERSION_template_haskell(2,11,0)
                              Nothing
                              (fmap qualConDeclToCon qcds)
                              (fmap (ConT . toName . fst) qns)
+#else
+                             (fmap qualConDeclToCon qcds)
+                             (fmap (toName . fst) qns)
+#endif
         Hs.NewType  -> let qcd = case qcds of
                                   [x] -> x
                                   _   -> nonsense "toDec" ("newtype with " ++
@@ -432,9 +441,14 @@ instance ToDec Hs.Decl where
                         in NewtypeD (toCxt cxt)
                                     (toName n)
                                     (fmap toTyVar ns)
+#if MIN_VERSION_template_haskell(2,11,0)
                                     Nothing
                                     (qualConDeclToCon qcd)
                                     (fmap (ConT . toName . fst) qns)
+#else
+                                    (qualConDeclToCon qcd)
+                                    (fmap (toName . fst) qns)
+#endif
 
   -- This type-signature conversion is just wrong.
   -- Type variables need to be dealt with. /Jonas
@@ -461,6 +475,7 @@ instance ToDec Hs.Decl where
 
 #endif /* MIN_VERSION_template_haskell(2,8,0) */
 
+#if MIN_VERSION_template_haskell(2,11,0)
   toDec (Hs.TypeFamDecl _ n ns Nothing)
     = OpenTypeFamilyD (TypeFamilyHead (toName n) (map toTyVar ns) NoSig Nothing)
 
@@ -470,6 +485,12 @@ instance ToDec Hs.Decl where
   -- TODO: do something with context?
   toDec (Hs.DataFamDecl _ _ n ns mk)
     = DataFamilyD (toName n) (fmap toTyVar ns) (fmap toKind mk)
+#else
+  toDec (Hs.TypeFamDecl _ n ns k)
+    = FamilyD TypeFam (toName n) (fmap toTyVar ns) (fmap toKind k)
+  toDec (Hs.DataFamDecl _ _ n ns k)
+    = FamilyD DataFam (toName n) (fmap toTyVar ns) (fmap toKind k)
+#endif
 
   toDec a@(Hs.FunBind mtchs)                           = hsMatchesToFunD mtchs
   toDec (Hs.PatBind _ p rhs bnds)                      = ValD (toPat p)
@@ -483,7 +504,9 @@ instance ToDec Hs.Decl where
   -- TH's own parser seems to flat-out ignore them, and honestly I can't see
   -- that it's obviously wrong to do so.
   toDec (Hs.InstDecl _ Nothing _vars cxt qname ts ids) = InstanceD
+#if MIN_VERSION_template_haskell(2,11,0)
     Nothing
+#endif
     (toCxt cxt)
     (foldl AppT (ConT (toName qname)) (map toType ts))
     (toDecs ids)
