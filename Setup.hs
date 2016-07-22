@@ -1,8 +1,8 @@
-import Distribution.Simple
-import System.Environment
-import System.IO
+import Distribution.Simple ( defaultMainArgs )
+import System.Environment ( getArgs )
 
-main =
-    do args <- getArgs
-       let args' = if "configure" `elem` args then args ++ ["--with-gcc","g++","--with-ld","g++"] else args
-       defaultMainArgs args'
+main = do
+    args <- getArgs
+    let args' | "configure" `elem` args = args ++ ["--with-gcc","g++", "--with-ld","g++"]
+              | otherwise               = args
+    defaultMainArgs args'
