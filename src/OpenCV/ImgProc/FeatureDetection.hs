@@ -18,6 +18,7 @@ import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
+import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear ( V2(..), V3(..) )
 import "this" OpenCV.C.Inline ( openCvCtx )
@@ -67,38 +68,39 @@ canny
        -- ^ Second threshold for the hysteresis procedure.
     -> Maybe Int32
        -- ^ Aperture size for the @Sobel()@ operator. If not specified defaults
-       -- to @3@.
+       -- to @3@. Must be 3, 5 or 7.
     -> Maybe Bool
        -- ^ A flag, indicating whether a more accurate L2 norm should be used.
        -- If 'False' or 'Nothing' the default L1 norm will be used.
-    -> Mat ('S [w, h]) ('S 1) ('S Word8)
-       -- ^ Single-channel 8-bit input image.
+    -> Mat ('S [h, w]) channels ('S Word8)
+       -- ^ 8-bit input image.
     -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
 canny threshold1 threshold2 apertureSize l2gradient src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
-        withPtr src $ \srcPtr ->
-        withPtr dst $ \dstPtr ->
-          [cvExcept|
-            cv::Canny
-            ( *$(Mat * srcPtr)
-            , *$(Mat * dstPtr)
-            , $(double c'threshold1)
-            , $(double c'threshold2)
-            , $(int32_t c'apertureSize)
-            , $(bool c'l2Gradient)
-            );
-          |]
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
+        [cvExcept|
+          cv::Canny
+          ( *$(Mat * srcPtr)
+          , *$(Mat * dstPtr)
+          , $(double c'threshold1)
+          , $(double c'threshold2)
+          , $(int32_t c'apertureSize)
+          , $(bool c'l2Gradient)
+          );
+        |]
   where
     c'threshold1 = realToFrac threshold1
     c'threshold2 = realToFrac threshold2
     c'apertureSize = fromMaybe 3 apertureSize
     c'l2Gradient = fromBool (fromMaybe False l2gradient)
 
-data Circle =
-  Circle {circleCenter :: V2 Float
-         ,circleRadius :: Float}
-  deriving (Show)
+data Circle
+   = Circle
+     { circleCenter :: V2 Float
+     , circleRadius :: Float
+     } deriving (Show)
 
 {- |
 
