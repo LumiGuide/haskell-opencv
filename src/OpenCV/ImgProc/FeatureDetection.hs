@@ -300,7 +300,7 @@ houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim 
 
       numLines <- fromIntegral <$> peek numLinesPtr
       linesPtr <- peek linesPtrPtr
-      (lines :: [Vec4i]) <- mapM (fromPtr . pure) =<< peekArray numLines linesPtr
+      lineSegments  <- mapM (fmap fromVec4i . fromPtr . pure) =<< peekArray numLines linesPtr
 
       -- Free the array of Vec4i pointers. This does not free the
       -- Vec4i's pointed to by the elements of the array. That is the
@@ -309,7 +309,7 @@ houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim 
         delete [] *$(Vec4i * * * linesPtrPtr);
       }|]
 
-      pure $ V.map fromVec4i $ V.fromList lines
+      pure $ V.fromList lineSegments
   where
     c'rho           = realToFrac rho
     c'theta         = realToFrac theta
