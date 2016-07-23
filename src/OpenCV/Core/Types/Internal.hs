@@ -2,6 +2,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module OpenCV.Core.Types.Internal
     ( -- * Point
       -- ** 2D types
@@ -724,7 +726,6 @@ mkPlacementNewInstance ''Vec4i
 mkPlacementNewInstance ''Size2i
 mkPlacementNewInstance ''Size2f
 mkPlacementNewInstance ''Scalar
-mkPlacementNewInstance ''Mat
 
 --------------------------------------------------------------------------------
 

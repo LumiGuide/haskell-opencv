@@ -9,6 +9,8 @@
 {-# options_ghc -Wno-redundant-constraints #-}
 #endif
 
+{-# options_ghc -fno-warn-orphans #-}
+
 module OpenCV.Core.Types.Mat.Internal
     ( -- * Matrix
       Mat(..)
@@ -74,6 +76,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
+import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Depth
 import "this" OpenCV.Exception.Internal
@@ -112,6 +115,8 @@ instance WithPtr (Mat shape channels depth) where
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr Mat $ \ptr ->
                 [CU.exp| void { delete $(Mat * ptr) }|]
+
+mkPlacementNewInstance ''Mat
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 
