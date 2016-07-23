@@ -1,9 +1,15 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 {-# language NoImplicitPrelude #-}
+{-# language CPP #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.ImgProc.FeatureDetection
     ( canny
+    , goodFeaturesToTrack
     , houghCircles
     , houghLinesP
     , Circle(..)
@@ -106,6 +112,120 @@ data Circle
      { circleCenter :: V2 Float
      , circleRadius :: Float
      } deriving (Show)
+
+{- |
+
+Determines strong corners on an image.
+
+The function finds the most prominent corners in the image or in the specified image region.
+
+* Function calculates the corner quality measure at every source image pixel using the cornerMinEigenVal or cornerHarris.
+* Function performs a non-maximum suppression (the local maximums in 3 x 3 neighborhood are retained).
+* The corners with the minimal eigenvalue less than @𝚚𝚞𝚊𝚕𝚒𝚝𝚢𝙻𝚎𝚟𝚎𝚕 * max(x,y) qualityMeasureMap(x,y)@ are rejected.
+* The remaining corners are sorted by the quality measure in the descending order.
+* Function throws away each corner for which there is a stronger corner at a distance less than maxDistance.
+
+Example:
+
+@
+goodFeaturesToTrackTraces
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
+    => Mat (ShapeT [height, width]) ('S channels) ('S depth)
+goodFeaturesToTrackTraces = exceptError $ do
+  imgG <- cvtColor bgr gray frog
+  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing Nothing Nothing
+  withMatM (Proxy :: Proxy [height, width])
+           (Proxy :: Proxy channels)
+           (Proxy :: Proxy depth)
+           white $ \imgM -> do
+    void $ matCopyToM imgM (V2 0 0) frog Nothing
+    forM_ features $ \f -> do
+      circle imgM (round \<$> f :: V2 Int32) 2 blue 5 LineType_AA 0
+@
+
+<<doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces>>
+-}
+goodFeaturesToTrack
+  :: (depth `In` ['S Word8, 'S Float, 'D])
+  => Mat ('S [h, w]) ('S 1) depth
+  -- ^ Input 8-bit or floating-point 32-bit, single-channel image.
+  -> Int32
+  -- ^ Maximum number of corners to return. If there are more corners than are
+  -- found, the strongest of them is returned.
+  -> Double
+  -- ^ Parameter characterizing the minimal accepted quality of image corners.
+  -- The parameter value is multiplied by the best corner quality measure,
+  -- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris
+  -- function response (see cornerHarris ). The corners with the quality measure
+  -- less than the product are rejected. For example, if the best corner has the
+  -- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with
+  -- the quality measure less than 15 are rejected.
+  -> Double
+  -- ^ Minimum possible Euclidean distance between the returned corners.
+  -> Maybe (Mat ('S [h, w]) ('S 1) ('S Word8))
+  -- ^ Optional region of interest. If the image is not empty (it needs to have
+  -- the type CV_8UC1 and the same size as image ), it specifies the region in which
+  -- the corners are detected.
+  -> Maybe Int32
+  -- ^ Size of an average block for computing a derivative covariation matrix
+  -- over each pixel neighborhood. See cornerEigenValsAndVecs.
+  -> Maybe Bool
+  -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
+  -- or cornerMinEigenVal.
+  -> Maybe Double
+  -- ^ 	Free parameter of the Harris detector.
+  -> V.Vector (V2 Float)
+goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize useHarrisDetector harrisK = unsafePerformIO $ do
+  withPtr src  $ \srcPtr ->
+    withPtr mbMask $ \mskPtr ->
+    alloca $ \(cornersLengthsPtr :: Ptr Int32) ->
+    alloca $ \(cornersPtrPtr :: Ptr (Ptr (Ptr C'Point2f))) -> mask_ $ do
+    [C.block| void {
+      std::vector<cv::Point2f> corners;
+      Mat * mskPtr = $(Mat * mskPtr);
+      cv::goodFeaturesToTrack
+      ( *$(Mat * srcPtr)
+      , corners
+      , $(int32_t maxCorners)
+      , $(double c'qualityLevel)
+      , $(double c'minDistance)
+      , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
+      , $(int32_t c'blockSize)
+      , $(bool c'useHarrisDetector)
+      , $(double c'harrisK)
+      );
+
+      cv::Point2f * * * cornersPtrPtr = $(Point2f * * * cornersPtrPtr);
+      cv::Point2f * * cornersPtr = new cv::Point2f * [corners.size()];
+      *cornersPtrPtr = cornersPtr;
+
+      *$(int32_t * cornersLengthsPtr) = corners.size();
+
+      for (std::vector<cv::Point2f>::size_type i = 0; i != corners.size(); i++) {
+        cornersPtr[i] = new cv::Point2f( corners[i] );
+      }
+    }|]
+    numCorners <- fromIntegral <$> peek cornersLengthsPtr
+    cornersPtr <- peek cornersPtrPtr
+    (corners :: [V2 Float]) <-
+        peekArray numCorners cornersPtr >>=
+        mapM (fmap (fmap fromCFloat . fromPoint2f) . fromPtr . pure)
+    [CU.block| void {
+      delete [] *$(Point2f * * * cornersPtrPtr);
+    }|]
+    pure (V.fromList  corners)
+  where
+    c'qualityLevel = realToFrac qualityLevel
+    c'minDistance  = realToFrac minDistance
+    c'blockSize    = fromMaybe 3 blockSize
+    c'useHarrisDetector = fromBool (fromMaybe False useHarrisDetector)
+    c'harrisK = realToFrac (fromMaybe 0.04 harrisK)
+    fromCFloat :: C.CFloat -> Float
+    fromCFloat = realToFrac
 
 {- |
 
