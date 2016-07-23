@@ -2,8 +2,7 @@ resolver: lts-6.8
 packages:
 - '.'
 - examples/
-extra-deps: []
+extra-deps:
+- 'inline-c-0.5.5.5'
 
 flags: {}
-
-extra-package-dbs: []
