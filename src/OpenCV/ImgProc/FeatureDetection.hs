@@ -12,6 +12,7 @@ module OpenCV.ImgProc.FeatureDetection
     , goodFeaturesToTrack
     , houghCircles
     , houghLinesP
+    , GoodFeaturesToTrackDetectionMethod(..)
     , CannyNorm(..)
     , Circle(..)
     , LineSegment(..)
@@ -182,13 +183,11 @@ goodFeaturesToTrack
   -> Maybe Int32
   -- ^ Size of an average block for computing a derivative covariation matrix
   -- over each pixel neighborhood. See cornerEigenValsAndVecs.
-  -> Maybe Bool
+  -> GoodFeaturesToTrackDetectionMethod
   -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
   -- or cornerMinEigenVal.
-  -> Maybe Double
-  -- ^ 	Free parameter of the Harris detector.
   -> V.Vector (V2 Float)
-goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize useHarrisDetector harrisK = unsafePerformIO $ do
+goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafePerformIO $ do
   withPtr src  $ \srcPtr ->
     withPtr mbMask $ \mskPtr ->
     alloca $ \(cornersLengthsPtr :: Ptr Int32) ->
@@ -231,10 +230,23 @@ goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize use
     c'qualityLevel = realToFrac qualityLevel
     c'minDistance  = realToFrac minDistance
     c'blockSize    = fromMaybe 3 blockSize
-    c'useHarrisDetector = fromBool (fromMaybe False useHarrisDetector)
-    c'harrisK = realToFrac (fromMaybe 0.04 harrisK)
+    c'useHarrisDetector =
+      fromBool $
+        case detector of
+          HarrisDetector _kValue -> True
+          CornerMinEigenVal -> False
+    c'harrisK =
+      realToFrac $
+        case detector of
+          HarrisDetector kValue -> kValue
+          CornerMinEigenVal -> 0.04
     fromCFloat :: C.CFloat -> Float
     fromCFloat = realToFrac
+
+data GoodFeaturesToTrackDetectionMethod
+   = HarrisDetector Double -- ^ Harris detector and it free k parameter
+   | CornerMinEigenVal
+   deriving (Show, Eq)
 
 {- |
 
