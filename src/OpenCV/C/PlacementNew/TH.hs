@@ -21,9 +21,9 @@ mkPlacementNewInstance name =
     ctypeName = "C'"  <> typeName
 
     placementNewQ = do
-      dst <- newName "dst"
       src <- newName "src"
-      lamE [varP dst, varP src] $
+      dst <- newName "dst"
+      lamE [varP src, varP dst] $
         quoteExp C.exp $
           "void { new($(" <> typeName <> " * " <> nameBase dst <> ")) cv::" <> typeName <>
                    "(*$(" <> typeName <> " * " <> nameBase src <> ")) }"
