@@ -68,7 +68,7 @@ cannyImg
      . (Mat shape channels depth ~ Lambda)
     => Mat shape ('S 1) depth
 cannyImg = exceptError $
-  canny 30 200 Nothing Nothing lambda
+  canny 30 200 Nothing CannyNormL1 lambda
 @
 
 <<doc/generated/examples/cannyImg.png cannyImg>>
@@ -147,7 +147,7 @@ goodFeaturesToTrackTraces
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 goodFeaturesToTrackTraces = exceptError $ do
   imgG <- cvtColor bgr gray frog
-  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing Nothing Nothing
+  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
   withMatM (Proxy :: Proxy [height, width])
            (Proxy :: Proxy channels)
            (Proxy :: Proxy depth)
