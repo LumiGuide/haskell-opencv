@@ -11,11 +11,8 @@ let
     overrides = self: super: {
       inline-c = super.inline-c.override (args: args // {
           mkDerivation = expr: args.mkDerivation (expr // {
-            src = pkgs.fetchgit {
-              url    = "https://github.com/fpco/inline-c.git";
-              rev    = "24020e1cd4d9196fde125ea7e957d633d5b49717";
-              sha256 = "0221w2pr136harxdql0649ilbn4yncb324q9jnhdg1xfch4shxbz";
-            };
+            version = "0.5.5.5";
+            sha256 = "0c3jijav2iz9b5k1hzzidq7rbavj45rbbyrk93ybd2dagrj45lgk";
           });
         });
     };
