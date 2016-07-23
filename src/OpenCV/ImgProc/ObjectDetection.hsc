@@ -8,6 +8,7 @@
 
 module OpenCV.ImgProc.ObjectDetection
     ( MatchTemplateMethod(..)
+    , MatchTemplateNormalisation(..)
     , matchTemplate
     ) where
 
@@ -54,6 +55,12 @@ data MatchTemplateMethod
        --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/235e42ec68d2d773899efcf0a4a9d35a7afedb64.png>>
      deriving Show
 
+-- | Whether to use normalisation. See 'MatchTemplateMethod'.
+data MatchTemplateNormalisation
+   = MatchTemplateNotNormed
+   | MatchTemplateNormed
+   deriving (Show, Eq)
+
 #num CV_TM_SQDIFF
 #num CV_TM_SQDIFF_NORMED
 #num CV_TM_CCORR
@@ -96,8 +103,8 @@ matchTemplate
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
     -> MatchTemplateMethod
        -- ^ Parameter specifying the comparison method.
-    -> Bool
-       -- ^ Normalise. See 'MatchTemplateMethod'.
+    -> MatchTemplateNormalisation
+       -- ^ Normalise
     -> CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
        -- ^ Map of comparison results. It must be single-channel 32-bit floating-point.
        -- If image is
@@ -106,7 +113,7 @@ matchTemplate
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/d47153257f0243694e5632bb23b85009eb9e5599.png>>
        -- , then result is
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
-matchTemplate image templ method normed = unsafeWrapException $ do
+matchTemplate image templ method normalisation = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
       withPtr result $ \resultPtr ->
@@ -120,4 +127,8 @@ matchTemplate image templ method normed = unsafeWrapException $ do
                            );
         |]
   where
+    normed =
+      case normalisation of
+        MatchTemplateNotNormed -> False
+        MatchTemplateNormed -> True
     c'method = marshalMatchTemplateMethod method normed
