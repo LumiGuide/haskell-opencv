@@ -1,3 +1,6 @@
+.PHONY: nothing
+nothing: ;
+
 .PHONY: shell
 shell:
 	nix-shell
@@ -6,6 +9,12 @@ shell:
 build:
 	cabal configure --enable-tests && \
 	cabal build
+
+.PHONY: clean
+clean:
+	cabal clean && \
+	find doc/generated -name "*.png" -type f -delete && \
+	find src           -name "*.cpp" -type f -delete
 
 .PHONY: test
 test:
