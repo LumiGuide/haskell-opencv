@@ -12,6 +12,7 @@ module OpenCV.ImgProc.FeatureDetection
     , goodFeaturesToTrack
     , houghCircles
     , houghLinesP
+    , CannyNorm(..)
     , Circle(..)
     , LineSegment(..)
     ) where
@@ -80,13 +81,12 @@ canny
     -> Maybe Int32
        -- ^ Aperture size for the @Sobel()@ operator. If not specified defaults
        -- to @3@. Must be 3, 5 or 7.
-    -> Maybe Bool
-       -- ^ A flag, indicating whether a more accurate L2 norm should be used.
-       -- If 'False' or 'Nothing' the default L1 norm will be used.
+    -> CannyNorm
+       -- ^ A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.
     -> Mat ('S [h, w]) channels ('S Word8)
        -- ^ 8-bit input image.
     -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
-canny threshold1 threshold2 apertureSize l2gradient src = unsafeWrapException $ do
+canny threshold1 threshold2 apertureSize norm src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src $ \srcPtr ->
@@ -105,7 +105,16 @@ canny threshold1 threshold2 apertureSize l2gradient src = unsafeWrapException $ 
     c'threshold1 = realToFrac threshold1
     c'threshold2 = realToFrac threshold2
     c'apertureSize = fromMaybe 3 apertureSize
-    c'l2Gradient = fromBool (fromMaybe False l2gradient)
+    c'l2Gradient =
+      fromBool $
+        case norm of
+          CannyNormL1 -> False
+          CannyNormL2 -> True
+
+data CannyNorm
+   = CannyNormL1
+   | CannyNormL2
+   deriving (Show, Eq)
 
 data Circle
    = Circle
