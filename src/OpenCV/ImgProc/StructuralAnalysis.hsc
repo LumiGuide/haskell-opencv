@@ -65,13 +65,10 @@ contourArea
     :: (ToPoint2f point2f)
     => V.Vector point2f
        -- ^ Input vector of 2D points (contour vertices).
-    -> Bool
-       -- ^ Oriented area flag. If it is true, the function returns a signed
-       -- area value, depending on the contour orientation (clockwise or
-       -- counter-clockwise). Using this feature you can determine orientation
-       -- of a contour by taking the sign of an area.
+    -> ContourAreaOriented
+       -- ^ Signed or unsigned area
     -> CvExcept Double
-contourArea contour oriented = unsafeWrapException $
+contourArea contour areaOriented = unsafeWrapException $
     withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
     alloca $ \c'area ->
     handleCvException (realToFrac <$> peek c'area) $
@@ -83,6 +80,10 @@ contourArea contour oriented = unsafeWrapException $
         *$(double * c'area) = cv::contourArea(contour, $(bool c'oriented));
       |]
   where
+    oriented =
+      case areaOriented of
+        ContourAreaOriented -> True
+        ContourAreaAbsoluteValue -> False
     c'numPoints = fromIntegral $ V.length contour
     c'oriented = fromBool oriented
 
@@ -126,6 +127,15 @@ pointPolygonTest contour pt measureDist = unsafeWrapException $
   where
     c'numPoints = fromIntegral $ V.length contour
     c'measureDist = fromBool measureDist
+
+-- | Oriented area flag.
+data ContourAreaOriented
+  = ContourAreaOriented
+    -- ^ Return a signed area value, depending on the contour orientation (clockwise or
+    -- counter-clockwise). Using this feature you can determine orientation
+    -- of a contour by taking the sign of an area.
+  | ContourAreaAbsoluteValue
+    -- ^ Return the area as an absolute value.
 
 data ContourRetrievalMode
   = ContourRetrievalExternal
