@@ -26,6 +26,7 @@ library
       , src/OpenCV/Core/Types/Mat.cpp
       , src/OpenCV/Core/Types/Mat/Internal.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
+      , src/OpenCV/Core/Types/Matx/Internal.cpp
       , src/OpenCV/Exception/Internal.cpp
       , src/OpenCV/Features2d.cpp
       , src/OpenCV/HighGui.cpp
@@ -71,6 +72,7 @@ library
         OpenCV.Core.Types.Mat
         OpenCV.Core.Types.Mat.HMat
         OpenCV.Core.Types.Mat.Repa
+        OpenCV.Core.Types.Matx
         OpenCV.Exception
         OpenCV.Features2d
         OpenCV.HighGui
@@ -97,6 +99,7 @@ library
         OpenCV.Core.Types.Internal
         OpenCV.Core.Types.Mat.Depth
         OpenCV.Core.Types.Mat.Internal
+        OpenCV.Core.Types.Matx.Internal
         OpenCV.C.PlacementNew
         OpenCV.C.PlacementNew.TH
         OpenCV.C.Types

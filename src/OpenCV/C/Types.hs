@@ -1,10 +1,27 @@
 module OpenCV.C.Types where
 
+import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Data.Int ( Int32 )
+import "base" GHC.TypeLits
 import "this" OpenCV.Core.Types.Constants
 
 --------------------------------------------------------------------------------
+
+data C'Matx (t :: *) (m :: Nat) (n :: Nat)
+data C'Vec  (t :: *) (m :: Nat)
+
+type C'Vec2i = C'Vec Int32   2
+type C'Vec2f = C'Vec CFloat  2
+type C'Vec2d = C'Vec CDouble 2
+
+type C'Vec3i = C'Vec Int32   3
+type C'Vec3f = C'Vec CFloat  3
+type C'Vec3d = C'Vec CDouble 3
+
+type C'Vec4f = C'Vec CFloat  4
+type C'Vec4d = C'Vec CDouble 4
+type C'Vec4i = C'Vec Int32   4
 
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
@@ -20,10 +37,6 @@ data C'Point3i
 data C'Point3f
 -- | Haskell representation of an OpenCV @cv::Point3_\<double>@ object
 data C'Point3d
--- | Haskell representation of an OpenCV @cv::Vec3f@ object
-data C'Vec3f
--- | Haskell representation of an OpenCV @cv::Vec4i@ object
-data C'Vec4i
 -- | Haskell representation of an OpenCV @cv::Size_\<int>@ object
 data C'Size2i
 -- | Haskell representation of an OpenCV @cv::Size_\<float>@ object

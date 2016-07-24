@@ -39,8 +39,11 @@ main = defaultMain $ testGroup "opencv"
         , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
         , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
         , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
+        , testIso "isoVec3fV3"   (toVec     :: V3 Float  -> Vec3f  ) fromVec
+        , testIso "isoVec4iV4"   (toVec     :: V4 Int32  -> Vec4i  ) fromVec
         , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
         , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
+        , testIso "isoScalarV4"  (toScalar  :: V4 Double -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties

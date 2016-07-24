@@ -26,12 +26,6 @@ module OpenCV.Core.Types.Internal
     , ToPoint3i(..), FromPoint3i(..)
     , ToPoint3f(..), FromPoint3f(..)
     , ToPoint3d(..), FromPoint3d(..)
-    , Vec3f(..)
-    , FromVec3f(..)
-      -- ** 4D types
-    , Vec4i(..)
-    , newVec4i
-    , ToVec4i(..), FromVec4i(..)
       -- * Size
     , Size2i(..)
     , Size2f(..)
@@ -132,12 +126,6 @@ newtype Point3f = Point3f {unPoint3f :: ForeignPtr (C Point3f)}
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#point3 OpenCV Sphinx doc>
 newtype Point3d = Point3d {unPoint3d :: ForeignPtr (C Point3d)}
 
--- | 3D vector with 32 bit floating point coordinates
-newtype Vec3f = Vec3f {unVec3f :: ForeignPtr (C Vec3f)}
-
--- | 4D vector with integer coordinates
-newtype Vec4i = Vec4i {unVec4i :: ForeignPtr (C Vec4i)}
-
 -- | Size of an image or rectangle with integer values
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
@@ -195,7 +183,6 @@ class ToPoint2d a where toPoint2d :: a -> Point2d
 class ToPoint3i a where toPoint3i :: a -> Point3i
 class ToPoint3f a where toPoint3f :: a -> Point3f
 class ToPoint3d a where toPoint3d :: a -> Point3d
-class ToVec4i   a where toVec4i   :: a -> Vec4i
 class ToSize2i  a where toSize2i  :: a -> Size2i
 class ToSize2f  a where toSize2f  :: a -> Size2f
 class ToScalar  a where toScalar  :: a -> Scalar
@@ -206,7 +193,6 @@ instance ToPoint2d Point2d where toPoint2d = id
 instance ToPoint3i Point3i where toPoint3i = id
 instance ToPoint3f Point3f where toPoint3f = id
 instance ToPoint3d Point3d where toPoint3d = id
-instance ToVec4i   Vec4i   where toVec4i   = id
 instance ToSize2i  Size2i  where toSize2i  = id
 instance ToSize2f  Size2f  where toSize2f  = id
 instance ToScalar  Scalar  where toScalar  = id
@@ -217,7 +203,6 @@ instance ToPoint2d (V2 CDouble) where toPoint2d = unsafePerformIO . newPoint2d
 instance ToPoint3i (V3 Int32  ) where toPoint3i = unsafePerformIO . newPoint3i
 instance ToPoint3f (V3 CFloat ) where toPoint3f = unsafePerformIO . newPoint3f
 instance ToPoint3d (V3 CDouble) where toPoint3d = unsafePerformIO . newPoint3d
-instance ToVec4i   (V4 Int32  ) where toVec4i   = unsafePerformIO . newVec4i
 instance ToSize2i  (V2 Int32  ) where toSize2i  = unsafePerformIO . newSize2i
 instance ToSize2f  (V2 CFloat ) where toSize2f  = unsafePerformIO . newSize2f
 instance ToScalar  (V4 CDouble) where toScalar  = unsafePerformIO . newScalar
@@ -244,7 +229,6 @@ instance ToPoint3d (CDouble, CDouble, CDouble) where toPoint3d = toPoint3d . toV
 instance ToPoint3d (Double , Double , Double ) where toPoint3d = toPoint3d . toV3
 instance ToScalar  (CDouble, CDouble, CDouble, CDouble) where toScalar = toScalar . toV4
 instance ToScalar  (Double , Double , Double , Double ) where toScalar = toScalar . toV4
-instance ToVec4i   (Int32  , Int32  , Int32  , Int32  ) where toVec4i  = toVec4i  . toV4
 
 class FromPoint2i a where fromPoint2i :: Point2i -> a
 class FromPoint2f a where fromPoint2f :: Point2f -> a
@@ -252,8 +236,6 @@ class FromPoint2d a where fromPoint2d :: Point2d -> a
 class FromPoint3i a where fromPoint3i :: Point3i -> a
 class FromPoint3f a where fromPoint3f :: Point3f -> a
 class FromPoint3d a where fromPoint3d :: Point3d -> a
-class FromVec3f   a where fromVec3f   :: Vec3f   -> a
-class FromVec4i   a where fromVec4i   :: Vec4i   -> a
 class FromSize2i  a where fromSize2i  :: Size2i  -> a
 class FromSize2f  a where fromSize2f  :: Size2f  -> a
 class FromScalar  a where fromScalar  :: Scalar  -> a
@@ -264,8 +246,6 @@ instance FromPoint2d Point2d where fromPoint2d = id
 instance FromPoint3i Point3i where fromPoint3i = id
 instance FromPoint3f Point3f where fromPoint3f = id
 instance FromPoint3d Point3d where fromPoint3d = id
-instance FromVec3f   Vec3f   where fromVec3f   = id
-instance FromVec4i   Vec4i   where fromVec4i   = id
 instance FromSize2i  Size2i  where fromSize2i  = id
 instance FromSize2f  Size2f  where fromSize2f  = id
 instance FromScalar  Scalar  where fromScalar  = id
@@ -356,41 +336,6 @@ instance FromPoint3d (V3 CDouble) where
         V3 <$> peek xPtr
            <*> peek yPtr
            <*> peek zPtr
-
-instance FromVec3f (V3 CFloat) where
-    fromVec3f vec = unsafePerformIO $
-      alloca $ \xPtr ->
-      alloca $ \yPtr ->
-      alloca $ \zPtr ->
-      withPtr vec $ \vecPtr -> do
-        [CU.block| void {
-          const Vec3f & p = *$(Vec3f * vecPtr);
-          *$(float * xPtr) = p[0];
-          *$(float * yPtr) = p[1];
-          *$(float * zPtr) = p[2];
-        }|]
-        V3 <$> peek xPtr
-           <*> peek yPtr
-           <*> peek zPtr
-
-instance FromVec4i (V4 Int32) where
-    fromVec4i vec = unsafePerformIO $
-      alloca $ \xPtr ->
-      alloca $ \yPtr ->
-      alloca $ \zPtr ->
-      alloca $ \wPtr ->
-      withPtr vec $ \vecPtr -> do
-        [CU.block| void {
-          const Vec4i & p = *$(Vec4i * vecPtr);
-          *$(int32_t * xPtr) = p[0];
-          *$(int32_t * yPtr) = p[1];
-          *$(int32_t * zPtr) = p[2];
-          *$(int32_t * wPtr) = p[3];
-        }|]
-        V4 <$> peek xPtr
-           <*> peek yPtr
-           <*> peek zPtr
-           <*> peek wPtr
 
 instance FromSize2i (V2 Int32) where
     fromSize2i s = unsafePerformIO $
@@ -507,10 +452,6 @@ newPoint3f (V3 x y z) = fromPtr $
 newPoint3d :: V3 CDouble -> IO Point3d
 newPoint3d (V3 x y z) = fromPtr $
     [CU.exp|Point3d * { new cv::Point3d($(double x), $(double y), $(double z)) }|]
-
-newVec4i :: V4 Int32 -> IO Vec4i
-newVec4i (V4 x y z w) = fromPtr $
-    [CU.exp|Vec4i * { new cv::Vec4i($(int32_t x), $(int32_t y), $(int32_t z), $(int32_t w)) }|]
 
 newSize2i :: V2 Int32 -> IO Size2i
 newSize2i (V2 x y) = fromPtr $
@@ -686,8 +627,6 @@ type instance C Point2d      = C'Point2d
 type instance C Point3i      = C'Point3i
 type instance C Point3f      = C'Point3f
 type instance C Point3d      = C'Point3d
-type instance C Vec3f        = C'Vec3f
-type instance C Vec4i        = C'Vec4i
 type instance C Size2i       = C'Size2i
 type instance C Size2f       = C'Size2f
 type instance C Scalar       = C'Scalar
@@ -704,8 +643,6 @@ instance WithPtr Point2d      where withPtr = withForeignPtr . unPoint2d
 instance WithPtr Point3i      where withPtr = withForeignPtr . unPoint3i
 instance WithPtr Point3f      where withPtr = withForeignPtr . unPoint3f
 instance WithPtr Point3d      where withPtr = withForeignPtr . unPoint3d
-instance WithPtr Vec3f        where withPtr = withForeignPtr . unVec3f
-instance WithPtr Vec4i        where withPtr = withForeignPtr . unVec4i
 instance WithPtr Size2i       where withPtr = withForeignPtr . unSize2i
 instance WithPtr Size2f       where withPtr = withForeignPtr . unSize2f
 instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
@@ -722,7 +659,6 @@ mkPlacementNewInstance ''Point2d
 mkPlacementNewInstance ''Point3i
 mkPlacementNewInstance ''Point3f
 mkPlacementNewInstance ''Point3d
-mkPlacementNewInstance ''Vec4i
 mkPlacementNewInstance ''Size2i
 mkPlacementNewInstance ''Size2f
 mkPlacementNewInstance ''Scalar
@@ -752,14 +688,6 @@ instance FromPtr Point3f where
 instance FromPtr Point3d where
     fromPtr = objFromPtr Point3d $ \ptr ->
                 [CU.exp| void { delete $(Point3d * ptr) }|]
-
-instance FromPtr Vec3f where
-    fromPtr = objFromPtr Vec3f $ \ptr ->
-                [CU.exp| void { delete $(Vec3f * ptr) }|]
-
-instance FromPtr Vec4i where
-    fromPtr = objFromPtr Vec4i $ \ptr ->
-                [CU.exp| void { delete $(Vec4i * ptr) }|]
 
 instance FromPtr Size2i where
     fromPtr = objFromPtr Size2i $ \ptr ->

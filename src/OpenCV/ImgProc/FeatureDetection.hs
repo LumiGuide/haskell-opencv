@@ -334,7 +334,7 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO 
     circlesPtr <- peek circlesPtrPtr
     (circles :: [V3 Float]) <-
         peekArray numCircles circlesPtr >>=
-        mapM (fmap (fmap fromCFloat . fromVec3f) . fromPtr . pure)
+        mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
     pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
   where c'dp = realToFrac dp
         c'minDist = realToFrac minDist
@@ -351,14 +351,17 @@ data LineSegment
      , lineSegmentStop  :: !(V2 Int32)
      } deriving Show
 
-instance FromVec4i LineSegment where
-    fromVec4i vec4i =
+type instance VecDepth LineSegment = Int32
+type instance VecDim   LineSegment = 4
+
+instance FromVec LineSegment where
+    fromVec vec =
         LineSegment
         { lineSegmentStart = V2 x1 y1
         , lineSegmentStop  = V2 x2 y2
         }
       where
-        V4 x1 y1 x2 y2 = fromVec4i vec4i
+        V4 x1 y1 x2 y2 = fromVec vec
 
 {- |
 Example:
@@ -442,7 +445,7 @@ houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim 
 
       numLines <- fromIntegral <$> peek numLinesPtr
       linesPtr <- peek linesPtrPtr
-      lineSegments  <- mapM (fmap fromVec4i . fromPtr . pure) =<< peekArray numLines linesPtr
+      lineSegments  <- mapM (fmap fromVec . fromPtr . pure) =<< peekArray numLines linesPtr
 
       -- Free the array of Vec4i pointers. This does not free the
       -- Vec4i's pointed to by the elements of the array. That is the

@@ -21,11 +21,6 @@ module OpenCV.Core.Types
     , ToPoint3i(..), FromPoint3i(..)
     , ToPoint3f(..), FromPoint3f(..)
     , ToPoint3d(..), FromPoint3d(..)
-    , Vec3f(..)
-    , FromVec3f(..)
-      -- ** 4D types
-    , Vec4i(..)
-    , ToVec4i(..), FromVec4i(..)
       -- * Size
     , Size2i
     , Size2f
@@ -69,6 +64,7 @@ module OpenCV.Core.Types
     , dmatchAsRec
       -- * Matrix
     , module OpenCV.Core.Types.Mat
+    , module OpenCV.Core.Types.Matx
       -- * Exception
     , module OpenCV.Exception
      -- * Algorithm
@@ -98,6 +94,7 @@ import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 

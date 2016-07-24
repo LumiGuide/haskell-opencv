@@ -33,6 +33,7 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.Types.Matx ( fromVec )
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -259,7 +260,7 @@ findContours mode method src = unsafePerformIO $
     hierarchyPtr <- peek hierarchyPtrPtr
     (hierarchy :: [V4 Int32]) <-
         peekArray numContours hierarchyPtr >>=
-        mapM (fmap fromVec4i . fromPtr . pure)
+        mapM (fmap fromVec . fromPtr . pure)
 
     let treeHierarchy =
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->

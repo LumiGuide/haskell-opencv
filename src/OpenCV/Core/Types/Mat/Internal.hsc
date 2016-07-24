@@ -107,7 +107,7 @@ newtype Mat (shape    :: DS [DS Nat])
             (depth    :: DS *)
       = Mat {unMat :: ForeignPtr (C (Mat shape channels depth))}
 
-type instance C (Mat    shape channels depth  ) = C'Mat
+type instance C (Mat shape channels depth) = C'Mat
 
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
