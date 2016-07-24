@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, fetchzip
+{ lib, stdenv, fetchurl, fetchgit
 , cmake, gtk, qt, libjpeg, libpng, libtiff, jasper, ffmpeg
 , pkgconfig, gstreamer, xineLib, glib, python27, python27Packages, unzip, doxygen, perl
 , enableIpp ? false
@@ -9,22 +9,23 @@
 }:
 
 let
-  v = "3.1.0";
+  v = "HEAD";
 
   enabled = condition : if condition then "ON" else "OFF";
 
-  contribSrc = fetchzip {
-    url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
-    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
-    name = "opencv-contrib-${v}-src";
+  contribSrc = fetchgit {
+    url = "https://github.com/Itseez/opencv_contrib.git";
+    rev = "159534a272955f04ad2bacf5afb4e1a17c5d82c3";
+    sha256 = "1gl2d7kvfh2ls3zj5wk1zz97gps368n9bdhapdnbbvwni9q1y2vl";
   };
 in
 
 stdenv.mkDerivation rec {
   name = "opencv-${v}";
-  src = fetchurl {
-    url = "https://github.com/Itseez/opencv/archive/${v}.zip";
-    sha256 = "1912wrsb6nfl9fp7w9z3n0x04jcrv6k6zsa0zx7q10nvkwj90s8z";
+  src = fetchgit {
+    url = "https://github.com/Itseez/opencv.git";
+    rev = "1001b05def6d09051629755d9c9a2ec370b48a8d";
+    sha256 = "1rh753r2dgwdjw3mla18cblvs6jgdcyzf4qqiigng72nrfhfjzf3";
   };
 
   preConfigure =

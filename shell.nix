@@ -9,6 +9,6 @@ let
                     then pkgs.haskellPackages
                     else pkgs.haskell.packages.${compiler};
 
-  drv = import ./default.nix pkgs haskellPackages;
+  drv = haskellPackages.opencv;
 
 in if pkgs.lib.inNixShell then drv.env else drv

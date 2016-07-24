@@ -10,9 +10,7 @@ let
                        then pkgs.haskellPackages
                        else pkgs.haskell.packages.${compiler};
 
-  drv = haskellPackages.callPackage (import ./opencv-examples.nix) {
-    opencv = import ../default.nix pkgs haskellPackages;
-  };
+  drv = haskellPackages.callPackage (import ./opencv-examples.nix) {};
 
 in
 
