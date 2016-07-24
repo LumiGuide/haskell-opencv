@@ -224,7 +224,7 @@ medianBlurImg = exceptError $
 -- TODO (Rvd): make ksize a type level argument
 -- if ksize in [3, 5] then depth in [Word8, Int16, Float) else depth ~ Word8
 medianBlur
-    :: ( depth    `In` '[Word8, Word16, Float]
+    :: ( depth    `In` '[Word8, Word16, Int16, Float, Double]
        , channels `In` '[1, 3, 4]
        -- , Length shape <= 2
        )
@@ -275,7 +275,7 @@ boxBlurImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
 blur
-  :: (depth `In` '[Word8, Word16, Float], ToSize2i size2i)
+  :: (depth `In` '[Word8, Word16, Int16, Float, Double], ToSize2i size2i)
   => size2i -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
   -> CvExcept (Mat shape ('S channels) ('S depth))
