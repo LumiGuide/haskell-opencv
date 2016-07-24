@@ -88,6 +88,9 @@ main = defaultMain $ testGroup "opencv"
       , testGroup "Structural Analysis and Shape Descriptors"
         [ HU.testCase "findContours" testFindContours
         ]
+      , testGroup "Feature Detection"
+        [ HU.testCase "houghLinesP"   testHoughLinesP
+        ]
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
@@ -273,6 +276,16 @@ testFindContours =
      assertEqual "Unexpected number of contours found"
                  (length contours)
                  1
+
+testHoughLinesP :: HU.Assertion
+testHoughLinesP = do
+    building <- loadImg ImreadUnchanged "building.jpg"
+    let building' :: Mat ('S ['D, 'D]) 'D ('S Word8)
+        building' = exceptError $ coerceMat building
+    let edgeImg = exceptError $ canny 50 200 Nothing CannyNormL1 building'
+    edgeImgM <- thaw edgeImg
+    lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
+    assertBool "no lines found" (V.length lineSegments > 0)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
