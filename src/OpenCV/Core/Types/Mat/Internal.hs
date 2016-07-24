@@ -14,6 +14,11 @@
 module OpenCV.Core.Types.Mat.Internal
     ( -- * Matrix
       Mat(..)
+    , MatShape
+    , MatChannels
+    , MatDepth
+    , ToMat(..)
+    , FromMat(..)
 
     , typeCheckMat
     , relaxMat
@@ -57,7 +62,6 @@ module OpenCV.Core.Types.Mat.Internal
     , ToDepthDS(toDepthDS)
     ) where
 
-import "base" Data.Bits
 import "base" Data.Int
 import "base" Data.Maybe
 import "base" Data.Monoid ( (<>) )
@@ -75,12 +79,15 @@ import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "linear" Linear.Matrix ( M23, M33 )
 import "primitive" Control.Monad.Primitive ( PrimMonad, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Depth
+import "this" OpenCV.Core.Types.Mat.Marshal
+import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.Mutable
@@ -96,11 +103,6 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-
-#include "namespace.hpp"
-
 --------------------------------------------------------------------------------
 -- Matrix
 --------------------------------------------------------------------------------
@@ -114,6 +116,57 @@ type instance C (Mat shape channels depth) = C'Mat
 
 type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth)
 
+type family MatShape    (a :: *) :: DS [DS Nat]
+type family MatChannels (a :: *) :: DS Nat
+type family MatDepth    (a :: *) :: DS *
+
+type instance MatShape    (Mat shape channels depth) = shape
+type instance MatChannels (Mat shape channels depth) = channels
+type instance MatDepth    (Mat shape channels depth) = depth
+
+type instance MatShape    (Matx depth m n) = ShapeT '[m, n]
+type instance MatChannels (Matx depth m n) = 'S 1
+type instance MatDepth    (Matx depth m n) = 'S depth
+
+type instance MatShape    (Vec depth dim) = ShapeT '[dim]
+type instance MatChannels (Vec depth dim) = 'S 1
+type instance MatDepth    (Vec depth dim) = 'S depth
+
+type instance MatShape    (M23 depth) = ShapeT [2, 3]
+type instance MatChannels (M23 depth) = 'S 1
+type instance MatDepth    (M23 depth) = 'S depth
+
+type instance MatShape    (M33 depth) = ShapeT [3, 3]
+type instance MatChannels (M33 depth) = 'S 1
+type instance MatDepth    (M33 depth) = 'S depth
+
+class ToMat a where
+    toMat :: a -> Mat (MatShape a) (MatChannels a) (MatDepth a)
+
+class FromMat a where
+    fromMat :: Mat (MatShape a) (MatChannels a) (MatDepth a) -> a
+
+instance ToMat   (Mat shape channels depth) where toMat   = id
+instance FromMat (Mat shape channels depth) where fromMat = id
+
+#define TO_MAT(NAME)                                      \
+instance ToMat NAME where {                               \
+    toMat vec = unsafePerformIO $ fromPtr $               \
+        withPtr vec $ \vecPtr ->                          \
+          [CU.exp| Mat * {                                \
+            new cv::Mat(*$(NAME * vecPtr), false)         \
+          }|];                                            \
+};
+
+TO_MAT(Vec2i)
+TO_MAT(Vec2f)
+TO_MAT(Vec2d)
+TO_MAT(Vec3i)
+TO_MAT(Vec3f)
+TO_MAT(Vec3d)
+TO_MAT(Vec4i)
+TO_MAT(Vec4f)
+TO_MAT(Vec4d)
 
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
@@ -423,57 +476,6 @@ matInfo mat = unsafePerformIO $
            , miDepth    = depth
            , miChannels = channels
            }
-
-#num CV_8U
-#num CV_8S
-#num CV_16U
-#num CV_16S
-#num CV_32S
-#num CV_32F
-#num CV_64F
-#num CV_USRTYPE1
-
-marshalDepth :: Depth -> Int32
-marshalDepth = \case
-    Depth_8U       -> c'CV_8U
-    Depth_8S       -> c'CV_8S
-    Depth_16U      -> c'CV_16U
-    Depth_16S      -> c'CV_16S
-    Depth_32S      -> c'CV_32S
-    Depth_32F      -> c'CV_32F
-    Depth_64F      -> c'CV_64F
-    Depth_USRTYPE1 -> c'CV_USRTYPE1
-
-unmarshalDepth :: Int32 -> Depth
-unmarshalDepth n
-    | n == c'CV_8U       = Depth_8U
-    | n == c'CV_8S       = Depth_8S
-    | n == c'CV_16U      = Depth_16U
-    | n == c'CV_16S      = Depth_16S
-    | n == c'CV_32S      = Depth_32S
-    | n == c'CV_32F      = Depth_32F
-    | n == c'CV_64F      = Depth_64F
-    | n == c'CV_USRTYPE1 = Depth_USRTYPE1
-    | otherwise          = error $ "unknown depth " <> show n
-
-#num CV_CN_SHIFT
-
-marshalFlags
-    :: Depth
-    -> Int32 -- ^ Number of channels
-    -> Int32
-marshalFlags depth cn =
-    marshalDepth depth
-      .|. ((cn - 1) `unsafeShiftL` c'CV_CN_SHIFT)
-
-#num CV_CN_MAX
-#num CV_MAT_DEPTH_MASK
-
-unmarshalFlags :: Int32 -> (Depth, Int32)
-unmarshalFlags n =
-    ( unmarshalDepth $ n .&. c'CV_MAT_DEPTH_MASK
-    , 1 + ((n `unsafeShiftR` c'CV_CN_SHIFT) .&. (c'CV_CN_MAX - 1))
-    )
 
 --------------------------------------------------------------------------------
 

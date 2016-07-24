@@ -30,7 +30,7 @@ module OpenCV
     ) where
 
 import OpenCV.Calib3d
-import OpenCV.Core
+import OpenCV.Core ( )
 import OpenCV.Core.ArrayOps
 import OpenCV.Core.Types
 import OpenCV.Core.Types.Mat

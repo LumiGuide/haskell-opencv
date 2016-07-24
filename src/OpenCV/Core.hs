@@ -2,13 +2,9 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module OpenCV.Core
-    ( -- *** Vectors of Vectors
-      matToM23
-    , matToM33
-    , m23ToMat
-    , m33ToMat
-    ) where
+{-# options_ghc -fno-warn-orphans #-}
+
+module OpenCV.Core ( ) where
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Foreign.Storable ( Storable )
@@ -25,17 +21,23 @@ import "this" OpenCV.Unsafe
 
 --------------------------------------------------------------------------------
 
-matToM23
-    :: (Storable depth)
-    => Mat (ShapeT [2, 3]) ('S 1) ('S depth) -- ^
-    -> M23 depth
-matToM23 = repaToM23 . toRepa
+instance (Storable depth) => FromMat (M23 depth) where
+    fromMat = repaToM23 . toRepa
 
-matToM33
-    :: (Storable depth)
-    => Mat (ShapeT [3, 3]) ('S 1) ('S depth) -- ^
-    -> M33 depth
-matToM33 = repaToM33 . toRepa
+instance (Storable depth) => FromMat (M33 depth) where
+    fromMat = repaToM33 . toRepa
+
+-- matToM23
+--     :: (Storable depth)
+--     => Mat (ShapeT [2, 3]) ('S 1) ('S depth) -- ^
+--     -> M23 depth
+-- matToM23 = repaToM23 . toRepa
+
+-- matToM33
+--     :: (Storable depth)
+--     => Mat (ShapeT [3, 3]) ('S 1) ('S depth) -- ^
+--     -> M33 depth
+-- matToM33 = repaToM33 . toRepa
 
 repaToM23 :: (Storable e) => Repa.Array (M '[ 'S 2, 'S 3 ] 1) Repa.DIM3 e -> M23 e
 repaToM23 a =
@@ -52,16 +54,12 @@ repaToM33 a =
   where
     i row col = Repa.unsafeIndex a $ Repa.ix3 0 col row
 
-m23ToMat :: forall depth
-          . ( ToDepth (Proxy depth)
-            , Storable depth
-            )
-         => M23 depth
-         -> Mat (ShapeT [2, 3]) ('S 1) ('S depth) -- ^
-m23ToMat (V2 (V3 i00 i01 i02)
-             (V3 i10 i11 i12)
-         )
-    = exceptError $ withMatM
+instance (ToDepth (Proxy depth), Storable depth)
+      => ToMat (M23 depth) where
+    toMat (V2 (V3 i00 i01 i02)
+              (V3 i10 i11 i12)
+          ) =
+      exceptError $ withMatM
         (Proxy :: Proxy [2, 3])
         (Proxy :: Proxy 1)
         (Proxy :: Proxy depth)
@@ -73,17 +71,13 @@ m23ToMat (V2 (V3 i00 i01 i02)
           unsafeWrite imgM [0, 2] i02
           unsafeWrite imgM [1, 2] i12
 
-m33ToMat :: forall depth
-          . ( ToDepth (Proxy depth)
-            , Storable depth
-            )
-         => M33 depth
-         -> Mat (ShapeT [3, 3]) ('S 1) ('S depth) -- ^
-m33ToMat (V3 (V3 i00 i01 i02)
-             (V3 i10 i11 i12)
-             (V3 i20 i21 i22)
-         )
-    = exceptError $ withMatM
+instance (ToDepth (Proxy depth), Storable depth)
+      => ToMat (M33 depth) where
+    toMat (V3 (V3 i00 i01 i02)
+              (V3 i10 i11 i12)
+              (V3 i20 i21 i22)
+          ) =
+      exceptError $ withMatM
         (Proxy :: Proxy [3, 3])
         (Proxy :: Proxy 1)
         (Proxy :: Proxy depth)

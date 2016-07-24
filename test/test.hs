@@ -312,14 +312,14 @@ testMatToM23
     => Mat (ShapeT [2, 3]) ('S 1) ('S e)
     -> V2 (V3 e)
     -> HU.Assertion
-testMatToM23 m v = assertEqual "" v $ matToM23 m
+testMatToM23 m v = assertEqual "" v $ fromMat m
 
 testMatToM33
     :: (Eq e, Show e, Storable e)
     => Mat (ShapeT [3, 3]) ('S 1) ('S e)
     -> V3 (V3 e)
     -> HU.Assertion
-testMatToM33 m v = assertEqual "" v $ matToM33 m
+testMatToM33 m v = assertEqual "" v $ fromMat m
 
 --------------------------------------------------------------------------------
 

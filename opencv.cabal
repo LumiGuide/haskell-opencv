@@ -99,6 +99,7 @@ library
         OpenCV.Core.Types.Internal
         OpenCV.Core.Types.Mat.Depth
         OpenCV.Core.Types.Mat.Internal
+        OpenCV.Core.Types.Mat.Marshal
         OpenCV.Core.Types.Matx.Internal
         OpenCV.C.PlacementNew
         OpenCV.C.PlacementNew.TH

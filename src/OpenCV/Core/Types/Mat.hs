@@ -5,6 +5,10 @@
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
       Mat
+    , MatShape
+    , MatChannels
+    , MatDepth
+    , ToMat(..), FromMat(..)
 
     , typeCheckMat
     , relaxMat
