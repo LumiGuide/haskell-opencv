@@ -98,6 +98,7 @@ library
         OpenCV.Core.Types.Mat.Depth
         OpenCV.Core.Types.Mat.Internal
         OpenCV.C.PlacementNew
+        OpenCV.C.PlacementNew.TH
         OpenCV.C.Types
         OpenCV.Exception.Internal
         OpenCV.ImgCodecs.Internal
