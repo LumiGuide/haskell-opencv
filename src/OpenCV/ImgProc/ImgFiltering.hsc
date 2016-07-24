@@ -38,6 +38,7 @@ module OpenCV.ImgProc.ImgFiltering
     , medianBlur
     , erode
     , dilate
+    , filter2D
     , morphologyEx
     , getStructuringElement
     , blur
@@ -369,6 +370,90 @@ erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
+
+{- | Convolves an image with the kernel.
+
+Example:
+
+@
+filter2DImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+filter2DImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      filteredBird <-
+        pureExcept $ filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) filteredBird Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    kernel =
+      exceptError $
+      withMatM (Proxy :: Proxy [3, 3])
+               (Proxy :: Proxy 1)
+               (Proxy :: Proxy Double)
+               black $ \imgM -> do
+        lift $ line imgM (V2 0 0 :: V2 Int32) (V2 0 0 :: V2 Int32) (toScalar (-2::Double,-2::Double,-2::Double,1::Double)) 0 LineType_8 0
+        lift $ line imgM (V2 1 0 :: V2 Int32) (V2 0 1 :: V2 Int32) (toScalar (-1::Double,-1::Double,-1::Double,1::Double)) 0 LineType_8 0
+        lift $ line imgM (V2 1 1 :: V2 Int32) (V2 1 1 :: V2 Int32) (toScalar (1::Double,1::Double,1::Double,1::Double)) 0 LineType_8 0
+        lift $ line imgM (V2 1 2 :: V2 Int32) (V2 2 1 :: V2 Int32) (toScalar (1::Double,1::Double,1::Double,1::Double)) 0 LineType_8 0
+        lift $ line imgM (V2 2 2 :: V2 Int32) (V2 2 2 :: V2 Int32) (toScalar (2::Double,2::Double,2::Double,1::Double)) 0 LineType_8 0
+@
+
+<<doc/generated/examples/filter2DImg.png filter2DImg>>
+
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#filter2d OpenCV Sphinx doc>
+-}
+filter2D
+    :: ( ToPoint2i point2i
+       , depth `In` [Word8, Word16, Int16, Float, Double]
+       )
+    => Mat shape channels ('S depth) -- ^ Input image.
+    -> Mat ('S [sh, sw]) ('S 1) ('S Double)
+       -- ^ convolution kernel (or rather a correlation kernel),
+       -- a single-channel floating point matrix; if you want to
+       -- apply different kernels to different channels, split the
+       -- image into separate color planes using split and process
+       -- them individually.
+    -> Maybe point2i -- ^ anchor
+    -> Double        -- ^ delta
+    -> BorderMode
+    -> CvExcept (Mat shape channels ('S depth))
+filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src    $ \srcPtr    ->
+      withPtr dst    $ \dstPtr    ->
+      withPtr kernel $ \kernelPtr ->
+      withPtr anchor $ \anchorPtr ->
+        [cvExcept|
+          cv::filter2D
+          ( *$(Mat     * srcPtr        )
+          , *$(Mat     * dstPtr        )
+          , -1
+          , *$(Mat     * kernelPtr     )
+          , *$(Point2i * anchorPtr     )
+          ,  $(double    c'delta       )
+          ,  $(int32_t   c'borderType  )
+          );
+        |]
+  where
+    anchor :: Point2i
+    anchor = maybe defaultAnchor toPoint2i mbAnchor
+
+    c'delta = realToFrac delta
+    (c'borderType, _) = marshalBorderMode borderMode
 
 {- | Dilates an image by using a specific structuring element
 
