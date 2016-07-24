@@ -11,7 +11,8 @@
 module OpenCV.Core.ArrayOps
     ( -- * Per element operations
       -- $per_element_intro
-      matAbs
+      matScalarMult
+    , matAbs
     , matAbsDiff
     , matAdd
     , matSubtract
@@ -84,6 +85,21 @@ Examples are based on the following two images:
 <<doc/generated/flower_512x341.png Flower>>
 <<doc/generated/sailboat_512x341.png Sailboat>>
 -}
+
+matScalarMult
+    :: Mat shape channels depth -- ^
+    -> Double
+    -> Mat shape channels depth
+matScalarMult src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          *$(Mat * dstPtr) = *$(Mat * srcPtr) * $(double c'x);
+        }|]
+    pure $ unsafeCoerceMat dst
+  where
+    c'x = realToFrac x
 
 {- | Calculates an absolute value of each matrix element.
 
