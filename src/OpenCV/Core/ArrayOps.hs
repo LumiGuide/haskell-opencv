@@ -17,6 +17,7 @@ module OpenCV.Core.ArrayOps
     , matSubtract
     , matAddWeighted
     , matScaleAdd
+    , matMax
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -277,6 +278,23 @@ matScaleAdd src1 scale src2 = unsafeWrapException $ do
   where
     c'scale = realToFrac scale
 
+matMax
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> Mat shape channels depth
+matMax src1 src2 = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+        [C.block| void {
+          cv::max
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          );
+        }|]
+    pure $ unsafeCoerceMat dst
 
 --------------------------------------------------------------------------------
 -- Per element bitwise operations
