@@ -11,7 +11,8 @@
 module OpenCV.Core.ArrayOps
     ( -- * Per element operations
       -- $per_element_intro
-      matScalarMult
+      matScalarAdd
+    , matScalarMult
     , matAbs
     , matAbsDiff
     , matAdd
@@ -85,6 +86,21 @@ Examples are based on the following two images:
 <<doc/generated/flower_512x341.png Flower>>
 <<doc/generated/sailboat_512x341.png Sailboat>>
 -}
+
+matScalarAdd
+    :: (ToScalar scalar)
+    => Mat shape channels depth -- ^
+    -> scalar
+    -> Mat shape channels depth
+matScalarAdd src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr (toScalar x) $ \xPtr ->
+      withPtr dst $ \dstPtr ->
+        withPtr src $ \srcPtr ->
+          [C.block| void {
+            *$(Mat * dstPtr) = *$(Mat * srcPtr) + *$(Scalar * xPtr);
+          }|]
+    pure $ unsafeCoerceMat dst
 
 matScalarMult
     :: Mat shape channels depth -- ^
