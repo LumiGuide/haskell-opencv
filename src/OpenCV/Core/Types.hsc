@@ -6,9 +6,13 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- For Show instances
 
 module OpenCV.Core.Types
-    ( -- * Point
+    ( -- * Mutable values
+      Mut
+    , Mutable
+    , FreezeThaw(..)
+      -- * Point
       -- ** 2D types
-      Point2i
+    , Point2i
     , Point2f
     , Point2d
     , ToPoint2i(..), FromPoint2i(..)
@@ -97,6 +101,7 @@ import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
+import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 

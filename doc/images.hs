@@ -150,7 +150,7 @@ fontImg font = exceptError $
 
 vennCircleA
     :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m)
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m)
     -> color
     -> Int32
     -> m ()
@@ -159,7 +159,7 @@ vennCircleA imgM color thickness =
 
 vennCircleB
     :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m)
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m)
     -> color
     -> Int32
     -> m ()

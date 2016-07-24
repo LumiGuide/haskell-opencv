@@ -18,12 +18,7 @@ module OpenCV.Core.Types.Mat
     , matCopyTo
     , matConvertTo
 
-
       -- * Mutable Matrix
-    , MutMat
-    , IOMat
-    , STMat
-
     , typeCheckMatM
     , relaxMatM
     , coerceMatM
@@ -54,7 +49,7 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
-import "base" Control.Monad.ST ( RealWorld, ST, runST )
+import "base" Control.Monad.ST ( ST, runST )
 import "base" Data.Int ( Int32 )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
@@ -66,11 +61,11 @@ import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Exception.Internal
-import "this" OpenCV.TypeLevel
-import "this" OpenCV.Unsafe
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Mutable
+import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
@@ -134,17 +129,6 @@ eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
     channels' = toChannels channels
     depth'    = toDepth    depth
 
-cloneMat :: Mat shape channels depth
-         -> Mat shape channels depth
-cloneMat = unsafePerformIO . cloneMatIO
-
-cloneMatIO :: Mat shape channels depth
-           -> IO (Mat shape channels depth)
-cloneMatIO mat =
-    fmap unsafeCoerceMat $ fromPtr $ withPtr mat $ \matPtr ->
-      [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
-
-
 {- | Extract a sub region from a 2D-matrix (image)
 
 Example:
@@ -194,11 +178,11 @@ matCopyTo
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
     -> CvExcept (Mat ('S [dstHeight, dstWidth]) channels depth)
 matCopyTo dst topLeft src mbSrcMask = runST $ do
-    dstMut <- thaw dst
-    eResult <- runExceptT $ matCopyToM dstMut topLeft src mbSrcMask
+    dstM <- thaw dst
+    eResult <- runExceptT $ matCopyToM dstM topLeft src mbSrcMask
     case eResult of
       Left err -> pure $ throwE err
-      Right () -> pure <$> unsafeFreeze dstMut
+      Right () -> pure <$> unsafeFreeze dstM
 
 
 {- | Converts an array to another data type with optional scaling
@@ -238,21 +222,6 @@ matConvertTo alpha beta src = unsafeWrapException $ do
 -- Mutable Matrix
 --------------------------------------------------------------------------------
 
-type IOMat shape channels depth   = MutMat shape channels depth RealWorld
-type STMat shape channels depth s = MutMat shape channels depth s
-
-freeze
-    :: (PrimMonad m)
-    => MutMat shape channels depth (PrimState m) -- ^
-    -> m (Mat shape channels depth)
-freeze = cloneMatM . unMutMat
-
-thaw
-    :: (PrimMonad m)
-    => Mat shape channels depth -- ^
-    -> m (MutMat shape channels depth (PrimState m))
-thaw = fmap MutMat . cloneMatM
-
 -- TODO (RvD): check for negative sizes
 -- This crashes OpenCV
 mkMatM
@@ -266,13 +235,13 @@ mkMatM
     -> channels -- ^
     -> depth    -- ^
     -> scalar   -- ^
-    -> CvExceptT m (MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState m))
+    -> CvExceptT m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
 mkMatM shape channels depth defValue = do
     mat <- mapExceptT unsafePrimToPrim $ newMat shape channels depth defValue
     unsafeThaw mat
 
 createMat
-    :: (forall s. CvExceptT (ST s) (MutMat shape channels depth s)) -- ^
+    :: (forall s. CvExceptT (ST s) (Mut (Mat shape channels depth) s)) -- ^
     -> CvExcept (Mat shape channels depth)
 createMat mk = runCvExceptST $ unsafeFreeze =<< mk
 
@@ -287,30 +256,25 @@ withMatM
     -> depth    -- ^
     -> scalar   -- ^
     -> (  forall s
-       .  MutMat (ShapeT shape) (ChannelsT channels) (DepthT depth) (PrimState (ST s))
+       .  Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState (ST s))
        -> CvExceptT (ST s) ()
        )
     -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 withMatM shape channels depth defValue f = createMat $ do
-    mutMat <- mkMatM shape channels depth defValue
-    f mutMat
-    pure mutMat
-
-cloneMatM :: (PrimMonad m)
-          => Mat shape channels depth
-          -> m (Mat shape channels depth)
-cloneMatM = unsafePrimToPrim . cloneMatIO
+    matM <- mkMatM shape channels depth defValue
+    f matM
+    pure matM
 
 matCopyToM
     :: (PrimMonad m)
-    => MutMat ('S [dstHeight, dstWidth]) channels depth (PrimState m) -- ^
+    => Mut (Mat ('S [dstHeight, dstWidth]) channels depth) (PrimState m) -- ^
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
     -> CvExceptT m ()
-matCopyToM dstMut (V2 x y) src mbSrcMask = ExceptT $
+matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
     unsafePrimToPrim $ handleCvException (pure ()) $
-    withPtr (unMutMat dstMut) $ \dstPtr ->
+    withPtr dstM $ \dstPtr ->
     withPtr src $ \srcPtr ->
     withPtr mbSrcMask $ \srcMaskPtr ->
       [cvExcept|
@@ -334,7 +298,3 @@ matCopyToM dstMut (V2 x y) src mbSrcMask = ExceptT $
           --                       )
           --                 );
           -- srcPtr->copyTo(dstRoi);
-
---------------------------------------------------------------------------------
--- Meta information
---------------------------------------------------------------------------------

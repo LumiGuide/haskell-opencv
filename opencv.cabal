@@ -108,6 +108,7 @@ library
         OpenCV.ImgProc.MiscImgTransform.Internal
         OpenCV.ImgProc.Types.Internal
         OpenCV.Internal
+        OpenCV.Mutable
 
     default-extensions:
         BangPatterns

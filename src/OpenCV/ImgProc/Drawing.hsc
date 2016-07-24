@@ -35,7 +35,6 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
@@ -199,7 +198,7 @@ arrowedLine
        , ToScalar  color
        , PrimMonad m
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ The point the arrow starts from.
     -> toPoint2i -- ^ The point the arrow points to.
     -> color -- ^ Line color.
@@ -210,7 +209,7 @@ arrowedLine
     -> m ()
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPtr (toPoint2i pt1) $ \pt1Ptr   ->
     withPtr (toPoint2i pt2) $ \pt2Ptr   ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -254,7 +253,7 @@ circle
        , ToPoint2i point2i
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image where the circle is drawn.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image where the circle is drawn.
     -> point2i -- ^ Center of the circle.
     -> Int32 -- ^ Radius of the circle.
     -> color -- ^ Circle color.
@@ -264,7 +263,7 @@ circle
     -> m ()
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPtr (toPoint2i center) $ \centerPtr ->
     withPtr (toScalar color ) $ \colorPtr  ->
       [C.exp|void {
@@ -306,7 +305,7 @@ ellipse
        , ToSize2i  size2i
        , ToScalar  color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> point2i -- ^ Center of the ellipse.
     -> size2i -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
@@ -322,7 +321,7 @@ ellipse
     -> m ()
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPtr (toPoint2i center) $ \centerPtr ->
     withPtr (toSize2i axes) $ \axesPtr   ->
     withPtr (toScalar color) $ \colorPtr  ->
@@ -361,7 +360,7 @@ fillConvexPoly
        , ToPoint2i point2i
        , ToScalar  color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> V.Vector point2i -- ^ Polygon vertices.
     -> color -- ^ Polygon color.
     -> LineType
@@ -369,7 +368,7 @@ fillConvexPoly
     -> m ()
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withArrayPtr (V.map toPoint2i points) $ \pointsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
@@ -439,7 +438,7 @@ fillPoly
        , ToPoint2i point2i
        , ToScalar  color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Polygons.
     -> color -- ^ Polygon color.
     -> LineType
@@ -447,7 +446,7 @@ fillPoly
     -> m ()
 fillPoly img polygons color lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -497,7 +496,7 @@ polylines
        , ToPoint2i point2i
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> V.Vector (V.Vector point2i) -- ^ Vertices.
     -> Bool
        -- ^ Flag indicating whether the drawn polylines are closed or not. If
@@ -510,7 +509,7 @@ polylines
     -> m ()
 polylines img curves isClosed color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -560,7 +559,7 @@ line
        , ToPoint2i toPoint2i
        , ToScalar  color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> fromPoint2i -- ^ First point of the line segment.
     -> toPoint2i -- ^ Scond point of the line segment.
     -> color -- ^ Line color.
@@ -570,7 +569,7 @@ line
     -> m ()
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPtr (toPoint2i pt1) $ \pt1Ptr ->
     withPtr (toPoint2i pt2) $ \pt2Ptr ->
     withPtr (toScalar  color) $ \colorPtr ->
@@ -655,7 +654,7 @@ putText
        , ToPoint2i point2i
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
     -> point2i -- ^ Bottom-left corner of the text string in the image.
     -> Font
@@ -666,7 +665,7 @@ putText
     -> m ()
 putText img text org font color thickness lineType bottomLeftOrigin =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
     withPtr (toPoint2i org) $ \orgPtr   ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -708,7 +707,7 @@ rectangleImg = exceptError $
 -}
 rectangle
     :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> Rect
     -> color -- ^ Rectangle color or brightness (grayscale image).
     -> Int32 -- ^ Line thickness.
@@ -717,7 +716,7 @@ rectangle
     -> m ()
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPtr rect $ \rectPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {

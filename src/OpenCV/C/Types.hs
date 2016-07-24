@@ -5,6 +5,7 @@ import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Data.Int ( Int32 )
 import "base" GHC.TypeLits
 import "this" OpenCV.Core.Types.Constants
+import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 
@@ -19,9 +20,9 @@ type C'Vec3i = C'Vec Int32   3
 type C'Vec3f = C'Vec CFloat  3
 type C'Vec3d = C'Vec CDouble 3
 
+type C'Vec4i = C'Vec Int32   4
 type C'Vec4f = C'Vec CFloat  4
 type C'Vec4d = C'Vec CDouble 4
-type C'Vec4i = C'Vec Int32   4
 
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
@@ -123,6 +124,9 @@ type family C (a :: *) :: *
 
 type instance C (Maybe a) = C a
 
+-- | Mutable types have the same C equivalent as their unmutable variants.
+type instance C (Mut a s) = C a
+
 --------------------------------------------------------------------------------
 
 -- | Perform an IO action with a pointer to the C equivalent of a value
@@ -134,9 +138,14 @@ class WithPtr a where
     -- function. The same warnings apply as for 'withForeignPtr'.
     withPtr :: a -> (Ptr (C a) -> IO b) -> IO b
 
+-- | 'Nothing' is represented as a 'nullPtr'.
 instance (WithPtr a) => WithPtr (Maybe a) where
     withPtr Nothing    f = f nullPtr
     withPtr (Just obj) f = withPtr obj f
+
+-- | Mutable types use the same underlying representation as unmutable types.
+instance (WithPtr a) => WithPtr (Mut a s) where
+    withPtr = withPtr . unMut
 
 --------------------------------------------------------------------------------
 

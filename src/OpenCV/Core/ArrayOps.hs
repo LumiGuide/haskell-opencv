@@ -51,13 +51,13 @@ import "linear" Linear.Vector ( zero )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
+import "this" OpenCV.Core.ArrayOps.Internal
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Core.ArrayOps.Internal
 import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
-import "this" OpenCV.Unsafe ( unsafeThaw )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Mutable as VM
@@ -726,7 +726,7 @@ matSum src = runCvExceptST $ matSumM =<< unsafeThaw src
 
 matSumM
     :: (PrimMonad m)
-    => MutMat shape channels depth (PrimState m)
+    => Mut (Mat shape channels depth) (PrimState m)
        -- ^ Input array that must have from 1 to 4 channels.
     -> CvExceptT m Scalar
 matSumM srcM = ExceptT $ unsafePrimToPrim $ do

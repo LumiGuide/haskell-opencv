@@ -1,4 +1,6 @@
-module OpenCV.Internal ( objFromPtr ) where
+module OpenCV.Internal
+  ( objFromPtr
+  ) where
 
 import "base" Control.Exception ( mask_ )
 import "base" Foreign.Concurrent ( newForeignPtr )

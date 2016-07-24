@@ -29,12 +29,12 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgCodecs.Internal
+import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
-import "this" OpenCV.Unsafe
 import "transformers" Control.Monad.Trans.Except
 
 
@@ -73,7 +73,7 @@ imdecodeM
     :: (PrimMonad m)
     => ImreadMode
     -> ByteString
-    -> m (MutMat ('S ['D, 'D]) 'D 'D (PrimState m))
+    -> m (Mut (Mat ('S ['D, 'D]) 'D 'D) (PrimState m))
 imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
 
 --------------------------------------------------------------------------------
@@ -131,7 +131,7 @@ imencode format mat = unsafeWrapException $
 imencodeM
     :: (PrimMonad m)
     => OutputFormat
-    -> MutMat shape channels depth (PrimState m)
+    -> Mut (Mat shape channels depth) (PrimState m)
     -> CvExceptT m ByteString
 imencodeM format matM =
     ExceptT . pure . runExcept =<< (imencode format <$> unsafeFreeze matM)

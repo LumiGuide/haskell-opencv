@@ -73,8 +73,8 @@ import "primitive" Control.Monad.Primitive ( PrimState )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
-import "this" OpenCV.Unsafe ( unsafeFreeze )
 
 --------------------------------------------------------------------------------
 
@@ -371,6 +371,6 @@ imshow window mat =
 
 imshowM
     :: Window -- ^
-    -> MutMat ('S [height, width]) channels depth (PrimState IO)
+    -> Mut (Mat ('S [height, width]) channels depth) (PrimState IO)
     -> IO ()
 imshowM window mat = imshow window =<< unsafeFreeze mat

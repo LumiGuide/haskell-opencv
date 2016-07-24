@@ -406,7 +406,7 @@ houghLinesP
      -- ^ Minimum line length. Line segments shorter than that are rejected.
   -> Maybe Double
      -- ^ Maximum allowed gap between points on the same line to link them.
-  -> MutMat ('S [h, w]) ('S 1) ('S Word8) (PrimState m)
+  -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
      -- ^ Source image. May be modified by the function.
   -> m (V.Vector LineSegment)
 houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim $

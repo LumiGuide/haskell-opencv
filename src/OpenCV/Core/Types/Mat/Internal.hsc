@@ -25,14 +25,15 @@ module OpenCV.Core.Types.Mat.Internal
     , newMat
     , withMatData
     , matElemAddress
+    , cloneMat
 
       -- * Mutable matrix
-    , MutMat(..)
-
     , typeCheckMatM
     , relaxMatM
     , coerceMatM
     , unsafeCoerceMatM
+
+    , cloneMatM
 
       -- * Meta information
     , MatInfo(..)
@@ -74,6 +75,7 @@ import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "primitive" Control.Monad.Primitive ( PrimMonad, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.C.PlacementNew.TH
@@ -81,6 +83,7 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Depth
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Internal
+import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
@@ -109,6 +112,9 @@ newtype Mat (shape    :: DS [DS Nat])
 
 type instance C (Mat shape channels depth) = C'Mat
 
+type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth)
+
+
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
@@ -116,7 +122,12 @@ instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr Mat $ \ptr ->
                 [CU.exp| void { delete $(Mat * ptr) }|]
 
-mkPlacementNewInstance ''Mat
+instance FreezeThaw (Mat shape channels depth) where
+    freeze = cloneMatM . unMut
+    thaw = fmap Mut . cloneMatM
+
+    unsafeFreeze = pure . unMut
+    unsafeThaw = pure . Mut
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 
@@ -326,20 +337,19 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
       offset = sum $ zipWith (*) step pos
 
+cloneMat :: Mat shape channels depth
+         -> Mat shape channels depth
+cloneMat = unsafePerformIO . cloneMatIO
+
+cloneMatIO :: Mat shape channels depth
+           -> IO (Mat shape channels depth)
+cloneMatIO mat =
+    fmap unsafeCoerceMat $ fromPtr $ withPtr mat $ \matPtr ->
+      [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
+
 --------------------------------------------------------------------------------
 -- Mutable matrix
 --------------------------------------------------------------------------------
-
-newtype MutMat (shape    :: DS [DS Nat])
-               (channels :: DS Nat)
-               (depth    :: DS *)
-               (s        :: *)
-      = MutMat {unMutMat :: Mat shape channels depth}
-
-type instance C (MutMat shape channels depth s) = C'Mat
-
-instance WithPtr (MutMat shape channels depth s) where
-    withPtr = withPtr . unMutMat
 
 typeCheckMatM
     :: forall shape channels depth s
@@ -347,17 +357,17 @@ typeCheckMatM
        , ToChannelsDS (Proxy channels)
        , ToDepthDS    (Proxy depth)
        )
-    => MutMat shape channels depth s -- ^ The matrix to be checked.
+    => Mut (Mat shape channels depth) s -- ^ The matrix to be checked.
     -> [CoerceMatError] -- ^ Error messages.
-typeCheckMatM = typeCheckMat . unMutMat
+typeCheckMatM = typeCheckMat . unMut
 
 relaxMatM
     :: ( MayRelax shapeIn    shapeOut
        , MayRelax channelsIn channelsOut
        , MayRelax depthIn    depthOut
        )
-    => MutMat shapeIn  channelsIn  depthIn  s -- ^ Original 'Mat'.
-    -> MutMat shapeOut channelsOut depthOut s -- ^ 'Mat' with relaxed constraints.
+    => Mut (Mat shapeIn  channelsIn  depthIn ) s -- ^ Original 'Mat'.
+    -> Mut (Mat shapeOut channelsOut depthOut) s -- ^ 'Mat' with relaxed constraints.
 relaxMatM = unsafeCoerce
 
 coerceMatM
@@ -365,14 +375,19 @@ coerceMatM
        , ToChannelsDS (Proxy channelsOut)
        , ToDepthDS    (Proxy depthOut)
        )
-    => MutMat shapeIn channelsIn depthIn s -- ^
-    -> CvExcept (MutMat shapeOut channelsOut depthOut s)
-coerceMatM = fmap MutMat . coerceMat . unMutMat
+    => Mut (Mat shapeIn channelsIn depthIn) s -- ^
+    -> CvExcept (Mut (Mat shapeOut channelsOut depthOut) s)
+coerceMatM = fmap Mut . coerceMat . unMut
 
 unsafeCoerceMatM
-    :: MutMat shapeIn  channelsIn  depthIn  s
-    -> MutMat shapeOut channelsOut depthOut s
+    :: Mut (Mat shapeIn  channelsIn  depthIn ) s
+    -> Mut (Mat shapeOut channelsOut depthOut) s
 unsafeCoerceMatM = unsafeCoerce
+
+cloneMatM :: (PrimMonad m)
+          => Mat shape channels depth
+          -> m (Mat shape channels depth)
+cloneMatM = unsafePrimToPrim . cloneMatIO
 
 
 --------------------------------------------------------------------------------
@@ -526,3 +541,7 @@ type ToChannelsDS a = ToNatDS a
 
 toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
 toChannelsDS = toNatDS
+
+--------------------------------------------------------------------------------
+
+mkPlacementNewInstance ''Mat
