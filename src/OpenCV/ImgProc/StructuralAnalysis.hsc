@@ -6,6 +6,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , pointPolygonTest
     , findContours
     , Contour(..)
+    , ContourAreaOriented(..)
     , ContourRetrievalMode(..)
     , ContourApproximationMethod(..)
     , minAreaRect

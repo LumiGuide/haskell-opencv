@@ -112,6 +112,7 @@ canny threshold1 threshold2 apertureSize norm src = unsafeWrapException $ do
           CannyNormL1 -> False
           CannyNormL2 -> True
 
+-- | A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.
 data CannyNorm
    = CannyNormL1
    | CannyNormL2
@@ -371,7 +372,7 @@ houghLinesPTraces
    . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Building_868x600)
   => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 houghLinesPTraces = exceptError $ do
-    edgeImg <- canny 50 200 Nothing Nothing building_868x600
+    edgeImg <- canny 50 200 Nothing CannyNormL1 building_868x600
     edgeImgBgr <- cvtColor gray bgr edgeImg
     withMatM (Proxy :: Proxy [height, width])
              (Proxy :: Proxy channels)

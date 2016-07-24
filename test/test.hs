@@ -266,7 +266,7 @@ testFindContours =
      let contours =
            findContours ContourRetrievalExternal
                         ContourApproximationSimple
-                        (exceptError (canny 30 20 Nothing Nothing lambda))
+                        (exceptError (canny 30 20 Nothing CannyNormL1 lambda))
      assertEqual "Unexpected number of contours found"
                  (length contours)
                  1
