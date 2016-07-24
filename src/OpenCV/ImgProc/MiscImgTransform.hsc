@@ -1061,7 +1061,7 @@ floodFill
        , ToPoint2i point2i
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m)
+    => MutMat shape channels depth (PrimState m)
         -- ^ Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the FLOODFILL_MASK_ONLY flag is set.
     -> point2i
         -- ^ Starting point.
