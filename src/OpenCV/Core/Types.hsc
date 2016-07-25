@@ -11,20 +11,7 @@ module OpenCV.Core.Types
     , Mutable
     , FreezeThaw(..)
       -- * Point
-      -- ** 2D types
-    , Point2i
-    , Point2f
-    , Point2d
-    , ToPoint2i(..), FromPoint2i(..)
-    , ToPoint2f(..), FromPoint2f(..)
-    , ToPoint2d(..), FromPoint2d(..)
-      -- ** 3D types
-    , Point3i
-    , Point3f
-    , Point3d
-    , ToPoint3i(..), FromPoint3i(..)
-    , ToPoint3f(..), FromPoint3f(..)
-    , ToPoint3d(..), FromPoint3d(..)
+    , module OpenCV.Core.Types.Point
       -- * Size
     , Size2i
     , Size2f
@@ -74,7 +61,6 @@ module OpenCV.Core.Types
      -- * Algorithm
     , Algorithm(..)
       -- * Polymorphic stuff
-    , PointT
     , WithPtr
     , FromPtr
     , CSizeOf
@@ -99,6 +85,7 @@ import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
+import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 import "this" OpenCV.Mutable
@@ -120,12 +107,6 @@ C.using "namespace cv"
 -- Point
 --------------------------------------------------------------------------------
 
-
-instance Show Point2i where
-    showsPrec prec point = showParen (prec >= 10) $
-                               showString "fromPoint2i "
-                             . shows (fromPoint2i point :: V2 Int32)
-
 instance Show Size2i where
     showsPrec prec size = showParen (prec >= 10) $
                               showString "fromSize2i "
@@ -145,8 +126,8 @@ instance Show Rect where
                             . shows h
       where
         x, y, w, h :: Int32
-        V2 x y = fromPoint2i $ rectTopLeft rect
-        V2 w h = fromSize2i  $ rectSize    rect
+        V2 x y = fromPoint  $ rectTopLeft rect
+        V2 w h = fromSize2i $ rectSize    rect
 
 mkRect
     :: V2 Int32 -- ^ top left
@@ -180,7 +161,7 @@ rectContains :: (ToPoint2i point2i) => point2i -> Rect -> Bool
 rectContains point rect =
     toBool $
       unsafePerformIO $
-        withPtr (toPoint2i point) $ \pointPtr ->
+        withPtr (toPoint point) $ \pointPtr ->
           withPtr rect $ \rectPtr ->
             [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point2i * pointPtr)) }|]
 

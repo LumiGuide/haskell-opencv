@@ -123,8 +123,8 @@ findFundamentalMat pts1 pts2 method = do
       handleCvException (pure (fm, pointMask)) $
         withPtr fm $ \fmPtr ->
         withPtr pointMask $ \pointMaskPtr ->
-        withArrayPtr (V.map toPoint2d pts1) $ \pts1Ptr ->
-        withArrayPtr (V.map toPoint2d pts2) $ \pts2Ptr ->
+        withArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
+        withArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
           [cvExcept|
             cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
             cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
@@ -156,7 +156,7 @@ computeCorrespondEpilines
 computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
-      withArrayPtr (V.map toPoint2d points) $ \pointsPtr ->
+      withArrayPtr (V.map toPoint points) $ \pointsPtr ->
       withPtr fm       $ \fmPtr       ->
       withPtr epilines $ \epilinesPtr -> do
         -- Destroy type information about the pointsPtr. We wan't to generate

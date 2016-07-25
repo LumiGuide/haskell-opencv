@@ -222,7 +222,7 @@ goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize det
     cornersPtr <- peek cornersPtrPtr
     (corners :: [V2 Float]) <-
         peekArray numCorners cornersPtr >>=
-        mapM (fmap (fmap fromCFloat . fromPoint2f) . fromPtr . pure)
+        mapM (fmap (fmap fromCFloat . fromPoint) . fromPtr . pure)
     [CU.block| void {
       delete [] *$(Point2f * * * cornersPtrPtr);
     }|]

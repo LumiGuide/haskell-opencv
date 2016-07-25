@@ -283,7 +283,7 @@ getRotationMatrix2D
     -> Double -- ^ Isotropic scale factor.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
-    withPtr (toPoint2f center) $ \centerPtr ->
+    withPtr (toPoint center) $ \centerPtr ->
       fromPtr
       [CU.block| Mat * {
         return new cv::Mat

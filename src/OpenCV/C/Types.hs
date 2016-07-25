@@ -9,8 +9,18 @@ import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 
-data C'Matx (t :: *) (m :: Nat) (n :: Nat)
-data C'Vec  (t :: *) (m :: Nat)
+data C'Point (depth :: *) (dim :: Nat)
+
+type C'Point2i = C'Point Int32   2
+type C'Point2f = C'Point CFloat  2
+type C'Point2d = C'Point CDouble 2
+
+type C'Point3i = C'Point Int32   3
+type C'Point3f = C'Point CFloat  3
+type C'Point3d = C'Point CDouble 3
+
+data C'Matx (depth :: *) (dimM :: Nat) (dimN :: Nat)
+data C'Vec  (depth :: *) (dim :: Nat)
 
 type C'Vec2i = C'Vec Int32   2
 type C'Vec2f = C'Vec CFloat  2
@@ -26,18 +36,6 @@ type C'Vec4d = C'Vec CDouble 4
 
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
--- | Haskell representation of an OpenCV @cv::Point_\<int>@ object
-data C'Point2i
--- | Haskell representation of an OpenCV @cv::Point_\<float>@ object
-data C'Point2f
--- | Haskell representation of an OpenCV @cv::Point_\<double>@ object
-data C'Point2d
--- | Haskell representation of an OpenCV @cv::Point3_\<int>@ object
-data C'Point3i
--- | Haskell representation of an OpenCV @cv::Point3_\<float>@ object
-data C'Point3f
--- | Haskell representation of an OpenCV @cv::Point3_\<double>@ object
-data C'Point3d
 -- | Haskell representation of an OpenCV @cv::Size_\<int>@ object
 data C'Size2i
 -- | Haskell representation of an OpenCV @cv::Size_\<float>@ object

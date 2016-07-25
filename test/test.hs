@@ -1,4 +1,6 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# language FlexibleInstances #-}
+{-# language TypeSynonymInstances #-}
+{-# options_ghc -fno-warn-orphans #-}
 
 module Main where
 
@@ -33,17 +35,17 @@ main = defaultMain $ testGroup "opencv"
       ]
     , testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (toPoint2i :: V2 Int32  -> Point2i) fromPoint2i
-        , testIso "isoPoint2fV2" (toPoint2f :: V2 Float  -> Point2f) fromPoint2f
-        , testIso "isoPoint2dV2" (toPoint2d :: V2 Double -> Point2d) fromPoint2d
-        , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
-        , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
-        , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
-        , testIso "isoVec3fV3"   (toVec     :: V3 Float  -> Vec3f  ) fromVec
-        , testIso "isoVec4iV4"   (toVec     :: V4 Int32  -> Vec4i  ) fromVec
-        , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
-        , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
-        , testIso "isoScalarV4"  (toScalar  :: V4 Double -> Scalar ) fromScalar
+        [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32  -> Point2i) fromPoint
+        , testIso "isoPoint2fV2" (toPoint  :: V2 Float  -> Point2f) fromPoint
+        , testIso "isoPoint2dV2" (toPoint  :: V2 Double -> Point2d) fromPoint
+        , testIso "isoPoint3iV3" (toPoint  :: V3 Int32  -> Point3i) fromPoint
+        , testIso "isoPoint3fV3" (toPoint  :: V3 Float  -> Point3f) fromPoint
+        , testIso "isoPoint3dV3" (toPoint  :: V3 Double -> Point3d) fromPoint
+        , testIso "isoVec3fV3"   (toVec    :: V3 Float  -> Vec3f  ) fromVec
+        , testIso "isoVec4iV4"   (toVec    :: V4 Int32  -> Vec4i  ) fromVec
+        , testIso "isoSize2iV2"  (toSize2i :: V2 Int32  -> Size2i ) fromSize2i
+        , testIso "isoSize2fV2"  (toSize2f :: V2 Float  -> Size2f ) fromSize2f
+        , testIso "isoScalarV4"  (toScalar :: V4 Double -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -167,10 +169,10 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ fromPoint2i (rectTopLeft     rect) == tl
-      , fromPoint2i (rectBottomRight rect) == tl ^+^ size
-      , fromSize2i  (rectSize        rect) == size
-      ,              rectArea        rect  == (w  *  h)
+      [ fromPoint  (rectTopLeft     rect) == tl
+      , fromPoint  (rectBottomRight rect) == tl ^+^ size
+      , fromSize2i (rectSize        rect) == size
+      ,             rectArea        rect  == (w  *  h)
       ]
     where
       rect = mkRect tl size
@@ -188,10 +190,10 @@ myRectContains point rect =
         ]
   where
     px, py :: Int32
-    V2 px py = fromPoint2i point
+    V2 px py = fromPoint point
 
     rx, ry :: Int32
-    V2 rx ry = fromPoint2i $ rectTopLeft rect
+    V2 rx ry = fromPoint $ rectTopLeft rect
 
     w, h :: Int32
     V2 w h = fromSize2i $ rectSize rect
@@ -354,7 +356,7 @@ instance QC.Arbitrary Rect where
     arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where
-    arbitrary = toPoint2i <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+    arbitrary = toPoint <$> (QC.arbitrary :: QC.Gen (V2 Int32))
 
 --------------------------------------------------------------------------------
 

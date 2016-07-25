@@ -15,6 +15,7 @@ import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
@@ -57,8 +58,8 @@ estimateRigidTransform src dst fullAffine = do
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withArrayPtr (V.map toPoint2i src) $ \srcPtr ->
-        withArrayPtr (V.map toPoint2i dst) $ \dstPtr ->
+        withArrayPtr (V.map toPoint src) $ \srcPtr ->
+        withArrayPtr (V.map toPoint dst) $ \dstPtr ->
         withPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);

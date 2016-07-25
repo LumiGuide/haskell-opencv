@@ -14,6 +14,7 @@ import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy ( Proxy(..) )
 import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
 import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V3 ( V3(..) )
 import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
@@ -21,6 +22,23 @@ import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.HMat
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
+
+--------------------------------------------------------------------------------
+
+newtype J a = J {unJ :: a}
+
+instance (ToJSON a) => ToJSON (J (V2 a)) where
+    toJSON (J (V2 x y)) = toJSON (x, y)
+
+instance (ToJSON a) => ToJSON (J (V3 a)) where
+    toJSON (J (V3 x y z)) = toJSON (x, y, z)
+
+instance (FromJSON a) => FromJSON (J (V2 a)) where
+    parseJSON = fmap (\(x, y) -> J $ V2 x y) . parseJSON
+
+instance (FromJSON a) => FromJSON (J (V3 a)) where
+    parseJSON = fmap (\(x, y, z) -> J $ V3 x y z) . parseJSON
+
 
 --------------------------------------------------------------------------------
 
@@ -33,15 +51,14 @@ instance FromJSON A where {                          \
 }
 
 --------------------------------------------------------------------------------
-
-IsoJSON(Point2i, (Int32 , Int32 ),         fromPoint2i, toPoint2i)
-IsoJSON(Point2f, (Float , Float ),         fromPoint2f, toPoint2f)
-IsoJSON(Point2d, (Double, Double),         fromPoint2d, toPoint2d)
-IsoJSON(Point3i, (Int32 , Int32 , Int32 ), fromPoint3i, toPoint3i)
-IsoJSON(Point3f, (Float , Float , Float ), fromPoint3f, toPoint3f)
-IsoJSON(Point3d, (Double, Double, Double), fromPoint3d, toPoint3d)
-IsoJSON(Size2i , (Int32 , Int32 ),         fromSize2i,  toSize2i)
-IsoJSON(Size2f , (Float , Float ),         fromSize2f,  toSize2f)
+IsoJSON(Point2i, J (V2 Int32 ), J . fromPoint , toPoint  . unJ)
+IsoJSON(Point2f, J (V2 Float ), J . fromPoint , toPoint  . unJ)
+IsoJSON(Point2d, J (V2 Double), J . fromPoint , toPoint  . unJ)
+IsoJSON(Point3i, J (V3 Int32 ), J . fromPoint , toPoint  . unJ)
+IsoJSON(Point3f, J (V3 Float ), J . fromPoint , toPoint  . unJ)
+IsoJSON(Point3d, J (V3 Double), J . fromPoint , toPoint  . unJ)
+IsoJSON(Size2i , J (V2 Int32 ), J . fromSize2i, toSize2i . unJ)
+IsoJSON(Size2f , J (V2 Float ), J . fromSize2f, toSize2f . unJ)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat

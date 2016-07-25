@@ -82,7 +82,7 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 defaultAnchor :: Point2i
-defaultAnchor = toPoint2i (pure (-1) :: V2 Int32)
+defaultAnchor = toPoint (pure (-1) :: V2 Int32)
 
 
 --------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
@@ -481,7 +481,7 @@ filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do
         |]
   where
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'delta = realToFrac delta
     (c'borderType, _) = marshalBorderMode borderMode
@@ -556,7 +556,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
@@ -601,7 +601,7 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException 
     c'op = marshalMorphOperation op
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
@@ -628,7 +628,7 @@ morphEllipseImg :: StructureImg
 morphEllipseImg = structureImg MorphEllipse
 
 morphCrossImg :: StructureImg
-morphCrossImg = structureImg $ MorphCross $ toPoint2i (pure (-1) :: V2 Int32)
+morphCrossImg = structureImg $ MorphCross $ toPoint (pure (-1) :: V2 Int32)
 @
 
 <<doc/generated/examples/morphRectImg.png morphRectImg>>

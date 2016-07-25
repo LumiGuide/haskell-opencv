@@ -34,6 +34,7 @@ import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Core.Types.Matx ( fromVec )
+import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -71,7 +72,7 @@ contourArea
        -- ^ Signed or unsigned area
     -> CvExcept Double
 contourArea contour areaOriented = unsafeWrapException $
-    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
+    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
     alloca $ \c'area ->
     handleCvException (realToFrac <$> peek c'area) $
       [cvExcept|
@@ -111,8 +112,8 @@ pointPolygonTest
        -- the point is inside a contour or not.
     -> CvExcept Double
 pointPolygonTest contour pt measureDist = unsafeWrapException $
-    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
-    withPtr (toPoint2f pt) $ \ptPtr ->
+    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
+    withPtr (toPoint pt) $ \ptPtr ->
     alloca $ \c'resultPtr ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
@@ -292,7 +293,7 @@ minAreaRect :: (ToPoint2i point2i)
             => V.Vector point2i -> RotatedRect
 minAreaRect points =
   unsafePerformIO $ fromPtr $
-  withArrayPtr (V.map toPoint2i points) $
+  withArrayPtr (V.map toPoint points) $
   \pointsPtr ->
     [CU.exp|
       RotatedRect * {

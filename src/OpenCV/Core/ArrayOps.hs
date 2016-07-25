@@ -58,6 +58,7 @@ import "this" OpenCV.Core.ArrayOps.Internal
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel

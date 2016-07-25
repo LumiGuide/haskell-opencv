@@ -210,8 +210,8 @@ arrowedLine
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withPtr (toPoint2i pt1) $ \pt1Ptr   ->
-    withPtr (toPoint2i pt2) $ \pt2Ptr   ->
+    withPtr (toPoint pt1) $ \pt1Ptr   ->
+    withPtr (toPoint pt2) $ \pt2Ptr   ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::arrowedLine( *$(Mat * matPtr)
@@ -264,8 +264,8 @@ circle
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withPtr (toPoint2i center) $ \centerPtr ->
-    withPtr (toScalar color ) $ \colorPtr  ->
+    withPtr (toPoint center) $ \centerPtr ->
+    withPtr (toScalar color) $ \colorPtr  ->
       [C.exp|void {
         cv::circle( *$(Mat * matPtr)
                   , *$(Point2i * centerPtr)
@@ -322,9 +322,9 @@ ellipse
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withPtr (toPoint2i center) $ \centerPtr ->
-    withPtr (toSize2i axes) $ \axesPtr   ->
-    withPtr (toScalar color) $ \colorPtr  ->
+    withPtr (toPoint  center) $ \centerPtr ->
+    withPtr (toSize2i axes  ) $ \axesPtr   ->
+    withPtr (toScalar color ) $ \colorPtr  ->
       [C.exp|void {
         cv::ellipse( *$(Mat * matPtr)
                    , *$(Point2i * centerPtr)
@@ -369,7 +369,7 @@ fillConvexPoly
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withArrayPtr (V.map toPoint2i points) $ \pointsPtr ->
+    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
@@ -570,9 +570,9 @@ line
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withPtr (toPoint2i pt1) $ \pt1Ptr ->
-    withPtr (toPoint2i pt2) $ \pt2Ptr ->
-    withPtr (toScalar  color) $ \colorPtr ->
+    withPtr (toPoint pt1) $ \pt1Ptr ->
+    withPtr (toPoint pt2) $ \pt2Ptr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::line( *$(Mat * matPtr)
                 , *$(Point2i * pt1Ptr)
@@ -667,7 +667,7 @@ putText img text org font color thickness lineType bottomLeftOrigin =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    withPtr (toPoint2i org) $ \orgPtr   ->
+    withPtr (toPoint org) $ \orgPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::putText( *$(Mat * matPtr)

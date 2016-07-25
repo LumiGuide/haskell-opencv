@@ -8,6 +8,7 @@ module OpenCV
     , module OpenCV.Core.Types.Mat.HMat
     , module OpenCV.Core.Types.Mat.Repa
     , module OpenCV.Core.Types.Matx
+    , module OpenCV.Core.Types.Point
     , module OpenCV.Features2d
     , module OpenCV.HighGui
     , module OpenCV.ImgCodecs
@@ -35,6 +36,7 @@ import OpenCV.Core.Types.Mat
 import OpenCV.Core.Types.Mat.HMat
 import OpenCV.Core.Types.Mat.Repa
 import OpenCV.Core.Types.Matx
+import OpenCV.Core.Types.Point
 import OpenCV.Features2d
 import OpenCV.HighGui
 import OpenCV.ImgCodecs
