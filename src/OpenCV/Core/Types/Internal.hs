@@ -138,12 +138,6 @@ instance ToScalar  (V4 CDouble) where toScalar  = unsafePerformIO . newScalar
 instance ToSize2f  (V2 Float  ) where toSize2f  = toSize2f  . fmap (realToFrac :: Float  -> CFloat )
 instance ToScalar  (V4 Double ) where toScalar  = toScalar  . fmap (realToFrac :: Double -> CDouble)
 
-instance ToSize2i  (Int32  , Int32  ) where toSize2i  = toSize2i  . toV2
-instance ToSize2f  (CFloat , CFloat ) where toSize2f  = toSize2f  . toV2
-instance ToSize2f  (Float  , Float  ) where toSize2f  = toSize2f  . toV2
-instance ToScalar  (CDouble, CDouble, CDouble, CDouble) where toScalar = toScalar . toV4
-instance ToScalar  (Double , Double , Double , Double ) where toScalar = toScalar . toV4
-
 class FromSize2i  a where fromSize2i  :: Size2i  -> a
 class FromSize2f  a where fromSize2f  :: Size2f  -> a
 class FromScalar  a where fromScalar  :: Scalar  -> a
@@ -197,30 +191,8 @@ instance FromScalar (V4 CDouble) where
            <*> peek zPtr
            <*> peek wPtr
 
-instance FromSize2f  (V2 Float ) where fromSize2f  = fmap (realToFrac :: CFloat  -> Float ) . fromSize2f
-instance FromScalar  (V4 Double) where fromScalar  = fmap (realToFrac :: CDouble -> Double) . fromScalar
-
-instance FromSize2i  (Int32  , Int32  )                   where fromSize2i  = fromV2 . fromSize2i
-instance FromSize2f  (CFloat , CFloat )                   where fromSize2f  = fromV2 . fromSize2f
-instance FromSize2f  (Float  , Float  )                   where fromSize2f  = fromV2 . fromSize2f
-instance FromScalar  (CDouble, CDouble, CDouble, CDouble) where fromScalar  = fromV4 . fromScalar
-instance FromScalar  (Double , Double , Double , Double ) where fromScalar  = fromV4 . fromScalar
-
---------------------------------------------------------------------------------
--- Converting V2, V3 and V4s
---------------------------------------------------------------------------------
-
-toV2 :: (a, a)       -> V2 a
-toV4 :: (a, a, a, a) -> V4 a
-
-toV2 (x, y)       = V2 x y
-toV4 (x, y, z, w) = V4 x y z w
-
-fromV2 :: V2 a -> (a, a)
-fromV4 :: V4 a -> (a, a, a, a)
-
-fromV2 (V2 x y)     = (x, y)
-fromV4 (V4 x y z w) = (x, y, z, w)
+instance FromSize2f (V2 Float ) where fromSize2f = fmap (realToFrac :: CFloat  -> Float ) . fromSize2f
+instance FromScalar (V4 Double) where fromScalar = fmap (realToFrac :: CDouble -> Double) . fromScalar
 
 --------------------------------------------------------------------------------
 -- Constructing new values

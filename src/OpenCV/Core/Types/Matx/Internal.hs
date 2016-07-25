@@ -50,7 +50,6 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-
 --------------------------------------------------------------------------------
 
 newtype Matx (depth :: *) (m :: Nat) (n :: Nat)
@@ -200,17 +199,9 @@ type instance VecDepth (V2 a) = TNormVecDepth a
 type instance VecDepth (V3 a) = TNormVecDepth a
 type instance VecDepth (V4 a) = TNormVecDepth a
 
-type instance VecDepth (a, a)       = TNormVecDepth a
-type instance VecDepth (a, a, a)    = TNormVecDepth a
-type instance VecDepth (a, a, a, a) = TNormVecDepth a
-
 type instance VecDim (V2 a) = 2
 type instance VecDim (V3 a) = 3
 type instance VecDim (V4 a) = 4
-
-type instance VecDim (a, a)       = 2
-type instance VecDim (a, a, a)    = 3
-type instance VecDim (a, a, a, a) = 4
 
 instance ToVec (Vec depth dim) where toVec = id
 
@@ -232,24 +223,6 @@ instance ToVec (V4 CDouble) where toVec = unsafePerformIO . newVec4d
 instance ToVec (V4 Float  ) where toVec = toVec . fmap (realToFrac :: Float  -> CFloat )
 instance ToVec (V4 Double ) where toVec = toVec . fmap (realToFrac :: Double -> CDouble)
 
-instance ToVec (Int32  , Int32  ) where toVec = toVec . toV2
-instance ToVec (CFloat , CFloat ) where toVec = toVec . toV2
-instance ToVec (Float  , Float  ) where toVec = toVec . toV2
-instance ToVec (CDouble, CDouble) where toVec = toVec . toV2
-instance ToVec (Double , Double ) where toVec = toVec . toV2
-
-instance ToVec (Int32  , Int32  , Int32  ) where toVec = toVec . toV3
-instance ToVec (CFloat , CFloat , CFloat ) where toVec = toVec . toV3
-instance ToVec (Float  , Float  , Float  ) where toVec = toVec . toV3
-instance ToVec (CDouble, CDouble, CDouble) where toVec = toVec . toV3
-instance ToVec (Double , Double , Double ) where toVec = toVec . toV3
-
-instance ToVec (Int32  , Int32  , Int32  , Int32  ) where toVec = toVec . toV4
-instance ToVec (CFloat , CFloat , CFloat , CFloat ) where toVec = toVec . toV4
-instance ToVec (Float  , Float  , Float  , Float  ) where toVec = toVec . toV4
-instance ToVec (CDouble, CDouble, CDouble, CDouble) where toVec = toVec . toV4
-instance ToVec (Double , Double , Double , Double ) where toVec = toVec . toV4
-
 instance FromVec (Vec depth dim) where fromVec = id
 
 instance FromVec (V2 Float) where fromVec = fmap (realToFrac :: CFloat  -> Float ) . fromVec
@@ -259,42 +232,6 @@ instance FromVec (V4 Float) where fromVec = fmap (realToFrac :: CFloat  -> Float
 instance FromVec (V2 Double) where fromVec = fmap (realToFrac :: CDouble  -> Double ) . fromVec
 instance FromVec (V3 Double) where fromVec = fmap (realToFrac :: CDouble  -> Double ) . fromVec
 instance FromVec (V4 Double) where fromVec = fmap (realToFrac :: CDouble  -> Double ) . fromVec
-
-instance FromVec (Int32  , Int32  )                   where fromVec = fromV2 . fromVec
-instance FromVec (CFloat , CFloat )                   where fromVec = fromV2 . fromVec
-instance FromVec (Float  , Float  )                   where fromVec = fromV2 . fromVec
-instance FromVec (CDouble, CDouble)                   where fromVec = fromV2 . fromVec
-instance FromVec (Double , Double )                   where fromVec = fromV2 . fromVec
-
-instance FromVec (Int32  , Int32  , Int32  )          where fromVec = fromV3 . fromVec
-instance FromVec (CFloat , CFloat , CFloat )          where fromVec = fromV3 . fromVec
-instance FromVec (Float  , Float  , Float  )          where fromVec = fromV3 . fromVec
-instance FromVec (CDouble, CDouble, CDouble)          where fromVec = fromV3 . fromVec
-instance FromVec (Double , Double , Double )          where fromVec = fromV3 . fromVec
-
-instance FromVec (Int32  , Int32  , Int32  , Int32  ) where fromVec = fromV4 . fromVec
-instance FromVec (CFloat , CFloat , CFloat , CFloat ) where fromVec = fromV4 . fromVec
-instance FromVec (Float  , Float  , Float  , Float  ) where fromVec = fromV4 . fromVec
-instance FromVec (CDouble, CDouble, CDouble, CDouble) where fromVec = fromV4 . fromVec
-instance FromVec (Double , Double , Double , Double ) where fromVec = fromV4 . fromVec
-
---------------------------------------------------------------------------------
-
-toV2 :: (a, a)       -> V2 a
-toV3 :: (a, a, a)    -> V3 a
-toV4 :: (a, a, a, a) -> V4 a
-
-toV2 (x, y)       = V2 x y
-toV3 (x, y, z)    = V3 x y z
-toV4 (x, y, z, w) = V4 x y z w
-
-fromV2 :: V2 a -> (a, a)
-fromV3 :: V3 a -> (a, a, a)
-fromV4 :: V4 a -> (a, a, a, a)
-
-fromV2 (V2 x y)     = (x, y)
-fromV3 (V3 x y z)   = (x, y, z)
-fromV4 (V4 x y z w) = (x, y, z, w)
 
 --------------------------------------------------------------------------------
 
