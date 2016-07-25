@@ -1,6 +1,7 @@
 {-# language CPP #-}
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
+{-# language UndecidableInstances #-}
 
 module OpenCV.Core.Types.Mat.ToFrom
   ( MatShape
@@ -49,19 +50,19 @@ type instance MatShape    (Mat shape channels depth) = shape
 type instance MatChannels (Mat shape channels depth) = channels
 type instance MatDepth    (Mat shape channels depth) = depth
 
-type instance MatShape    (Matx depth m n) = 'S '[ 'S m, 'S n ] -- ShapeT '[m, n]
+type instance MatShape    (Matx depth m n) = ShapeT '[m, n]
 type instance MatChannels (Matx depth m n) = 'S 1
 type instance MatDepth    (Matx depth m n) = 'S depth
 
-type instance MatShape    (Vec depth dim) = 'S '[ 'S dim ] -- ShapeT '[dim]
+type instance MatShape    (Vec depth dim) = ShapeT '[dim]
 type instance MatChannels (Vec depth dim) = 'S 1
 type instance MatDepth    (Vec depth dim) = 'S depth
 
-type instance MatShape    (M23 depth) = 'S '[ 'S 2, 'S 3 ] -- ShapeT [2, 3]
+type instance MatShape    (M23 depth) = ShapeT [2, 3]
 type instance MatChannels (M23 depth) = 'S 1
 type instance MatDepth    (M23 depth) = 'S depth
 
-type instance MatShape    (M33 depth) = 'S '[ 'S 3, 'S 3 ] -- ShapeT [3, 3]
+type instance MatShape    (M33 depth) = ShapeT [3, 3]
 type instance MatChannels (M33 depth) = 'S 1
 type instance MatDepth    (M33 depth) = 'S depth
 
