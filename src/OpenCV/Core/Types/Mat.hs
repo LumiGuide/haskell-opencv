@@ -1,5 +1,4 @@
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Core.Types.Mat
@@ -53,7 +52,7 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
-import "base" Control.Monad.ST ( ST, runST )
+import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
@@ -67,6 +66,7 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.Types.Mat.ToFrom
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
@@ -86,23 +86,6 @@ C.using "namespace cv"
 
 emptyMat :: Mat ('S '[]) ('S 1) ('S Word8)
 emptyMat = unsafePerformIO newEmptyMat
-
--- TODO (RvD): check for negative sizes
--- This crashes OpenCV
-mkMat
-    :: ( ToShape    shape
-       , ToChannels channels
-       , ToDepth    depth
-       , ToScalar   scalar
-       )
-    => shape    -- ^
-    -> channels -- ^
-    -> depth    -- ^
-    -> scalar   -- ^
-    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
-mkMat shape channels depth defValue =
-    unsafeCvExcept $ newMat shape channels depth defValue
-
 
 -- | Identity matrix
 --
@@ -225,49 +208,6 @@ matConvertTo alpha beta src = unsafeWrapException $ do
 --------------------------------------------------------------------------------
 -- Mutable Matrix
 --------------------------------------------------------------------------------
-
--- TODO (RvD): check for negative sizes
--- This crashes OpenCV
-mkMatM
-    :: ( PrimMonad m
-       , ToShape    shape
-       , ToChannels channels
-       , ToDepth    depth
-       , ToScalar   scalar
-       )
-    => shape    -- ^
-    -> channels -- ^
-    -> depth    -- ^
-    -> scalar   -- ^
-    -> CvExceptT m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
-mkMatM shape channels depth defValue = do
-    mat <- mapExceptT unsafePrimToPrim $ newMat shape channels depth defValue
-    unsafeThaw mat
-
-createMat
-    :: (forall s. CvExceptT (ST s) (Mut (Mat shape channels depth) s)) -- ^
-    -> CvExcept (Mat shape channels depth)
-createMat mk = runCvExceptST $ unsafeFreeze =<< mk
-
-withMatM
-    :: ( ToShape    shape
-       , ToChannels channels
-       , ToDepth    depth
-       , ToScalar   scalar
-       )
-    => shape    -- ^
-    -> channels -- ^
-    -> depth    -- ^
-    -> scalar   -- ^
-    -> (  forall s
-       .  Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState (ST s))
-       -> CvExceptT (ST s) ()
-       )
-    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
-withMatM shape channels depth defValue f = createMat $ do
-    matM <- mkMatM shape channels depth defValue
-    f matM
-    pure matM
 
 matCopyToM
     :: (PrimMonad m)

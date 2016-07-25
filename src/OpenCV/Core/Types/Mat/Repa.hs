@@ -36,7 +36,6 @@ import qualified "repa" Data.Array.Repa as Repa
 import           "repa" Data.Array.Repa.Index ( (:.) )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
 

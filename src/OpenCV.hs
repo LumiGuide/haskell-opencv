@@ -2,7 +2,6 @@
 
 module OpenCV
     ( module OpenCV.Calib3d
-    , module OpenCV.Core
     , module OpenCV.Core.ArrayOps
     , module OpenCV.Core.Types
     , module OpenCV.Core.Types.Mat
@@ -30,7 +29,6 @@ module OpenCV
     ) where
 
 import OpenCV.Calib3d
-import OpenCV.Core ( )
 import OpenCV.Core.ArrayOps
 import OpenCV.Core.Types
 import OpenCV.Core.Types.Mat

@@ -1,7 +1,7 @@
 {-# language CPP #-}
-{-# language ConstraintKinds #-}
-{-# language MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# language QuasiQuotes #-}
+{-# language ConstraintKinds #-}
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
 
@@ -14,11 +14,6 @@
 module OpenCV.Core.Types.Mat.Internal
     ( -- * Matrix
       Mat(..)
-    , MatShape
-    , MatChannels
-    , MatDepth
-    , ToMat(..)
-    , FromMat(..)
 
     , typeCheckMat
     , relaxMat
@@ -30,6 +25,7 @@ module OpenCV.Core.Types.Mat.Internal
     , newMat
     , withMatData
     , matElemAddress
+    , mkMat
     , cloneMat
 
       -- * Mutable matrix
@@ -38,6 +34,9 @@ module OpenCV.Core.Types.Mat.Internal
     , coerceMatM
     , unsafeCoerceMatM
 
+    , mkMatM
+    , createMat
+    , withMatM
     , cloneMatM
 
       -- * Meta information
@@ -62,6 +61,7 @@ module OpenCV.Core.Types.Mat.Internal
     , ToDepthDS(toDepthDS)
     ) where
 
+import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
 import "base" Data.Maybe
 import "base" Data.Monoid ( (<>) )
@@ -79,15 +79,13 @@ import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "linear" Linear.Matrix ( M23, M33 )
-import "primitive" Control.Monad.Primitive ( PrimMonad, unsafePrimToPrim )
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Depth
 import "this" OpenCV.Core.Types.Mat.Marshal
-import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Internal
 import "this" OpenCV.Mutable
@@ -115,58 +113,6 @@ newtype Mat (shape    :: DS [DS Nat])
 type instance C (Mat shape channels depth) = C'Mat
 
 type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth)
-
-type family MatShape    (a :: *) :: DS [DS Nat]
-type family MatChannels (a :: *) :: DS Nat
-type family MatDepth    (a :: *) :: DS *
-
-type instance MatShape    (Mat shape channels depth) = shape
-type instance MatChannels (Mat shape channels depth) = channels
-type instance MatDepth    (Mat shape channels depth) = depth
-
-type instance MatShape    (Matx depth m n) = ShapeT '[m, n]
-type instance MatChannels (Matx depth m n) = 'S 1
-type instance MatDepth    (Matx depth m n) = 'S depth
-
-type instance MatShape    (Vec depth dim) = ShapeT '[dim]
-type instance MatChannels (Vec depth dim) = 'S 1
-type instance MatDepth    (Vec depth dim) = 'S depth
-
-type instance MatShape    (M23 depth) = ShapeT [2, 3]
-type instance MatChannels (M23 depth) = 'S 1
-type instance MatDepth    (M23 depth) = 'S depth
-
-type instance MatShape    (M33 depth) = ShapeT [3, 3]
-type instance MatChannels (M33 depth) = 'S 1
-type instance MatDepth    (M33 depth) = 'S depth
-
-class ToMat a where
-    toMat :: a -> Mat (MatShape a) (MatChannels a) (MatDepth a)
-
-class FromMat a where
-    fromMat :: Mat (MatShape a) (MatChannels a) (MatDepth a) -> a
-
-instance ToMat   (Mat shape channels depth) where toMat   = id
-instance FromMat (Mat shape channels depth) where fromMat = id
-
-#define TO_MAT(NAME)                                      \
-instance ToMat NAME where {                               \
-    toMat vec = unsafePerformIO $ fromPtr $               \
-        withPtr vec $ \vecPtr ->                          \
-          [CU.exp| Mat * {                                \
-            new cv::Mat(*$(NAME * vecPtr), false)         \
-          }|];                                            \
-};
-
-TO_MAT(Vec2i)
-TO_MAT(Vec2f)
-TO_MAT(Vec2d)
-TO_MAT(Vec3i)
-TO_MAT(Vec3f)
-TO_MAT(Vec3d)
-TO_MAT(Vec4i)
-TO_MAT(Vec4f)
-TO_MAT(Vec4d)
 
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
@@ -390,6 +336,22 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
       offset = sum $ zipWith (*) step pos
 
+-- TODO (RvD): check for negative sizes
+-- This crashes OpenCV
+mkMat
+    :: ( ToShape    shape
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+mkMat shape channels depth defValue =
+    unsafeCvExcept $ newMat shape channels depth defValue
+
 cloneMat :: Mat shape channels depth
          -> Mat shape channels depth
 cloneMat = unsafePerformIO . cloneMatIO
@@ -436,6 +398,49 @@ unsafeCoerceMatM
     :: Mut (Mat shapeIn  channelsIn  depthIn ) s
     -> Mut (Mat shapeOut channelsOut depthOut) s
 unsafeCoerceMatM = unsafeCoerce
+
+-- TODO (RvD): check for negative sizes
+-- This crashes OpenCV
+mkMatM
+    :: ( PrimMonad m
+       , ToShape    shape
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> CvExceptT m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
+mkMatM shape channels depth defValue = do
+    mat <- mapExceptT unsafePrimToPrim $ newMat shape channels depth defValue
+    unsafeThaw mat
+
+createMat
+    :: (forall s. CvExceptT (ST s) (Mut (Mat shape channels depth) s)) -- ^
+    -> CvExcept (Mat shape channels depth)
+createMat mk = runCvExceptST $ unsafeFreeze =<< mk
+
+withMatM
+    :: ( ToShape    shape
+       , ToChannels channels
+       , ToDepth    depth
+       , ToScalar   scalar
+       )
+    => shape    -- ^
+    -> channels -- ^
+    -> depth    -- ^
+    -> scalar   -- ^
+    -> (  forall s
+       .  Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState (ST s))
+       -> CvExceptT (ST s) ()
+       )
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+withMatM shape channels depth defValue f = createMat $ do
+    matM <- mkMatM shape channels depth defValue
+    f matM
+    pure matM
 
 cloneMatM :: (PrimMonad m)
           => Mat shape channels depth
