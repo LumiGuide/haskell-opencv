@@ -11,12 +11,15 @@
 module OpenCV.Core.ArrayOps
     ( -- * Per element operations
       -- $per_element_intro
-      matAbs
+      matScalarAdd
+    , matScalarMult
+    , matAbs
     , matAbsDiff
     , matAdd
     , matSubtract
     , matAddWeighted
     , matScaleAdd
+    , matMax
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -83,6 +86,36 @@ Examples are based on the following two images:
 <<doc/generated/flower_512x341.png Flower>>
 <<doc/generated/sailboat_512x341.png Sailboat>>
 -}
+
+matScalarAdd
+    :: (ToScalar scalar)
+    => Mat shape channels depth -- ^
+    -> scalar
+    -> Mat shape channels depth
+matScalarAdd src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr (toScalar x) $ \xPtr ->
+      withPtr dst $ \dstPtr ->
+        withPtr src $ \srcPtr ->
+          [C.block| void {
+            *$(Mat * dstPtr) = *$(Mat * srcPtr) + *$(Scalar * xPtr);
+          }|]
+    pure $ unsafeCoerceMat dst
+
+matScalarMult
+    :: Mat shape channels depth -- ^
+    -> Double
+    -> Mat shape channels depth
+matScalarMult src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          *$(Mat * dstPtr) = *$(Mat * srcPtr) * $(double c'x);
+        }|]
+    pure $ unsafeCoerceMat dst
+  where
+    c'x = realToFrac x
 
 {- | Calculates an absolute value of each matrix element.
 
@@ -277,6 +310,23 @@ matScaleAdd src1 scale src2 = unsafeWrapException $ do
   where
     c'scale = realToFrac scale
 
+matMax
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+matMax src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+        [cvExcept|
+          cv::max
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          );
+        |]
 
 --------------------------------------------------------------------------------
 -- Per element bitwise operations

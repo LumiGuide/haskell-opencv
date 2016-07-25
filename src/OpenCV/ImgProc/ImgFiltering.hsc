@@ -42,6 +42,7 @@ module OpenCV.ImgProc.ImgFiltering
     , morphologyEx
     , getStructuringElement
     , blur
+    , gaussianBlur
     ) where
 
 import "base" Data.Int
@@ -276,7 +277,7 @@ boxBlurImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
 blur
-  :: (depth `In` '[Word8, Word16, Float], ToSize2i size2i)
+  :: (depth `In` '[Word8, Word16, Int16, Float, Double], ToSize2i size2i)
   => size2i -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
   -> CvExcept (Mat shape ('S channels) ('S depth))
@@ -296,6 +297,36 @@ blur size matIn =
        |]
   where ksize :: Size2i
         ksize = toSize2i size
+
+gaussianBlur
+  :: (depth `In` '[Word8, Word16, Float, Double], ToSize2i size2i)
+  => size2i -- ^ Blurring kernel size.
+  -> Double -- ^ sigmaX
+  -> Double -- ^ sigmaY
+  -> Mat shape ('S channels) ('S depth)
+  -> CvExcept (Mat shape ('S channels) ('S depth))
+gaussianBlur size sigmaX sigmaY matIn =
+  unsafeWrapException $
+  do matOut <- newEmptyMat
+     handleCvException (pure $ unsafeCoerceMat matOut) $
+       withPtr ksize $ \ksizePtr ->
+       withPtr matIn $ \matInPtr ->
+       withPtr matOut $ \matOutPtr ->
+       [cvExcept|
+           cv::GaussianBlur
+           ( *$(Mat * matInPtr)
+           , *$(Mat * matOutPtr)
+           , *$(Size2i * ksizePtr)
+           , $(double c'sigmaX)
+           , $(double c'sigmaY)
+           );
+       |]
+  where
+    ksize :: Size2i
+    ksize = toSize2i size
+
+    c'sigmaX = realToFrac sigmaX
+    c'sigmaY = realToFrac sigmaY
 
 {- | Erodes an image by using a specific structuring element
 
