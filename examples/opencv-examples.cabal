@@ -16,7 +16,7 @@ executable highgui
   hs-source-dirs: src
   ghc-options: -Wall -O2
 
-  build-depends: base >=4.8 && < 4.9
+  build-depends: base >=4.8 && < 4.10
                , bytestring
                , opencv
 
