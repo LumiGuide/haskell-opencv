@@ -314,20 +314,19 @@ matMax
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
     -> CvExcept (Mat shape channels depth)
-matMax src1 src2 = unsafePerformIO $ do
+matMax src1 src2 = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
       withPtr src2 $ \src2Ptr ->
-        [C.block| void {
+        [cvExcept|
           cv::max
           ( *$(Mat * src1Ptr)
           , *$(Mat * src2Ptr)
           , *$(Mat * dstPtr)
           );
-        }|]
-    pure $ unsafeCoerceMat dst
+        |]
 
 --------------------------------------------------------------------------------
 -- Per element bitwise operations
