@@ -225,7 +225,7 @@ medianBlurImg = exceptError $
 -- TODO (Rvd): make ksize a type level argument
 -- if ksize in [3, 5] then depth in [Word8, Int16, Float) else depth ~ Word8
 medianBlur
-    :: ( depth    `In` '[Word8, Word16, Int16, Float, Double]
+    :: ( depth    `In` '[Word8, Word16, Float]
        , channels `In` '[1, 3, 4]
        -- , Length shape <= 2
        )

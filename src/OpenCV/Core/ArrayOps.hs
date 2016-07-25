@@ -313,10 +313,11 @@ matScaleAdd src1 scale src2 = unsafeWrapException $ do
 matMax
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
 matMax src1 src2 = unsafePerformIO $ do
     dst <- newEmptyMat
-    withPtr dst $ \dstPtr ->
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
       withPtr src2 $ \src2Ptr ->
         [C.block| void {
