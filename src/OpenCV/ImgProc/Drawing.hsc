@@ -697,8 +697,8 @@ rectangleImg = exceptError $
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \imgM -> do
-      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
-      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
+      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180) :: Rect2i) blue  5  LineType_8 0
+      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140) :: Rect2i) red (-1) LineType_8 0
 @
 
 <<doc/generated/examples/rectangleImg.png rectangleImg>>
@@ -706,9 +706,9 @@ rectangleImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
-    :: (PrimMonad m, ToScalar color)
+    :: (PrimMonad m, ToScalar color, IsRect2i rect2i)
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> Rect
+    -> rect2i
     -> color -- ^ Rectangle color or brightness (grayscale image).
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -717,11 +717,11 @@ rectangle
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
-    withPtr rect $ \rectPtr ->
+    withPtr (toRect rect) $ \rectPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::rectangle( *$(Mat * matPtr)
-                     , *$(Rect * rectPtr)
+                     , *$(Rect2i * rectPtr)
                      , *$(Scalar * colorPtr)
                      , $(int32_t thickness)
                      , $(int32_t c'lineType)

@@ -9,10 +9,11 @@ import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 
-data C'Matx (depth :: *) (dimM :: Nat) (dimN :: Nat)
-data C'Vec  (depth :: *) (dim :: Nat)
+data C'Matx  (depth :: *) (dimM :: Nat) (dimN :: Nat)
+data C'Vec   (depth :: *) (dim :: Nat)
 data C'Point (depth :: *) (dim :: Nat)
 data C'Size  (depth :: *) (dim :: Nat)
+data C'Rect  (depth :: *)
 
 type C'Vec2i = C'Vec Int32   2
 type C'Vec2f = C'Vec CFloat  2
@@ -34,13 +35,16 @@ type C'Point3i = C'Point Int32   3
 type C'Point3f = C'Point CFloat  3
 type C'Point3d = C'Point CDouble 3
 
-type C'Size2i = C'Size Int32  2
-type C'Size2f = C'Size CFloat 2
+type C'Size2i = C'Size Int32   2
+type C'Size2f = C'Size CFloat  2
+type C'Size2d = C'Size CDouble 2
+
+type C'Rect2i = C'Rect Int32
+type C'Rect2f = C'Rect CFloat
+type C'Rect2d = C'Rect CDouble
 
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
--- | Haskell representation of an OpenCV @cv::Rect_\<int>@ object
-data C'Rect
 -- | Haskell representation of an OpenCV @cv::RotatedRect@ object
 data C'RotatedRect
 -- | Haskell representation of an OpenCV @cv::TermCriteria@ object

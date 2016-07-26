@@ -175,12 +175,13 @@ rectBasicProperties tl size@(V2 w h) = and
       ,           rectArea         rect  == (w  *  h)
       ]
     where
+      rect :: Rect2i
       rect = mkRect tl size
 
-rectContainsProperty :: Point2i -> Rect -> Bool
+rectContainsProperty :: Point2i -> Rect2i -> Bool
 rectContainsProperty point rect = rectContains point rect == myRectContains point rect
 
-myRectContains :: Point2i -> Rect -> Bool
+myRectContains :: Point2i -> Rect2i -> Bool
 myRectContains point rect =
     and [ rx <= px
         , ry <= py
@@ -352,7 +353,7 @@ instance (QC.Arbitrary a) => QC.Arbitrary (V3 a) where
 instance (QC.Arbitrary a) => QC.Arbitrary (V4 a) where
     arbitrary = V4 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
 
-instance QC.Arbitrary Rect where
+instance QC.Arbitrary Rect2i where
     arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Point2i where

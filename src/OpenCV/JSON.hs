@@ -109,12 +109,17 @@ instance FromJSON HElems where
                     "USR" -> HElems_USRTYPE1 <$> (mapM (either fail pure . B64.decode . TE.encodeUtf8) =<< elems)
                     _ -> fail $ "Unknown Helems type " <> T.unpack typ
 
-instance ToJSON Rect where
+instance ( IsRect (Rect a)
+         , ToJSON (Point a 2)
+         , ToJSON (Size  a 2)
+         ) => ToJSON (Rect a) where
     toJSON rect = object [ "pos"  .= rectTopLeft rect
                          , "size" .= rectSize    rect
                          ]
 
-instance FromJSON Rect where
+instance ( IsRect (Rect a)
+         , FromJSON a
+         ) => FromJSON (Rect a) where
     parseJSON = withObject "Rect" $ \obj ->
                   mkRect <$> (uncurry V2 <$> obj .: "pos")
                          <*> (uncurry V2 <$> obj .: "size")

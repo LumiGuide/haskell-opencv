@@ -29,6 +29,7 @@ library
       , src/OpenCV/Core/Types/Mat/Repa.cpp
       , src/OpenCV/Core/Types/Matx/Internal.cpp
       , src/OpenCV/Core/Types/Point/Internal.cpp
+      , src/OpenCV/Core/Types/Rect/Internal.cpp
       , src/OpenCV/Core/Types/Size/Internal.cpp
       , src/OpenCV/Exception/Internal.cpp
       , src/OpenCV/Features2d.cpp
@@ -76,6 +77,7 @@ library
         OpenCV.Core.Types.Mat.Repa
         OpenCV.Core.Types.Matx
         OpenCV.Core.Types.Point
+        OpenCV.Core.Types.Rect
         OpenCV.Core.Types.Size
         OpenCV.Exception
         OpenCV.Features2d
@@ -107,6 +109,7 @@ library
         OpenCV.Core.Types.Mat.ToFrom
         OpenCV.Core.Types.Matx.Internal
         OpenCV.Core.Types.Point.Internal
+        OpenCV.Core.Types.Rect.Internal
         OpenCV.Core.Types.Size.Internal
         OpenCV.C.PlacementNew
         OpenCV.C.PlacementNew.TH

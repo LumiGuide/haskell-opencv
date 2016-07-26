@@ -18,13 +18,7 @@ module OpenCV.Core.Types
     , Scalar
     , ToScalar(..), FromScalar(..)
       -- * Rect
-    , Rect
-    , mkRect
-    , rectTopLeft
-    , rectBottomRight
-    , rectSize
-    , rectArea
-    , rectContains
+    , module OpenCV.Core.Types.Rect
       -- * RotatedRect
     , RotatedRect
     , mkRotatedRect
@@ -67,7 +61,6 @@ module OpenCV.Core.Types
 import "base" Data.Int ( Int32 )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -83,6 +76,7 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Rect
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
@@ -99,59 +93,6 @@ C.using "namespace cv"
 #include "opencv2/core.hpp"
 
 #include "namespace.hpp"
-
---------------------------------------------------------------------------------
---  Rect
---------------------------------------------------------------------------------
-
-instance Show Rect where
-    showsPrec prec rect = showParen (prec >= 10) $
-                              showString "mkRect "
-                            . shows x . showString " "
-                            . shows y . showString " "
-                            . shows w . showString " "
-                            . shows h
-      where
-        x, y, w, h :: Int32
-        V2 x y = fromPoint $ rectTopLeft rect
-        V2 w h = fromSize  $ rectSize    rect
-
-mkRect
-    :: V2 Int32 -- ^ top left
-    -> V2 Int32 -- ^ size
-    -> Rect
-mkRect pos size = unsafePerformIO $ newRect pos size
-
--- | The top-left corner
-rectTopLeft :: Rect -> Point2i
-rectTopLeft rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->tl()) }|]
-
--- | The bottom-right corner
-rectBottomRight :: Rect -> Point2i
-rectBottomRight rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->br()) }|]
-
--- | Size (width, height) of the rectangle
-rectSize :: Rect -> Size2i
-rectSize rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Size2i * { new Size2i($(Rect * rectPtr)->size()) }|]
-
--- | Area (width*height) of the rectangle
-rectArea :: Rect -> Int32
-rectArea rect = unsafePerformIO $ withPtr rect $ \rectPtr ->
-    [CU.exp| int32_t { $(Rect * rectPtr)->area() }|]
-
-
--- | Checks whether the rectangle contains the point
-rectContains :: (ToPoint2i point2i) => point2i -> Rect -> Bool
-rectContains point rect =
-    toBool $
-      unsafePerformIO $
-        withPtr (toPoint point) $ \pointPtr ->
-          withPtr rect $ \rectPtr ->
-            [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point2i * pointPtr)) }|]
-
 
 --------------------------------------------------------------------------------
 --  RotatedRect
@@ -192,10 +133,10 @@ rotatedRectAngle rotRect = realToFrac $ unsafePerformIO $
       [CU.exp| float { $(RotatedRect * rotRectPtr)->angle }|]
 
 -- | The minimal up-right rectangle containing the rotated rectangle
-rotatedRectBoundingRect :: RotatedRect -> Rect
+rotatedRectBoundingRect :: RotatedRect -> Rect2i
 rotatedRectBoundingRect rotRect =
     unsafePerformIO $ fromPtr $ withPtr rotRect $ \rotRectPtr ->
-      [CU.exp| Rect * { new Rect($(RotatedRect * rotRectPtr)->boundingRect()) }|]
+      [CU.exp| Rect2i * { new Rect2i($(RotatedRect * rotRectPtr)->boundingRect()) }|]
 
 rotatedRectPoints :: RotatedRect -> (Point2f, Point2f, Point2f, Point2f)
 rotatedRectPoints rotRect = unsafePerformIO $ do

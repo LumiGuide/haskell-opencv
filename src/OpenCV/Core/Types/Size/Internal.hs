@@ -11,12 +11,12 @@ module OpenCV.Core.Types.Size.Internal
   , SizeDim
   , ToSize(..), FromSize(..)
 
-  , Size2i, Size2f
+  , Size2i, Size2f, Size2d
 
-  , ToSize2i  , ToSize2f
-  , FromSize2i, FromSize2f
+  , ToSize2i  , ToSize2f  , ToSize2d
+  , FromSize2i, FromSize2f, FromSize2d
 
-  , newSize2i, newSize2f
+  , newSize2i, newSize2f, newSize2d
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -60,6 +60,9 @@ type family TNormSizeDepth (a :: *) :: * where
     TNormSizeDepth CFloat = CFloat
     TNormSizeDepth Float  = CFloat
 
+    TNormSizeDepth CDouble = CDouble
+    TNormSizeDepth Double  = CDouble
+
     TNormSizeDepth Int32 = Int32
 
 class ToSize   a where toSize   :: a -> Size (SizeDepth a) (SizeDim a)
@@ -96,6 +99,7 @@ NEW_NAME (V2 x y) = fromPtr $                                          \
 
 SIZE2_TYPE(Size2i, ToSize2i, FromSize2i, newSize2i, Int32  , int32_t)
 SIZE2_TYPE(Size2f, ToSize2f, FromSize2f, newSize2f, CFloat , float  )
+SIZE2_TYPE(Size2d, ToSize2d, FromSize2d, newSize2d, CDouble, double )
 
 type instance SizeDepth (Size depth dim) = depth
 type instance SizeDim   (Size depth dim) = dim
@@ -108,10 +112,13 @@ instance ToSize (Size depth dim) where toSize = id
 instance ToSize (V2 Int32  ) where toSize = unsafePerformIO . newSize2i
 instance ToSize (V2 CFloat ) where toSize = unsafePerformIO . newSize2f
 instance ToSize (V2 Float  ) where toSize = toSize . fmap (realToFrac :: Float  -> CFloat )
+instance ToSize (V2 CDouble) where toSize = unsafePerformIO . newSize2d
+instance ToSize (V2 Double ) where toSize = toSize . fmap (realToFrac :: Double  -> CDouble )
 
 instance FromSize (Size depth dim) where fromSize = id
 
-instance FromSize (V2 Float) where fromSize = fmap (realToFrac :: CFloat  -> Float ) . fromSize
+instance FromSize (V2 Float ) where fromSize = fmap (realToFrac :: CFloat  -> Float ) . fromSize
+instance FromSize (V2 Double) where fromSize = fmap (realToFrac :: CDouble -> Double) . fromSize
 
 --------------------------------------------------------------------------------
 
@@ -124,3 +131,4 @@ instance Show Size2i where
 
 mkPlacementNewInstance ''Size2i
 mkPlacementNewInstance ''Size2f
+mkPlacementNewInstance ''Size2d

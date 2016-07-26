@@ -9,9 +9,6 @@ module OpenCV.Core.Types.Internal
       Scalar(..)
     , newScalar
     , ToScalar(..), FromScalar(..)
-      -- * Rect
-    , Rect(..)
-    , newRect
       -- * RotatedRect
     , RotatedRect(..)
     , newRotatedRect
@@ -42,7 +39,6 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.PlacementNew
@@ -72,11 +68,6 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#scalar OpenCV Sphinx doc>
 newtype Scalar = Scalar {unScalar :: ForeignPtr (C Scalar)}
-
--- | 2D rectangles
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#rect OpenCV Sphinx doc>
-newtype Rect = Rect {unRect :: ForeignPtr (C Rect)}
 
 -- | Rotated (i.e. not up-right) rectangles on a plane
 --
@@ -152,18 +143,6 @@ newScalar (V4 x y z w) = fromPtr $
                                      , $(double w)
                                      )
                      }|]
-
-newRect
-    :: V2 Int32 -- ^ top left
-    -> V2 Int32 -- ^ size
-    -> IO Rect
-newRect (V2 x y) (V2 width height) = fromPtr $
-    [CU.exp|Rect * { new cv::Rect( $(int32_t x)
-                                 , $(int32_t y)
-                                 , $(int32_t width)
-                                 , $(int32_t height)
-                                 )
-                   }|]
 
 newRotatedRect
     :: ( ToPoint2f point2f
@@ -288,7 +267,6 @@ withArrayPtr arr act =
 --------------------------------------------------------------------------------
 
 type instance C Scalar       = C'Scalar
-type instance C Rect         = C'Rect
 type instance C RotatedRect  = C'RotatedRect
 type instance C TermCriteria = C'TermCriteria
 type instance C Range        = C'Range
@@ -296,7 +274,6 @@ type instance C Range        = C'Range
 --------------------------------------------------------------------------------
 
 instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
-instance WithPtr Rect         where withPtr = withForeignPtr . unRect
 instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
 instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
 instance WithPtr Range        where withPtr = withForeignPtr . unRange
@@ -310,10 +287,6 @@ mkPlacementNewInstance ''Scalar
 instance FromPtr Scalar where
     fromPtr = objFromPtr Scalar $ \ptr ->
                 [CU.exp| void { delete $(Scalar * ptr) }|]
-
-instance FromPtr Rect where
-    fromPtr = objFromPtr Rect $ \ptr ->
-                [CU.exp| void { delete $(Rect * ptr) }|]
 
 instance FromPtr RotatedRect where
     fromPtr = objFromPtr RotatedRect $ \ptr ->

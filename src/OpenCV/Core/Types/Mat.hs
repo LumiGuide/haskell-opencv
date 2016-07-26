@@ -64,9 +64,9 @@ import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Core.Types.Mat.ToFrom
+import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
@@ -130,7 +130,7 @@ matSubRectImg = exceptError $
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) subImg        Nothing
       lift $ rectangle imgM subRect blue 1 LineType_4 0
-      lift $ rectangle imgM (mkRect (V2 w 0) (V2 w h)) blue 1 LineType_4 0
+      lift $ rectangle imgM (mkRect (V2 w 0) (V2 w h) :: Rect2i) blue 1 LineType_4 0
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
     subImg = exceptError $
@@ -143,7 +143,7 @@ matSubRectImg = exceptError $
 -}
 matSubRect
     :: Mat ('S [height, width]) channels depth
-    -> Rect
+    -> Rect2i
     -> CvExcept (Mat ('S ['D, 'D]) channels depth)
 matSubRect matIn rect = unsafeWrapException $ do
     matOut <- newEmptyMat
@@ -154,7 +154,7 @@ matSubRect matIn rect = unsafeWrapException $ do
         [cvExceptU|
           *$(Mat * matOutPtr) =
             Mat( *$(Mat * matInPtr)
-               , *$(Rect * rectPtr)
+               , *$(Rect2i * rectPtr)
                );
         |]
 
