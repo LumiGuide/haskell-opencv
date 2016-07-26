@@ -39,7 +39,7 @@ update-git-haddock:
 	cabal haddock --hyperlink-source && \
 	git stash save && \
 	git checkout gh-pages && \
-	git rm -r doc && mv ./dist/doc/html/opencv doc && \
+	git rm -r doc && rm -rf doc && mv ./dist/doc/html/opencv doc && \
 	git add doc && \
 	git commit -m 'updated haddock documentation' && \
 	git push && \
