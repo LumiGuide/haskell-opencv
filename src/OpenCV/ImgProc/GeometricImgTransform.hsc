@@ -98,7 +98,7 @@ marshalResizeAbsRel (ResizeAbs s) = (s, 0   , 0   )
 marshalResizeAbsRel (ResizeRel f) = (s, c'fx, c'fy)
   where
     s :: Size2i
-    s = toSize2i (zero :: V2 Int32)
+    s = toSize (zero :: V2 Int32)
 
     (V2 c'fx c'fy) = realToFrac <$> f
 

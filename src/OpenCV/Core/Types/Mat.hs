@@ -134,7 +134,7 @@ matSubRectImg = exceptError $
   where
     subRect = mkRect (V2 96 131) (V2 90 60)
     subImg = exceptError $
-               resize (ResizeAbs $ toSize2i $ V2 w h) InterCubic =<<
+               resize (ResizeAbs $ toSize $ V2 w h) InterCubic =<<
                matSubRect birds_512x341 subRect
     [h, w] = miShape $ matInfo birds_512x341
 @

@@ -9,18 +9,10 @@ import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 
-data C'Point (depth :: *) (dim :: Nat)
-
-type C'Point2i = C'Point Int32   2
-type C'Point2f = C'Point CFloat  2
-type C'Point2d = C'Point CDouble 2
-
-type C'Point3i = C'Point Int32   3
-type C'Point3f = C'Point CFloat  3
-type C'Point3d = C'Point CDouble 3
-
 data C'Matx (depth :: *) (dimM :: Nat) (dimN :: Nat)
 data C'Vec  (depth :: *) (dim :: Nat)
+data C'Point (depth :: *) (dim :: Nat)
+data C'Size  (depth :: *) (dim :: Nat)
 
 type C'Vec2i = C'Vec Int32   2
 type C'Vec2f = C'Vec CFloat  2
@@ -34,12 +26,19 @@ type C'Vec4i = C'Vec Int32   4
 type C'Vec4f = C'Vec CFloat  4
 type C'Vec4d = C'Vec CDouble 4
 
+type C'Point2i = C'Point Int32   2
+type C'Point2f = C'Point CFloat  2
+type C'Point2d = C'Point CDouble 2
+
+type C'Point3i = C'Point Int32   3
+type C'Point3f = C'Point CFloat  3
+type C'Point3d = C'Point CDouble 3
+
+type C'Size2i = C'Size Int32  2
+type C'Size2f = C'Size CFloat 2
+
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
--- | Haskell representation of an OpenCV @cv::Size_\<int>@ object
-data C'Size2i
--- | Haskell representation of an OpenCV @cv::Size_\<float>@ object
-data C'Size2f
 -- | Haskell representation of an OpenCV @cv::Rect_\<int>@ object
 data C'Rect
 -- | Haskell representation of an OpenCV @cv::RotatedRect@ object

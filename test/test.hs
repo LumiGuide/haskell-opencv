@@ -43,8 +43,8 @@ main = defaultMain $ testGroup "opencv"
         , testIso "isoPoint3dV3" (toPoint  :: V3 Double -> Point3d) fromPoint
         , testIso "isoVec3fV3"   (toVec    :: V3 Float  -> Vec3f  ) fromVec
         , testIso "isoVec4iV4"   (toVec    :: V4 Int32  -> Vec4i  ) fromVec
-        , testIso "isoSize2iV2"  (toSize2i :: V2 Int32  -> Size2i ) fromSize2i
-        , testIso "isoSize2fV2"  (toSize2f :: V2 Float  -> Size2f ) fromSize2f
+        , testIso "isoSize2iV2"  (toSize   :: V2 Int32  -> Size2i ) fromSize
+        , testIso "isoSize2fV2"  (toSize   :: V2 Float  -> Size2f ) fromSize
         , testIso "isoScalarV4"  (toScalar :: V4 Double -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
@@ -169,10 +169,10 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ fromPoint  (rectTopLeft     rect) == tl
-      , fromPoint  (rectBottomRight rect) == tl ^+^ size
-      , fromSize2i (rectSize        rect) == size
-      ,             rectArea        rect  == (w  *  h)
+      [ fromPoint (rectTopLeft     rect) == tl
+      , fromPoint (rectBottomRight rect) == tl ^+^ size
+      , fromSize  (rectSize        rect) == size
+      ,           rectArea         rect  == (w  *  h)
       ]
     where
       rect = mkRect tl size
@@ -196,7 +196,7 @@ myRectContains point rect =
     V2 rx ry = fromPoint $ rectTopLeft rect
 
     w, h :: Int32
-    V2 w h = fromSize2i $ rectSize rect
+    V2 w h = fromSize $ rectSize rect
 
 testMatType
     :: ( ToShapeDS    (Proxy shape)

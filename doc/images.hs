@@ -64,7 +64,7 @@ smallerKodakImg
     -> Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 smallerKodakImg img =
     exceptError $ coerceMat =<<
-      resize (ResizeAbs $ toSize2i (V2 512 341 :: V2 Int32))
+      resize (ResizeAbs $ toSize (V2 512 341 :: V2 Int32))
              InterArea
              img
 
@@ -145,7 +145,7 @@ fontImg font = exceptError $
     txt = "The quick brown fox jumps over the lazy dog"
     (size2i, baseLine) = getTextSize txt font thickness
     tw, th :: Int32
-    V2 tw th = fromSize2i size2i
+    V2 tw th = fromSize size2i
     thickness = 1
 
 vennCircleA

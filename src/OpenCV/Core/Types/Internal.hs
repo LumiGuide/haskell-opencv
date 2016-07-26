@@ -5,15 +5,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module OpenCV.Core.Types.Internal
-    ( -- * Size
-      Size2i(..)
-    , Size2f(..)
-    , newSize2i
-    , newSize2f
-    , ToSize2i(..), FromSize2i(..)
-    , ToSize2f(..), FromSize2f(..)
-      -- * Scalar
-    , Scalar(..)
+    ( -- * Scalar
+      Scalar(..)
     , newScalar
     , ToScalar(..), FromScalar(..)
       -- * Rect
@@ -57,6 +50,7 @@ import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Constants
 import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal
 import qualified "vector" Data.Vector as V
 
@@ -71,16 +65,6 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 -- Types
 --------------------------------------------------------------------------------
-
--- | Size of an image or rectangle with integer values
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
-newtype Size2i = Size2i {unSize2i :: ForeignPtr (C Size2i)}
-
--- | Size of an image or rectangle with 32 bit floating point values
---
--- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#size OpenCV Sphinx doc>
-newtype Size2f = Size2f {unSize2f :: ForeignPtr (C Size2f)}
 
 -- | A 4-element vector with 64 bit floating point elements
 --
@@ -123,54 +107,17 @@ newtype Range = Range {unRange :: ForeignPtr (C Range)}
 -- Conversions
 --------------------------------------------------------------------------------
 
-class ToSize2i  a where toSize2i  :: a -> Size2i
-class ToSize2f  a where toSize2f  :: a -> Size2f
 class ToScalar  a where toScalar  :: a -> Scalar
 
-instance ToSize2i  Size2i  where toSize2i  = id
-instance ToSize2f  Size2f  where toSize2f  = id
 instance ToScalar  Scalar  where toScalar  = id
 
-instance ToSize2i  (V2 Int32  ) where toSize2i  = unsafePerformIO . newSize2i
-instance ToSize2f  (V2 CFloat ) where toSize2f  = unsafePerformIO . newSize2f
 instance ToScalar  (V4 CDouble) where toScalar  = unsafePerformIO . newScalar
 
-instance ToSize2f  (V2 Float  ) where toSize2f  = toSize2f  . fmap (realToFrac :: Float  -> CFloat )
 instance ToScalar  (V4 Double ) where toScalar  = toScalar  . fmap (realToFrac :: Double -> CDouble)
 
-class FromSize2i  a where fromSize2i  :: Size2i  -> a
-class FromSize2f  a where fromSize2f  :: Size2f  -> a
 class FromScalar  a where fromScalar  :: Scalar  -> a
 
-instance FromSize2i  Size2i  where fromSize2i  = id
-instance FromSize2f  Size2f  where fromSize2f  = id
 instance FromScalar  Scalar  where fromScalar  = id
-
-instance FromSize2i (V2 Int32) where
-    fromSize2i s = unsafePerformIO $
-      alloca $ \wPtr ->
-      alloca $ \hPtr ->
-      withPtr s $ \sPtr -> do
-        [CU.block| void {
-          Size2i * s = $(Size2i * sPtr);
-          *$(int32_t * wPtr) = s->width;
-          *$(int32_t * hPtr) = s->height;
-        }|]
-        V2 <$> peek wPtr
-           <*> peek hPtr
-
-instance FromSize2f (V2 CFloat) where
-    fromSize2f s = unsafePerformIO $
-      alloca $ \wPtr ->
-      alloca $ \hPtr ->
-      withPtr s $ \sPtr -> do
-        [CU.block| void {
-          Size2f * s = $(Size2f * sPtr);
-          *$(float * wPtr) = s->width;
-          *$(float * hPtr) = s->height;
-        }|]
-        V2 <$> peek wPtr
-           <*> peek hPtr
 
 instance FromScalar (V4 CDouble) where
     fromScalar s = unsafePerformIO $
@@ -191,20 +138,11 @@ instance FromScalar (V4 CDouble) where
            <*> peek zPtr
            <*> peek wPtr
 
-instance FromSize2f (V2 Float ) where fromSize2f = fmap (realToFrac :: CFloat  -> Float ) . fromSize2f
 instance FromScalar (V4 Double) where fromScalar = fmap (realToFrac :: CDouble -> Double) . fromScalar
 
 --------------------------------------------------------------------------------
 -- Constructing new values
 --------------------------------------------------------------------------------
-
-newSize2i :: V2 Int32 -> IO Size2i
-newSize2i (V2 x y) = fromPtr $
-    [CU.exp|Size2i * { new cv::Size2i($(int32_t x), $(int32_t y)) }|]
-
-newSize2f :: V2 CFloat -> IO Size2f
-newSize2f (V2 x y) = fromPtr $
-    [CU.exp|Size2f * { new cv::Size2f($(float x), $(float y)) }|]
 
 newScalar :: V4 CDouble -> IO Scalar
 newScalar (V4 x y z w) = fromPtr $
@@ -238,8 +176,8 @@ newRotatedRect
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
     -> IO RotatedRect
 newRotatedRect center size angle = fromPtr $
-    withPtr (toPoint  center) $ \centerPtr ->
-    withPtr (toSize2f size)   $ \sizePtr   ->
+    withPtr (toPoint center) $ \centerPtr ->
+    withPtr (toSize  size)   $ \sizePtr   ->
       [CU.exp| RotatedRect * {
           new cv::RotatedRect( *$(Point2f * centerPtr)
                              , *$(Size2f * sizePtr)
@@ -349,8 +287,6 @@ withArrayPtr arr act =
 
 --------------------------------------------------------------------------------
 
-type instance C Size2i       = C'Size2i
-type instance C Size2f       = C'Size2f
 type instance C Scalar       = C'Scalar
 type instance C Rect         = C'Rect
 type instance C RotatedRect  = C'RotatedRect
@@ -359,8 +295,6 @@ type instance C Range        = C'Range
 
 --------------------------------------------------------------------------------
 
-instance WithPtr Size2i       where withPtr = withForeignPtr . unSize2i
-instance WithPtr Size2f       where withPtr = withForeignPtr . unSize2f
 instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
 instance WithPtr Rect         where withPtr = withForeignPtr . unRect
 instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
@@ -369,19 +303,9 @@ instance WithPtr Range        where withPtr = withForeignPtr . unRange
 
 --------------------------------------------------------------------------------
 
-mkPlacementNewInstance ''Size2i
-mkPlacementNewInstance ''Size2f
 mkPlacementNewInstance ''Scalar
 
 --------------------------------------------------------------------------------
-
-instance FromPtr Size2i where
-    fromPtr = objFromPtr Size2i $ \ptr ->
-                [CU.exp| void { delete $(Size2i * ptr) }|]
-
-instance FromPtr Size2f where
-    fromPtr = objFromPtr Size2f $ \ptr ->
-                [CU.exp| void { delete $(Size2f * ptr) }|]
 
 instance FromPtr Scalar where
     fromPtr = objFromPtr Scalar $ \ptr ->

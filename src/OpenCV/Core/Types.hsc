@@ -13,10 +13,7 @@ module OpenCV.Core.Types
       -- * Point
     , module OpenCV.Core.Types.Point
       -- * Size
-    , Size2i
-    , Size2f
-    , ToSize2i(..), FromSize2i(..)
-    , ToSize2f(..), FromSize2f(..)
+    , module OpenCV.Core.Types.Size
       -- * Scalar
     , Scalar
     , ToScalar(..), FromScalar(..)
@@ -86,6 +83,7 @@ import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 import "this" OpenCV.Mutable
@@ -102,17 +100,6 @@ C.using "namespace cv"
 
 #include "namespace.hpp"
 
-
---------------------------------------------------------------------------------
--- Point
---------------------------------------------------------------------------------
-
-instance Show Size2i where
-    showsPrec prec size = showParen (prec >= 10) $
-                              showString "fromSize2i "
-                            . shows (fromSize2i size :: V2 Int32)
-
-
 --------------------------------------------------------------------------------
 --  Rect
 --------------------------------------------------------------------------------
@@ -126,8 +113,8 @@ instance Show Rect where
                             . shows h
       where
         x, y, w, h :: Int32
-        V2 x y = fromPoint  $ rectTopLeft rect
-        V2 w h = fromSize2i $ rectSize    rect
+        V2 x y = fromPoint $ rectTopLeft rect
+        V2 w h = fromSize  $ rectSize    rect
 
 mkRect
     :: V2 Int32 -- ^ top left

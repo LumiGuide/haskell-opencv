@@ -51,14 +51,14 @@ instance FromJSON A where {                          \
 }
 
 --------------------------------------------------------------------------------
-IsoJSON(Point2i, J (V2 Int32 ), J . fromPoint , toPoint  . unJ)
-IsoJSON(Point2f, J (V2 Float ), J . fromPoint , toPoint  . unJ)
-IsoJSON(Point2d, J (V2 Double), J . fromPoint , toPoint  . unJ)
-IsoJSON(Point3i, J (V3 Int32 ), J . fromPoint , toPoint  . unJ)
-IsoJSON(Point3f, J (V3 Float ), J . fromPoint , toPoint  . unJ)
-IsoJSON(Point3d, J (V3 Double), J . fromPoint , toPoint  . unJ)
-IsoJSON(Size2i , J (V2 Int32 ), J . fromSize2i, toSize2i . unJ)
-IsoJSON(Size2f , J (V2 Float ), J . fromSize2f, toSize2f . unJ)
+IsoJSON(Point2i, J (V2 Int32 ), J . fromPoint, toPoint . unJ)
+IsoJSON(Point2f, J (V2 Float ), J . fromPoint, toPoint . unJ)
+IsoJSON(Point2d, J (V2 Double), J . fromPoint, toPoint . unJ)
+IsoJSON(Point3i, J (V3 Int32 ), J . fromPoint, toPoint . unJ)
+IsoJSON(Point3f, J (V3 Float ), J . fromPoint, toPoint . unJ)
+IsoJSON(Point3d, J (V3 Double), J . fromPoint, toPoint . unJ)
+IsoJSON(Size2i , J (V2 Int32 ), J . fromSize , toSize  . unJ)
+IsoJSON(Size2f , J (V2 Float ), J . fromSize , toSize  . unJ)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat

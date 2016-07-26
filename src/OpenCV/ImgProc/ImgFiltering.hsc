@@ -296,7 +296,7 @@ blur size matIn =
            );
        |]
   where ksize :: Size2i
-        ksize = toSize2i size
+        ksize = toSize size
 
 gaussianBlur
   :: (depth `In` '[Word8, Word16, Float, Double], ToSize2i size2i)
@@ -323,7 +323,7 @@ gaussianBlur size sigmaX sigmaY matIn =
        |]
   where
     ksize :: Size2i
-    ksize = toSize2i size
+    ksize = toSize size
 
     c'sigmaX = realToFrac sigmaX
     c'sigmaY = realToFrac sigmaY
@@ -659,5 +659,5 @@ getStructuringElement morphShape height width = unsafeWrapException $ do
        |]
   where
     ksize :: Size2i
-    ksize = toSize2i $ V2 (toInt32 width) (toInt32 height)
+    ksize = toSize $ V2 (toInt32 width) (toInt32 height)
     (c'morphShape, anchor) = marshalMorphShape morphShape

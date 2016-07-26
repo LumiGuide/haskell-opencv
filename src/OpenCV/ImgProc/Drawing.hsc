@@ -323,7 +323,7 @@ ellipse img center axes angle startAngle endAngle color thickness lineType shift
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
     withPtr (toPoint  center) $ \centerPtr ->
-    withPtr (toSize2i axes  ) $ \axesPtr   ->
+    withPtr (toSize   axes  ) $ \axesPtr   ->
     withPtr (toScalar color ) $ \colorPtr  ->
       [C.exp|void {
         cv::ellipse( *$(Mat * matPtr)
