@@ -43,10 +43,12 @@ module OpenCV.Core.ArrayOps
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
-import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
+import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
+import "base" Data.Int ( Int32 )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -64,7 +66,6 @@ import "this" OpenCV.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
-import qualified "vector" Data.Vector.Mutable as VM
 
 --------------------------------------------------------------------------------
 
@@ -584,25 +585,22 @@ matSplit
     -> V.Vector (Mat shape ('S 1) depth)
 matSplit src = unsafePerformIO $
     withPtr src $ \srcPtr ->
-    allocaBytes (numChans * cSizeOfMat) $ \(mvBeginPtr :: Ptr C'Mat) -> do
+    allocaArray numChans $ \(splitsArray :: Ptr (Ptr C'Mat)) -> do
       [C.block| void {
-        cv::split
-        ( *$(Mat * srcPtr)
-        , $(Mat * mvBeginPtr)
-        );
+        cv::Mat * srcPtr = $(Mat * srcPtr);
+        int32_t numChans = $(int32_t c'numChans);
+        cv::Mat splits[numChans];
+        cv::split(*srcPtr, splits);
+        for(int i = 0; i < numChans; i++){
+          $(Mat * * splitsArray)[i] = new cv::Mat(splits[i]);
+        }
       }|]
-      dstVecM <- VM.unsafeNew numChans
-      let go !n | n == numChans = V.freeze dstVecM
-                | otherwise = do
-                    mat <- fromPtr $ pure $ mvBeginPtr `plusPtr` (n * cSizeOfMat)
-                    VM.unsafeWrite dstVecM n $ unsafeCoerceMat mat
-                    go $ n + 1
-      go 0
+      fmap V.fromList . mapM (fromPtr . pure) =<< peekArray numChans splitsArray
   where
-    cSizeOfMat :: Int
-    cSizeOfMat = cSizeOf (Proxy :: Proxy C'Mat)
-
     numChans = fromIntegral $ miChannels $ matInfo src
+
+    c'numChans :: Int32
+    c'numChans = fromIntegral numChans
 
 {- | Finds the global minimum and maximum in an array
 
