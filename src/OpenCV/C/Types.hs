@@ -156,3 +156,17 @@ instance (WithPtr a) => WithPtr (Mut a s) where
 -- Used to wrap values created in C.
 class FromPtr a where
     fromPtr :: IO (Ptr (C a)) -> IO a
+
+--------------------------------------------------------------------------------
+
+toCFloat :: Float -> CFloat
+toCFloat = realToFrac
+
+fromCFloat :: CFloat -> Float
+fromCFloat = realToFrac
+
+toCDouble :: Double -> CDouble
+toCDouble = realToFrac
+
+fromCDouble :: CDouble -> Double
+fromCDouble = realToFrac

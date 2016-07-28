@@ -241,8 +241,6 @@ goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize det
         case detector of
           HarrisDetector kValue -> kValue
           CornerMinEigenVal -> 0.04
-    fromCFloat :: C.CFloat -> Float
-    fromCFloat = realToFrac
 
 data GoodFeaturesToTrackDetectionMethod
    = HarrisDetector Double -- ^ Harris detector and it free k parameter
@@ -342,8 +340,6 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO 
         c'param2 = realToFrac (fromMaybe 100 param2)
         c'minRadius = fromIntegral (fromMaybe 0 minRadius)
         c'maxRadius = fromIntegral (fromMaybe 0 maxRadius)
-        fromCFloat :: C.CFloat -> Float
-        fromCFloat = realToFrac
 
 data LineSegment
    = LineSegment
