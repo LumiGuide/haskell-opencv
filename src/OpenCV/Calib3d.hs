@@ -99,9 +99,9 @@ contains 3 rows.
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc>
 -}
 findFundamentalMat
-    :: (ToPoint2d point2d)
-    => V.Vector point2d -- ^ Points from the first image.
-    -> V.Vector point2d -- ^ Points from the second image.
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble) -- ^ Points from the first image.
+    -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FundamentalMatMethod
     -> CvExcept ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
@@ -148,8 +148,8 @@ findFundamentalMat pts1 pts2 method = do
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc>
 -}
 computeCorrespondEpilines
-    :: (ToPoint2d point2d)
-    => V.Vector point2d -- ^ Points.
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble) -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
     -> CvExcept (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))

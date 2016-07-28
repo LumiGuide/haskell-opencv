@@ -10,6 +10,7 @@ import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Foreign.C.Types
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
@@ -117,7 +118,7 @@ lineTypeImg lineType = exceptError $ do
                     transparent $ \imgM -> do
              lift $ line imgM (pure p + V2 0 h) (pure p + V2 w 0) black 1 lineType 0
     resize (ResizeRel $ pure zoom) InterNearest
-           =<< matSubRect img (mkRect (pure p) (V2 w h))
+           =<< matSubRect img (toRect $ HRect (pure p) (V2 w h))
   where
     w, h, p :: Int32
     w = fromInteger $ natVal (Proxy :: Proxy w)

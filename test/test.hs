@@ -8,6 +8,7 @@ import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Matrix ( M23, M33 )
@@ -35,17 +36,17 @@ main = defaultMain $ testGroup "opencv"
       ]
     , testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32  -> Point2i) fromPoint
-        , testIso "isoPoint2fV2" (toPoint  :: V2 Float  -> Point2f) fromPoint
-        , testIso "isoPoint2dV2" (toPoint  :: V2 Double -> Point2d) fromPoint
-        , testIso "isoPoint3iV3" (toPoint  :: V3 Int32  -> Point3i) fromPoint
-        , testIso "isoPoint3fV3" (toPoint  :: V3 Float  -> Point3f) fromPoint
-        , testIso "isoPoint3dV3" (toPoint  :: V3 Double -> Point3d) fromPoint
-        , testIso "isoVec3fV3"   (toVec    :: V3 Float  -> Vec3f  ) fromVec
-        , testIso "isoVec4iV4"   (toVec    :: V4 Int32  -> Vec4i  ) fromVec
-        , testIso "isoSize2iV2"  (toSize   :: V2 Int32  -> Size2i ) fromSize
-        , testIso "isoSize2fV2"  (toSize   :: V2 Float  -> Size2f ) fromSize
-        , testIso "isoScalarV4"  (toScalar :: V4 Double -> Scalar ) fromScalar
+        [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32   -> Point2i) fromPoint
+        , testIso "isoPoint2fV2" (toPoint  :: V2 CFloat  -> Point2f) fromPoint
+        , testIso "isoPoint2dV2" (toPoint  :: V2 CDouble -> Point2d) fromPoint
+        , testIso "isoPoint3iV3" (toPoint  :: V3 Int32   -> Point3i) fromPoint
+        , testIso "isoPoint3fV3" (toPoint  :: V3 CFloat  -> Point3f) fromPoint
+        , testIso "isoPoint3dV3" (toPoint  :: V3 CDouble -> Point3d) fromPoint
+        , testIso "isoVec3fV3"   (toVec    :: V3 CFloat  -> Vec3f  ) fromVec
+        , testIso "isoVec4iV4"   (toVec    :: V4 Int32   -> Vec4i  ) fromVec
+        , testIso "isoSize2iV2"  (toSize   :: V2 Int32   -> Size2i ) fromSize
+        , testIso "isoSize2fV2"  (toSize   :: V2 CFloat  -> Size2f ) fromSize
+        , testIso "isoScalarV4"  (toScalar :: V4 CDouble -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -126,7 +127,7 @@ testFindFundamentalMat_noPoints =
       Right Nothing -> pure ()
       Right (Just _) -> assertFailure "result despite lack of data"
   where
-    points :: V.Vector (V2 Double)
+    points :: V.Vector (V2 CDouble)
     points = V.empty
 
 testFindFundamentalMat :: HU.Assertion
@@ -138,7 +139,7 @@ testFindFundamentalMat =
           assertNull (typeCheckMat fm        ) (("fm: "         <>) . show)
           assertNull (typeCheckMat pointsMask) (("pointsMask: " <>) . show)
   where
-    points1, points2 :: V.Vector (V2 Double)
+    points1, points2 :: V.Vector (V2 CDouble)
     points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
     points2 = V.map (^+^ (V2 3 2)) points1
 
@@ -157,7 +158,7 @@ testComputeCorrespondEpilines =
                        assertNull (typeCheckMat epilines2) (("epilines2: " <>) . show)
       _ -> assertFailure "couldn't find fundamental matrix"
   where
-    points1, points2 :: V.Vector (V2 Double)
+    points1, points2 :: V.Vector (V2 CDouble)
     points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
     points2 = V.map (^+^ (V2 3 2)) points1
 
@@ -176,7 +177,7 @@ rectBasicProperties tl size@(V2 w h) = and
       ]
     where
       rect :: Rect2i
-      rect = mkRect tl size
+      rect = toRect $ HRect tl size
 
 rectContainsProperty :: Point2i -> Rect2i -> Bool
 rectContainsProperty point rect = rectContains point rect == myRectContains point rect
@@ -219,7 +220,7 @@ matHasInfoFP fp expectedInfo = HU.testCase fp $ do
 testGetRotationMatrix2D :: HU.Assertion
 testGetRotationMatrix2D = testMatType rot2D
   where
-    rot2D = getRotationMatrix2D (zero :: V2 Float) 0 0
+    rot2D = getRotationMatrix2D (zero :: V2 CFloat) 0 0
 
 hMatEncodeDecodeFP :: FilePath -> TestTree
 hMatEncodeDecodeFP fp = HU.testCase fp $ do
@@ -344,6 +345,12 @@ eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 -- QuikcCheck Arbitrary Instances
 --------------------------------------------------------------------------------
 
+instance QC.Arbitrary CFloat where
+    arbitrary = CFloat <$> QC.arbitrary
+
+instance QC.Arbitrary CDouble where
+    arbitrary = CDouble <$> QC.arbitrary
+
 instance (QC.Arbitrary a) => QC.Arbitrary (V2 a) where
     arbitrary = V2 <$> QC.arbitrary <*> QC.arbitrary
 
@@ -353,8 +360,11 @@ instance (QC.Arbitrary a) => QC.Arbitrary (V3 a) where
 instance (QC.Arbitrary a) => QC.Arbitrary (V4 a) where
     arbitrary = V4 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
 
+instance (QC.Arbitrary a) => QC.Arbitrary (HRect a) where
+    arbitrary = HRect <$> QC.arbitrary <*> QC.arbitrary
+
 instance QC.Arbitrary Rect2i where
-    arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
+    arbitrary = toRect <$> (QC.arbitrary :: QC.Gen (HRect Int32))
 
 instance QC.Arbitrary Point2i where
     arbitrary = toPoint <$> (QC.arbitrary :: QC.Gen (V2 Int32))

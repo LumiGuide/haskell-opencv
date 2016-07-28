@@ -47,6 +47,8 @@ module OpenCV.Core.Types
       -- * Matrix
     , module OpenCV.Core.Types.Mat
     , module OpenCV.Core.Types.Matx
+      -- * Vec
+    , module OpenCV.Core.Types.Vec
       -- * Exception
     , module OpenCV.Exception
      -- * Algorithm
@@ -59,6 +61,7 @@ module OpenCV.Core.Types
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
@@ -78,6 +81,7 @@ import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Rect
 import "this" OpenCV.Core.Types.Size
+import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 import "this" OpenCV.Mutable
@@ -99,11 +103,11 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 mkRotatedRect
-    :: ( ToPoint2f point2f
-       , ToSize2f  size2f
+    :: ( IsPoint2 point2 CFloat
+       , IsSize   size   CFloat
        )
-    => point2f -- ^ Rectangle mass center
-    -> size2f -- ^ Width and height of the rectangle
+    => point2 CFloat -- ^ Rectangle mass center
+    -> size   CFloat -- ^ Width and height of the rectangle
     -> Float
        -- ^ The rotation angle (in degrees). When the angle is 0, 90,
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
@@ -140,10 +144,10 @@ rotatedRectBoundingRect rotRect =
 
 rotatedRectPoints :: RotatedRect -> (Point2f, Point2f, Point2f, Point2f)
 rotatedRectPoints rotRect = unsafePerformIO $ do
-    p1 <- newPoint2f zero
-    p2 <- newPoint2f zero
-    p3 <- newPoint2f zero
-    p4 <- newPoint2f zero
+    p1 <- toPointIO (zero :: V2 CFloat)
+    p2 <- toPointIO (zero :: V2 CFloat)
+    p3 <- toPointIO (zero :: V2 CFloat)
+    p4 <- toPointIO (zero :: V2 CFloat)
     withPtr rotRect $ \rotRectPtr ->
       withPtr p1 $ \p1Ptr ->
       withPtr p2 $ \p2Ptr ->

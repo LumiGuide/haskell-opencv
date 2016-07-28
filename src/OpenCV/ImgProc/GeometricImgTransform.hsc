@@ -53,7 +53,7 @@ module OpenCV.ImgProc.GeometricImgTransform
     ) where
 
 import "base" Data.Int ( Int32 )
-import "base" Foreign.C.Types ( CDouble )
+import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -167,7 +167,7 @@ Example:
 
 @
 rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
-rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 Float) 45 0.75
+rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 CFloat) 45 0.75
 
 warpAffineImg :: Birds_512x341
 warpAffineImg = exceptError $
@@ -275,8 +275,8 @@ invertAffineTransform matIn = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
 -}
 getRotationMatrix2D
-    :: (ToPoint2f point2f)
-    => point2f -- ^ Center of the rotation in the source image.
+    :: (IsPoint2 point2 CFloat)
+    => point2 CFloat -- ^ Center of the rotation in the source image.
     -> Double
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
        -- rotation (the coordinate origin is assumed to be the top-left corner).

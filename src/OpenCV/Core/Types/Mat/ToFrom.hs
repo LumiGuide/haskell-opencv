@@ -28,6 +28,7 @@ import           "this" OpenCV.C.Types
 import           "this" OpenCV.Core.Types.Mat.Internal
 import           "this" OpenCV.Core.Types.Matx
 import           "this" OpenCV.Core.Types.Mat.Repa
+import           "this" OpenCV.Core.Types.Vec
 import           "this" OpenCV.Exception.Internal
 import           "this" OpenCV.TypeLevel
 import           "this" OpenCV.Unsafe
@@ -50,13 +51,13 @@ type instance MatShape    (Mat shape channels depth) = shape
 type instance MatChannels (Mat shape channels depth) = channels
 type instance MatDepth    (Mat shape channels depth) = depth
 
-type instance MatShape    (Matx depth m n) = ShapeT '[m, n]
-type instance MatChannels (Matx depth m n) = 'S 1
-type instance MatDepth    (Matx depth m n) = 'S depth
+type instance MatShape    (Matx m n depth) = ShapeT '[m, n]
+type instance MatChannels (Matx m n depth) = 'S 1
+type instance MatDepth    (Matx m n depth) = 'S depth
 
-type instance MatShape    (Vec depth dim) = ShapeT '[dim]
-type instance MatChannels (Vec depth dim) = 'S 1
-type instance MatDepth    (Vec depth dim) = 'S depth
+type instance MatShape    (Vec dim depth) = ShapeT '[dim]
+type instance MatChannels (Vec dim depth) = 'S 1
+type instance MatDepth    (Vec dim depth) = 'S depth
 
 type instance MatShape    (M23 depth) = ShapeT [2, 3]
 type instance MatChannels (M23 depth) = 'S 1
@@ -76,26 +77,71 @@ instance ToMat   (Mat shape channels depth) where toMat   = id
 instance FromMat (Mat shape channels depth) where fromMat = id
 
 --------------------------------------------------------------------------------
--- Vec instances
+-- Matx instances
 
-#define TO_MAT(NAME)                                      \
-instance ToMat NAME where {                               \
-    toMat vec = unsafePerformIO $ fromPtr $               \
-        withPtr vec $ \vecPtr ->                          \
-          [CU.exp| Mat * {                                \
-            new cv::Mat(*$(NAME * vecPtr), false)         \
-          }|];                                            \
+#define MATX_TO_MAT(NAME)                          \
+instance ToMat NAME where {                        \
+    toMat matx = unsafePerformIO $ fromPtr $       \
+        withPtr matx $ \matxPtr ->                 \
+          [CU.exp| Mat * {                         \
+            new cv::Mat(*$(NAME * matxPtr), false) \
+          }|];                                     \
 };
 
-TO_MAT(Vec2i)
-TO_MAT(Vec2f)
-TO_MAT(Vec2d)
-TO_MAT(Vec3i)
-TO_MAT(Vec3f)
-TO_MAT(Vec3d)
-TO_MAT(Vec4i)
-TO_MAT(Vec4f)
-TO_MAT(Vec4d)
+MATX_TO_MAT(Matx12f)
+MATX_TO_MAT(Matx12d)
+MATX_TO_MAT(Matx13f)
+MATX_TO_MAT(Matx13d)
+MATX_TO_MAT(Matx14f)
+MATX_TO_MAT(Matx14d)
+MATX_TO_MAT(Matx16f)
+MATX_TO_MAT(Matx16d)
+MATX_TO_MAT(Matx21f)
+MATX_TO_MAT(Matx21d)
+MATX_TO_MAT(Matx22f)
+MATX_TO_MAT(Matx22d)
+MATX_TO_MAT(Matx23f)
+MATX_TO_MAT(Matx23d)
+MATX_TO_MAT(Matx31f)
+MATX_TO_MAT(Matx31d)
+MATX_TO_MAT(Matx32f)
+MATX_TO_MAT(Matx32d)
+MATX_TO_MAT(Matx33f)
+MATX_TO_MAT(Matx33d)
+MATX_TO_MAT(Matx34f)
+MATX_TO_MAT(Matx34d)
+MATX_TO_MAT(Matx41f)
+MATX_TO_MAT(Matx41d)
+MATX_TO_MAT(Matx43f)
+MATX_TO_MAT(Matx43d)
+MATX_TO_MAT(Matx44f)
+MATX_TO_MAT(Matx44d)
+MATX_TO_MAT(Matx61f)
+MATX_TO_MAT(Matx61d)
+MATX_TO_MAT(Matx66f)
+MATX_TO_MAT(Matx66d)
+
+--------------------------------------------------------------------------------
+-- Vec instances
+
+#define VEC_TO_MAT(NAME)                          \
+instance ToMat NAME where {                       \
+    toMat vec = unsafePerformIO $ fromPtr $       \
+        withPtr vec $ \vecPtr ->                  \
+          [CU.exp| Mat * {                        \
+            new cv::Mat(*$(NAME * vecPtr), false) \
+          }|];                                    \
+};
+
+VEC_TO_MAT(Vec2i)
+VEC_TO_MAT(Vec2f)
+VEC_TO_MAT(Vec2d)
+VEC_TO_MAT(Vec3i)
+VEC_TO_MAT(Vec3f)
+VEC_TO_MAT(Vec3d)
+VEC_TO_MAT(Vec4i)
+VEC_TO_MAT(Vec4f)
+VEC_TO_MAT(Vec4d)
 
 --------------------------------------------------------------------------------
 -- Linear instances

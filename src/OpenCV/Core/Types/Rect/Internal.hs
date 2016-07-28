@@ -1,42 +1,28 @@
-{-# language CPP             #-}
+{-# language CPP #-}
 {-# language ConstraintKinds #-}
-{-# language QuasiQuotes     #-}
-{-# language TemplateHaskell #-}
-
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# language DeriveFunctor #-}
+{-# language DeriveTraversable #-}
+{-# language MultiParamTypeClasses #-}
+{-# language UndecidableInstances #-}
 
 module OpenCV.Core.Types.Rect.Internal
   ( Rect(..)
-  , RectDepth
+  , RectPoint
+  , RectSize
+  , HRect(..)
   , IsRect(..)
-  , mkRect
-
-  , Rect2i, Rect2f, Rect2d
-  , IsRect2i, IsRect2f, IsRect2d
   ) where
 
-import "base" Data.Int ( Int32 )
-import "base" Foreign.C.Types
+import "aeson" Data.Aeson
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
-import "base" Foreign.Marshal.Utils ( toBool )
-import "base" System.IO.Unsafe ( unsafePerformIO )
-import qualified "inline-c" Language.C.Inline as C
-import qualified "inline-c" Language.C.Inline.Unsafe as CU
-import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.PlacementNew.TH
 import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Point
-import "this" OpenCV.Core.Types.Size
-import "this" OpenCV.Internal
-
---------------------------------------------------------------------------------
-
-C.context openCvCtx
-
-C.include "opencv2/core.hpp"
-C.using "namespace cv"
+import "this" OpenCV.Core.Types.Point ( Point )
+import "this" OpenCV.Core.Types.Size ( Size )
+#if MIN_VERSION_base(4,9,0)
+import "base" Data.Foldable ( Foldable )
+import "base" Data.Traversable ( Traversable )
+#endif
 
 --------------------------------------------------------------------------------
 
@@ -47,79 +33,67 @@ type instance C (Rect depth) = C'Rect depth
 
 instance WithPtr (Rect depth) where withPtr = withForeignPtr . unRect
 
-type family RectDepth (a :: *) :: *
-type instance RectDepth (Rect depth) = depth
+-- | Native Haskell represenation of a rectangle.
+data HRect a
+   = HRect
+     { hRectTopLeft :: !(V2 a)
+     , hRectSize    :: !(V2 a)
+     } deriving (Foldable, Functor, Traversable, Show)
 
-class IsRect a where
-    toRect   :: a -> Rect (RectDepth a)
-    fromRect :: Rect (RectDepth a) -> a
+type family RectPoint (r :: * -> *) :: * -> *
+type family RectSize  (r :: * -> *) :: * -> *
 
-    newRect :: V2 (RectDepth a) -> V2 (RectDepth a) -> IO a
+type instance RectPoint Rect = Point 2
+type instance RectSize  Rect = Size
 
-    rectTopLeft     :: a -> Point (RectDepth a) 2
-    rectBottomRight :: a -> Point (RectDepth a) 2
-    rectSize        :: a -> Size  (RectDepth a) 2
-    rectArea        :: a -> RectDepth a
-    rectContains    :: Point (RectDepth a) 2 -> a -> Bool
+type instance RectPoint HRect = V2
+type instance RectSize  HRect = V2
 
-mkRect
-    :: (IsRect a)
-    => V2 (RectDepth a) -- ^ top left
-    -> V2 (RectDepth a) -- ^ size
-    -> a
-mkRect pos size = unsafePerformIO $ newRect pos size
+class IsRect (r :: * -> *) (depth :: *) where
+    toRect   :: r depth -> Rect depth
+    fromRect :: Rect depth -> r depth
 
-#define RECT_TYPE(NAME, IS_NAME, HDEPTH, CDEPTH, POINT, SIZE)                     \
-type NAME = Rect HDEPTH;                                                          \
-instance FromPtr NAME where {                                                     \
-    fromPtr = objFromPtr Rect $ \ptr ->                                           \
-                [CU.exp| void { delete $(NAME * ptr) }|];                         \
-};                                                                                \
-type IS_NAME p = (IsRect p, RectDepth p ~ HDEPTH);                                \
-instance IsRect NAME where {                                                      \
-    toRect = id;                                                                  \
-    fromRect = id;                                                                \
-    newRect (V2 x y) (V2 width height) = fromPtr $                                \
-      [CU.exp|NAME * { new cv::Rect_<CDEPTH>                                      \
-                           ( $(CDEPTH x)                                          \
-                           , $(CDEPTH y)                                          \
-                           , $(CDEPTH width)                                      \
-                           , $(CDEPTH height)                                     \
-                           )                                                      \
-                     }|];                                                         \
-    rectTopLeft rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->     \
-      [CU.exp| POINT * { new POINT($(NAME * rectPtr)->tl()) }|];                  \
-    rectBottomRight rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr -> \
-      [CU.exp| POINT * { new POINT($(NAME * rectPtr)->br()) }|];                  \
-    rectSize rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->        \
-      [CU.exp| SIZE * { new SIZE($(NAME * rectPtr)->size()) } |];                 \
-    rectArea rect = unsafePerformIO $ withPtr rect $ \rectPtr ->                  \
-      [CU.exp| CDEPTH { $(NAME * rectPtr)->area() }|];                            \
-    rectContains point rect = toBool $ unsafePerformIO $                          \
-      withPtr (toPoint point) $ \pointPtr ->                                      \
-        withPtr rect $ \rectPtr ->                                                \
-          [CU.exp| int { $(NAME * rectPtr)->contains(*$(POINT * pointPtr)) }|];   \
-};
+    toRectIO :: r depth -> IO (Rect depth)
+    toRectIO = pure . toRect
 
-RECT_TYPE(Rect2i, IsRect2i, Int32  , int32_t, Point2i, Size2i)
-RECT_TYPE(Rect2f, IsRect2f, CFloat , float  , Point2f, Size2f)
-RECT_TYPE(Rect2d, IsRect2d, CDouble, double , Point2d, Size2d)
+    rectTopLeft     :: r depth -> RectPoint r depth
+    rectBottomRight :: r depth -> RectPoint r depth
+    rectSize        :: r depth -> RectSize  r depth
+    rectArea        :: r depth -> depth
+    rectContains    :: RectPoint r depth -> r depth -> Bool
 
 --------------------------------------------------------------------------------
 
-instance Show Rect2i where
+instance (IsRect HRect a, Show a)
+      => Show (Rect a) where
     showsPrec prec rect = showParen (prec >= 10) $
-                              showString "mkRect "
-                            . shows x . showString " "
-                            . shows y . showString " "
-                            . shows w . showString " "
-                            . shows h
+                              showString "toRect "
+                            . showParen True (shows hr)
       where
-        x, y, w, h :: Int32
-        V2 x y = fromPoint $ rectTopLeft rect
-        V2 w h = fromSize  $ rectSize    rect
+        hr :: HRect a
+        hr = fromRect rect
 
---------------------------------------------------------------------------------
+instance (ToJSON a) => ToJSON (HRect a) where
+    toJSON hr = object [ "pos"  .= (x, y)
+                       , "size" .= (w, h)
+                       ]
+      where
+        V2 x y = hRectTopLeft hr
+        V2 w h = hRectSize    hr
 
-mkPlacementNewInstance ''Rect2i
-mkPlacementNewInstance ''Rect2f
+instance (FromJSON a) => FromJSON (HRect a) where
+    parseJSON = withObject "HRect" $ \obj ->
+                  HRect  <$> (uncurry V2 <$> obj .: "pos")
+                         <*> (uncurry V2 <$> obj .: "size")
+
+instance ( ToJSON a
+         , IsRect HRect a
+         )
+      => ToJSON (Rect a) where
+    toJSON = toJSON . (fromRect :: Rect a -> HRect a)
+
+instance ( FromJSON a
+         , IsRect HRect a
+         )
+      => FromJSON (Rect a) where
+    parseJSON value = (toRect :: HRect a -> Rect a) <$> parseJSON value

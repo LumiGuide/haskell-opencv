@@ -53,6 +53,7 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
+import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
@@ -612,8 +613,8 @@ minMaxLoc
     :: Mat ('S [height, width]) channels depth -- ^
     -> CvExcept (Double, Double, Point2i, Point2i)
 minMaxLoc src = unsafeWrapException $ do
-    minLoc <- newPoint2i zero
-    maxLoc <- newPoint2i zero
+    minLoc <- toPointIO $ V2 0 0
+    maxLoc <- toPointIO $ V2 0 0
     withPtr src $ \srcPtr ->
       withPtr minLoc $ \minLocPtr ->
       withPtr maxLoc $ \maxLocPtr ->

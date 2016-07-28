@@ -145,11 +145,11 @@ newScalar (V4 x y z w) = fromPtr $
                      }|]
 
 newRotatedRect
-    :: ( ToPoint2f point2f
-       , ToSize2f  size2f
+    :: ( IsPoint2 point2 CFloat
+       , IsSize   size   CFloat
        )
-    => point2f -- ^ Rectangle mass center
-    -> size2f  -- ^ Width and height of the rectangle
+    => point2 CFloat -- ^ Rectangle mass center
+    -> size   CFloat -- ^ Width and height of the rectangle
     -> CFloat
        -- ^ The rotation angle (in degrees). When the angle is 0, 90,
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
@@ -202,9 +202,9 @@ newWholeRange = fromPtr $
 --------------------------------------------------------------------------------
 
 withPolygons
-    :: forall a point2i
-     . (ToPoint2i point2i)
-    => V.Vector (V.Vector point2i)
+    :: forall a point2
+     . (IsPoint2 point2 Int32)
+    => V.Vector (V.Vector (point2 Int32))
     -> (Ptr (Ptr (C Point2i)) -> IO a)
     -> IO a
 withPolygons polygons act =

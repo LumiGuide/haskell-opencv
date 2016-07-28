@@ -1,7 +1,11 @@
+{-# language CPP #-}
+{-# language DeriveFunctor #-}
+{-# language DeriveTraversable #-}
+{-# language MultiParamTypeClasses #-}
+{-# language NoImplicitPrelude #-}
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
-{-# language NoImplicitPrelude #-}
-{-# language CPP #-}
+{-# language UndecidableInstances #-}
 
 #if __GLASGOW_HASKELL__ >= 800
 {-# options_ghc -Wno-redundant-constraints #-}
@@ -41,6 +45,10 @@ import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
+#if MIN_VERSION_base(4,9,0)
+import "base" Data.Foldable ( Foldable )
+import "base" Data.Traversable ( Traversable )
+#endif
 
 --------------------------------------------------------------------------------
 
@@ -341,16 +349,18 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO 
         c'minRadius = fromIntegral (fromMaybe 0 minRadius)
         c'maxRadius = fromIntegral (fromMaybe 0 maxRadius)
 
-data LineSegment
+data LineSegment depth
    = LineSegment
-     { lineSegmentStart :: !(V2 Int32)
-     , lineSegmentStop  :: !(V2 Int32)
-     } deriving Show
+     { lineSegmentStart :: !(V2 depth)
+     , lineSegmentStop  :: !(V2 depth)
+     } deriving (Foldable, Functor, Traversable, Show)
 
-type instance VecDepth LineSegment = Int32
-type instance VecDim   LineSegment = 4
+type instance VecDim LineSegment = 4
 
-instance FromVec LineSegment where
+instance (IsVec V4 depth) => IsVec LineSegment depth where
+    toVec (LineSegment (V2 x1 y1) (V2 x2 y2)) =
+        toVec (V4 x1 y1 x2 y2)
+
     fromVec vec =
         LineSegment
         { lineSegmentStart = V2 x1 y1
@@ -404,7 +414,7 @@ houghLinesP
      -- ^ Maximum allowed gap between points on the same line to link them.
   -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
      -- ^ Source image. May be modified by the function.
-  -> m (V.Vector LineSegment)
+  -> m (V.Vector (LineSegment Int32))
 houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim $
     withPtr src $ \srcPtr ->
     -- Pointer to number of lines.

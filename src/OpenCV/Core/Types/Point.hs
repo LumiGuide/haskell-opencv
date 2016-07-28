@@ -1,20 +1,38 @@
+{-# language MultiParamTypeClasses #-}
+{-# language TemplateHaskell #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module OpenCV.Core.Types.Point
-  ( Point
-  , PointDepth
-  , PointDim
-  , ToPoint(..), FromPoint(..)
+    ( Point
+    , PointDim
+    , IsPoint(..)
+    , IsPoint2
+    , IsPoint3
 
-  , Point2i, Point2f, Point2d
-  , Point3i, Point3f, Point3d
+    , Point2i, Point2f, Point2d
+    , Point3i, Point3f, Point3d
+    ) where
 
-  , ToPoint2i, ToPoint2f, ToPoint2d
-  , ToPoint3i, ToPoint3f, ToPoint3d
+import "base" Data.Int ( Int32 )
+import "base" Foreign.C.Types
+import qualified "inline-c"     Language.C.Inline as C
+import qualified "inline-c-cpp" Language.C.Inline.Cpp as C ( using )
+import "this" OpenCV.C.Inline ( openCvCtx )
+import "this" OpenCV.C.Types
+import "this" OpenCV.Core.Types.Point.Internal
+import "this" OpenCV.Core.Types.Point.TH
 
-  , FromPoint2i, FromPoint2f, FromPoint2d
-  , FromPoint3i, FromPoint3f, FromPoint3d
+--------------------------------------------------------------------------------
 
-  , newPoint2i, newPoint2f, newPoint2d
-  , newPoint3i, newPoint3f, newPoint3d
-  ) where
+C.context openCvCtx
+C.include "opencv2/core.hpp"
+C.using "namespace cv"
 
-import OpenCV.Core.Types.Point.Internal
+mkPointType "Point2i" 2 "Point_"  ''Int32   "int32_t"
+mkPointType "Point2f" 2 "Point_"  ''CFloat  "float"
+mkPointType "Point2d" 2 "Point_"  ''CDouble "double"
+
+mkPointType "Point3i" 3 "Point3_" ''Int32   "int32_t"
+mkPointType "Point3f" 3 "Point3_" ''CFloat  "float"
+mkPointType "Point3d" 3 "Point3_" ''CDouble "double"

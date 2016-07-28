@@ -277,8 +277,10 @@ boxBlurImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
 blur
-  :: (depth `In` '[Word8, Word16, Int16, Float, Double], ToSize2i size2i)
-  => size2i -- ^ Blurring kernel size.
+  :: ( depth `In` '[Word8, Word16, Int16, Float, Double]
+     , IsSize  size  Int32
+     )
+  => size  Int32 -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
   -> CvExcept (Mat shape ('S channels) ('S depth))
 blur size matIn =
@@ -299,8 +301,10 @@ blur size matIn =
         ksize = toSize size
 
 gaussianBlur
-  :: (depth `In` '[Word8, Word16, Float, Double], ToSize2i size2i)
-  => size2i -- ^ Blurring kernel size.
+  :: ( depth `In` '[Word8, Word16, Float, Double]
+     , IsSize size Int32
+     )
+  => size Int32 -- ^ Blurring kernel size.
   -> Double -- ^ sigmaX
   -> Double -- ^ sigmaY
   -> Mat shape ('S channels) ('S depth)
@@ -361,7 +365,7 @@ erodeImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
 -}
 erode
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -369,8 +373,8 @@ erode
        -- ^ Structuring element used for erosion. If `emptyMat` is
        -- used a @3x3@ rectangular structuring element is used. Kernel
        -- can be created using `getStructuringElement`.
-    -> Maybe point2i -- ^ anchor
-    -> Int           -- ^ iterations
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Int -- ^ iterations
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
@@ -447,7 +451,7 @@ filter2DImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#filter2d OpenCV Sphinx doc>
 -}
 filter2D
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -457,8 +461,8 @@ filter2D
        -- apply different kernels to different channels, split the
        -- image into separate color planes using split and process
        -- them individually.
-    -> Maybe point2i -- ^ anchor
-    -> Double        -- ^ delta
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Double -- ^ delta
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do
@@ -520,7 +524,7 @@ dilateImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
 -}
 dilate
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -528,8 +532,8 @@ dilate
        -- ^ Structuring element used for dilation. If `emptyMat` is
        -- used a @3x3@ rectangular structuring element is used. Kernel
        -- can be created using `getStructuringElement`.
-    -> Maybe point2i -- ^ anchor
-    -> Int           -- ^ iterations
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Int -- ^ iterations
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
@@ -566,14 +570,14 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
      => Mat shape channels ('S depth) -- ^ Source image.
-    -> MorphOperation  -- ^ Type of a morphological operation.
-    -> Mat 'D 'D 'D    -- ^ Structuring element.
-    -> Maybe point2i   -- ^ Anchor position with the kernel.
-    -> Int             -- ^ Number of times erosion and dilation are applied.
+    -> MorphOperation -- ^ Type of a morphological operation.
+    -> Mat 'D 'D 'D -- ^ Structuring element.
+    -> Maybe (point2 Int32) -- ^ Anchor position with the kernel.
+    -> Int -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException $ do

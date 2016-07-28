@@ -51,14 +51,14 @@ instance FromJSON A where {                          \
 }
 
 --------------------------------------------------------------------------------
-IsoJSON(Point2i, J (V2 Int32 ), J . fromPoint, toPoint . unJ)
-IsoJSON(Point2f, J (V2 Float ), J . fromPoint, toPoint . unJ)
-IsoJSON(Point2d, J (V2 Double), J . fromPoint, toPoint . unJ)
-IsoJSON(Point3i, J (V3 Int32 ), J . fromPoint, toPoint . unJ)
-IsoJSON(Point3f, J (V3 Float ), J . fromPoint, toPoint . unJ)
-IsoJSON(Point3d, J (V3 Double), J . fromPoint, toPoint . unJ)
-IsoJSON(Size2i , J (V2 Int32 ), J . fromSize , toSize  . unJ)
-IsoJSON(Size2f , J (V2 Float ), J . fromSize , toSize  . unJ)
+IsoJSON(Point2i, J (V2 Int32 ), J .                   fromPoint, toPoint                   . unJ)
+IsoJSON(Point2f, J (V2 Float ), J . fmap realToFrac . fromPoint, toPoint . fmap realToFrac . unJ)
+IsoJSON(Point2d, J (V2 Double), J . fmap realToFrac . fromPoint, toPoint . fmap realToFrac . unJ)
+IsoJSON(Point3i, J (V3 Int32 ), J .                   fromPoint, toPoint                   . unJ)
+IsoJSON(Point3f, J (V3 Float ), J . fmap realToFrac . fromPoint, toPoint . fmap realToFrac . unJ)
+IsoJSON(Point3d, J (V3 Double), J . fmap realToFrac . fromPoint, toPoint . fmap realToFrac . unJ)
+IsoJSON(Size2i , J (V2 Int32 ), J .                   fromSize , toSize                    . unJ)
+IsoJSON(Size2f , J (V2 Float ), J . fmap realToFrac . fromSize , toSize  . fmap realToFrac . unJ)
 
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat
@@ -108,21 +108,6 @@ instance FromJSON HElems where
                     "64F" -> HElems_64F      <$> elems
                     "USR" -> HElems_USRTYPE1 <$> (mapM (either fail pure . B64.decode . TE.encodeUtf8) =<< elems)
                     _ -> fail $ "Unknown Helems type " <> T.unpack typ
-
-instance ( IsRect (Rect a)
-         , ToJSON (Point a 2)
-         , ToJSON (Size  a 2)
-         ) => ToJSON (Rect a) where
-    toJSON rect = object [ "pos"  .= rectTopLeft rect
-                         , "size" .= rectSize    rect
-                         ]
-
-instance ( IsRect (Rect a)
-         , FromJSON a
-         ) => FromJSON (Rect a) where
-    parseJSON = withObject "Rect" $ \obj ->
-                  mkRect <$> (uncurry V2 <$> obj .: "pos")
-                         <*> (uncurry V2 <$> obj .: "size")
 
 --------------------------------------------------------------------------------
 

@@ -9,35 +9,68 @@ import "this" OpenCV.Mutable
 
 --------------------------------------------------------------------------------
 
-data C'Matx  (depth :: *) (dimM :: Nat) (dimN :: Nat)
-data C'Vec   (depth :: *) (dim :: Nat)
-data C'Point (depth :: *) (dim :: Nat)
-data C'Size  (depth :: *) (dim :: Nat)
+data C'Matx  (dimR :: Nat) (dimC :: Nat) (depth :: *)
+data C'Vec   (dim :: Nat) (depth :: *)
+data C'Point (dim :: Nat) (depth :: *)
+data C'Size  (depth :: *)
 data C'Rect  (depth :: *)
 
-type C'Vec2i = C'Vec Int32   2
-type C'Vec2f = C'Vec CFloat  2
-type C'Vec2d = C'Vec CDouble 2
+type C'Matx12f = C'Matx 1 2 CFloat
+type C'Matx12d = C'Matx 1 2 CDouble
+type C'Matx13f = C'Matx 1 3 CFloat
+type C'Matx13d = C'Matx 1 3 CDouble
+type C'Matx14f = C'Matx 1 4 CFloat
+type C'Matx14d = C'Matx 1 4 CDouble
+type C'Matx16f = C'Matx 1 6 CFloat
+type C'Matx16d = C'Matx 1 6 CDouble
+type C'Matx21f = C'Matx 2 1 CFloat
+type C'Matx21d = C'Matx 2 1 CDouble
+type C'Matx22f = C'Matx 2 2 CFloat
+type C'Matx22d = C'Matx 2 2 CDouble
+type C'Matx23f = C'Matx 2 3 CFloat
+type C'Matx23d = C'Matx 2 3 CDouble
+type C'Matx31f = C'Matx 3 1 CFloat
+type C'Matx31d = C'Matx 3 1 CDouble
+type C'Matx32f = C'Matx 3 2 CFloat
+type C'Matx32d = C'Matx 3 2 CDouble
+type C'Matx33f = C'Matx 3 3 CFloat
+type C'Matx33d = C'Matx 3 3 CDouble
+type C'Matx34f = C'Matx 3 4 CFloat
+type C'Matx34d = C'Matx 3 4 CDouble
+type C'Matx41f = C'Matx 4 1 CFloat
+type C'Matx41d = C'Matx 4 1 CDouble
+type C'Matx43f = C'Matx 4 3 CFloat
+type C'Matx43d = C'Matx 4 3 CDouble
+type C'Matx44f = C'Matx 4 4 CFloat
+type C'Matx44d = C'Matx 4 4 CDouble
+type C'Matx61f = C'Matx 6 1 CFloat
+type C'Matx61d = C'Matx 6 1 CDouble
+type C'Matx66f = C'Matx 6 6 CFloat
+type C'Matx66d = C'Matx 6 6 CDouble
 
-type C'Vec3i = C'Vec Int32   3
-type C'Vec3f = C'Vec CFloat  3
-type C'Vec3d = C'Vec CDouble 3
+type C'Vec2i = C'Vec 2 Int32
+type C'Vec2f = C'Vec 2 CFloat
+type C'Vec2d = C'Vec 2 CDouble
 
-type C'Vec4i = C'Vec Int32   4
-type C'Vec4f = C'Vec CFloat  4
-type C'Vec4d = C'Vec CDouble 4
+type C'Vec3i = C'Vec 3 Int32
+type C'Vec3f = C'Vec 3 CFloat
+type C'Vec3d = C'Vec 3 CDouble
 
-type C'Point2i = C'Point Int32   2
-type C'Point2f = C'Point CFloat  2
-type C'Point2d = C'Point CDouble 2
+type C'Vec4i = C'Vec 4 Int32
+type C'Vec4f = C'Vec 4 CFloat
+type C'Vec4d = C'Vec 4 CDouble
 
-type C'Point3i = C'Point Int32   3
-type C'Point3f = C'Point CFloat  3
-type C'Point3d = C'Point CDouble 3
+type C'Point2i = C'Point 2 Int32
+type C'Point2f = C'Point 2 CFloat
+type C'Point2d = C'Point 2 CDouble
 
-type C'Size2i = C'Size Int32   2
-type C'Size2f = C'Size CFloat  2
-type C'Size2d = C'Size CDouble 2
+type C'Point3i = C'Point 3 Int32
+type C'Point3f = C'Point 3 CFloat
+type C'Point3d = C'Point 3 CDouble
+
+type C'Size2i = C'Size Int32
+type C'Size2f = C'Size CFloat
+type C'Size2d = C'Size CDouble
 
 type C'Rect2i = C'Rect Int32
 type C'Rect2f = C'Rect CFloat

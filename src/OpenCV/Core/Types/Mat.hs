@@ -130,9 +130,9 @@ matSubRectImg = exceptError $
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) subImg        Nothing
       lift $ rectangle imgM subRect blue 1 LineType_4 0
-      lift $ rectangle imgM (mkRect (V2 w 0) (V2 w h) :: Rect2i) blue 1 LineType_4 0
+      lift $ rectangle imgM (toRect $ HRect (V2 w 0) (V2 w h) :: Rect2i) blue 1 LineType_4 0
   where
-    subRect = mkRect (V2 96 131) (V2 90 60)
+    subRect = toRect $ HRect (V2 96 131) (V2 90 60)
     subImg = exceptError $
                resize (ResizeAbs $ toSize $ V2 w h) InterCubic =<<
                matSubRect birds_512x341 subRect

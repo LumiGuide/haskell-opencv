@@ -6,6 +6,7 @@ module OpenCV.Video
       estimateRigidTransform
     ) where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -38,11 +39,11 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/video/doc/motion_analysis_and_object_tracking.html#estimaterigidtransform OpenCV Sphinx doc>
 estimateRigidTransform
-    :: ( ToPoint2i  srcPoint2i
-       , ToPoint2i  dstPoint2i
+    :: ( IsPoint2 srcPoint2 Int32
+       , IsPoint2 dstPoint2 Int32
        )
-    => V.Vector srcPoint2i -- ^ Source
-    -> V.Vector dstPoint2i -- ^ Destination
+    => V.Vector (srcPoint2 Int32) -- ^ Source
+    -> V.Vector (dstPoint2 Int32) -- ^ Destination
     -> Bool -- ^ Full affine
     -> CvExcept (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
 estimateRigidTransform src dst fullAffine = do

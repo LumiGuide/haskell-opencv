@@ -361,7 +361,7 @@ bfMatcherImg = do
 
     rotatedFrog = exceptError $
                   warpAffine frog rotMat InterArea False False (BorderConstant black)
-    rotMat = getRotationMatrix2D (V2 250 195 :: V2 Float) 45 0.8
+    rotMat = getRotationMatrix2D (V2 250 195 :: V2 CFloat) 45 0.8
 @
 
 <<doc/generated/examples/bfMatcherImg.png bfMatcherImg>>

@@ -25,12 +25,13 @@ library
       , src/OpenCV/Core/Types/Internal.cpp
       , src/OpenCV/Core/Types/Mat.cpp
       , src/OpenCV/Core/Types/Mat/Internal.cpp
-      , src/OpenCV/Core/Types/Mat/ToFrom.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/Core/Types/Matx/Internal.cpp
-      , src/OpenCV/Core/Types/Point/Internal.cpp
-      , src/OpenCV/Core/Types/Rect/Internal.cpp
-      , src/OpenCV/Core/Types/Size/Internal.cpp
+      , src/OpenCV/Core/Types/Mat/ToFrom.cpp
+      , src/OpenCV/Core/Types/Matx.cpp
+      , src/OpenCV/Core/Types/Point.cpp
+      , src/OpenCV/Core/Types/Rect.cpp
+      , src/OpenCV/Core/Types/Size.cpp
+      , src/OpenCV/Core/Types/Vec.cpp
       , src/OpenCV/Exception/Internal.cpp
       , src/OpenCV/Features2d.cpp
       , src/OpenCV/HighGui.cpp
@@ -50,22 +51,22 @@ library
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
 
     build-depends:
-        aeson             >=0.9.0.1
-      , base              >=4.8     && <5
-      , base64-bytestring >=1.0.0.1
-      , bindings-DSL      >=1.0.23
-      , bytestring        >=0.10.6
-      , containers        >=0.5.6.2
-      , deepseq           >=1.4.1.1
-      , inline-c          >=0.5.5.5
-      , inline-c-cpp      >=0.1
-      , linear            >=1.20.4
-      , primitive         >=0.6.1
-      , repa              >=3.4.0.2
-      , template-haskell  >=2.10
-      , text              >=1.2.2.1
-      , transformers      >=0.4.2
-      , vector            >=0.11
+        aeson             >= 0.9.0.1
+      , base              >= 4.8     && <5
+      , base64-bytestring >= 1.0.0.1
+      , bindings-DSL      >= 1.0.23
+      , bytestring        >= 0.10.6
+      , containers        >= 0.5.6.2
+      , deepseq           >= 1.4.1.1
+      , inline-c          >= 0.5.5.5
+      , inline-c-cpp      >= 0.1
+      , linear            >= 1.20.4
+      , primitive         >= 0.6.1
+      , repa              >= 3.4.0.2
+      , template-haskell  >= 2.10
+      , text              >= 1.2.2.1
+      , transformers      >= 0.4.2
+      , vector            >= 0.11
 
     exposed-modules:
         OpenCV
@@ -79,6 +80,7 @@ library
         OpenCV.Core.Types.Point
         OpenCV.Core.Types.Rect
         OpenCV.Core.Types.Size
+        OpenCV.Core.Types.Vec
         OpenCV.Exception
         OpenCV.Features2d
         OpenCV.HighGui
@@ -98,8 +100,11 @@ library
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
     other-modules:
-        OpenCV.Calib3d.Constants
         OpenCV.C.Inline
+        OpenCV.C.PlacementNew
+        OpenCV.C.PlacementNew.TH
+        OpenCV.C.Types
+        OpenCV.Calib3d.Constants
         OpenCV.Core.ArrayOps.Internal
         OpenCV.Core.Types.Constants
         OpenCV.Core.Types.Internal
@@ -108,12 +113,15 @@ library
         OpenCV.Core.Types.Mat.Marshal
         OpenCV.Core.Types.Mat.ToFrom
         OpenCV.Core.Types.Matx.Internal
+        OpenCV.Core.Types.Matx.TH
         OpenCV.Core.Types.Point.Internal
+        OpenCV.Core.Types.Point.TH
         OpenCV.Core.Types.Rect.Internal
+        OpenCV.Core.Types.Rect.TH
         OpenCV.Core.Types.Size.Internal
-        OpenCV.C.PlacementNew
-        OpenCV.C.PlacementNew.TH
-        OpenCV.C.Types
+        OpenCV.Core.Types.Size.TH
+        OpenCV.Core.Types.Vec.Internal
+        OpenCV.Core.Types.Vec.TH
         OpenCV.Exception.Internal
         OpenCV.ImgCodecs.Internal
         OpenCV.ImgProc.MiscImgTransform.Internal

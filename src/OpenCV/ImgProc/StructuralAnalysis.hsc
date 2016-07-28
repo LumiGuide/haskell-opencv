@@ -20,6 +20,7 @@ import "base" Data.Maybe (mapMaybe)
 import "base" Data.Traversable (for)
 import qualified "vector" Data.Vector as V
 import "base" Data.Word
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
@@ -33,7 +34,7 @@ import "this" OpenCV.C.Inline ( openCvCtx )
 import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Core.Types.Matx ( fromVec )
+import "this" OpenCV.Core.Types.Vec ( fromVec )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.TypeLevel
@@ -65,8 +66,8 @@ will most certainly give a wrong results for contours with self-intersections.
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#cv2.contourArea OpenCV Sphinx doc>
 -}
 contourArea
-    :: (ToPoint2f point2f)
-    => V.Vector point2f
+    :: (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat)
        -- ^ Input vector of 2D points (contour vertices).
     -> ContourAreaOriented
        -- ^ Signed or unsigned area
@@ -101,11 +102,11 @@ contourArea contour areaOriented = unsafeWrapException $
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
 pointPolygonTest
-    :: ( ToPoint2f contourPoint2f
-       , ToPoint2f testPoint2f
+    :: ( IsPoint2 contourPoint2 CFloat
+       , IsPoint2 testPoint2    CFloat
        )
-    => V.Vector contourPoint2f -- ^ Contour.
-    -> testPoint2f -- ^ Point tested against the contour.
+    => V.Vector (contourPoint2 CFloat) -- ^ Contour.
+    -> testPoint2 CFloat -- ^ Point tested against the contour.
     -> Bool
        -- ^ If true, the function estimates the signed distance from the point
        -- to the nearest contour edge. Otherwise, the function only checks if
@@ -289,8 +290,8 @@ findContours mode method src = unsafePerformIO $
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method
 
-minAreaRect :: (ToPoint2i point2i)
-            => V.Vector point2i -> RotatedRect
+minAreaRect :: (IsPoint2 point2 Int32)
+            => V.Vector (point2 Int32) -> RotatedRect
 minAreaRect points =
   unsafePerformIO $ fromPtr $
   withArrayPtr (V.map toPoint points) $

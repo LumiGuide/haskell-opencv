@@ -193,14 +193,14 @@ arrowedLineImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 -}
 arrowedLine
-    :: ( ToPoint2i fromPoint2i
-       , ToPoint2i toPoint2i
+    :: ( IsPoint2 fromPoint2 Int32
+       , IsPoint2 toPoint2   Int32
        , ToScalar  color
        , PrimMonad m
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> fromPoint2i -- ^ The point the arrow starts from.
-    -> toPoint2i -- ^ The point the arrow points to.
+    -> fromPoint2 Int32 -- ^ The point the arrow starts from.
+    -> toPoint2 Int32 -- ^ The point the arrow points to.
     -> color -- ^ Line color.
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -250,11 +250,11 @@ circleImg = exceptError $
 -}
 circle
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image where the circle is drawn.
-    -> point2i -- ^ Center of the circle.
+    -> point2 Int32 -- ^ Center of the circle.
     -> Int32 -- ^ Radius of the circle.
     -> color -- ^ Circle color.
     -> Int32 -- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
@@ -301,13 +301,13 @@ ellipseImg = exceptError $
 -}
 ellipse
     :: ( PrimMonad m
-       , ToPoint2i point2i
-       , ToSize2i  size2i
-       , ToScalar  color
+       , IsPoint2 point2 Int32
+       , IsSize   size   Int32
+       , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> point2i -- ^ Center of the ellipse.
-    -> size2i -- ^ Half of the size of the ellipse main axes.
+    -> point2 Int32 -- ^ Center of the ellipse.
+    -> size   Int32  -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
     -> Double -- ^ Starting angle of the elliptic arc in degrees.
     -> Double -- ^ Ending angle of the elliptic arc in degrees.
@@ -357,11 +357,11 @@ top-most and/or the bottom edge could be horizontal).
 -}
 fillConvexPoly
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar  color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> V.Vector point2i -- ^ Polygon vertices.
+    -> V.Vector (point2 Int32) -- ^ Polygon vertices.
     -> color -- ^ Polygon color.
     -> LineType
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
@@ -435,11 +435,11 @@ fillPolyImg = exceptError $
 -}
 fillPoly
     :: ( PrimMonad m
-       , ToPoint2i point2i
-       , ToScalar  color
+       , IsPoint2 point2 Int32
+       , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> V.Vector (V.Vector point2i) -- ^ Polygons.
+    -> V.Vector (V.Vector (point2 Int32)) -- ^ Polygons.
     -> color -- ^ Polygon color.
     -> LineType
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
@@ -493,11 +493,11 @@ polylinesImg = exceptError $
 -}
 polylines
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> V.Vector (V.Vector point2i) -- ^ Vertices.
+    -> V.Vector (V.Vector (point2 Int32)) -- ^ Vertices.
     -> Bool
        -- ^ Flag indicating whether the drawn polylines are closed or not. If
        -- they are closed, the function draws a line from the last vertex of
@@ -555,13 +555,13 @@ lineImg = exceptError $
 -}
 line
     :: ( PrimMonad m
-       , ToPoint2i fromPoint2i
-       , ToPoint2i toPoint2i
-       , ToScalar  color
+       , IsPoint2 fromPoint2 Int32
+       , IsPoint2 toPoint2   Int32
+       , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> fromPoint2i -- ^ First point of the line segment.
-    -> toPoint2i -- ^ Scond point of the line segment.
+    -> fromPoint2 Int32 -- ^ First point of the line segment.
+    -> toPoint2   Int32 -- ^ Scond point of the line segment.
     -> color -- ^ Line color.
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -651,12 +651,12 @@ putTextImg = exceptError $
 -}
 putText
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
-    -> point2i -- ^ Bottom-left corner of the text string in the image.
+    -> point2 Int32 -- ^ Bottom-left corner of the text string in the image.
     -> Font
     -> color -- ^ Text color.
     -> Int32 -- ^ Thickness of the lines used to draw a text.
@@ -697,8 +697,8 @@ rectangleImg = exceptError $
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \imgM -> do
-      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180) :: Rect2i) blue  5  LineType_8 0
-      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140) :: Rect2i) red (-1) LineType_8 0
+      lift $ rectangle imgM (toRect $ HRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+      lift $ rectangle imgM (toRect $ HRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
 @
 
 <<doc/generated/examples/rectangleImg.png rectangleImg>>
@@ -706,9 +706,9 @@ rectangleImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
-    :: (PrimMonad m, ToScalar color, IsRect2i rect2i)
+    :: (PrimMonad m, ToScalar color, IsRect rect Int32)
     => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
-    -> rect2i
+    -> rect Int32
     -> color -- ^ Rectangle color or brightness (grayscale image).
     -> Int32 -- ^ Line thickness.
     -> LineType
