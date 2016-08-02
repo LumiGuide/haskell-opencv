@@ -7,25 +7,43 @@
 <link type='text/css' rel='stylesheet' href='hscolour.css' />
 </head>
 <body>
-<pre><a name="line-1"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Point</span>
-<a name="line-2"></a>  <span class='hs-layout'>(</span> <span class='hs-conid'>Point</span>
-<a name="line-3"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>PointDepth</span>
-<a name="line-4"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>PointDim</span>
-<a name="line-5"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-6"></a>
-<a name="line-7"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>Point2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point2d</span>
-<a name="line-8"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>Point3i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point3f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point3d</span>
-<a name="line-9"></a>
-<a name="line-10"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2d</span>
-<a name="line-11"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint3i</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint3f</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint3d</span>
+<pre><a name="line-1"></a><span class='hs-comment'>{-# language MultiParamTypeClasses #-}</span>
+<a name="line-2"></a><span class='hs-comment'>{-# language TemplateHaskell #-}</span>
+<a name="line-3"></a>
+<a name="line-4"></a><span class='hs-comment'>{-# OPTIONS_GHC -fno-warn-orphans #-}</span>
+<a name="line-5"></a>
+<a name="line-6"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Point</span>
+<a name="line-7"></a>    <span class='hs-layout'>(</span> <span class='hs-conid'>Point</span>
+<a name="line-8"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>PointDim</span>
+<a name="line-9"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-10"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span>
+<a name="line-11"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint3</span>
 <a name="line-12"></a>
-<a name="line-13"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint2d</span>
-<a name="line-14"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint3i</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint3f</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromPoint3d</span>
-<a name="line-15"></a>
-<a name="line-16"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>newPoint2i</span><span class='hs-layout'>,</span> <span class='hs-varid'>newPoint2f</span><span class='hs-layout'>,</span> <span class='hs-varid'>newPoint2d</span>
-<a name="line-17"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>newPoint3i</span><span class='hs-layout'>,</span> <span class='hs-varid'>newPoint3f</span><span class='hs-layout'>,</span> <span class='hs-varid'>newPoint3d</span>
-<a name="line-18"></a>  <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
-<a name="line-19"></a>
-<a name="line-20"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Point</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-13"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Point2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point2d</span>
+<a name="line-14"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Point3i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point3f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Point3d</span>
+<a name="line-15"></a>    <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
+<a name="line-16"></a>
+<a name="line-17"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Int</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Int32</span> <span class='hs-layout'>)</span>
+<a name="line-18"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-19"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span>     <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
+<a name="line-20"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c-cpp"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Cpp</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span> <span class='hs-varid'>using</span> <span class='hs-layout'>)</span>
+<a name="line-21"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-layout'>(</span> <span class='hs-varid'>openCvCtx</span> <span class='hs-layout'>)</span>
+<a name="line-22"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-23"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Point</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-24"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Point</span><span class='hs-varop'>.</span><span class='hs-conid'>TH</span>
+<a name="line-25"></a>
+<a name="line-26"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-27"></a>
+<a name="line-28"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>context</span> <span class='hs-varid'>openCvCtx</span>
+<a name="line-29"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/core.hpp"</span>
+<a name="line-30"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>using</span> <span class='hs-str'>"namespace cv"</span>
+<a name="line-31"></a>
+<a name="line-32"></a><a name="mkPointType"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point2i"</span> <span class='hs-num'>2</span> <span class='hs-str'>"Point_"</span>  <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Int32</span>   <span class='hs-str'>"int32_t"</span>
+<a name="line-33"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point2f"</span> <span class='hs-num'>2</span> <span class='hs-str'>"Point_"</span>  <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CFloat</span>  <span class='hs-str'>"float"</span>
+<a name="line-34"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point2d"</span> <span class='hs-num'>2</span> <span class='hs-str'>"Point_"</span>  <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CDouble</span> <span class='hs-str'>"double"</span>
+<a name="line-35"></a>
+<a name="line-36"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point3i"</span> <span class='hs-num'>3</span> <span class='hs-str'>"Point3_"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Int32</span>   <span class='hs-str'>"int32_t"</span>
+<a name="line-37"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point3f"</span> <span class='hs-num'>3</span> <span class='hs-str'>"Point3_"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CFloat</span>  <span class='hs-str'>"float"</span>
+<a name="line-38"></a><span class='hs-definition'>mkPointType</span> <span class='hs-str'>"Point3d"</span> <span class='hs-num'>3</span> <span class='hs-str'>"Point3_"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CDouble</span> <span class='hs-str'>"double"</span>
 </pre></body>
 </html>

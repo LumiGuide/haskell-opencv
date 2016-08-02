@@ -244,14 +244,14 @@
 <a name="line-235"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline</a> OpenCV Sphinx doc&gt;
 <a name="line-236"></a>-}</span>
 <a name="line-237"></a><span class='hs-definition'>arrowedLine</span>
-<a name="line-238"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>fromPoint2i</span>
-<a name="line-239"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>toPoint2i</span>
+<a name="line-238"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>fromPoint2</span> <span class='hs-conid'>Int32</span>
+<a name="line-239"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>toPoint2</span>   <span class='hs-conid'>Int32</span>
 <a name="line-240"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span>  <span class='hs-varid'>color</span>
 <a name="line-241"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
 <a name="line-242"></a>       <span class='hs-layout'>)</span>
 <a name="line-243"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-244"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>fromPoint2i</span> <span class='hs-comment'>-- ^ The point the arrow starts from.</span>
-<a name="line-245"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>toPoint2i</span> <span class='hs-comment'>-- ^ The point the arrow points to.</span>
+<a name="line-244"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>fromPoint2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The point the arrow starts from.</span>
+<a name="line-245"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>toPoint2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ The point the arrow points to.</span>
 <a name="line-246"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Line color.</span>
 <a name="line-247"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Line thickness.</span>
 <a name="line-248"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>LineType</span>
@@ -301,11 +301,11 @@
 <a name="line-292"></a>-}</span>
 <a name="line-293"></a><span class='hs-definition'>circle</span>
 <a name="line-294"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-295"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
+<a name="line-295"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
 <a name="line-296"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-297"></a>       <span class='hs-layout'>)</span>
 <a name="line-298"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image where the circle is drawn.</span>
-<a name="line-299"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2i</span> <span class='hs-comment'>-- ^ Center of the circle.</span>
+<a name="line-299"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Center of the circle.</span>
 <a name="line-300"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Radius of the circle.</span>
 <a name="line-301"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Circle color.</span>
 <a name="line-302"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.</span>
@@ -352,13 +352,13 @@
 <a name="line-343"></a>-}</span>
 <a name="line-344"></a><span class='hs-definition'>ellipse</span>
 <a name="line-345"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-346"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
-<a name="line-347"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize2i</span>  <span class='hs-varid'>size2i</span>
-<a name="line-348"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span>  <span class='hs-varid'>color</span>
+<a name="line-346"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
+<a name="line-347"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsSize</span>   <span class='hs-varid'>size</span>   <span class='hs-conid'>Int32</span>
+<a name="line-348"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-349"></a>       <span class='hs-layout'>)</span>
 <a name="line-350"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-351"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2i</span> <span class='hs-comment'>-- ^ Center of the ellipse.</span>
-<a name="line-352"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>size2i</span> <span class='hs-comment'>-- ^ Half of the size of the ellipse main axes.</span>
+<a name="line-351"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Center of the ellipse.</span>
+<a name="line-352"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>size</span>   <span class='hs-conid'>Int32</span>  <span class='hs-comment'>-- ^ Half of the size of the ellipse main axes.</span>
 <a name="line-353"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ Ellipse rotation angle in degrees.</span>
 <a name="line-354"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ Starting angle of the elliptic arc in degrees.</span>
 <a name="line-355"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ Ending angle of the elliptic arc in degrees.</span>
@@ -408,11 +408,11 @@
 <a name="line-399"></a>-}</span>
 <a name="line-400"></a><span class='hs-definition'>fillConvexPoly</span>
 <a name="line-401"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-402"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
+<a name="line-402"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
 <a name="line-403"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span>  <span class='hs-varid'>color</span>
 <a name="line-404"></a>       <span class='hs-layout'>)</span>
 <a name="line-405"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-406"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-varid'>point2i</span> <span class='hs-comment'>-- ^ Polygon vertices.</span>
+<a name="line-406"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Polygon vertices.</span>
 <a name="line-407"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Polygon color.</span>
 <a name="line-408"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>LineType</span>
 <a name="line-409"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Number of fractional bits in the vertex coordinates.</span>
@@ -486,11 +486,11 @@
 <a name="line-477"></a>-}</span>
 <a name="line-478"></a><span class='hs-definition'>fillPoly</span>
 <a name="line-479"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-480"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
-<a name="line-481"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span>  <span class='hs-varid'>color</span>
+<a name="line-480"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
+<a name="line-481"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-482"></a>       <span class='hs-layout'>)</span>
 <a name="line-483"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-484"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-varid'>point2i</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Polygons.</span>
+<a name="line-484"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Polygons.</span>
 <a name="line-485"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Polygon color.</span>
 <a name="line-486"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>LineType</span>
 <a name="line-487"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Number of fractional bits in the vertex coordinates.</span>
@@ -544,11 +544,11 @@
 <a name="line-535"></a>-}</span>
 <a name="line-536"></a><span class='hs-definition'>polylines</span>
 <a name="line-537"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-538"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
+<a name="line-538"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
 <a name="line-539"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-540"></a>       <span class='hs-layout'>)</span>
 <a name="line-541"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-542"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-varid'>point2i</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Vertices.</span>
+<a name="line-542"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Vertices.</span>
 <a name="line-543"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Bool</span>
 <a name="line-544"></a>       <span class='hs-comment'>-- ^ Flag indicating whether the drawn polylines are closed or not. If</span>
 <a name="line-545"></a>       <span class='hs-comment'>-- they are closed, the function draws a line from the last vertex of</span>
@@ -606,13 +606,13 @@
 <a name="line-597"></a>-}</span>
 <a name="line-598"></a><span class='hs-definition'>line</span>
 <a name="line-599"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-600"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>fromPoint2i</span>
-<a name="line-601"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>toPoint2i</span>
-<a name="line-602"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span>  <span class='hs-varid'>color</span>
+<a name="line-600"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>fromPoint2</span> <span class='hs-conid'>Int32</span>
+<a name="line-601"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>toPoint2</span>   <span class='hs-conid'>Int32</span>
+<a name="line-602"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-603"></a>       <span class='hs-layout'>)</span>
 <a name="line-604"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-605"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>fromPoint2i</span> <span class='hs-comment'>-- ^ First point of the line segment.</span>
-<a name="line-606"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>toPoint2i</span> <span class='hs-comment'>-- ^ Scond point of the line segment.</span>
+<a name="line-605"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>fromPoint2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ First point of the line segment.</span>
+<a name="line-606"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>toPoint2</span>   <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Scond point of the line segment.</span>
 <a name="line-607"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Line color.</span>
 <a name="line-608"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Line thickness.</span>
 <a name="line-609"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>LineType</span>
@@ -702,12 +702,12 @@
 <a name="line-693"></a>-}</span>
 <a name="line-694"></a><span class='hs-definition'>putText</span>
 <a name="line-695"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span>
-<a name="line-696"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span>
+<a name="line-696"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span>
 <a name="line-697"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span>
 <a name="line-698"></a>       <span class='hs-layout'>)</span>
 <a name="line-699"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
 <a name="line-700"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Text</span> <span class='hs-comment'>-- ^ Text string to be drawn.</span>
-<a name="line-701"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2i</span> <span class='hs-comment'>-- ^ Bottom-left corner of the text string in the image.</span>
+<a name="line-701"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Bottom-left corner of the text string in the image.</span>
 <a name="line-702"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Font</span>
 <a name="line-703"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Text color.</span>
 <a name="line-704"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Thickness of the lines used to draw a text.</span>
@@ -748,8 +748,8 @@
 <a name="line-739"></a>             (Proxy :: Proxy 4)
 <a name="line-740"></a>             (Proxy :: Proxy Word8)
 <a name="line-741"></a>             transparent $ \imgM -&gt; do
-<a name="line-742"></a>      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180) :: Rect2i) blue  5  LineType_8 0
-<a name="line-743"></a>      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140) :: Rect2i) red (-1) LineType_8 0
+<a name="line-742"></a>      lift $ rectangle imgM (toRect $ HRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+<a name="line-743"></a>      lift $ rectangle imgM (toRect $ HRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
 <a name="line-744"></a>@
 <a name="line-745"></a>
 <a name="line-746"></a>&lt;&lt;doc/generated/examples/rectangleImg.png rectangleImg&gt;&gt;
@@ -757,9 +757,9 @@
 <a name="line-748"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle</a> OpenCV Sphinx doc&gt;
 <a name="line-749"></a>-}</span>
 <a name="line-750"></a><span class='hs-definition'>rectangle</span>
-<a name="line-751"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span><span class='hs-layout'>,</span> <span class='hs-conid'>IsRect2i</span> <span class='hs-varid'>rect2i</span><span class='hs-layout'>)</span>
+<a name="line-751"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>,</span> <span class='hs-conid'>ToScalar</span> <span class='hs-varid'>color</span><span class='hs-layout'>,</span> <span class='hs-conid'>IsRect</span> <span class='hs-varid'>rect</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span>
 <a name="line-752"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>height</span><span class='hs-layout'>,</span> <span class='hs-varid'>width</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Image.</span>
-<a name="line-753"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>rect2i</span>
+<a name="line-753"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>rect</span> <span class='hs-conid'>Int32</span>
 <a name="line-754"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>color</span> <span class='hs-comment'>-- ^ Rectangle color or brightness (grayscale image).</span>
 <a name="line-755"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span> <span class='hs-comment'>-- ^ Line thickness.</span>
 <a name="line-756"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>LineType</span>

@@ -154,11 +154,11 @@
 <a name="line-145"></a>                     <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
 <a name="line-146"></a>
 <a name="line-147"></a><a name="newRotatedRect"></a><span class='hs-definition'>newRotatedRect</span>
-<a name="line-148"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>ToPoint2f</span> <span class='hs-varid'>point2f</span>
-<a name="line-149"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize2f</span>  <span class='hs-varid'>size2f</span>
+<a name="line-148"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span> <span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>CFloat</span>
+<a name="line-149"></a>       <span class='hs-layout'>,</span> <span class='hs-conid'>IsSize</span>   <span class='hs-varid'>size</span>   <span class='hs-conid'>CFloat</span>
 <a name="line-150"></a>       <span class='hs-layout'>)</span>
-<a name="line-151"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>point2f</span> <span class='hs-comment'>-- ^ Rectangle mass center</span>
-<a name="line-152"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>size2f</span>  <span class='hs-comment'>-- ^ Width and height of the rectangle</span>
+<a name="line-151"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>CFloat</span> <span class='hs-comment'>-- ^ Rectangle mass center</span>
+<a name="line-152"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>size</span>   <span class='hs-conid'>CFloat</span> <span class='hs-comment'>-- ^ Width and height of the rectangle</span>
 <a name="line-153"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CFloat</span>
 <a name="line-154"></a>       <span class='hs-comment'>-- ^ The rotation angle (in degrees). When the angle is 0, 90,</span>
 <a name="line-155"></a>       <span class='hs-comment'>-- 180, 270 etc., the rectangle becomes an up-right rectangle.</span>
@@ -211,9 +211,9 @@
 <a name="line-202"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
 <a name="line-203"></a>
 <a name="line-204"></a><a name="withPolygons"></a><span class='hs-definition'>withPolygons</span>
-<a name="line-205"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>a</span> <span class='hs-varid'>point2i</span>
-<a name="line-206"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>ToPoint2i</span> <span class='hs-varid'>point2i</span><span class='hs-layout'>)</span>
-<a name="line-207"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-varid'>point2i</span><span class='hs-layout'>)</span>
+<a name="line-205"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-keyword'>forall</span> <span class='hs-varid'>a</span> <span class='hs-varid'>point2</span>
+<a name="line-206"></a>     <span class='hs-varop'>.</span> <span class='hs-layout'>(</span><span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span>
+<a name="line-207"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-varid'>point2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
 <a name="line-208"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>C</span> <span class='hs-conid'>Point2i</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
 <a name="line-209"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span>
 <a name="line-210"></a><span class='hs-definition'>withPolygons</span> <span class='hs-varid'>polygons</span> <span class='hs-varid'>act</span> <span class='hs-keyglyph'>=</span>

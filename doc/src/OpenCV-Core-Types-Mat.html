@@ -139,9 +139,9 @@
 <a name="line-130"></a>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
 <a name="line-131"></a>      matCopyToM imgM (V2 w 0) subImg        Nothing
 <a name="line-132"></a>      lift $ rectangle imgM subRect blue 1 LineType_4 0
-<a name="line-133"></a>      lift $ rectangle imgM (mkRect (V2 w 0) (V2 w h) :: Rect2i) blue 1 LineType_4 0
+<a name="line-133"></a>      lift $ rectangle imgM (toRect $ HRect (V2 w 0) (V2 w h) :: Rect2i) blue 1 LineType_4 0
 <a name="line-134"></a>  where
-<a name="line-135"></a>    subRect = mkRect (V2 96 131) (V2 90 60)
+<a name="line-135"></a>    subRect = toRect $ HRect (V2 96 131) (V2 90 60)
 <a name="line-136"></a>    subImg = exceptError $
 <a name="line-137"></a>               resize (ResizeAbs $ toSize $ V2 w h) InterCubic =&lt;&lt;
 <a name="line-138"></a>               matSubRect birds_512x341 subRect

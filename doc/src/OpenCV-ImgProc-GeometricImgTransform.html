@@ -64,7 +64,7 @@
 <a name="line-55"></a>    <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
 <a name="line-56"></a>
 <a name="line-57"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Int</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Int32</span> <span class='hs-layout'>)</span>
-<a name="line-58"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span> <span class='hs-layout'>(</span> <span class='hs-conid'>CDouble</span> <span class='hs-layout'>)</span>
+<a name="line-58"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span> <span class='hs-layout'>(</span> <span class='hs-conid'>CFloat</span><span class='hs-layout'>,</span> <span class='hs-conid'>CDouble</span> <span class='hs-layout'>)</span>
 <a name="line-59"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>System</span><span class='hs-varop'>.</span><span class='hs-conid'>IO</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-layout'>(</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-layout'>)</span>
 <a name="line-60"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
 <a name="line-61"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>CU</span>
@@ -188,7 +188,7 @@
 <a name="line-179"></a>
 <a name="line-180"></a>@
 <a name="line-181"></a>rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
-<a name="line-182"></a>rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 Float) 45 0.75
+<a name="line-182"></a>rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 CFloat) 45 0.75
 <a name="line-183"></a>
 <a name="line-184"></a>warpAffineImg :: Birds_512x341
 <a name="line-185"></a>warpAffineImg = exceptError $
@@ -296,8 +296,8 @@
 <a name="line-287"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d</a> OpenCV Sphinx doc&gt;
 <a name="line-288"></a>-}</span>
 <a name="line-289"></a><span class='hs-definition'>getRotationMatrix2D</span>
-<a name="line-290"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>ToPoint2f</span> <span class='hs-varid'>point2f</span><span class='hs-layout'>)</span>
-<a name="line-291"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>point2f</span> <span class='hs-comment'>-- ^ Center of the rotation in the source image.</span>
+<a name="line-290"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>IsPoint2</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>CFloat</span><span class='hs-layout'>)</span>
+<a name="line-291"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>point2</span> <span class='hs-conid'>CFloat</span> <span class='hs-comment'>-- ^ Center of the rotation in the source image.</span>
 <a name="line-292"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
 <a name="line-293"></a>       <span class='hs-comment'>-- ^ Rotation angle in degrees. Positive values mean counter-clockwise</span>
 <a name="line-294"></a>       <span class='hs-comment'>-- rotation (the coordinate origin is assumed to be the top-left corner).</span>

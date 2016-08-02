@@ -7,20 +7,35 @@
 <link type='text/css' rel='stylesheet' href='hscolour.css' />
 </head>
 <body>
-<pre><a name="line-1"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Size</span>
-<a name="line-2"></a>  <span class='hs-layout'>(</span> <span class='hs-conid'>Size</span>
-<a name="line-3"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>SizeDepth</span>
-<a name="line-4"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>SizeDim</span>
-<a name="line-5"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromSize</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-6"></a>
-<a name="line-7"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>Size2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Size2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Size2d</span>
-<a name="line-8"></a>
-<a name="line-9"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize2i</span>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize2f</span>  <span class='hs-layout'>,</span> <span class='hs-conid'>ToSize2d</span>
-<a name="line-10"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>FromSize2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromSize2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>FromSize2d</span>
-<a name="line-11"></a>
-<a name="line-12"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>newSize2i</span><span class='hs-layout'>,</span> <span class='hs-varid'>newSize2f</span><span class='hs-layout'>,</span> <span class='hs-varid'>newSize2d</span>
-<a name="line-13"></a>  <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
-<a name="line-14"></a>
-<a name="line-15"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Size</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<pre><a name="line-1"></a><span class='hs-comment'>{-# language MultiParamTypeClasses #-}</span>
+<a name="line-2"></a><span class='hs-comment'>{-# language TemplateHaskell #-}</span>
+<a name="line-3"></a>
+<a name="line-4"></a><span class='hs-comment'>{-# OPTIONS_GHC -fno-warn-orphans #-}</span>
+<a name="line-5"></a>
+<a name="line-6"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Size</span>
+<a name="line-7"></a>    <span class='hs-layout'>(</span> <span class='hs-conid'>Size</span>
+<a name="line-8"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>IsSize</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-9"></a>
+<a name="line-10"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Size2i</span><span class='hs-layout'>,</span> <span class='hs-conid'>Size2f</span><span class='hs-layout'>,</span> <span class='hs-conid'>Size2d</span>
+<a name="line-11"></a>    <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
+<a name="line-12"></a>
+<a name="line-13"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Int</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Int32</span> <span class='hs-layout'>)</span>
+<a name="line-14"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-15"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span>     <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
+<a name="line-16"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c-cpp"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Cpp</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span> <span class='hs-layout'>(</span> <span class='hs-varid'>using</span> <span class='hs-layout'>)</span>
+<a name="line-17"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-layout'>(</span> <span class='hs-varid'>openCvCtx</span> <span class='hs-layout'>)</span>
+<a name="line-18"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-19"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Size</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-20"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Size</span><span class='hs-varop'>.</span><span class='hs-conid'>TH</span>
+<a name="line-21"></a>
+<a name="line-22"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-23"></a>
+<a name="line-24"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>context</span> <span class='hs-varid'>openCvCtx</span>
+<a name="line-25"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/core.hpp"</span>
+<a name="line-26"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>using</span> <span class='hs-str'>"namespace cv"</span>
+<a name="line-27"></a>
+<a name="line-28"></a><a name="mkSizeType"></a><span class='hs-definition'>mkSizeType</span> <span class='hs-str'>"Size2i"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Int32</span>   <span class='hs-str'>"int32_t"</span>
+<a name="line-29"></a><span class='hs-definition'>mkSizeType</span> <span class='hs-str'>"Size2f"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CFloat</span>  <span class='hs-str'>"float"</span>
+<a name="line-30"></a><span class='hs-definition'>mkSizeType</span> <span class='hs-str'>"Size2d"</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>CDouble</span> <span class='hs-str'>"double"</span>
 </pre></body>
 </html>

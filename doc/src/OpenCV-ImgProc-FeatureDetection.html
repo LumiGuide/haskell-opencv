@@ -7,467 +7,473 @@
 <link type='text/css' rel='stylesheet' href='hscolour.css' />
 </head>
 <body>
-<pre><a name="line-1"></a><span class='hs-comment'>{-# language QuasiQuotes #-}</span>
-<a name="line-2"></a><span class='hs-comment'>{-# language TemplateHaskell #-}</span>
-<a name="line-3"></a><span class='hs-comment'>{-# language NoImplicitPrelude #-}</span>
-<a name="line-4"></a><span class='hs-comment'>{-# language CPP #-}</span>
-<a name="line-5"></a>
-<a name="line-6"></a><span class='hs-cpp'>#if __GLASGOW_HASKELL__ &gt;= 800</span>
-<a name="line-7"></a><span class='hs-comment'>{-# options_ghc -Wno-redundant-constraints #-}</span>
-<a name="line-8"></a><span class='hs-cpp'>#endif</span>
+<pre><a name="line-1"></a><span class='hs-comment'>{-# language CPP #-}</span>
+<a name="line-2"></a><span class='hs-comment'>{-# language DeriveFunctor #-}</span>
+<a name="line-3"></a><span class='hs-comment'>{-# language DeriveTraversable #-}</span>
+<a name="line-4"></a><span class='hs-comment'>{-# language MultiParamTypeClasses #-}</span>
+<a name="line-5"></a><span class='hs-comment'>{-# language NoImplicitPrelude #-}</span>
+<a name="line-6"></a><span class='hs-comment'>{-# language QuasiQuotes #-}</span>
+<a name="line-7"></a><span class='hs-comment'>{-# language TemplateHaskell #-}</span>
+<a name="line-8"></a><span class='hs-comment'>{-# language UndecidableInstances #-}</span>
 <a name="line-9"></a>
-<a name="line-10"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>ImgProc</span><span class='hs-varop'>.</span><span class='hs-conid'>FeatureDetection</span>
-<a name="line-11"></a>    <span class='hs-layout'>(</span> <span class='hs-varid'>canny</span>
-<a name="line-12"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>goodFeaturesToTrack</span>
-<a name="line-13"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>houghCircles</span>
-<a name="line-14"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>houghLinesP</span>
-<a name="line-15"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-16"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>CannyNorm</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-17"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Circle</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-18"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>LineSegment</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-19"></a>    <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
-<a name="line-20"></a>
-<a name="line-21"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Exception</span> <span class='hs-layout'>(</span> <span class='hs-varid'>mask_</span> <span class='hs-layout'>)</span>
-<a name="line-22"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Int</span>
-<a name="line-23"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Maybe</span>
-<a name="line-24"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"vector"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>V</span>
-<a name="line-25"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Word</span>
-<a name="line-26"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Alloc</span> <span class='hs-layout'>(</span> <span class='hs-varid'>alloca</span> <span class='hs-layout'>)</span>
-<a name="line-27"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Array</span> <span class='hs-layout'>(</span> <span class='hs-varid'>peekArray</span> <span class='hs-layout'>)</span>
-<a name="line-28"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Utils</span> <span class='hs-layout'>(</span> <span class='hs-varid'>fromBool</span> <span class='hs-layout'>)</span>
-<a name="line-29"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>)</span>
-<a name="line-30"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Storable</span> <span class='hs-layout'>(</span> <span class='hs-varid'>peek</span> <span class='hs-layout'>)</span>
-<a name="line-31"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Prelude</span> <span class='hs-varid'>hiding</span> <span class='hs-layout'>(</span> <span class='hs-varid'>lines</span> <span class='hs-layout'>)</span>
-<a name="line-32"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>System</span><span class='hs-varop'>.</span><span class='hs-conid'>IO</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-layout'>(</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-layout'>)</span>
-<a name="line-33"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
-<a name="line-34"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>CU</span>
-<a name="line-35"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c-cpp"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Cpp</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
-<a name="line-36"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"linear"</span> <span class='hs-conid'>Linear</span> <span class='hs-layout'>(</span> <span class='hs-conid'>V2</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>V3</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>V4</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span> <span class='hs-layout'>)</span>
-<a name="line-37"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"primitive"</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Monad</span><span class='hs-varop'>.</span><span class='hs-conid'>Primitive</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span><span class='hs-layout'>,</span> <span class='hs-conid'>PrimState</span><span class='hs-layout'>,</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-layout'>)</span>
-<a name="line-38"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-layout'>(</span> <span class='hs-varid'>openCvCtx</span> <span class='hs-layout'>)</span>
-<a name="line-39"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
-<a name="line-40"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
-<a name="line-41"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Mat</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
-<a name="line-42"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Exception</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
-<a name="line-43"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>TypeLevel</span>
-<a name="line-44"></a>
-<a name="line-45"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
-<a name="line-46"></a>
-<a name="line-47"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>context</span> <span class='hs-varid'>openCvCtx</span>
-<a name="line-48"></a>
-<a name="line-49"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/core.hpp"</span>
-<a name="line-50"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/imgproc.hpp"</span>
-<a name="line-51"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>using</span> <span class='hs-str'>"namespace cv"</span>
+<a name="line-10"></a><span class='hs-cpp'>#if __GLASGOW_HASKELL__ &gt;= 800</span>
+<a name="line-11"></a><span class='hs-comment'>{-# options_ghc -Wno-redundant-constraints #-}</span>
+<a name="line-12"></a><span class='hs-cpp'>#endif</span>
+<a name="line-13"></a>
+<a name="line-14"></a><span class='hs-keyword'>module</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>ImgProc</span><span class='hs-varop'>.</span><span class='hs-conid'>FeatureDetection</span>
+<a name="line-15"></a>    <span class='hs-layout'>(</span> <span class='hs-varid'>canny</span>
+<a name="line-16"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>goodFeaturesToTrack</span>
+<a name="line-17"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>houghCircles</span>
+<a name="line-18"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>houghLinesP</span>
+<a name="line-19"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-20"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>CannyNorm</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-21"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Circle</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-22"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>LineSegment</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
+<a name="line-23"></a>    <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
+<a name="line-24"></a>
+<a name="line-25"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Exception</span> <span class='hs-layout'>(</span> <span class='hs-varid'>mask_</span> <span class='hs-layout'>)</span>
+<a name="line-26"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Int</span>
+<a name="line-27"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Maybe</span>
+<a name="line-28"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"vector"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>V</span>
+<a name="line-29"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Word</span>
+<a name="line-30"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Alloc</span> <span class='hs-layout'>(</span> <span class='hs-varid'>alloca</span> <span class='hs-layout'>)</span>
+<a name="line-31"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Array</span> <span class='hs-layout'>(</span> <span class='hs-varid'>peekArray</span> <span class='hs-layout'>)</span>
+<a name="line-32"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Marshal</span><span class='hs-varop'>.</span><span class='hs-conid'>Utils</span> <span class='hs-layout'>(</span> <span class='hs-varid'>fromBool</span> <span class='hs-layout'>)</span>
+<a name="line-33"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>)</span>
+<a name="line-34"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Foreign</span><span class='hs-varop'>.</span><span class='hs-conid'>Storable</span> <span class='hs-layout'>(</span> <span class='hs-varid'>peek</span> <span class='hs-layout'>)</span>
+<a name="line-35"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Prelude</span> <span class='hs-varid'>hiding</span> <span class='hs-layout'>(</span> <span class='hs-varid'>lines</span> <span class='hs-layout'>)</span>
+<a name="line-36"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>System</span><span class='hs-varop'>.</span><span class='hs-conid'>IO</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-layout'>(</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-layout'>)</span>
+<a name="line-37"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
+<a name="line-38"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Unsafe</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>CU</span>
+<a name="line-39"></a><span class='hs-keyword'>import</span> <span class='hs-keyword'>qualified</span> <span class='hs-str'>"inline-c-cpp"</span> <span class='hs-conid'>Language</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span><span class='hs-varop'>.</span><span class='hs-conid'>Cpp</span> <span class='hs-keyword'>as</span> <span class='hs-conid'>C</span>
+<a name="line-40"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"linear"</span> <span class='hs-conid'>Linear</span> <span class='hs-layout'>(</span> <span class='hs-conid'>V2</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>V3</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>V4</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span> <span class='hs-layout'>)</span>
+<a name="line-41"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"primitive"</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Monad</span><span class='hs-varop'>.</span><span class='hs-conid'>Primitive</span> <span class='hs-layout'>(</span> <span class='hs-conid'>PrimMonad</span><span class='hs-layout'>,</span> <span class='hs-conid'>PrimState</span><span class='hs-layout'>,</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-layout'>)</span>
+<a name="line-42"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Inline</span> <span class='hs-layout'>(</span> <span class='hs-varid'>openCvCtx</span> <span class='hs-layout'>)</span>
+<a name="line-43"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-44"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span>
+<a name="line-45"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Core</span><span class='hs-varop'>.</span><span class='hs-conid'>Types</span><span class='hs-varop'>.</span><span class='hs-conid'>Mat</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-46"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>Exception</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-47"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"this"</span> <span class='hs-conid'>OpenCV</span><span class='hs-varop'>.</span><span class='hs-conid'>TypeLevel</span>
+<a name="line-48"></a><span class='hs-cpp'>#if MIN_VERSION_base(4,9,0)</span>
+<a name="line-49"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Foldable</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Foldable</span> <span class='hs-layout'>)</span>
+<a name="line-50"></a><span class='hs-keyword'>import</span> <span class='hs-str'>"base"</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Traversable</span> <span class='hs-layout'>(</span> <span class='hs-conid'>Traversable</span> <span class='hs-layout'>)</span>
+<a name="line-51"></a><span class='hs-cpp'>#endif</span>
 <a name="line-52"></a>
 <a name="line-53"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
-<a name="line-54"></a><span class='hs-comment'>-- Feature Detection</span>
-<a name="line-55"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-54"></a>
+<a name="line-55"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>context</span> <span class='hs-varid'>openCvCtx</span>
 <a name="line-56"></a>
-<a name="line-57"></a><a name="canny"></a><span class='hs-comment'>{- |
-<a name="line-58"></a>
-<a name="line-59"></a>Finds edges in an image using the
-<a name="line-60"></a>&lt;<a href="http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html#canny86">http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html#canny86</a> Canny86&gt;
-<a name="line-61"></a>algorithm.
-<a name="line-62"></a>
-<a name="line-63"></a>Example:
+<a name="line-57"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/core.hpp"</span>
+<a name="line-58"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>include</span> <span class='hs-str'>"opencv2/imgproc.hpp"</span>
+<a name="line-59"></a><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>using</span> <span class='hs-str'>"namespace cv"</span>
+<a name="line-60"></a>
+<a name="line-61"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
+<a name="line-62"></a><span class='hs-comment'>-- Feature Detection</span>
+<a name="line-63"></a><span class='hs-comment'>--------------------------------------------------------------------------------</span>
 <a name="line-64"></a>
-<a name="line-65"></a>@
-<a name="line-66"></a>cannyImg
-<a name="line-67"></a>    :: forall shape channels depth
-<a name="line-68"></a>     . (Mat shape channels depth ~ Lambda)
-<a name="line-69"></a>    =&gt; Mat shape ('S 1) depth
-<a name="line-70"></a>cannyImg = exceptError $
-<a name="line-71"></a>  canny 30 200 Nothing CannyNormL1 lambda
-<a name="line-72"></a>@
-<a name="line-73"></a>
-<a name="line-74"></a>&lt;&lt;doc/generated/examples/cannyImg.png cannyImg&gt;&gt;
-<a name="line-75"></a>
-<a name="line-76"></a>-}</span>
-<a name="line-77"></a><span class='hs-definition'>canny</span>
-<a name="line-78"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Double</span>
-<a name="line-79"></a>       <span class='hs-comment'>-- ^ First threshold for the hysteresis procedure.</span>
-<a name="line-80"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-81"></a>       <span class='hs-comment'>-- ^ Second threshold for the hysteresis procedure.</span>
-<a name="line-82"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
-<a name="line-83"></a>       <span class='hs-comment'>-- ^ Aperture size for the @Sobel()@ operator. If not specified defaults</span>
-<a name="line-84"></a>       <span class='hs-comment'>-- to @3@. Must be 3, 5 or 7.</span>
-<a name="line-85"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CannyNorm</span>
-<a name="line-86"></a>       <span class='hs-comment'>-- ^ A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.</span>
-<a name="line-87"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
-<a name="line-88"></a>       <span class='hs-comment'>-- ^ 8-bit input image.</span>
-<a name="line-89"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-90"></a><span class='hs-definition'>canny</span> <span class='hs-varid'>threshold1</span> <span class='hs-varid'>threshold2</span> <span class='hs-varid'>apertureSize</span> <span class='hs-varid'>norm</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-91"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
-<a name="line-92"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
-<a name="line-93"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-94"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-95"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-96"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Canny</span>
-<a name="line-97"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-98"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
-<a name="line-99"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshold1</span><span class='hs-layout'>)</span>
-<a name="line-100"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshold2</span><span class='hs-layout'>)</span>
-<a name="line-101"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'apertureSize</span><span class='hs-layout'>)</span>
-<a name="line-102"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>bool</span> <span class='hs-varid'>c'l2Gradient</span><span class='hs-layout'>)</span>
-<a name="line-103"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-104"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-105"></a>  <span class='hs-keyword'>where</span>
-<a name="line-106"></a>    <span class='hs-varid'>c'threshold1</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>threshold1</span>
-<a name="line-107"></a>    <span class='hs-varid'>c'threshold2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>threshold2</span>
-<a name="line-108"></a>    <span class='hs-varid'>c'apertureSize</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromMaybe</span> <span class='hs-num'>3</span> <span class='hs-varid'>apertureSize</span>
-<a name="line-109"></a>    <span class='hs-varid'>c'l2Gradient</span> <span class='hs-keyglyph'>=</span>
-<a name="line-110"></a>      <span class='hs-varid'>fromBool</span> <span class='hs-varop'>$</span>
-<a name="line-111"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>norm</span> <span class='hs-keyword'>of</span>
-<a name="line-112"></a>          <span class='hs-conid'>CannyNormL1</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>False</span>
-<a name="line-113"></a>          <span class='hs-conid'>CannyNormL2</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>True</span>
-<a name="line-114"></a>
-<a name="line-115"></a><a name="CannyNorm"></a><span class='hs-comment'>-- | A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.</span>
-<a name="line-116"></a><a name="CannyNorm"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>CannyNorm</span>
-<a name="line-117"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>CannyNormL1</span>
-<a name="line-118"></a>   <span class='hs-keyglyph'>|</span> <span class='hs-conid'>CannyNormL2</span>
-<a name="line-119"></a>   <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Eq</span><span class='hs-layout'>)</span>
-<a name="line-120"></a>
-<a name="line-121"></a><a name="Circle"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>Circle</span>
-<a name="line-122"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Circle</span>
-<a name="line-123"></a>     <span class='hs-layout'>{</span> <span class='hs-varid'>circleCenter</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span>
-<a name="line-124"></a>     <span class='hs-layout'>,</span> <span class='hs-varid'>circleRadius</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Float</span>
-<a name="line-125"></a>     <span class='hs-layout'>}</span> <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>)</span>
-<a name="line-126"></a>
-<a name="line-127"></a><a name="goodFeaturesToTrack"></a><span class='hs-comment'>{- |
+<a name="line-65"></a><a name="canny"></a><span class='hs-comment'>{- |
+<a name="line-66"></a>
+<a name="line-67"></a>Finds edges in an image using the
+<a name="line-68"></a>&lt;<a href="http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html#canny86">http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html#canny86</a> Canny86&gt;
+<a name="line-69"></a>algorithm.
+<a name="line-70"></a>
+<a name="line-71"></a>Example:
+<a name="line-72"></a>
+<a name="line-73"></a>@
+<a name="line-74"></a>cannyImg
+<a name="line-75"></a>    :: forall shape channels depth
+<a name="line-76"></a>     . (Mat shape channels depth ~ Lambda)
+<a name="line-77"></a>    =&gt; Mat shape ('S 1) depth
+<a name="line-78"></a>cannyImg = exceptError $
+<a name="line-79"></a>  canny 30 200 Nothing CannyNormL1 lambda
+<a name="line-80"></a>@
+<a name="line-81"></a>
+<a name="line-82"></a>&lt;&lt;doc/generated/examples/cannyImg.png cannyImg&gt;&gt;
+<a name="line-83"></a>
+<a name="line-84"></a>-}</span>
+<a name="line-85"></a><span class='hs-definition'>canny</span>
+<a name="line-86"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Double</span>
+<a name="line-87"></a>       <span class='hs-comment'>-- ^ First threshold for the hysteresis procedure.</span>
+<a name="line-88"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
+<a name="line-89"></a>       <span class='hs-comment'>-- ^ Second threshold for the hysteresis procedure.</span>
+<a name="line-90"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
+<a name="line-91"></a>       <span class='hs-comment'>-- ^ Aperture size for the @Sobel()@ operator. If not specified defaults</span>
+<a name="line-92"></a>       <span class='hs-comment'>-- to @3@. Must be 3, 5 or 7.</span>
+<a name="line-93"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CannyNorm</span>
+<a name="line-94"></a>       <span class='hs-comment'>-- ^ A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.</span>
+<a name="line-95"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varid'>channels</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
+<a name="line-96"></a>       <span class='hs-comment'>-- ^ 8-bit input image.</span>
+<a name="line-97"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-98"></a><span class='hs-definition'>canny</span> <span class='hs-varid'>threshold1</span> <span class='hs-varid'>threshold2</span> <span class='hs-varid'>apertureSize</span> <span class='hs-varid'>norm</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-99"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
+<a name="line-100"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<a name="line-101"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-102"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-103"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-104"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Canny</span>
+<a name="line-105"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-106"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
+<a name="line-107"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshold1</span><span class='hs-layout'>)</span>
+<a name="line-108"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshold2</span><span class='hs-layout'>)</span>
+<a name="line-109"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'apertureSize</span><span class='hs-layout'>)</span>
+<a name="line-110"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>bool</span> <span class='hs-varid'>c'l2Gradient</span><span class='hs-layout'>)</span>
+<a name="line-111"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-112"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-113"></a>  <span class='hs-keyword'>where</span>
+<a name="line-114"></a>    <span class='hs-varid'>c'threshold1</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>threshold1</span>
+<a name="line-115"></a>    <span class='hs-varid'>c'threshold2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>threshold2</span>
+<a name="line-116"></a>    <span class='hs-varid'>c'apertureSize</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromMaybe</span> <span class='hs-num'>3</span> <span class='hs-varid'>apertureSize</span>
+<a name="line-117"></a>    <span class='hs-varid'>c'l2Gradient</span> <span class='hs-keyglyph'>=</span>
+<a name="line-118"></a>      <span class='hs-varid'>fromBool</span> <span class='hs-varop'>$</span>
+<a name="line-119"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>norm</span> <span class='hs-keyword'>of</span>
+<a name="line-120"></a>          <span class='hs-conid'>CannyNormL1</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>False</span>
+<a name="line-121"></a>          <span class='hs-conid'>CannyNormL2</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>True</span>
+<a name="line-122"></a>
+<a name="line-123"></a><a name="CannyNorm"></a><span class='hs-comment'>-- | A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.</span>
+<a name="line-124"></a><a name="CannyNorm"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>CannyNorm</span>
+<a name="line-125"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>CannyNormL1</span>
+<a name="line-126"></a>   <span class='hs-keyglyph'>|</span> <span class='hs-conid'>CannyNormL2</span>
+<a name="line-127"></a>   <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Eq</span><span class='hs-layout'>)</span>
 <a name="line-128"></a>
-<a name="line-129"></a>Determines strong corners on an image.
-<a name="line-130"></a>
-<a name="line-131"></a>The function finds the most prominent corners in the image or in the specified image region.
-<a name="line-132"></a>
-<a name="line-133"></a>* Function calculates the corner quality measure at every source image pixel using the cornerMinEigenVal or cornerHarris.
-<a name="line-134"></a>* Function performs a non-maximum suppression (the local maximums in 3 x 3 neighborhood are retained).
-<a name="line-135"></a>* The corners with the minimal eigenvalue less than @𝚚𝚞𝚊𝚕𝚒𝚝𝚢𝙻𝚎𝚟𝚎𝚕 * max(x,y) qualityMeasureMap(x,y)@ are rejected.
-<a name="line-136"></a>* The remaining corners are sorted by the quality measure in the descending order.
-<a name="line-137"></a>* Function throws away each corner for which there is a stronger corner at a distance less than maxDistance.
+<a name="line-129"></a><a name="Circle"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>Circle</span>
+<a name="line-130"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Circle</span>
+<a name="line-131"></a>     <span class='hs-layout'>{</span> <span class='hs-varid'>circleCenter</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span>
+<a name="line-132"></a>     <span class='hs-layout'>,</span> <span class='hs-varid'>circleRadius</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Float</span>
+<a name="line-133"></a>     <span class='hs-layout'>}</span> <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>)</span>
+<a name="line-134"></a>
+<a name="line-135"></a><a name="goodFeaturesToTrack"></a><span class='hs-comment'>{- |
+<a name="line-136"></a>
+<a name="line-137"></a>Determines strong corners on an image.
 <a name="line-138"></a>
-<a name="line-139"></a>Example:
+<a name="line-139"></a>The function finds the most prominent corners in the image or in the specified image region.
 <a name="line-140"></a>
-<a name="line-141"></a>@
-<a name="line-142"></a>goodFeaturesToTrackTraces
-<a name="line-143"></a>    :: forall (width    :: Nat)
-<a name="line-144"></a>              (height   :: Nat)
-<a name="line-145"></a>              (channels :: Nat)
-<a name="line-146"></a>              (depth    :: *)
-<a name="line-147"></a>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
-<a name="line-148"></a>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
-<a name="line-149"></a>goodFeaturesToTrackTraces = exceptError $ do
-<a name="line-150"></a>  imgG &lt;- cvtColor bgr gray frog
-<a name="line-151"></a>  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
-<a name="line-152"></a>  withMatM (Proxy :: Proxy [height, width])
-<a name="line-153"></a>           (Proxy :: Proxy channels)
-<a name="line-154"></a>           (Proxy :: Proxy depth)
-<a name="line-155"></a>           white $ \imgM -&gt; do
-<a name="line-156"></a>    void $ matCopyToM imgM (V2 0 0) frog Nothing
-<a name="line-157"></a>    forM_ features $ \f -&gt; do
-<a name="line-158"></a>      circle imgM (round \&lt;$&gt; f :: V2 Int32) 2 blue 5 LineType_AA 0
-<a name="line-159"></a>@
-<a name="line-160"></a>
-<a name="line-161"></a>&lt;&lt;doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces&gt;&gt;
-<a name="line-162"></a>-}</span>
-<a name="line-163"></a><span class='hs-definition'>goodFeaturesToTrack</span>
-<a name="line-164"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-varid'>depth</span> <span class='hs-varop'>`In`</span> <span class='hs-keyglyph'>[</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>,</span> <span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Float</span><span class='hs-layout'>,</span> <span class='hs-chr'>'</span><span class='hs-conid'>D</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
-<a name="line-165"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>depth</span>
-<a name="line-166"></a>  <span class='hs-comment'>-- ^ Input 8-bit or floating-point 32-bit, single-channel image.</span>
-<a name="line-167"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span>
-<a name="line-168"></a>  <span class='hs-comment'>-- ^ Maximum number of corners to return. If there are more corners than are</span>
-<a name="line-169"></a>  <span class='hs-comment'>-- found, the strongest of them is returned.</span>
-<a name="line-170"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-171"></a>  <span class='hs-comment'>-- ^ Parameter characterizing the minimal accepted quality of image corners.</span>
-<a name="line-172"></a>  <span class='hs-comment'>-- The parameter value is multiplied by the best corner quality measure,</span>
-<a name="line-173"></a>  <span class='hs-comment'>-- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris</span>
-<a name="line-174"></a>  <span class='hs-comment'>-- function response (see cornerHarris ). The corners with the quality measure</span>
-<a name="line-175"></a>  <span class='hs-comment'>-- less than the product are rejected. For example, if the best corner has the</span>
-<a name="line-176"></a>  <span class='hs-comment'>-- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with</span>
-<a name="line-177"></a>  <span class='hs-comment'>-- the quality measure less than 15 are rejected.</span>
+<a name="line-141"></a>* Function calculates the corner quality measure at every source image pixel using the cornerMinEigenVal or cornerHarris.
+<a name="line-142"></a>* Function performs a non-maximum suppression (the local maximums in 3 x 3 neighborhood are retained).
+<a name="line-143"></a>* The corners with the minimal eigenvalue less than @𝚚𝚞𝚊𝚕𝚒𝚝𝚢𝙻𝚎𝚟𝚎𝚕 * max(x,y) qualityMeasureMap(x,y)@ are rejected.
+<a name="line-144"></a>* The remaining corners are sorted by the quality measure in the descending order.
+<a name="line-145"></a>* Function throws away each corner for which there is a stronger corner at a distance less than maxDistance.
+<a name="line-146"></a>
+<a name="line-147"></a>Example:
+<a name="line-148"></a>
+<a name="line-149"></a>@
+<a name="line-150"></a>goodFeaturesToTrackTraces
+<a name="line-151"></a>    :: forall (width    :: Nat)
+<a name="line-152"></a>              (height   :: Nat)
+<a name="line-153"></a>              (channels :: Nat)
+<a name="line-154"></a>              (depth    :: *)
+<a name="line-155"></a>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
+<a name="line-156"></a>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<a name="line-157"></a>goodFeaturesToTrackTraces = exceptError $ do
+<a name="line-158"></a>  imgG &lt;- cvtColor bgr gray frog
+<a name="line-159"></a>  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
+<a name="line-160"></a>  withMatM (Proxy :: Proxy [height, width])
+<a name="line-161"></a>           (Proxy :: Proxy channels)
+<a name="line-162"></a>           (Proxy :: Proxy depth)
+<a name="line-163"></a>           white $ \imgM -&gt; do
+<a name="line-164"></a>    void $ matCopyToM imgM (V2 0 0) frog Nothing
+<a name="line-165"></a>    forM_ features $ \f -&gt; do
+<a name="line-166"></a>      circle imgM (round \&lt;$&gt; f :: V2 Int32) 2 blue 5 LineType_AA 0
+<a name="line-167"></a>@
+<a name="line-168"></a>
+<a name="line-169"></a>&lt;&lt;doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces&gt;&gt;
+<a name="line-170"></a>-}</span>
+<a name="line-171"></a><span class='hs-definition'>goodFeaturesToTrack</span>
+<a name="line-172"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-varid'>depth</span> <span class='hs-varop'>`In`</span> <span class='hs-keyglyph'>[</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>,</span> <span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Float</span><span class='hs-layout'>,</span> <span class='hs-chr'>'</span><span class='hs-conid'>D</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
+<a name="line-173"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-varid'>depth</span>
+<a name="line-174"></a>  <span class='hs-comment'>-- ^ Input 8-bit or floating-point 32-bit, single-channel image.</span>
+<a name="line-175"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span>
+<a name="line-176"></a>  <span class='hs-comment'>-- ^ Maximum number of corners to return. If there are more corners than are</span>
+<a name="line-177"></a>  <span class='hs-comment'>-- found, the strongest of them is returned.</span>
 <a name="line-178"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-179"></a>  <span class='hs-comment'>-- ^ Minimum possible Euclidean distance between the returned corners.</span>
-<a name="line-180"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-181"></a>  <span class='hs-comment'>-- ^ Optional region of interest. If the image is not empty (it needs to have</span>
-<a name="line-182"></a>  <span class='hs-comment'>-- the type CV_8UC1 and the same size as image ), it specifies the region in which</span>
-<a name="line-183"></a>  <span class='hs-comment'>-- the corners are detected.</span>
-<a name="line-184"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
-<a name="line-185"></a>  <span class='hs-comment'>-- ^ Size of an average block for computing a derivative covariation matrix</span>
-<a name="line-186"></a>  <span class='hs-comment'>-- over each pixel neighborhood. See cornerEigenValsAndVecs.</span>
-<a name="line-187"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span>
-<a name="line-188"></a>  <span class='hs-comment'>-- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)</span>
-<a name="line-189"></a>  <span class='hs-comment'>-- or cornerMinEigenVal.</span>
-<a name="line-190"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span><span class='hs-layout'>)</span>
-<a name="line-191"></a><span class='hs-definition'>goodFeaturesToTrack</span> <span class='hs-varid'>src</span> <span class='hs-varid'>maxCorners</span> <span class='hs-varid'>qualityLevel</span> <span class='hs-varid'>minDistance</span> <span class='hs-varid'>mbMask</span> <span class='hs-varid'>blockSize</span> <span class='hs-varid'>detector</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-192"></a>  <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span>  <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-193"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mbMask</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>mskPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-194"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>cornersLengthsPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-195"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Point2f</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-196"></a>    <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
-<a name="line-197"></a>      <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>corners</span><span class='hs-layout'>;</span>
-<a name="line-198"></a>      <span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>mskPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>mskPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-199"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>goodFeaturesToTrack</span>
-<a name="line-200"></a>      <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-201"></a>      <span class='hs-layout'>,</span> <span class='hs-varid'>corners</span>
-<a name="line-202"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>maxCorners</span><span class='hs-layout'>)</span>
-<a name="line-203"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'qualityLevel</span><span class='hs-layout'>)</span>
-<a name="line-204"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'minDistance</span><span class='hs-layout'>)</span>
-<a name="line-205"></a>      <span class='hs-layout'>,</span> <span class='hs-varid'>mskPtr</span> <span class='hs-varop'>?</span> <span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varop'>*</span><span class='hs-varid'>mskPtr</span><span class='hs-layout'>)</span> <span class='hs-conop'>:</span> <span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>noArray</span><span class='hs-conid'>()</span><span class='hs-layout'>)</span>
-<a name="line-206"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'blockSize</span><span class='hs-layout'>)</span>
-<a name="line-207"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>bool</span> <span class='hs-varid'>c'useHarrisDetector</span><span class='hs-layout'>)</span>
-<a name="line-208"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'harrisK</span><span class='hs-layout'>)</span>
-<a name="line-209"></a>      <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-210"></a>
-<a name="line-211"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-212"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
-<a name="line-213"></a>      <span class='hs-varop'>*</span><span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>cornersPtr</span><span class='hs-layout'>;</span>
-<a name="line-214"></a>
-<a name="line-215"></a>      <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersLengthsPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
-<a name="line-216"></a>
-<a name="line-217"></a>      <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>i</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span> <span class='hs-layout'>{</span>
-<a name="line-218"></a>        <span class='hs-varid'>cornersPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-layout'>(</span> <span class='hs-varid'>corners</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-219"></a>      <span class='hs-layout'>}</span>
-<a name="line-220"></a>    <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-221"></a>    <span class='hs-varid'>numCorners</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>cornersLengthsPtr</span>
-<a name="line-222"></a>    <span class='hs-varid'>cornersPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>cornersPtrPtr</span>
-<a name="line-223"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>corners</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span>
-<a name="line-224"></a>        <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numCorners</span> <span class='hs-varid'>cornersPtr</span> <span class='hs-varop'>&gt;&gt;=</span>
-<a name="line-225"></a>        <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromCFloat</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPoint</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span>
-<a name="line-226"></a>    <span class='hs-keyglyph'>[</span><span class='hs-conid'>CU</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
-<a name="line-227"></a>      <span class='hs-varid'>delete</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-179"></a>  <span class='hs-comment'>-- ^ Parameter characterizing the minimal accepted quality of image corners.</span>
+<a name="line-180"></a>  <span class='hs-comment'>-- The parameter value is multiplied by the best corner quality measure,</span>
+<a name="line-181"></a>  <span class='hs-comment'>-- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris</span>
+<a name="line-182"></a>  <span class='hs-comment'>-- function response (see cornerHarris ). The corners with the quality measure</span>
+<a name="line-183"></a>  <span class='hs-comment'>-- less than the product are rejected. For example, if the best corner has the</span>
+<a name="line-184"></a>  <span class='hs-comment'>-- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with</span>
+<a name="line-185"></a>  <span class='hs-comment'>-- the quality measure less than 15 are rejected.</span>
+<a name="line-186"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
+<a name="line-187"></a>  <span class='hs-comment'>-- ^ Minimum possible Euclidean distance between the returned corners.</span>
+<a name="line-188"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-189"></a>  <span class='hs-comment'>-- ^ Optional region of interest. If the image is not empty (it needs to have</span>
+<a name="line-190"></a>  <span class='hs-comment'>-- the type CV_8UC1 and the same size as image ), it specifies the region in which</span>
+<a name="line-191"></a>  <span class='hs-comment'>-- the corners are detected.</span>
+<a name="line-192"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
+<a name="line-193"></a>  <span class='hs-comment'>-- ^ Size of an average block for computing a derivative covariation matrix</span>
+<a name="line-194"></a>  <span class='hs-comment'>-- over each pixel neighborhood. See cornerEigenValsAndVecs.</span>
+<a name="line-195"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span>
+<a name="line-196"></a>  <span class='hs-comment'>-- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)</span>
+<a name="line-197"></a>  <span class='hs-comment'>-- or cornerMinEigenVal.</span>
+<a name="line-198"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span><span class='hs-layout'>)</span>
+<a name="line-199"></a><span class='hs-definition'>goodFeaturesToTrack</span> <span class='hs-varid'>src</span> <span class='hs-varid'>maxCorners</span> <span class='hs-varid'>qualityLevel</span> <span class='hs-varid'>minDistance</span> <span class='hs-varid'>mbMask</span> <span class='hs-varid'>blockSize</span> <span class='hs-varid'>detector</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-200"></a>  <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span>  <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-201"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>mbMask</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>mskPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-202"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>cornersLengthsPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-203"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Point2f</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-204"></a>    <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
+<a name="line-205"></a>      <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>corners</span><span class='hs-layout'>;</span>
+<a name="line-206"></a>      <span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>mskPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>mskPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-207"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>goodFeaturesToTrack</span>
+<a name="line-208"></a>      <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-209"></a>      <span class='hs-layout'>,</span> <span class='hs-varid'>corners</span>
+<a name="line-210"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>maxCorners</span><span class='hs-layout'>)</span>
+<a name="line-211"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'qualityLevel</span><span class='hs-layout'>)</span>
+<a name="line-212"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'minDistance</span><span class='hs-layout'>)</span>
+<a name="line-213"></a>      <span class='hs-layout'>,</span> <span class='hs-varid'>mskPtr</span> <span class='hs-varop'>?</span> <span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varop'>*</span><span class='hs-varid'>mskPtr</span><span class='hs-layout'>)</span> <span class='hs-conop'>:</span> <span class='hs-sel'>_InputArray</span><span class='hs-layout'>(</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>noArray</span><span class='hs-conid'>()</span><span class='hs-layout'>)</span>
+<a name="line-214"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'blockSize</span><span class='hs-layout'>)</span>
+<a name="line-215"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>bool</span> <span class='hs-varid'>c'useHarrisDetector</span><span class='hs-layout'>)</span>
+<a name="line-216"></a>      <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'harrisK</span><span class='hs-layout'>)</span>
+<a name="line-217"></a>      <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-218"></a>
+<a name="line-219"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-220"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
+<a name="line-221"></a>      <span class='hs-varop'>*</span><span class='hs-varid'>cornersPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>cornersPtr</span><span class='hs-layout'>;</span>
+<a name="line-222"></a>
+<a name="line-223"></a>      <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersLengthsPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
+<a name="line-224"></a>
+<a name="line-225"></a>      <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>i</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>corners</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span> <span class='hs-layout'>{</span>
+<a name="line-226"></a>        <span class='hs-varid'>cornersPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Point2f</span><span class='hs-layout'>(</span> <span class='hs-varid'>corners</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-227"></a>      <span class='hs-layout'>}</span>
 <a name="line-228"></a>    <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-229"></a>    <span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span>  <span class='hs-varid'>corners</span><span class='hs-layout'>)</span>
-<a name="line-230"></a>  <span class='hs-keyword'>where</span>
-<a name="line-231"></a>    <span class='hs-varid'>c'qualityLevel</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>qualityLevel</span>
-<a name="line-232"></a>    <span class='hs-varid'>c'minDistance</span>  <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minDistance</span>
-<a name="line-233"></a>    <span class='hs-varid'>c'blockSize</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromMaybe</span> <span class='hs-num'>3</span> <span class='hs-varid'>blockSize</span>
-<a name="line-234"></a>    <span class='hs-varid'>c'useHarrisDetector</span> <span class='hs-keyglyph'>=</span>
-<a name="line-235"></a>      <span class='hs-varid'>fromBool</span> <span class='hs-varop'>$</span>
-<a name="line-236"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>detector</span> <span class='hs-keyword'>of</span>
-<a name="line-237"></a>          <span class='hs-conid'>HarrisDetector</span> <span class='hs-sel'>_kValue</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>True</span>
-<a name="line-238"></a>          <span class='hs-conid'>CornerMinEigenVal</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>False</span>
-<a name="line-239"></a>    <span class='hs-varid'>c'harrisK</span> <span class='hs-keyglyph'>=</span>
-<a name="line-240"></a>      <span class='hs-varid'>realToFrac</span> <span class='hs-varop'>$</span>
-<a name="line-241"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>detector</span> <span class='hs-keyword'>of</span>
-<a name="line-242"></a>          <span class='hs-conid'>HarrisDetector</span> <span class='hs-varid'>kValue</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>kValue</span>
-<a name="line-243"></a>          <span class='hs-conid'>CornerMinEigenVal</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-num'>0.04</span>
-<a name="line-244"></a>    <span class='hs-varid'>fromCFloat</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>CFloat</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Float</span>
-<a name="line-245"></a>    <span class='hs-varid'>fromCFloat</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span>
-<a name="line-246"></a>
-<a name="line-247"></a><a name="GoodFeaturesToTrackDetectionMethod"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span>
-<a name="line-248"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>HarrisDetector</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ Harris detector and it free k parameter</span>
-<a name="line-249"></a>   <span class='hs-keyglyph'>|</span> <span class='hs-conid'>CornerMinEigenVal</span>
-<a name="line-250"></a>   <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Eq</span><span class='hs-layout'>)</span>
-<a name="line-251"></a>
-<a name="line-252"></a><a name="houghCircles"></a><span class='hs-comment'>{- |
-<a name="line-253"></a>
-<a name="line-254"></a>Finds circles in a grayscale image using a modification of the Hough
-<a name="line-255"></a>transformation.
-<a name="line-256"></a>
-<a name="line-257"></a>Example:
-<a name="line-258"></a>
-<a name="line-259"></a>@
-<a name="line-260"></a>houghCircleTraces
-<a name="line-261"></a>    :: forall (width    :: Nat)
-<a name="line-262"></a>              (height   :: Nat)
-<a name="line-263"></a>              (channels :: Nat)
-<a name="line-264"></a>              (depth    :: *)
-<a name="line-265"></a>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Circles_1000x625)
-<a name="line-266"></a>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
-<a name="line-267"></a>houghCircleTraces = exceptError $ do
-<a name="line-268"></a>  imgG &lt;- cvtColor bgr gray circles_1000x625
-<a name="line-269"></a>  let circles = houghCircles 1 10 Nothing Nothing Nothing Nothing imgG
-<a name="line-270"></a>  withMatM (Proxy :: Proxy [height, width])
-<a name="line-271"></a>           (Proxy :: Proxy channels)
-<a name="line-272"></a>           (Proxy :: Proxy depth)
-<a name="line-273"></a>           white $ \imgM -&gt; do
-<a name="line-274"></a>    void $ matCopyToM imgM (V2 0 0) circles_1000x625 Nothing
-<a name="line-275"></a>    forM_ circles $ \c -&gt; do
-<a name="line-276"></a>      circle imgM (round \&lt;$&gt; circleCenter c :: V2 Int32) (round (circleRadius c)) blue 1 LineType_AA 0
-<a name="line-277"></a>@
-<a name="line-278"></a>
-<a name="line-279"></a>&lt;&lt;doc/generated/examples/houghCircleTraces.png houghCircleTraces&gt;&gt;
-<a name="line-280"></a>-}</span>
-<a name="line-281"></a><span class='hs-definition'>houghCircles</span>
-<a name="line-282"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Double</span>
-<a name="line-283"></a>     <span class='hs-comment'>-- ^ Inverse ratio of the accumulator resolution to the image resolution.</span>
-<a name="line-284"></a>     <span class='hs-comment'>-- For example, if @dp=1@, the accumulator has the same resolution as the</span>
-<a name="line-285"></a>     <span class='hs-comment'>-- input image. If @dp=2@, the accumulator has half as big width and height.</span>
-<a name="line-286"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-287"></a>     <span class='hs-comment'>-- ^ Minimum distance between the centers of the detected circles. If the</span>
-<a name="line-288"></a>     <span class='hs-comment'>-- parameter is too small, multiple neighbor circles may be falsely</span>
-<a name="line-289"></a>     <span class='hs-comment'>-- detected in addition to a true one. If it is too large, some circles may</span>
-<a name="line-290"></a>     <span class='hs-comment'>-- be missed.</span>
-<a name="line-291"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
-<a name="line-292"></a>     <span class='hs-comment'>-- ^ The higher threshold of the two passed to the 'canny' edge detector</span>
-<a name="line-293"></a>     <span class='hs-comment'>-- (the lower one is twice smaller). Default is 100.</span>
-<a name="line-294"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
-<a name="line-295"></a>     <span class='hs-comment'>-- ^ The accumulator threshold for the circle centers at the detection</span>
-<a name="line-296"></a>     <span class='hs-comment'>-- stage. The smaller it is, the more false circles may be detected.</span>
-<a name="line-297"></a>     <span class='hs-comment'>-- Circles, corresponding to the larger accumulator values, will be returned</span>
-<a name="line-298"></a>     <span class='hs-comment'>-- first. Default is 100.</span>
-<a name="line-299"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
-<a name="line-300"></a>     <span class='hs-comment'>-- ^ Minimum circle radius.</span>
-<a name="line-301"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
-<a name="line-302"></a>     <span class='hs-comment'>-- ^ Maximum circle radius.</span>
-<a name="line-303"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>w</span><span class='hs-layout'>,</span><span class='hs-varid'>h</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
-<a name="line-304"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-conid'>Circle</span>
-<a name="line-305"></a><span class='hs-definition'>houghCircles</span> <span class='hs-varid'>dp</span> <span class='hs-varid'>minDist</span> <span class='hs-varid'>param1</span> <span class='hs-varid'>param2</span> <span class='hs-varid'>minRadius</span> <span class='hs-varid'>maxRadius</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-varop'>$</span>
-<a name="line-306"></a>  <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-307"></a>  <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>circleLengthsPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-308"></a>  <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Vec3f</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-309"></a>    <span class='hs-keyword'>_</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-310"></a>      <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>circles</span><span class='hs-layout'>;</span>
-<a name="line-311"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>HoughCircles</span><span class='hs-layout'>(</span>
-<a name="line-312"></a>        <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-313"></a>        <span class='hs-varid'>circles</span><span class='hs-layout'>,</span>
-<a name="line-314"></a>        <span class='hs-conid'>CV_HOUGH_GRADIENT</span><span class='hs-layout'>,</span>
-<a name="line-315"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'dp</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-316"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'minDist</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-317"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'param1</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-318"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'param2</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-319"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'minRadius</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
-<a name="line-320"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'maxRadius</span><span class='hs-layout'>)</span>
-<a name="line-321"></a>      <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-322"></a>
-<a name="line-323"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-324"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
-<a name="line-325"></a>      <span class='hs-varop'>*</span><span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>circlesPtr</span><span class='hs-layout'>;</span>
-<a name="line-326"></a>
-<a name="line-327"></a>      <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circleLengthsPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
+<a name="line-229"></a>    <span class='hs-varid'>numCorners</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>cornersLengthsPtr</span>
+<a name="line-230"></a>    <span class='hs-varid'>cornersPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>cornersPtrPtr</span>
+<a name="line-231"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>corners</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span>
+<a name="line-232"></a>        <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numCorners</span> <span class='hs-varid'>cornersPtr</span> <span class='hs-varop'>&gt;&gt;=</span>
+<a name="line-233"></a>        <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromCFloat</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPoint</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span>
+<a name="line-234"></a>    <span class='hs-keyglyph'>[</span><span class='hs-conid'>CU</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
+<a name="line-235"></a>      <span class='hs-varid'>delete</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Point2f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>cornersPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-236"></a>    <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-237"></a>    <span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span>  <span class='hs-varid'>corners</span><span class='hs-layout'>)</span>
+<a name="line-238"></a>  <span class='hs-keyword'>where</span>
+<a name="line-239"></a>    <span class='hs-varid'>c'qualityLevel</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>qualityLevel</span>
+<a name="line-240"></a>    <span class='hs-varid'>c'minDistance</span>  <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minDistance</span>
+<a name="line-241"></a>    <span class='hs-varid'>c'blockSize</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromMaybe</span> <span class='hs-num'>3</span> <span class='hs-varid'>blockSize</span>
+<a name="line-242"></a>    <span class='hs-varid'>c'useHarrisDetector</span> <span class='hs-keyglyph'>=</span>
+<a name="line-243"></a>      <span class='hs-varid'>fromBool</span> <span class='hs-varop'>$</span>
+<a name="line-244"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>detector</span> <span class='hs-keyword'>of</span>
+<a name="line-245"></a>          <span class='hs-conid'>HarrisDetector</span> <span class='hs-sel'>_kValue</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>True</span>
+<a name="line-246"></a>          <span class='hs-conid'>CornerMinEigenVal</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>False</span>
+<a name="line-247"></a>    <span class='hs-varid'>c'harrisK</span> <span class='hs-keyglyph'>=</span>
+<a name="line-248"></a>      <span class='hs-varid'>realToFrac</span> <span class='hs-varop'>$</span>
+<a name="line-249"></a>        <span class='hs-keyword'>case</span> <span class='hs-varid'>detector</span> <span class='hs-keyword'>of</span>
+<a name="line-250"></a>          <span class='hs-conid'>HarrisDetector</span> <span class='hs-varid'>kValue</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>kValue</span>
+<a name="line-251"></a>          <span class='hs-conid'>CornerMinEigenVal</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-num'>0.04</span>
+<a name="line-252"></a>
+<a name="line-253"></a><a name="GoodFeaturesToTrackDetectionMethod"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>GoodFeaturesToTrackDetectionMethod</span>
+<a name="line-254"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>HarrisDetector</span> <span class='hs-conid'>Double</span> <span class='hs-comment'>-- ^ Harris detector and it free k parameter</span>
+<a name="line-255"></a>   <span class='hs-keyglyph'>|</span> <span class='hs-conid'>CornerMinEigenVal</span>
+<a name="line-256"></a>   <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Eq</span><span class='hs-layout'>)</span>
+<a name="line-257"></a>
+<a name="line-258"></a><a name="houghCircles"></a><span class='hs-comment'>{- |
+<a name="line-259"></a>
+<a name="line-260"></a>Finds circles in a grayscale image using a modification of the Hough
+<a name="line-261"></a>transformation.
+<a name="line-262"></a>
+<a name="line-263"></a>Example:
+<a name="line-264"></a>
+<a name="line-265"></a>@
+<a name="line-266"></a>houghCircleTraces
+<a name="line-267"></a>    :: forall (width    :: Nat)
+<a name="line-268"></a>              (height   :: Nat)
+<a name="line-269"></a>              (channels :: Nat)
+<a name="line-270"></a>              (depth    :: *)
+<a name="line-271"></a>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Circles_1000x625)
+<a name="line-272"></a>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<a name="line-273"></a>houghCircleTraces = exceptError $ do
+<a name="line-274"></a>  imgG &lt;- cvtColor bgr gray circles_1000x625
+<a name="line-275"></a>  let circles = houghCircles 1 10 Nothing Nothing Nothing Nothing imgG
+<a name="line-276"></a>  withMatM (Proxy :: Proxy [height, width])
+<a name="line-277"></a>           (Proxy :: Proxy channels)
+<a name="line-278"></a>           (Proxy :: Proxy depth)
+<a name="line-279"></a>           white $ \imgM -&gt; do
+<a name="line-280"></a>    void $ matCopyToM imgM (V2 0 0) circles_1000x625 Nothing
+<a name="line-281"></a>    forM_ circles $ \c -&gt; do
+<a name="line-282"></a>      circle imgM (round \&lt;$&gt; circleCenter c :: V2 Int32) (round (circleRadius c)) blue 1 LineType_AA 0
+<a name="line-283"></a>@
+<a name="line-284"></a>
+<a name="line-285"></a>&lt;&lt;doc/generated/examples/houghCircleTraces.png houghCircleTraces&gt;&gt;
+<a name="line-286"></a>-}</span>
+<a name="line-287"></a><span class='hs-definition'>houghCircles</span>
+<a name="line-288"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Double</span>
+<a name="line-289"></a>     <span class='hs-comment'>-- ^ Inverse ratio of the accumulator resolution to the image resolution.</span>
+<a name="line-290"></a>     <span class='hs-comment'>-- For example, if @dp=1@, the accumulator has the same resolution as the</span>
+<a name="line-291"></a>     <span class='hs-comment'>-- input image. If @dp=2@, the accumulator has half as big width and height.</span>
+<a name="line-292"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
+<a name="line-293"></a>     <span class='hs-comment'>-- ^ Minimum distance between the centers of the detected circles. If the</span>
+<a name="line-294"></a>     <span class='hs-comment'>-- parameter is too small, multiple neighbor circles may be falsely</span>
+<a name="line-295"></a>     <span class='hs-comment'>-- detected in addition to a true one. If it is too large, some circles may</span>
+<a name="line-296"></a>     <span class='hs-comment'>-- be missed.</span>
+<a name="line-297"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
+<a name="line-298"></a>     <span class='hs-comment'>-- ^ The higher threshold of the two passed to the 'canny' edge detector</span>
+<a name="line-299"></a>     <span class='hs-comment'>-- (the lower one is twice smaller). Default is 100.</span>
+<a name="line-300"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
+<a name="line-301"></a>     <span class='hs-comment'>-- ^ The accumulator threshold for the circle centers at the detection</span>
+<a name="line-302"></a>     <span class='hs-comment'>-- stage. The smaller it is, the more false circles may be detected.</span>
+<a name="line-303"></a>     <span class='hs-comment'>-- Circles, corresponding to the larger accumulator values, will be returned</span>
+<a name="line-304"></a>     <span class='hs-comment'>-- first. Default is 100.</span>
+<a name="line-305"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
+<a name="line-306"></a>     <span class='hs-comment'>-- ^ Minimum circle radius.</span>
+<a name="line-307"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Int32</span>
+<a name="line-308"></a>     <span class='hs-comment'>-- ^ Maximum circle radius.</span>
+<a name="line-309"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>w</span><span class='hs-layout'>,</span><span class='hs-varid'>h</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
+<a name="line-310"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-conid'>Circle</span>
+<a name="line-311"></a><span class='hs-definition'>houghCircles</span> <span class='hs-varid'>dp</span> <span class='hs-varid'>minDist</span> <span class='hs-varid'>param1</span> <span class='hs-varid'>param2</span> <span class='hs-varid'>minRadius</span> <span class='hs-varid'>maxRadius</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePerformIO</span> <span class='hs-varop'>$</span>
+<a name="line-312"></a>  <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-313"></a>  <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>circleLengthsPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-314"></a>  <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Vec3f</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-315"></a>    <span class='hs-keyword'>_</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-316"></a>      <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>circles</span><span class='hs-layout'>;</span>
+<a name="line-317"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>HoughCircles</span><span class='hs-layout'>(</span>
+<a name="line-318"></a>        <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-319"></a>        <span class='hs-varid'>circles</span><span class='hs-layout'>,</span>
+<a name="line-320"></a>        <span class='hs-conid'>CV_HOUGH_GRADIENT</span><span class='hs-layout'>,</span>
+<a name="line-321"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'dp</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-322"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'minDist</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-323"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'param1</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-324"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'param2</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-325"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'minRadius</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span>
+<a name="line-326"></a>        <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'maxRadius</span><span class='hs-layout'>)</span>
+<a name="line-327"></a>      <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
 <a name="line-328"></a>
-<a name="line-329"></a>      <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>i</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span> <span class='hs-layout'>{</span>
-<a name="line-330"></a>        <span class='hs-varid'>circlesPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-layout'>(</span> <span class='hs-varid'>circles</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-331"></a>      <span class='hs-layout'>}</span>
-<a name="line-332"></a>    <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-333"></a>    <span class='hs-varid'>numCircles</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>circleLengthsPtr</span>
-<a name="line-334"></a>    <span class='hs-varid'>circlesPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>circlesPtrPtr</span>
-<a name="line-335"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>circles</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>V3</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span>
-<a name="line-336"></a>        <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numCircles</span> <span class='hs-varid'>circlesPtr</span> <span class='hs-varop'>&gt;&gt;=</span>
-<a name="line-337"></a>        <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromCFloat</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromVec</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span>
-<a name="line-338"></a>    <span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span> <span class='hs-layout'>(</span><span class='hs-varid'>map</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-conid'>V3</span> <span class='hs-varid'>x</span> <span class='hs-varid'>y</span> <span class='hs-varid'>r</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Circle</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>x</span> <span class='hs-varid'>y</span><span class='hs-layout'>)</span> <span class='hs-varid'>r</span><span class='hs-layout'>)</span> <span class='hs-varid'>circles</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-339"></a>  <span class='hs-keyword'>where</span> <span class='hs-varid'>c'dp</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>dp</span>
-<a name="line-340"></a>        <span class='hs-varid'>c'minDist</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minDist</span>
-<a name="line-341"></a>        <span class='hs-varid'>c'param1</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>100</span> <span class='hs-varid'>param1</span><span class='hs-layout'>)</span>
-<a name="line-342"></a>        <span class='hs-varid'>c'param2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>100</span> <span class='hs-varid'>param2</span><span class='hs-layout'>)</span>
-<a name="line-343"></a>        <span class='hs-varid'>c'minRadius</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>minRadius</span><span class='hs-layout'>)</span>
-<a name="line-344"></a>        <span class='hs-varid'>c'maxRadius</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>maxRadius</span><span class='hs-layout'>)</span>
-<a name="line-345"></a>        <span class='hs-varid'>fromCFloat</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-conid'>CFloat</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Float</span>
-<a name="line-346"></a>        <span class='hs-varid'>fromCFloat</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span>
-<a name="line-347"></a>
-<a name="line-348"></a><a name="LineSegment"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>LineSegment</span>
-<a name="line-349"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>LineSegment</span>
-<a name="line-350"></a>     <span class='hs-layout'>{</span> <span class='hs-varid'>lineSegmentStart</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>!</span><span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span>
-<a name="line-351"></a>     <span class='hs-layout'>,</span> <span class='hs-varid'>lineSegmentStop</span>  <span class='hs-keyglyph'>::</span> <span class='hs-varop'>!</span><span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span>
-<a name="line-352"></a>     <span class='hs-layout'>}</span> <span class='hs-keyword'>deriving</span> <span class='hs-conid'>Show</span>
-<a name="line-353"></a>
-<a name="line-354"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>instance</span> <span class='hs-conid'>VecDepth</span> <span class='hs-conid'>LineSegment</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Int32</span>
-<a name="line-355"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>instance</span> <span class='hs-conid'>VecDim</span>   <span class='hs-conid'>LineSegment</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>4</span>
-<a name="line-356"></a>
-<a name="line-357"></a><a name="instance%20FromVec%20LineSegment"></a><span class='hs-keyword'>instance</span> <span class='hs-conid'>FromVec</span> <span class='hs-conid'>LineSegment</span> <span class='hs-keyword'>where</span>
-<a name="line-358"></a>    <span class='hs-varid'>fromVec</span> <span class='hs-varid'>vec</span> <span class='hs-keyglyph'>=</span>
-<a name="line-359"></a>        <span class='hs-conid'>LineSegment</span>
-<a name="line-360"></a>        <span class='hs-layout'>{</span> <span class='hs-varid'>lineSegmentStart</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>V2</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span>
-<a name="line-361"></a>        <span class='hs-layout'>,</span> <span class='hs-varid'>lineSegmentStop</span>  <span class='hs-keyglyph'>=</span> <span class='hs-conid'>V2</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span>
-<a name="line-362"></a>        <span class='hs-layout'>}</span>
-<a name="line-363"></a>      <span class='hs-keyword'>where</span>
-<a name="line-364"></a>        <span class='hs-conid'>V4</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromVec</span> <span class='hs-varid'>vec</span>
-<a name="line-365"></a>
-<a name="line-366"></a><a name="houghLinesP"></a><span class='hs-comment'>{- |
-<a name="line-367"></a>Example:
-<a name="line-368"></a>
-<a name="line-369"></a>@
-<a name="line-370"></a>houghLinesPTraces
-<a name="line-371"></a>  :: forall (width    :: Nat)
-<a name="line-372"></a>            (height   :: Nat)
-<a name="line-373"></a>            (channels :: Nat)
-<a name="line-374"></a>            (depth    :: *  )
-<a name="line-375"></a>   . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Building_868x600)
-<a name="line-376"></a>  =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
-<a name="line-377"></a>houghLinesPTraces = exceptError $ do
-<a name="line-378"></a>    edgeImg &lt;- canny 50 200 Nothing CannyNormL1 building_868x600
-<a name="line-379"></a>    edgeImgBgr &lt;- cvtColor gray bgr edgeImg
-<a name="line-380"></a>    withMatM (Proxy :: Proxy [height, width])
-<a name="line-381"></a>             (Proxy :: Proxy channels)
-<a name="line-382"></a>             (Proxy :: Proxy depth)
-<a name="line-383"></a>             white $ \imgM -&gt; do
-<a name="line-384"></a>      edgeImgM &lt;- thaw edgeImg
-<a name="line-385"></a>      lineSegments &lt;- houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
-<a name="line-386"></a>      void $ matCopyToM imgM (V2 0 0) edgeImgBgr Nothing
-<a name="line-387"></a>      forM_ lineSegments $ \lineSegment -&gt; do
-<a name="line-388"></a>        line imgM
-<a name="line-389"></a>             (lineSegmentStart lineSegment)
-<a name="line-390"></a>             (lineSegmentStop  lineSegment)
-<a name="line-391"></a>             red 2 LineType_8 0
-<a name="line-392"></a>@
-<a name="line-393"></a>
-<a name="line-394"></a>&lt;&lt;doc/generated/examples/houghLinesPTraces.png houghLinesPTraces&gt;&gt;
-<a name="line-395"></a>-}</span>
-<a name="line-396"></a><span class='hs-definition'>houghLinesP</span>
-<a name="line-397"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
-<a name="line-398"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-399"></a>     <span class='hs-comment'>-- ^ Distance resolution of the accumulator in pixels.</span>
-<a name="line-400"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
-<a name="line-401"></a>     <span class='hs-comment'>-- ^ Angle resolution of the accumulator in radians.</span>
-<a name="line-402"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span>
-<a name="line-403"></a>     <span class='hs-comment'>-- ^ Accumulator threshold parameter. Only those lines are returned that</span>
-<a name="line-404"></a>     <span class='hs-comment'>-- get enough votes (&gt; threshold).</span>
-<a name="line-405"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
-<a name="line-406"></a>     <span class='hs-comment'>-- ^ Minimum line length. Line segments shorter than that are rejected.</span>
-<a name="line-407"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
-<a name="line-408"></a>     <span class='hs-comment'>-- ^ Maximum allowed gap between points on the same line to link them.</span>
-<a name="line-409"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
-<a name="line-410"></a>     <span class='hs-comment'>-- ^ Source image. May be modified by the function.</span>
-<a name="line-411"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>m</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-conid'>LineSegment</span><span class='hs-layout'>)</span>
-<a name="line-412"></a><span class='hs-definition'>houghLinesP</span> <span class='hs-varid'>rho</span> <span class='hs-varid'>theta</span> <span class='hs-varid'>threshold</span> <span class='hs-varid'>minLineLength</span> <span class='hs-varid'>maxLineGap</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span>
-<a name="line-413"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-414"></a>    <span class='hs-comment'>-- Pointer to number of lines.</span>
-<a name="line-415"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>numLinesPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-416"></a>    <span class='hs-comment'>-- Pointer to array of Vec4i pointers. The array is allocated in</span>
-<a name="line-417"></a>    <span class='hs-comment'>-- C++. Each element of the array points to a Vec4i that is also</span>
-<a name="line-418"></a>    <span class='hs-comment'>-- allocated in C++.</span>
-<a name="line-419"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Vec4i</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-420"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
-<a name="line-421"></a>        <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>lines</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
-<a name="line-422"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>HoughLinesP</span>
-<a name="line-423"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-424"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>lines</span>
-<a name="line-425"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'rho</span><span class='hs-layout'>)</span>
-<a name="line-426"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'theta</span><span class='hs-layout'>)</span>
-<a name="line-427"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>threshold</span><span class='hs-layout'>)</span>
-<a name="line-428"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'minLineLength</span><span class='hs-layout'>)</span>
-<a name="line-429"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'maxLineGap</span><span class='hs-layout'>)</span>
-<a name="line-430"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-431"></a>
-<a name="line-432"></a>        <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>numLinesPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
-<a name="line-433"></a>
-<a name="line-434"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-435"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
-<a name="line-436"></a>        <span class='hs-varop'>*</span><span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>linesPtr</span><span class='hs-layout'>;</span>
+<a name="line-329"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-330"></a>      <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circlesPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
+<a name="line-331"></a>      <span class='hs-varop'>*</span><span class='hs-varid'>circlesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>circlesPtr</span><span class='hs-layout'>;</span>
+<a name="line-332"></a>
+<a name="line-333"></a>      <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>circleLengthsPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
+<a name="line-334"></a>
+<a name="line-335"></a>      <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>i</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>circles</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>i</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span> <span class='hs-layout'>{</span>
+<a name="line-336"></a>        <span class='hs-varid'>circlesPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec3f</span><span class='hs-layout'>(</span> <span class='hs-varid'>circles</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>i</span><span class='hs-keyglyph'>]</span> <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-337"></a>      <span class='hs-layout'>}</span>
+<a name="line-338"></a>    <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-339"></a>    <span class='hs-varid'>numCircles</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>circleLengthsPtr</span>
+<a name="line-340"></a>    <span class='hs-varid'>circlesPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>circlesPtrPtr</span>
+<a name="line-341"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>circles</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>V3</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span>
+<a name="line-342"></a>        <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numCircles</span> <span class='hs-varid'>circlesPtr</span> <span class='hs-varop'>&gt;&gt;=</span>
+<a name="line-343"></a>        <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromCFloat</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromVec</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span>
+<a name="line-344"></a>    <span class='hs-varid'>pure</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span> <span class='hs-layout'>(</span><span class='hs-varid'>map</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-conid'>V3</span> <span class='hs-varid'>x</span> <span class='hs-varid'>y</span> <span class='hs-varid'>r</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Circle</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>x</span> <span class='hs-varid'>y</span><span class='hs-layout'>)</span> <span class='hs-varid'>r</span><span class='hs-layout'>)</span> <span class='hs-varid'>circles</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-345"></a>  <span class='hs-keyword'>where</span> <span class='hs-varid'>c'dp</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>dp</span>
+<a name="line-346"></a>        <span class='hs-varid'>c'minDist</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minDist</span>
+<a name="line-347"></a>        <span class='hs-varid'>c'param1</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>100</span> <span class='hs-varid'>param1</span><span class='hs-layout'>)</span>
+<a name="line-348"></a>        <span class='hs-varid'>c'param2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>100</span> <span class='hs-varid'>param2</span><span class='hs-layout'>)</span>
+<a name="line-349"></a>        <span class='hs-varid'>c'minRadius</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>minRadius</span><span class='hs-layout'>)</span>
+<a name="line-350"></a>        <span class='hs-varid'>c'maxRadius</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-layout'>(</span><span class='hs-varid'>fromMaybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>maxRadius</span><span class='hs-layout'>)</span>
+<a name="line-351"></a>
+<a name="line-352"></a><a name="LineSegment"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>LineSegment</span> <span class='hs-varid'>depth</span>
+<a name="line-353"></a>   <span class='hs-keyglyph'>=</span> <span class='hs-conid'>LineSegment</span>
+<a name="line-354"></a>     <span class='hs-layout'>{</span> <span class='hs-varid'>lineSegmentStart</span> <span class='hs-keyglyph'>::</span> <span class='hs-varop'>!</span><span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span>
+<a name="line-355"></a>     <span class='hs-layout'>,</span> <span class='hs-varid'>lineSegmentStop</span>  <span class='hs-keyglyph'>::</span> <span class='hs-varop'>!</span><span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span>
+<a name="line-356"></a>     <span class='hs-layout'>}</span> <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Foldable</span><span class='hs-layout'>,</span> <span class='hs-conid'>Functor</span><span class='hs-layout'>,</span> <span class='hs-conid'>Traversable</span><span class='hs-layout'>,</span> <span class='hs-conid'>Show</span><span class='hs-layout'>)</span>
+<a name="line-357"></a>
+<a name="line-358"></a><span class='hs-keyword'>type</span> <span class='hs-keyword'>instance</span> <span class='hs-conid'>VecDim</span> <span class='hs-conid'>LineSegment</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>4</span>
+<a name="line-359"></a>
+<a name="line-360"></a><a name="instance%20IsVec%20LineSegment%20depth"></a><span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>IsVec</span> <span class='hs-conid'>V4</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>IsVec</span> <span class='hs-conid'>LineSegment</span> <span class='hs-varid'>depth</span> <span class='hs-keyword'>where</span>
+<a name="line-361"></a>    <span class='hs-varid'>toVec</span> <span class='hs-layout'>(</span><span class='hs-conid'>LineSegment</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>V2</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
+<a name="line-362"></a>        <span class='hs-varid'>toVec</span> <span class='hs-layout'>(</span><span class='hs-conid'>V4</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span><span class='hs-layout'>)</span>
+<a name="line-363"></a>
+<a name="line-364"></a>    <span class='hs-varid'>fromVec</span> <span class='hs-varid'>vec</span> <span class='hs-keyglyph'>=</span>
+<a name="line-365"></a>        <span class='hs-conid'>LineSegment</span>
+<a name="line-366"></a>        <span class='hs-layout'>{</span> <span class='hs-varid'>lineSegmentStart</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>V2</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span>
+<a name="line-367"></a>        <span class='hs-layout'>,</span> <span class='hs-varid'>lineSegmentStop</span>  <span class='hs-keyglyph'>=</span> <span class='hs-conid'>V2</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span>
+<a name="line-368"></a>        <span class='hs-layout'>}</span>
+<a name="line-369"></a>      <span class='hs-keyword'>where</span>
+<a name="line-370"></a>        <span class='hs-conid'>V4</span> <span class='hs-varid'>x1</span> <span class='hs-varid'>y1</span> <span class='hs-varid'>x2</span> <span class='hs-varid'>y2</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>fromVec</span> <span class='hs-varid'>vec</span>
+<a name="line-371"></a>
+<a name="line-372"></a><a name="houghLinesP"></a><span class='hs-comment'>{- |
+<a name="line-373"></a>Example:
+<a name="line-374"></a>
+<a name="line-375"></a>@
+<a name="line-376"></a>houghLinesPTraces
+<a name="line-377"></a>  :: forall (width    :: Nat)
+<a name="line-378"></a>            (height   :: Nat)
+<a name="line-379"></a>            (channels :: Nat)
+<a name="line-380"></a>            (depth    :: *  )
+<a name="line-381"></a>   . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Building_868x600)
+<a name="line-382"></a>  =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<a name="line-383"></a>houghLinesPTraces = exceptError $ do
+<a name="line-384"></a>    edgeImg &lt;- canny 50 200 Nothing CannyNormL1 building_868x600
+<a name="line-385"></a>    edgeImgBgr &lt;- cvtColor gray bgr edgeImg
+<a name="line-386"></a>    withMatM (Proxy :: Proxy [height, width])
+<a name="line-387"></a>             (Proxy :: Proxy channels)
+<a name="line-388"></a>             (Proxy :: Proxy depth)
+<a name="line-389"></a>             white $ \imgM -&gt; do
+<a name="line-390"></a>      edgeImgM &lt;- thaw edgeImg
+<a name="line-391"></a>      lineSegments &lt;- houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
+<a name="line-392"></a>      void $ matCopyToM imgM (V2 0 0) edgeImgBgr Nothing
+<a name="line-393"></a>      forM_ lineSegments $ \lineSegment -&gt; do
+<a name="line-394"></a>        line imgM
+<a name="line-395"></a>             (lineSegmentStart lineSegment)
+<a name="line-396"></a>             (lineSegmentStop  lineSegment)
+<a name="line-397"></a>             red 2 LineType_8 0
+<a name="line-398"></a>@
+<a name="line-399"></a>
+<a name="line-400"></a>&lt;&lt;doc/generated/examples/houghLinesPTraces.png houghLinesPTraces&gt;&gt;
+<a name="line-401"></a>-}</span>
+<a name="line-402"></a><span class='hs-definition'>houghLinesP</span>
+<a name="line-403"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
+<a name="line-404"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Double</span>
+<a name="line-405"></a>     <span class='hs-comment'>-- ^ Distance resolution of the accumulator in pixels.</span>
+<a name="line-406"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Double</span>
+<a name="line-407"></a>     <span class='hs-comment'>-- ^ Angle resolution of the accumulator in radians.</span>
+<a name="line-408"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int32</span>
+<a name="line-409"></a>     <span class='hs-comment'>-- ^ Accumulator threshold parameter. Only those lines are returned that</span>
+<a name="line-410"></a>     <span class='hs-comment'>-- get enough votes (&gt; threshold).</span>
+<a name="line-411"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
+<a name="line-412"></a>     <span class='hs-comment'>-- ^ Minimum line length. Line segments shorter than that are rejected.</span>
+<a name="line-413"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Maybe</span> <span class='hs-conid'>Double</span>
+<a name="line-414"></a>     <span class='hs-comment'>-- ^ Maximum allowed gap between points on the same line to link them.</span>
+<a name="line-415"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
+<a name="line-416"></a>     <span class='hs-comment'>-- ^ Source image. May be modified by the function.</span>
+<a name="line-417"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>m</span> <span class='hs-layout'>(</span><span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-conid'>Vector</span> <span class='hs-layout'>(</span><span class='hs-conid'>LineSegment</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-418"></a><span class='hs-definition'>houghLinesP</span> <span class='hs-varid'>rho</span> <span class='hs-varid'>theta</span> <span class='hs-varid'>threshold</span> <span class='hs-varid'>minLineLength</span> <span class='hs-varid'>maxLineGap</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span>
+<a name="line-419"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-420"></a>    <span class='hs-comment'>-- Pointer to number of lines.</span>
+<a name="line-421"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>numLinesPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-422"></a>    <span class='hs-comment'>-- Pointer to array of Vec4i pointers. The array is allocated in</span>
+<a name="line-423"></a>    <span class='hs-comment'>-- C++. Each element of the array points to a Vec4i that is also</span>
+<a name="line-424"></a>    <span class='hs-comment'>-- allocated in C++.</span>
+<a name="line-425"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-layout'>(</span><span class='hs-conid'>Ptr</span> <span class='hs-conid'>C'Vec4i</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>mask_</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-426"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
+<a name="line-427"></a>        <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;</span> <span class='hs-varid'>lines</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
+<a name="line-428"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>HoughLinesP</span>
+<a name="line-429"></a>          <span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-430"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>lines</span>
+<a name="line-431"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'rho</span><span class='hs-layout'>)</span>
+<a name="line-432"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'theta</span><span class='hs-layout'>)</span>
+<a name="line-433"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>threshold</span><span class='hs-layout'>)</span>
+<a name="line-434"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'minLineLength</span><span class='hs-layout'>)</span>
+<a name="line-435"></a>          <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span>  <span class='hs-varid'>c'maxLineGap</span><span class='hs-layout'>)</span>
+<a name="line-436"></a>          <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
 <a name="line-437"></a>
-<a name="line-438"></a>        <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>ix</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>ix</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>ix</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span>
-<a name="line-439"></a>        <span class='hs-layout'>{</span>
-<a name="line-440"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>&amp;</span> <span class='hs-varid'>org</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>lines</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>ix</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
-<a name="line-441"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varid'>newLine</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-layout'>(</span><span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>0</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>1</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>2</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>3</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-442"></a>          <span class='hs-varid'>linesPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>ix</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>newLine</span><span class='hs-layout'>;</span>
-<a name="line-443"></a>        <span class='hs-layout'>}</span>
-<a name="line-444"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-445"></a>
-<a name="line-446"></a>      <span class='hs-varid'>numLines</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>numLinesPtr</span>
-<a name="line-447"></a>      <span class='hs-varid'>linesPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>linesPtrPtr</span>
-<a name="line-448"></a>      <span class='hs-varid'>lineSegments</span>  <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromVec</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span> <span class='hs-varop'>=&lt;&lt;</span> <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numLines</span> <span class='hs-varid'>linesPtr</span>
-<a name="line-449"></a>
-<a name="line-450"></a>      <span class='hs-comment'>-- Free the array of Vec4i pointers. This does not free the</span>
-<a name="line-451"></a>      <span class='hs-comment'>-- Vec4i's pointed to by the elements of the array. That is the</span>
-<a name="line-452"></a>      <span class='hs-comment'>-- responsibility of Haskell's Vec4i finalizer.</span>
-<a name="line-453"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>CU</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
-<a name="line-454"></a>        <span class='hs-varid'>delete</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-455"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-456"></a>
-<a name="line-457"></a>      <span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span> <span class='hs-varid'>lineSegments</span>
-<a name="line-458"></a>  <span class='hs-keyword'>where</span>
-<a name="line-459"></a>    <span class='hs-varid'>c'rho</span>           <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>rho</span>
-<a name="line-460"></a>    <span class='hs-varid'>c'theta</span>         <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>theta</span>
-<a name="line-461"></a>    <span class='hs-varid'>c'minLineLength</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minLineLength</span>
-<a name="line-462"></a>    <span class='hs-varid'>c'maxLineGap</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>maxLineGap</span>
+<a name="line-438"></a>        <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varop'>*</span> <span class='hs-varid'>numLinesPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span>
+<a name="line-439"></a>
+<a name="line-440"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-441"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
+<a name="line-442"></a>        <span class='hs-varop'>*</span><span class='hs-varid'>linesPtrPtr</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>linesPtr</span><span class='hs-layout'>;</span>
+<a name="line-443"></a>
+<a name="line-444"></a>        <span class='hs-varid'>for</span> <span class='hs-layout'>(</span><span class='hs-varid'>std</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>vector</span><span class='hs-varop'>&lt;</span><span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-varop'>&gt;::</span><span class='hs-varid'>size_type</span> <span class='hs-varid'>ix</span> <span class='hs-keyglyph'>=</span> <span class='hs-num'>0</span><span class='hs-layout'>;</span> <span class='hs-varid'>ix</span> <span class='hs-varop'>!=</span> <span class='hs-varid'>lines</span><span class='hs-varop'>.</span><span class='hs-varid'>size</span><span class='hs-conid'>()</span><span class='hs-layout'>;</span> <span class='hs-varid'>ix</span><span class='hs-varop'>++</span><span class='hs-layout'>)</span>
+<a name="line-445"></a>        <span class='hs-layout'>{</span>
+<a name="line-446"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>&amp;</span> <span class='hs-varid'>org</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>lines</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>ix</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>;</span>
+<a name="line-447"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varid'>newLine</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>new</span> <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-conid'>Vec4i</span><span class='hs-layout'>(</span><span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>0</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>1</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>2</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>,</span> <span class='hs-varid'>org</span><span class='hs-keyglyph'>[</span><span class='hs-num'>3</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-448"></a>          <span class='hs-varid'>linesPtr</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>ix</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>newLine</span><span class='hs-layout'>;</span>
+<a name="line-449"></a>        <span class='hs-layout'>}</span>
+<a name="line-450"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-451"></a>
+<a name="line-452"></a>      <span class='hs-varid'>numLines</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>fromIntegral</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>numLinesPtr</span>
+<a name="line-453"></a>      <span class='hs-varid'>linesPtr</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>linesPtrPtr</span>
+<a name="line-454"></a>      <span class='hs-varid'>lineSegments</span>  <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-varid'>fmap</span> <span class='hs-varid'>fromVec</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fromPtr</span> <span class='hs-varop'>.</span> <span class='hs-varid'>pure</span><span class='hs-layout'>)</span> <span class='hs-varop'>=&lt;&lt;</span> <span class='hs-varid'>peekArray</span> <span class='hs-varid'>numLines</span> <span class='hs-varid'>linesPtr</span>
+<a name="line-455"></a>
+<a name="line-456"></a>      <span class='hs-comment'>-- Free the array of Vec4i pointers. This does not free the</span>
+<a name="line-457"></a>      <span class='hs-comment'>-- Vec4i's pointed to by the elements of the array. That is the</span>
+<a name="line-458"></a>      <span class='hs-comment'>-- responsibility of Haskell's Vec4i finalizer.</span>
+<a name="line-459"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>CU</span><span class='hs-varop'>.</span><span class='hs-varid'>block</span><span class='hs-keyglyph'>|</span> <span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
+<a name="line-460"></a>        <span class='hs-varid'>delete</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Vec4i</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varop'>*</span> <span class='hs-varid'>linesPtrPtr</span><span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-461"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-462"></a>
+<a name="line-463"></a>      <span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-conid'>V</span><span class='hs-varop'>.</span><span class='hs-varid'>fromList</span> <span class='hs-varid'>lineSegments</span>
+<a name="line-464"></a>  <span class='hs-keyword'>where</span>
+<a name="line-465"></a>    <span class='hs-varid'>c'rho</span>           <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>rho</span>
+<a name="line-466"></a>    <span class='hs-varid'>c'theta</span>         <span class='hs-keyglyph'>=</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>theta</span>
+<a name="line-467"></a>    <span class='hs-varid'>c'minLineLength</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>minLineLength</span>
+<a name="line-468"></a>    <span class='hs-varid'>c'maxLineGap</span>    <span class='hs-keyglyph'>=</span> <span class='hs-varid'>maybe</span> <span class='hs-num'>0</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varid'>maxLineGap</span>
 </pre></body>
 </html>
