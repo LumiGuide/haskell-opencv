@@ -50,6 +50,7 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpPerspective
     , invertAffineTransform
     , getRotationMatrix2D
+    , remap
     ) where
 
 import "base" Data.Int ( Int32 )
@@ -297,3 +298,37 @@ getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
   where
     c'angle = realToFrac angle
     c'scale = realToFrac scale
+
+{- | Applies a generic geometrical transformation to an image.
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap>
+-}
+remap
+    :: Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
+    -> Mat ('S [outputHeight, outputWidth]) ('S 2) ('S Float)
+    -> InterpolationMethod
+    -> BorderMode
+    -> Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth
+remap src mapping interpolationMethod borderMode =
+  unsafeCoerceMat $ unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
+        withPtr mapping $ \mappingPtr ->
+          withPtr borderValue $ \borderValuePtr ->
+            [CU.block| void {
+              Mat * src = $(Mat * srcPtr);
+              cv::remap
+                ( *src
+                , *$(Mat * dstPtr)
+                , *$(Mat * mappingPtr)
+                , {}
+                , $(int32_t c'interpolationMethod)
+                , $(int32_t c'borderMode)
+                , *$(Scalar * borderValuePtr)
+                );
+              } |]
+    return dst
+  where
+    c'interpolationMethod = marshalInterpolationMethod interpolationMethod
+    (c'borderMode, borderValue) = marshalBorderMode borderMode
