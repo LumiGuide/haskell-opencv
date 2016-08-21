@@ -39,6 +39,7 @@ import           "this" OpenCV.Unsafe
 C.context openCvCtx
 
 C.include "opencv2/core.hpp"
+C.include "haskell_opencv_matx_typedefs.hpp"
 C.using "namespace cv"
 
 --------------------------------------------------------------------------------
@@ -116,6 +117,8 @@ MATX_TO_MAT(Matx43f)
 MATX_TO_MAT(Matx43d)
 MATX_TO_MAT(Matx44f)
 MATX_TO_MAT(Matx44d)
+MATX_TO_MAT(Matx51f)
+MATX_TO_MAT(Matx51d)
 MATX_TO_MAT(Matx61f)
 MATX_TO_MAT(Matx61d)
 MATX_TO_MAT(Matx66f)

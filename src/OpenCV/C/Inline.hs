@@ -62,6 +62,8 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "Matx43d"     , [t| C'Matx43d     |] )
   , ( C.TypeName "Matx44f"     , [t| C'Matx44f     |] )
   , ( C.TypeName "Matx44d"     , [t| C'Matx44d     |] )
+  , ( C.TypeName "Matx51f"     , [t| C'Matx51f     |] )
+  , ( C.TypeName "Matx51d"     , [t| C'Matx51d     |] )
   , ( C.TypeName "Matx61f"     , [t| C'Matx61f     |] )
   , ( C.TypeName "Matx61d"     , [t| C'Matx61d     |] )
   , ( C.TypeName "Matx66f"     , [t| C'Matx66f     |] )

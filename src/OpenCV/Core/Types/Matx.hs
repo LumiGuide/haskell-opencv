@@ -25,6 +25,7 @@ module OpenCV.Core.Types.Matx
     , Matx41f, Matx41d
     , Matx43f, Matx43d
     , Matx44f, Matx44d
+    , Matx51f, Matx51d
     , Matx61f, Matx61d
     , Matx66f, Matx66d
 
@@ -43,6 +44,7 @@ module OpenCV.Core.Types.Matx
     , newMatx41f, newMatx41d
     , newMatx43f, newMatx43d
     , newMatx44f, newMatx44d
+    , newMatx51f, newMatx51d
     , newMatx61f, newMatx61d
     ) where
 
@@ -58,6 +60,7 @@ import "this" OpenCV.Core.Types.Matx.TH
 
 C.context openCvCtx
 C.include "opencv2/core.hpp"
+C.include "haskell_opencv_matx_typedefs.hpp"
 C.using "namespace cv"
 
 mkMatxType "Matx12f" 1 2 ''CFloat  "float"
@@ -88,6 +91,8 @@ mkMatxType "Matx43f" 4 3 ''CFloat  "float"
 mkMatxType "Matx43d" 4 3 ''CDouble "double"
 mkMatxType "Matx44f" 4 4 ''CFloat  "float"
 mkMatxType "Matx44d" 4 4 ''CDouble "double"
+mkMatxType "Matx51f" 5 1 ''CFloat  "float"
+mkMatxType "Matx51d" 5 1 ''CDouble "double"
 mkMatxType "Matx61f" 6 1 ''CFloat  "float"
 mkMatxType "Matx61d" 6 1 ''CDouble "double"
 mkMatxType "Matx66f" 6 6 ''CFloat  "float"
