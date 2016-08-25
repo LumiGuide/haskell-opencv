@@ -1,7 +1,7 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
-module OpenCV.Core.Types.Matx.TH
+module OpenCV.Core.Types.Matx.Internal.TH
   ( mkMatxType
   ) where
 
@@ -10,8 +10,8 @@ import "base" Data.Monoid ( (<>) )
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.C.PlacementNew.TH ( mkPlacementNewInstance )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Matx.Internal
 import "this" OpenCV.Internal
 

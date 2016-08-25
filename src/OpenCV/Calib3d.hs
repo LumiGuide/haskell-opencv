@@ -14,9 +14,9 @@ import "base" Data.Word
 import "base" Foreign.C.Types
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Calib3d.Constants
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Calib3d.Internal.Constants
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat.Internal

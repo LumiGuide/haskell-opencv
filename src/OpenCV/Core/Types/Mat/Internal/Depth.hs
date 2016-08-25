@@ -1,6 +1,6 @@
 {-# language MultiParamTypeClasses #-}
 
-module OpenCV.Core.Types.Mat.Depth
+module OpenCV.Core.Types.Mat.Internal.Depth
     ( Depth(..)
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)

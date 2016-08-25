@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Interface between OpenCV and inline-c(pp) (Haskell)
-module OpenCV.C.Inline ( openCvCtx ) where
+module OpenCV.Internal.C.Inline ( openCvCtx ) where
 
 import "base" Foreign.Ptr ( FunPtr )
 import "base" Data.Monoid ( (<>) )
@@ -11,14 +11,14 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Types  as C
 import qualified "inline-c" Language.C.Inline.Context as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.Types
 
 -- | Context useful to work with the OpenCV library
 --
 -- Based on 'C.cppCtx', 'C.bsCtx' and 'C.vecCtx'.
 --
 -- 'C.ctxTypesTable': converts OpenCV basic types to their counterparts in
--- "OpenCV.C.Inline".
+-- "OpenCV.Internal.C.Inline".
 --
 -- No 'C.ctxAntiQuoters'.
 openCvCtx :: C.Context

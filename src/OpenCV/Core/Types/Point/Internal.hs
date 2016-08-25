@@ -12,7 +12,7 @@ module OpenCV.Core.Types.Point.Internal
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" GHC.TypeLits
 import "linear" Linear ( V2, V3 )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.Types
 
 --------------------------------------------------------------------------------
 

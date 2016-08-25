@@ -1,7 +1,7 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
-module OpenCV.Core.Types.Size.TH
+module OpenCV.Core.Types.Size.Internal.TH
   ( mkSizeType
   ) where
 
@@ -14,8 +14,8 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.C.PlacementNew.TH ( mkPlacementNewInstance )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Size.Internal
 import "this" OpenCV.Internal
 

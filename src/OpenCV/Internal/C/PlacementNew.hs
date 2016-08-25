@@ -1,4 +1,4 @@
-module OpenCV.C.PlacementNew ( PlacementNew(..) ) where
+module OpenCV.Internal.C.PlacementNew ( PlacementNew(..) ) where
 
 import "base" Foreign.Ptr ( Ptr )
 
