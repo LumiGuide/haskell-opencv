@@ -1,8 +1,8 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
-module OpenCV.Core.Types.Vec.TH
-  ( mkVecType
+module OpenCV.Core.Types.Point.Internal.TH
+  ( mkPointType
   ) where
 
 import "base" Data.List ( intercalate )
@@ -11,39 +11,40 @@ import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
-import "linear" Linear ( V2(..), V3(..), V4(..) )
+import "linear" Linear ( V2(..), V3(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.C.PlacementNew.TH ( mkPlacementNewInstance )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Vec.Internal
+import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Core.Types.Point.Internal
 import "this" OpenCV.Internal
 
-mkVecType
-    :: String  -- ^ Vec type name, for both Haskell and C
-    -> Integer -- ^ Vec dimension
+mkPointType
+    :: String  -- ^ Point type name, for both Haskell and C
+    -> Integer -- ^ Point dimension
+    -> String  -- ^ Point template name in C
     -> Name    -- ^ Depth type name in Haskell
     -> String  -- ^ Depth type name in C
     -> Q [Dec]
-mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
-    | dim < 2 || dim > 4 = fail $ "mkVecType: Unsupported dimension: " <> show dim
+mkPointType pTypeNameStr dim cTemplateStr depthTypeName cDepthTypeStr
+    | dim < 2 || dim > 3 = fail $ "mkPointType: Unsupported dimension: " <> show dim
     | otherwise =
       fmap concat . sequence $
-        [ pure <$> vecTySynD
+        [ pure <$> pointTySynD
         , fromPtrDs
-        , isVecOpenCVInstanceDs
-        , isVecHaskellInstanceDs
-        , mkPlacementNewInstance vTypeName
+        , isPointOpenCVInstanceDs
+        , isPointHaskellInstanceDs
+        , mkPlacementNewInstance pTypeName
         ]
   where
-    vTypeName :: Name
-    vTypeName = mkName vTypeNameStr
+    pTypeName :: Name
+    pTypeName = mkName pTypeNameStr
 
-    cVecTypeStr :: String
-    cVecTypeStr = vTypeNameStr
+    cPointTypeStr :: String
+    cPointTypeStr = pTypeNameStr
 
-    vTypeQ :: Q Type
-    vTypeQ = conT vTypeName
+    pTypeQ :: Q Type
+    pTypeQ = conT pTypeName
 
     depthTypeQ :: Q Type
     depthTypeQ = conT depthTypeName
@@ -51,17 +52,17 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
     dimTypeQ :: Q Type
     dimTypeQ = litT (numTyLit dim)
 
-    vecTySynD :: Q Dec
-    vecTySynD =
-        tySynD vTypeName
+    pointTySynD :: Q Dec
+    pointTySynD =
+        tySynD pTypeName
                []
-               ([t|Vec|] `appT` dimTypeQ `appT` depthTypeQ)
+               ([t|Point|] `appT` dimTypeQ `appT` depthTypeQ)
 
     fromPtrDs :: Q [Dec]
     fromPtrDs =
         [d|
-        instance FromPtr $(vTypeQ) where
-          fromPtr = objFromPtr Vec $ $(finalizerExpQ)
+        instance FromPtr $(pTypeQ) where
+          fromPtr = objFromPtr Point $ $(finalizerExpQ)
         |]
       where
         finalizerExpQ :: Q Exp
@@ -69,40 +70,40 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
           ptr <- newName "ptr"
           lamE [varP ptr] $
             quoteExp CU.exp $
-              "void { delete $(" <> cVecTypeStr <> " * " <> nameBase ptr <> ") }"
+              "void { delete $(" <> cPointTypeStr <> " * " <> nameBase ptr <> ") }"
 
-    isVecOpenCVInstanceDs :: Q [Dec]
-    isVecOpenCVInstanceDs =
+    isPointOpenCVInstanceDs :: Q [Dec]
+    isPointOpenCVInstanceDs =
         [d|
-        instance IsVec (Vec $(dimTypeQ)) $(depthTypeQ) where
-          toVec   = id
-          toVecIO = pure
-          fromVec = id
+        instance IsPoint (Point $(dimTypeQ)) $(depthTypeQ) where
+          toPoint   = id
+          toPointIO = pure
+          fromPoint = id
         |]
 
-    isVecHaskellInstanceDs :: Q [Dec]
-    isVecHaskellInstanceDs =
+    isPointHaskellInstanceDs :: Q [Dec]
+    isPointHaskellInstanceDs =
         let ix = fromInteger dim - 2
         in withLinear (linearTypeQs   !! ix)
                       (linearConNames !! ix)
       where
         linearTypeQs :: [Q Type]
-        linearTypeQs = map conT [''V2, ''V3, ''V4]
+        linearTypeQs = map conT [''V2, ''V3]
 
         linearConNames :: [Name]
-        linearConNames = ['V2, 'V3, 'V4]
+        linearConNames = ['V2, 'V3]
 
         withLinear :: Q Type -> Name -> Q [Dec]
-        withLinear lvTypeQ lvConName =
+        withLinear lpTypeQ lvConName =
             [d|
-            instance IsVec $(lvTypeQ) $(depthTypeQ) where
-              toVec   = unsafePerformIO . toVecIO
-              toVecIO = $(toVecIOExpQ)
-              fromVec = $(fromVecExpQ)
+            instance IsPoint $(lpTypeQ) $(depthTypeQ) where
+              toPoint   = unsafePerformIO . toPointIO
+              toPointIO = $(toPointIOExpQ)
+              fromPoint = $(fromPointExpQ)
             |]
           where
-            toVecIOExpQ :: Q Exp
-            toVecIOExpQ = do
+            toPointIOExpQ :: Q Exp
+            toPointIOExpQ = do
                 ns <- mapM newName elemNames
                 lamE [conP lvConName $ map varP ns]
                  $ appE [e|fromPtr|]
@@ -111,28 +112,26 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
               where
                 inlineCStr :: [Name] -> String
                 inlineCStr ns = concat
-                    [ cVecTypeStr
-                    , " * { new cv::Vec<"
-                    , cDepthTypeStr
-                    , ", "
-                    , show dim
-                    , ">(" <> intercalate ", " (map elemQuote ns) <> ")"
+                    [ cPointTypeStr
+                    , " * { new cv::" <> cTemplateStr
+                    , "<" <> cDepthTypeStr <> ">"
+                    , "(" <> intercalate ", " (map elemQuote ns) <> ")"
                     , " }"
                     ]
                   where
                     elemQuote :: Name -> String
                     elemQuote n = "$(" <> cDepthTypeStr <> " " <> nameBase n <> ")"
 
-            fromVecExpQ :: Q Exp
-            fromVecExpQ = do
-                vec <- newName "vec"
-                vecPtr <- newName "vecPtr"
+            fromPointExpQ :: Q Exp
+            fromPointExpQ = do
+                point <- newName "point"
+                pointPtr <- newName "pointPtr"
                 ptrNames <- mapM (newName . (<> "Ptr")) elemNames
-                withPtrNames vec vecPtr ptrNames
+                withPtrNames point pointPtr ptrNames
               where
                 withPtrNames :: Name -> Name -> [Name] -> Q Exp
-                withPtrNames vec vecPtr ptrNames =
-                    lamE [varP vec]
+                withPtrNames point pointPtr ptrNames =
+                    lamE [varP point]
                       $ appE [e|unsafePerformIO|]
                       $ withPtrVarsExpQ ptrNames
                   where
@@ -142,8 +141,8 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
 
                     withAllocatedVars :: Q Exp
                     withAllocatedVars =
-                        appE ([e|withPtr|] `appE` varE vec)
-                          $ lamE [varP vecPtr]
+                        appE ([e|withPtr|] `appE` varE point)
+                          $ lamE [varP pointPtr]
                           $ doE
                             [ noBindS $ quoteExp CU.block inlineCStr
                             , noBindS extractExpQ
@@ -153,12 +152,12 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
                     inlineCStr = unlines $
                         concat
                           [ "void {"
-                          , "const cv::Vec<"
-                          , cDepthTypeStr
-                          , ", " <> show dim <> "> & p = *$("
-                          , cVecTypeStr
+                          , "const cv::" <> cTemplateStr
+                          , "<" <> cDepthTypeStr <> ">"
+                          , " & p = *$("
+                          , cPointTypeStr
                           , " * "
-                          , nameBase vecPtr
+                          , nameBase pointPtr
                           , ");"
                           ]
                         : map ptrLine (zip [0..] ptrNames)
@@ -166,7 +165,7 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
                       where
                         ptrLine :: (Int, Name) -> String
                         ptrLine (ix, ptrName) =
-                            "*$(" <> cDepthTypeStr <> " * " <> nameBase ptrName <> ") = p[" <> show ix <> "];"
+                            "*$(" <> cDepthTypeStr <> " * " <> nameBase ptrName <> ") = p." <> elemNames !! ix <> ";"
 
                     -- Applies the constructor to the values that are
                     -- read from the pointers.
@@ -180,4 +179,4 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
 
             elemNames :: [String]
             elemNames = take (fromInteger dim)
-                             ["x", "y", "z", "w"]
+                             ["x", "y", "z"]

@@ -1,4 +1,4 @@
-module OpenCV.Mutable
+module OpenCV.Internal.Mutable
   ( Mut(..)
   , Mutable
   , FreezeThaw(..)
