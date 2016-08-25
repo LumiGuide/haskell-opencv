@@ -1,4 +1,4 @@
-module OpenCV.Core.Types.Constants where
+module OpenCV.Core.Types.Internal.Constants where
 
 #include <bindings.dsl.h>
 #include "opencv2/core.hpp"

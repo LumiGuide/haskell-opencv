@@ -18,10 +18,10 @@ import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types
 import qualified "inline-c"     Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C ( using )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Point.Internal
-import "this" OpenCV.Core.Types.Point.TH
+import "this" OpenCV.Core.Types.Point.Internal.TH
 
 --------------------------------------------------------------------------------
 

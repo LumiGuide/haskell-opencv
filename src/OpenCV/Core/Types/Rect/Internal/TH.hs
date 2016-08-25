@@ -1,7 +1,7 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
-module OpenCV.Core.Types.Rect.TH
+module OpenCV.Core.Types.Rect.Internal.TH
   ( mkRectType
   ) where
 
@@ -13,8 +13,8 @@ import "linear" Linear.Vector ( (^+^) )
 import "linear" Linear.V2 ( V2(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.C.PlacementNew.TH ( mkPlacementNewInstance )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Rect.Internal
 import "this" OpenCV.Core.Types.Size

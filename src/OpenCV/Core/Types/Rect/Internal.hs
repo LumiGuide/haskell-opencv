@@ -16,7 +16,7 @@ module OpenCV.Core.Types.Rect.Internal
 import "aeson" Data.Aeson
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "linear" Linear.V2 ( V2(..) )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Point ( Point )
 import "this" OpenCV.Core.Types.Size ( Size )
 #if MIN_VERSION_base(4,9,0)

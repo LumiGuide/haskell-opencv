@@ -80,15 +80,15 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.C.PlacementNew.TH
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.C.PlacementNew.TH
 import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Depth
-import "this" OpenCV.Core.Types.Mat.Marshal
+import "this" OpenCV.Core.Types.Mat.Internal.Depth
+import "this" OpenCV.Core.Types.Mat.Internal.Marshal
 import "this" OpenCV.Exception.Internal
 import "this" OpenCV.Internal
-import "this" OpenCV.Mutable
+import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V

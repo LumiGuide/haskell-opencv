@@ -26,7 +26,7 @@ library
       , src/OpenCV/Core/Types/Mat.cpp
       , src/OpenCV/Core/Types/Mat/Internal.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/Core/Types/Mat/ToFrom.cpp
+      , src/OpenCV/Core/Types/Mat/Internal/ToFrom.cpp
       , src/OpenCV/Core/Types/Matx.cpp
       , src/OpenCV/Core/Types/Point.cpp
       , src/OpenCV/Core/Types/Rect.cpp
@@ -99,35 +99,34 @@ library
         OpenCV.Unsafe
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
-    other-modules:
-        OpenCV.C.Inline
-        OpenCV.C.PlacementNew
-        OpenCV.C.PlacementNew.TH
-        OpenCV.C.Types
-        OpenCV.Calib3d.Constants
+        OpenCV.Internal.C.Inline
+        OpenCV.Internal.C.PlacementNew
+        OpenCV.Internal.C.PlacementNew.TH
+        OpenCV.Internal.C.Types
+        OpenCV.Calib3d.Internal.Constants
         OpenCV.Core.ArrayOps.Internal
-        OpenCV.Core.Types.Constants
+        OpenCV.Core.Types.Internal.Constants
         OpenCV.Core.Types.Internal
-        OpenCV.Core.Types.Mat.Depth
+        OpenCV.Core.Types.Mat.Internal.Depth
         OpenCV.Core.Types.Mat.Internal
-        OpenCV.Core.Types.Mat.Marshal
-        OpenCV.Core.Types.Mat.ToFrom
+        OpenCV.Core.Types.Mat.Internal.Marshal
+        OpenCV.Core.Types.Mat.Internal.ToFrom
         OpenCV.Core.Types.Matx.Internal
-        OpenCV.Core.Types.Matx.TH
+        OpenCV.Core.Types.Matx.Internal.TH
         OpenCV.Core.Types.Point.Internal
-        OpenCV.Core.Types.Point.TH
+        OpenCV.Core.Types.Point.Internal.TH
         OpenCV.Core.Types.Rect.Internal
-        OpenCV.Core.Types.Rect.TH
+        OpenCV.Core.Types.Rect.Internal.TH
         OpenCV.Core.Types.Size.Internal
-        OpenCV.Core.Types.Size.TH
+        OpenCV.Core.Types.Size.Internal.TH
         OpenCV.Core.Types.Vec.Internal
-        OpenCV.Core.Types.Vec.TH
+        OpenCV.Core.Types.Vec.Internal.TH
         OpenCV.Exception.Internal
         OpenCV.ImgCodecs.Internal
         OpenCV.ImgProc.MiscImgTransform.Internal
         OpenCV.ImgProc.Types.Internal
         OpenCV.Internal
-        OpenCV.Mutable
+        OpenCV.Internal.Mutable
 
     default-extensions:
         BangPatterns

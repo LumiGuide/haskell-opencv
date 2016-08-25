@@ -1,13 +1,13 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
-module OpenCV.C.PlacementNew.TH ( mkPlacementNewInstance ) where
+module OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance ) where
 
 import "base" Data.Monoid ( (<>) )
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.C.PlacementNew ( PlacementNew (..) )
+import "this" OpenCV.Internal.C.PlacementNew ( PlacementNew (..) )
 
 mkPlacementNewInstance :: Name -> DecsQ
 mkPlacementNewInstance name =

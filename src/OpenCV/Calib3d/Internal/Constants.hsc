@@ -1,4 +1,4 @@
-module OpenCV.Calib3d.Constants where
+module OpenCV.Calib3d.Internal.Constants where
 
 #include <bindings.dsl.h>
 #include "opencv2/core.hpp"

@@ -12,7 +12,7 @@ import "base" Foreign.Storable ( Storable, peek, poke )
 import "primitive" Control.Monad.Primitive
     ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Mutable
+import "this" OpenCV.Internal.Mutable
 
 unsafeRead
     :: (PrimMonad m, Storable value)
