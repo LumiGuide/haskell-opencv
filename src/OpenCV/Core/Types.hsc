@@ -71,10 +71,10 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.PlacementNew
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Constants
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.PlacementNew
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Core.Types.Internal.Constants
 import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
@@ -84,7 +84,7 @@ import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
-import "this" OpenCV.Mutable
+import "this" OpenCV.Internal.Mutable
 
 --------------------------------------------------------------------------------
 

@@ -1,11 +1,11 @@
-module OpenCV.C.Types where
+module OpenCV.Internal.C.Types where
 
 import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Data.Int ( Int32 )
 import "base" GHC.TypeLits
-import "this" OpenCV.Core.Types.Constants
-import "this" OpenCV.Mutable
+import "this" OpenCV.Core.Types.Internal.Constants
+import "this" OpenCV.Internal.Mutable
 
 --------------------------------------------------------------------------------
 

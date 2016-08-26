@@ -1,4 +1,4 @@
-module OpenCV.Core.Types.Mat.Marshal
+module OpenCV.Core.Types.Mat.Internal.Marshal
     ( marshalDepth
     , unmarshalDepth
     , marshalFlags
@@ -8,7 +8,7 @@ module OpenCV.Core.Types.Mat.Marshal
 import "base" Data.Bits
 import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
-import "this" OpenCV.Core.Types.Mat.Depth
+import "this" OpenCV.Core.Types.Mat.Internal.Depth
 
 --------------------------------------------------------------------------------
 

@@ -40,11 +40,11 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V4 ( V4(..) )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.PlacementNew
-import "this" OpenCV.C.PlacementNew.TH
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Constants
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.PlacementNew
+import "this" OpenCV.Internal.C.PlacementNew.TH
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Core.Types.Internal.Constants
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal

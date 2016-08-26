@@ -3,7 +3,7 @@
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
 
-module OpenCV.Core.Types.Mat.ToFrom
+module OpenCV.Core.Types.Mat.Internal.ToFrom
   ( MatShape
   , MatChannels
   , MatDepth
@@ -23,8 +23,8 @@ import           "linear" Linear.V2 ( V2(..) )
 import           "linear" Linear.V3 ( V3(..) )
 import           "linear" Linear.V4 ( V4 )
 import qualified "repa" Data.Array.Repa as Repa
-import           "this" OpenCV.C.Inline ( openCvCtx )
-import           "this" OpenCV.C.Types
+import           "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import           "this" OpenCV.Internal.C.Types
 import           "this" OpenCV.Core.Types.Mat.Internal
 import           "this" OpenCV.Core.Types.Matx
 import           "this" OpenCV.Core.Types.Mat.Repa

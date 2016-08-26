@@ -9,7 +9,7 @@ module OpenCV.Core.Types.Size.Internal
 
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "linear" Linear ( V2 )
-import "this" OpenCV.C.Types
+import "this" OpenCV.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
