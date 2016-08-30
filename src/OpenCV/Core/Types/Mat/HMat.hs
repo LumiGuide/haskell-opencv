@@ -1,8 +1,5 @@
 module OpenCV.Core.Types.Mat.HMat
-    ( HMat
-    , hmShape
-    , hmChannels
-    , hmElems
+    ( HMat(..)
     , HElems(..)
     , hElemsDepth
     , hElemsLength
