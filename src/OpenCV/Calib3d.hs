@@ -16,11 +16,11 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Calib3d.Internal.Constants
+import "this" OpenCV.Internal.Calib3d.Constants
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V

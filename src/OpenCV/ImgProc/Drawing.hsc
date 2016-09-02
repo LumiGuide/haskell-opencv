@@ -31,10 +31,10 @@ import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToP
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( append )
 import qualified "text" Data.Text.Foreign as T ( withCStringLen )
-import "this" OpenCV.Internal.C.Inline ( openCvCtx )
-import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS

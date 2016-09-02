@@ -30,13 +30,13 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
+import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Vec ( fromVec )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Core.Types.Vec ( fromVec )
-import "this" OpenCV.Core.Types.Point
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 import "base" System.IO.Unsafe ( unsafePerformIO )
 

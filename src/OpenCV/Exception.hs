@@ -21,4 +21,4 @@ module OpenCV.Exception
     , exceptErrorM
     ) where
 
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.Exception

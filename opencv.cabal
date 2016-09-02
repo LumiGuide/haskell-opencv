@@ -22,17 +22,13 @@ library
         src/OpenCV/Calib3d.cpp
       , src/OpenCV/Core/ArrayOps.cpp
       , src/OpenCV/Core/Types.cpp
-      , src/OpenCV/Core/Types/Internal.cpp
       , src/OpenCV/Core/Types/Mat.cpp
-      , src/OpenCV/Core/Types/Mat/Internal.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/Core/Types/Mat/Internal/ToFrom.cpp
       , src/OpenCV/Core/Types/Matx.cpp
       , src/OpenCV/Core/Types/Point.cpp
       , src/OpenCV/Core/Types/Rect.cpp
       , src/OpenCV/Core/Types/Size.cpp
       , src/OpenCV/Core/Types/Vec.cpp
-      , src/OpenCV/Exception/Internal.cpp
       , src/OpenCV/Features2d.cpp
       , src/OpenCV/HighGui.cpp
       , src/OpenCV/ImgCodecs.cpp
@@ -44,6 +40,10 @@ library
       , src/OpenCV/ImgProc/MiscImgTransform.cpp
       , src/OpenCV/ImgProc/ObjectDetection.cpp
       , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+      , src/OpenCV/Internal/Core/Types.cpp
+      , src/OpenCV/Internal/Core/Types/Mat.cpp
+      , src/OpenCV/Internal/Core/Types/Mat/ToFrom.cpp
+      , src/OpenCV/Internal/Exception.cpp
       , src/OpenCV/Video.cpp
       , src/OpenCV/Video/MotionAnalysis.cpp
 
@@ -99,34 +99,36 @@ library
         OpenCV.Unsafe
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
+
+        OpenCV.Internal
+        OpenCV.Internal.Mutable
         OpenCV.Internal.C.Inline
         OpenCV.Internal.C.PlacementNew
         OpenCV.Internal.C.PlacementNew.TH
         OpenCV.Internal.C.Types
-        OpenCV.Calib3d.Internal.Constants
-        OpenCV.Core.ArrayOps.Internal
-        OpenCV.Core.Types.Internal.Constants
-        OpenCV.Core.Types.Internal
-        OpenCV.Core.Types.Mat.Internal.Depth
-        OpenCV.Core.Types.Mat.Internal
-        OpenCV.Core.Types.Mat.Internal.Marshal
-        OpenCV.Core.Types.Mat.Internal.ToFrom
-        OpenCV.Core.Types.Matx.Internal
-        OpenCV.Core.Types.Matx.Internal.TH
-        OpenCV.Core.Types.Point.Internal
-        OpenCV.Core.Types.Point.Internal.TH
-        OpenCV.Core.Types.Rect.Internal
-        OpenCV.Core.Types.Rect.Internal.TH
-        OpenCV.Core.Types.Size.Internal
-        OpenCV.Core.Types.Size.Internal.TH
-        OpenCV.Core.Types.Vec.Internal
-        OpenCV.Core.Types.Vec.Internal.TH
-        OpenCV.Exception.Internal
-        OpenCV.ImgCodecs.Internal
-        OpenCV.ImgProc.MiscImgTransform.Internal
-        OpenCV.ImgProc.Types.Internal
-        OpenCV.Internal
-        OpenCV.Internal.Mutable
+        OpenCV.Internal.Calib3d.Constants
+        OpenCV.Internal.Core.ArrayOps
+        OpenCV.Internal.Core.Types
+        OpenCV.Internal.Core.Types.Constants
+        OpenCV.Internal.Core.Types.Mat
+        OpenCV.Internal.Core.Types.Mat.Depth
+        OpenCV.Internal.Core.Types.Mat.Marshal
+        OpenCV.Internal.Core.Types.Mat.ToFrom
+        OpenCV.Internal.Core.Types.Matx
+        OpenCV.Internal.Core.Types.Matx.TH
+        OpenCV.Internal.Core.Types.Point
+        OpenCV.Internal.Core.Types.Point.TH
+        OpenCV.Internal.Core.Types.Rect
+        OpenCV.Internal.Core.Types.Rect.TH
+        OpenCV.Internal.Core.Types.Size
+        OpenCV.Internal.Core.Types.Size.TH
+        OpenCV.Internal.Core.Types.Vec
+        OpenCV.Internal.Core.Types.Vec.TH
+        OpenCV.Internal.Exception
+        OpenCV.Internal.ImgCodecs
+        OpenCV.Internal.ImgProc.MiscImgTransform
+        OpenCV.Internal.ImgProc.Types
+
 
     default-extensions:
         BangPatterns

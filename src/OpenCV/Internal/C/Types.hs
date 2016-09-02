@@ -4,7 +4,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Data.Int ( Int32 )
 import "base" GHC.TypeLits
-import "this" OpenCV.Core.Types.Internal.Constants
+import "this" OpenCV.Internal.Core.Types.Constants
 import "this" OpenCV.Internal.Mutable
 
 --------------------------------------------------------------------------------

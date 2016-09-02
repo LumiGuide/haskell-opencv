@@ -55,14 +55,14 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Core.ArrayOps.Internal
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Core.Types.Point
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.Core.ArrayOps
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except

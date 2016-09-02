@@ -11,7 +11,7 @@ module OpenCV.Unsafe
 import "base" Foreign.Storable ( Storable, peek, poke )
 import "primitive" Control.Monad.Primitive
     ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Mutable
 
 unsafeRead
