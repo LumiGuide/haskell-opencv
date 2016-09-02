@@ -31,6 +31,17 @@ The documenation includes example programs that are automatically extracted from
 the source code and run as part of the test-suite. See the `opencv-doc-images`
 test-suite. The resulting images are referenced from the Haddock documentation.
 
+Internal modules
+----------------
+
+OpenCV exports a number of modules named OpenCV.Internal. They are
+provided in case of urgent need for access to the internals, but they
+are not intended to be used by API consumers and if you find yourself
+repeatedly accessing them this is a sign that either you or OpenCV are
+doing something wrong. In such a case please file a bug.
+
+The interface of Internal modules does not follow the PVP and may
+break between minor releases, so be careful.
 
 Development
 -----------
@@ -72,4 +83,6 @@ will at the same time function as a test for the function you just documented!
 Policies
 --------
 
-In haskell-opencv we use the most precise types for integer arguments. OpenCV uses int which is a 32-bit integer. So in Haskell we have to use Int32 instead of Int for, eg. width and height.
+In haskell-opencv we use the most precise types for integer
+arguments. OpenCV uses int which is a 32-bit integer. So in Haskell we
+have to use Int32 instead of Int for, eg. width and height.
