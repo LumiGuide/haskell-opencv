@@ -1027,7 +1027,7 @@ floodFillImg = exceptError $
              white $ \imgM -> do
       sailboatEvening_768x512 <- thaw sailboat_768x512
       rect <- floodFill sailboatEvening_768x512 seedPoint eveningRed (Just tolerance) (Just tolerance) defaultFloodFillOperationFlags
-      rectangle sailboatEvening_768x512 rect black 2 LineType_8 0
+      rectangle sailboatEvening_768x512 rect blue 2 LineType_8 0
       frozenSailboatEvening_768x512 <- freeze sailboatEvening_768x512
       matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
       matCopyToM imgM (V2 w 0) frozenSailboatEvening_768x512 Nothing
@@ -1040,11 +1040,15 @@ floodFillImg = exceptError $
     startX, pointX :: Int32
     startX = round $ fromIntegral w * (0.95 :: Double)
     pointX = round $ fromIntegral w * (1.05 :: Double)
+
     midY = h \`div\` 2
+
     seedPoint :: V2 Int32
     seedPoint = V2 100 50
+
     eveningRed :: V4 Double
     eveningRed = V4 0 100 200 255
+
     tolerance :: V4 Double
     tolerance = pure 7
 @
