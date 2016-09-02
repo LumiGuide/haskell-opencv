@@ -23,7 +23,7 @@ import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Generic as VG

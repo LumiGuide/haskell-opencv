@@ -27,12 +27,12 @@ import qualified "bytestring" Data.ByteString.Unsafe as BU
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
+import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Core.Types.Mat
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
-import "this" OpenCV.ImgCodecs.Internal
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
+import "this" OpenCV.Internal.ImgCodecs
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except

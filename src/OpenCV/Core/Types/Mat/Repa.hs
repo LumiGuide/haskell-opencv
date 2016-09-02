@@ -35,8 +35,8 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "repa" Data.Array.Repa as Repa
 import           "repa" Data.Array.Repa.Index ( (:.) )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Core.Types.Mat.Internal
 import "this" OpenCV.TypeLevel
 
 
