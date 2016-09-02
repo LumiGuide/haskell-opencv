@@ -113,6 +113,11 @@ module OpenCV.ImgProc.MiscImgTransform
     , yuv_IYUV
     , yuv_YV12
 
+      -- * Flood filling
+    , floodFill
+    , FloodFillOperationFlags(..)
+    , defaultFloodFillOperationFlags
+
       -- * Thresholding
     , ThreshType(..)
     , ThreshValue(..)
@@ -126,8 +131,10 @@ import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" GHC.TypeLits
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "linear" Linear.V4 ( V4 )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Exception.Internal
@@ -143,6 +150,14 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
 C.using "namespace cv"
+
+--------------------------------------------------------------------------------
+
+#include <bindings.dsl.h>
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+
+#include "namespace.hpp"
 
 --------------------------------------------------------------------------------
 
@@ -869,6 +884,7 @@ type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDep
 
   ColorCodeDepth srcCode  dstCode      'D         = 'D
 
+-- ignore next Haddock code block, because of the hash sign in the link at the end of the comment.
 {- | Converts an image from one color space to another
 
 The function converts an input image from one color space to
@@ -947,8 +963,11 @@ cvtColorImg = exceptError $
 
 <<doc/generated/examples/cvtColorImg.png cvtColorImg>>
 
-<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#cvtcolor OpenCV Sphinx Doc>
+<http://goo.gl/3rfrhu OpenCV Sphinx Doc>
 -}
+
+-- the link avove is minified because it includes a hash, which the CPP tries to parse and fails
+
 -- TODO (RvD): Allow value level color codes
 -- Allow statically unknown color codes: fromColor :: DS ColorCode
 cvtColor :: forall (fromColor   :: ColorCode)
@@ -982,6 +1001,142 @@ cvtColor fromColor toColor src = unsafeWrapException $ do
         |]
   where
     c'code = colorCode fromColor toColor
+
+{- | The function 'floodFill' fills a connected component starting from the seed point with the specified color.
+
+The connectivity is determined by the color/brightness closeness of the neighbor pixels. See the OpenCV
+documentation for details on the algorithm.
+
+Example:
+
+@
+floodFillImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Sailboat_768x512
+       , width2 ~ (width + width)
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+floodFillImg = exceptError $
+    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      sailboatEvening_768x512 <- thaw sailboat_768x512
+      rect <- floodFill sailboatEvening_768x512 seedPoint eveningRed (Just tolerance) (Just tolerance) defaultFloodFillOperationFlags
+      rectangle sailboatEvening_768x512 rect black 2 LineType_8 0
+      frozenSailboatEvening_768x512 <- freeze sailboatEvening_768x512
+      matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
+      matCopyToM imgM (V2 w 0) frozenSailboatEvening_768x512 Nothing
+      lift $ arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
+  where
+    h, w :: Int32
+    h = fromInteger $ natVal (Proxy :: Proxy height)
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+
+    startX, pointX :: Int32
+    startX = round $ fromIntegral w * (0.95 :: Double)
+    pointX = round $ fromIntegral w * (1.05 :: Double)
+    midY = h \`div\` 2
+    seedPoint :: V2 Int32
+    seedPoint = V2 100 50
+    eveningRed :: V4 Double
+    eveningRed = V4 0 100 200 255
+    tolerance :: V4 Double
+    tolerance = pure 7
+@
+
+<<doc/generated/examples/floodFillImg.png floodFillImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#floodFill OpenCV Sphinx Doc>
+-}
+floodFill
+    :: ( PrimMonad m
+       , channels `In` '[ 'S 1, 'S 3 ]
+       , depth `In` '[ 'D, 'S Word8, 'S Float, 'S Double ]
+       , IsPoint2 point2 Int32
+       , ToScalar color
+       )
+    => Mut (Mat shape channels depth) (PrimState m)
+        -- ^ Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the FLOODFILL_MASK_ONLY flag is set.
+    -> point2 Int32
+        -- ^ Starting point.
+    -> color
+        -- ^ New value of the repainted domain pixels.
+    -> Maybe color
+        -- ^ Maximal lower brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
+    -> Maybe color
+        -- ^ Maximal upper brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
+    -> FloodFillOperationFlags
+    -> m Rect2i
+floodFill img seedPoint color mLoDiff mUpDiff opFlags =
+    unsafePrimToPrim $
+    withPtr img $ \matPtr ->
+    withPtr (toPoint seedPoint) $ \seedPointPtr ->
+    withPtr (toScalar color) $ \colorPtr ->
+    withPtr loDiff $ \loDiffPtr ->
+    withPtr upDiff $ \upDiffPtr ->
+    withPtr rect $ \rectPtr -> do
+      [C.exp|void {
+        cv::floodFill( *$(Mat * matPtr)
+                     , *$(Point2i * seedPointPtr)
+                     , *$(Scalar * colorPtr)
+                     , $(Rect2i * rectPtr)
+                     , *$(Scalar * loDiffPtr)
+                     , *$(Scalar * upDiffPtr)
+                     , $(int32_t c'opFlags)
+                     )
+      }|]
+      pure rect
+  where
+    rect :: Rect2i
+    rect = toRect HRect{ hRectTopLeft = pure 0
+                       , hRectSize    = pure 0
+                       }
+    c'opFlags = marshalFloodFillOperationFlags opFlags
+    zeroScalar = toScalar (pure 0 :: V4 Double)
+    loDiff = maybe zeroScalar toScalar mLoDiff
+    upDiff = maybe zeroScalar toScalar mUpDiff
+
+data FloodFillOperationFlags
+   = FloodFillOperationFlags
+   { floodFillConnectivity :: Word8
+      -- ^ Connectivity value. The default value of 4 means that only the four nearest neighbor pixels (those that share
+      -- an edge) are considered. A connectivity value of 8 means that the eight nearest neighbor pixels (those that share
+      -- a corner) will be considered.
+   , floodFillMaskFillColor :: Word8
+      -- ^ Value between 1 and 255 with which to fill the mask (the default value is 1).
+   , floodFillFixedRange :: Bool
+      -- ^ If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference
+      -- between neighbor pixels is considered (that is, the range is floating).
+   , floodFillMaskOnly :: Bool
+      -- ^ If set, the function does not change the image ( newVal is ignored), and only fills the mask with the
+      -- value specified in bits 8-16 of flags as described above. This option only make sense in function variants
+      -- that have the mask parameter.
+   }
+
+defaultFloodFillOperationFlags :: FloodFillOperationFlags
+defaultFloodFillOperationFlags =
+    FloodFillOperationFlags
+    { floodFillConnectivity = 4
+    , floodFillMaskFillColor = 1
+    , floodFillFixedRange = False
+    , floodFillMaskOnly = False
+    }
+
+#num FLOODFILL_FIXED_RANGE
+#num FLOODFILL_MASK_ONLY
+
+marshalFloodFillOperationFlags :: FloodFillOperationFlags -> Int32
+marshalFloodFillOperationFlags opFlags =
+    let connectivityBits = fromIntegral (floodFillConnectivity opFlags)
+        maskFillColorBits = fromIntegral (floodFillMaskFillColor opFlags) `shiftL` 8
+        fixedRangeBits = if floodFillFixedRange opFlags then c'FLOODFILL_FIXED_RANGE else 0
+        fillMaskOnlyBits = if floodFillMaskOnly opFlags then c'FLOODFILL_MASK_ONLY else 0
+    in connectivityBits .|. maskFillColorBits .|. fixedRangeBits .|. fillMaskOnlyBits
 
 -- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
 
