@@ -30,8 +30,8 @@ executable videoio
   build-depends: base >=4.8 && < 4.10
                , opencv
 
-executable munihac
-  main-is: munihac.hs
+executable munihac1
+  main-is: munihac1.hs
   hs-source-dirs: src
   ghc-options: -Wall -O2
 
@@ -39,5 +39,78 @@ executable munihac
      base >=4.8 && < 4.10
    , linear
    , opencv
+
+  default-language: Haskell2010
+
+executable munihac2
+  main-is: munihac2.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+
+  default-language: Haskell2010
+
+executable munihac3
+  main-is: munihac3.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+
+  default-language: Haskell2010
+
+executable munihac4
+  main-is: munihac4.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+
+  default-language: Haskell2010
+
+executable munihac5
+  main-is: munihac5.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+
+  default-language: Haskell2010
+
+executable munihac6
+  main-is: munihac6.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+
+  default-language: Haskell2010
+
+executable munihac7
+  main-is: munihac7.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends:
+     base >=4.8 && < 4.10
+   , linear
+   , opencv
+   , transformers
 
   default-language: Haskell2010

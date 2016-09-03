@@ -3,46 +3,51 @@
 
 import Control.Monad ( unless )
 import Data.Foldable ( forM_ )
-import Data.Functor ( void )
 import Data.Proxy
+import Data.Int ( Int32 )
 import Data.Word ( Word8 )
+import Data.IORef ( IORef, newIORef, writeIORef, readIORef )
 import Linear.V2 ( V2(..) )
 import Linear.V4 ( V4(..) )
 import qualified OpenCV as CV
 import OpenCV.TypeLevel
+import Control.Monad.IO.Class ( liftIO )
 
 main :: IO ()
 main = do
     cap <- CV.newVideoCapture
-    -- Open the first available video capture device. Usually the
-    -- webcam if run on a laptop.
     CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0
-    isOpened <- CV.videoCaptureIsOpened cap
-    case isOpened of
-      False -> putStrLn "Couldn't open video capture device"
-      True -> CV.withWindow "video" $ \window -> do
-                loop cap window
+    CV.withWindow "video" $ \window -> do
+      lowRef  <- newIORef  30
+      highRef <- newIORef 200
+      CV.createTrackbar window "low"   30 255 $ \pos -> writeIORef lowRef  pos
+      CV.createTrackbar window "high" 200 255 $ \pos -> writeIORef highRef pos
+      loop cap window lowRef highRef
   where
-    loop cap window = do
+    loop cap window lowRef highRef = do
       _ok <- CV.videoCaptureGrab cap
       mbImg <- CV.videoCaptureRetrieve cap
       case mbImg of
         Just img -> do
-          result <- CV.exceptErrorIO $ fancy img
+          result <- CV.exceptErrorIO $ process lowRef highRef img
           CV.imshow window result
           key <- CV.waitKey 20
-          -- Loop unless the escape key is pressed.
-          unless (key == 27) $ loop cap window
-        -- Out of frames, stop looping.
+          unless (key == 27) $ loop cap window lowRef highRef
         Nothing -> pure ()
 
-fancy :: CV.Mat ('S ['D, 'D]) 'D 'D
-      -> CV.CvExceptT IO (CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8))
-fancy inputImg = do
+process :: IORef Int32 -- low ref
+        -> IORef Int32 -- high ref
+        -> CV.Mat ('S ['D, 'D]) 'D 'D
+        -> CV.CvExceptT IO (CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8))
+process lowRef highRef inputImg = do
     (inputImg' :: CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8)) <- CV.pureExcept $ CV.coerceMat inputImg
 
     blurImg <- CV.pureExcept $ CV.gaussianBlur (V2 3 3) 0 0 inputImg'
-    edgeImg <- CV.pureExcept $ CV.canny 30 200 Nothing CV.CannyNormL1 blurImg
+
+    low  <- liftIO $ readIORef lowRef
+    high <- liftIO $ readIORef highRef
+    edgeImg <- CV.pureExcept $
+               CV.canny (realToFrac low) (realToFrac high) Nothing CV.CannyNormL1 blurImg
     edgeImgBgr <- CV.pureExcept $ CV.cvtColor CV.gray CV.bgr edgeImg
     edgeImgM <- CV.thaw edgeImg
     lineSegments <- CV.houghLinesP 1 (pi / 180) 100 (Just 30) (Just 10) edgeImgM
@@ -52,17 +57,16 @@ fancy inputImg = do
           (Proxy :: Proxy 3)
           (Proxy :: Proxy Word8)
           white $ \outImgM -> do
-      void $ CV.matCopyToM outImgM (V2 0 0) inputImg' Nothing
-      void $ CV.matCopyToM outImgM (V2 0 0) edgeImgBgr (Just edgeImg)
+      CV.matCopyToM outImgM (V2 0 0) inputImg' Nothing
+      CV.matCopyToM outImgM (V2 0 0) edgeImgBgr (Just edgeImg)
 
-      -- Draw the lines found by houghLinesP
       forM_ lineSegments $ \lineSegment -> do
         CV.line outImgM
                 (CV.lineSegmentStart lineSegment)
                 (CV.lineSegmentStop  lineSegment)
                 red 2 CV.LineType_8 0
   where
-    [h, w] = CV.miShape info -- evil!
+    [h, w] = CV.miShape info
     info = CV.matInfo inputImg
 
 white, red :: CV.Scalar
