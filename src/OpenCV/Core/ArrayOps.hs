@@ -590,11 +590,12 @@ matSplit src = unsafePerformIO $
       [C.block| void {
         cv::Mat * srcPtr = $(Mat * srcPtr);
         int32_t numChans = $(int32_t c'numChans);
-        cv::Mat splits[numChans];
+        cv::Mat *splits = new cv::Mat[numChans];
         cv::split(*srcPtr, splits);
         for(int i = 0; i < numChans; i++){
           $(Mat * * splitsArray)[i] = new cv::Mat(splits[i]);
         }
+        delete [] splits;
       }|]
       fmap V.fromList . mapM (fromPtr . pure) =<< peekArray numChans splitsArray
   where
