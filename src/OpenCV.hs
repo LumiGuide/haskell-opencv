@@ -23,6 +23,7 @@ module OpenCV
     , module OpenCV.ImgProc.Types
     , module OpenCV.Video
     , module OpenCV.Video.MotionAnalysis
+    , module OpenCV.VideoIO.VideoCapture
 
     , module OpenCV.TypeLevel
 
@@ -51,6 +52,7 @@ import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types
 import OpenCV.Video
 import OpenCV.Video.MotionAnalysis
+import OpenCV.VideoIO.VideoCapture
 
 import OpenCV.TypeLevel
 
