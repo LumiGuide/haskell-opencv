@@ -174,21 +174,23 @@ marshalContourRetrievalMode
   :: ContourRetrievalMode -> Int32
 marshalContourRetrievalMode = \case
   ContourRetrievalExternal -> c'CV_RETR_EXTERNAL
-  ContourRetrievalList -> c'CV_RETR_LIST
-  ContourRetrievalCComp -> c'CV_RETR_CCOMP
-  ContourRetrievalTree -> c'CV_RETR_TREE
+  ContourRetrievalList     -> c'CV_RETR_LIST
+  ContourRetrievalCComp    -> c'CV_RETR_CCOMP
+  ContourRetrievalTree     -> c'CV_RETR_TREE
 
 marshalContourApproximationMethod
   :: ContourApproximationMethod -> Int32
 marshalContourApproximationMethod = \case
-  ContourApproximationNone -> c'CV_CHAIN_APPROX_NONE
-  ContourApproximationSimple -> c'CV_CHAIN_APPROX_SIMPLE
-  ContourApproximationTC89L1 -> c'CV_CHAIN_APPROX_TC89_L1
+  ContourApproximationNone     -> c'CV_CHAIN_APPROX_NONE
+  ContourApproximationSimple   -> c'CV_CHAIN_APPROX_SIMPLE
+  ContourApproximationTC89L1   -> c'CV_CHAIN_APPROX_TC89_L1
   ContourApproximationTC89KCOS -> c'CV_CHAIN_APPROX_TC89_KCOS
 
 data Contour =
-  Contour {contourPoints :: !(V.Vector Point2i)
-          ,contourChildren :: !(V.Vector Contour)}
+     Contour
+     { contourPoints   :: !(V.Vector Point2i)
+     , contourChildren :: !(V.Vector Contour)
+     } deriving Show
 
 findContours
   :: (PrimMonad m)
@@ -267,19 +269,23 @@ findContours mode method src = unsafePrimToPrim $
         peekArray numContours hierarchyPtr >>=
         mapM (fmap fromVec . fromPtr . pure)
 
-    let treeHierarchy =
-          zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->
-                (Contour { contourPoints = points
-                         , contourChildren = if firstChild < 0
-                                               then mempty
-                                               else V.fromList (map fst treeHierarchy !! fromIntegral firstChild)
-                         } : if nextSibling < 0
-                               then []
-                               else map fst treeHierarchy !! fromIntegral nextSibling
-                ,parent < 0 && previousSibling < 0)
+    let treeHierarchy :: V.Vector ([Contour], Bool)
+        treeHierarchy = V.fromList $
+          zipWith
+            (\(V4 nextSibling previousSibling firstChild parent) points ->
+              ( Contour { contourPoints = points
+                        , contourChildren =
+                            if firstChild < 0
+                            then mempty
+                            else V.fromList $ fst $ treeHierarchy V.! fromIntegral firstChild
+                        } : if nextSibling < 0
+                            then []
+                            else fst $ treeHierarchy V.! fromIntegral nextSibling
+              , parent < 0 && previousSibling < 0
               )
-              hierarchy
-              allContours
+            )
+            hierarchy
+            allContours
 
     [CU.block| void {
       delete [] *$(Point2i * * * * contoursPtrPtr);
@@ -287,8 +293,9 @@ findContours mode method src = unsafePrimToPrim $
       delete [] *$(int32_t * * contourLengthsPtrPtr);
     } |]
 
-    return (V.fromList
-              (concat (mapMaybe (\(contours,isRoot) -> guard isRoot $> contours) treeHierarchy)))
+    return $ V.fromList $ concat
+           $ mapMaybe (\(contours,isRoot) -> guard isRoot $> contours)
+           $ V.toList treeHierarchy
   where
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method

@@ -758,13 +758,11 @@ flowerContours = exceptError $
            (Proxy :: Proxy 3)
            (Proxy :: Proxy Word8)
            black $ \imgM -> do
-    let edges = exceptError $
-          cvtColor bgr gray flower_768x512 >>=
-          canny 30 20 Nothing CannyNormL1
-    contours <-
-      thaw edges >>=
-      findContours ContourRetrievalList
-                   ContourApproximationSimple
+    edges <- thaw $ exceptError $
+             cvtColor bgr gray flower_768x512 >>=
+             canny 30 20 Nothing CannyNormL1
+    contours <- findContours ContourRetrievalList
+                             ContourApproximationSimple edges
     lift $ drawContours (V.map contourPoints contours)
                         red
                         (OutlineContour LineType_AA 1)
