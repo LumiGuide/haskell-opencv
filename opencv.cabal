@@ -7,10 +7,18 @@ author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Custom
 cabal-version: >=1.10
+category:      AI, Graphics
+synopsis:      Haskell binding to OpenCV-3.1
+description:   This is a Haskell library providing a binding to OpenCV-3.1.
+               It binds directly with the C++ API using the @inline-c@ Haskell library.
+               .
+               The library is far from complete but the framework is there to easily
+               bind missing functionality.
 
 extra-source-files:
     data/*.png
     data/*.jpg
+
 extra-doc-files:
     doc/generated/*.png
     doc/generated/examples/*.png
@@ -47,7 +55,7 @@ library
       , src/OpenCV/Video.cpp
       , src/OpenCV/Video/MotionAnalysis.cpp
 
-    cc-options: -Wall -O2 -std=c++11
+    cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
 
     build-depends:
