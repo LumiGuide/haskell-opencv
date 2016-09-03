@@ -1,7 +1,20 @@
 #!/bin/bash
 set -eux -o pipefail
 
-# First OpenCV
+# OpenCV looks for libjpeg in /usr/lib/libjpeg.so, for some reason. However,
+# it does not seem to be there in 14.04. Create a link
+
+if [[ ! -f "/usr/lib/libjpeg.so" ]]; then
+  sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib/libjpeg.so
+fi
+
+# Same for libpng.so
+
+if [[ ! -f "/usr/lib/libpng.so" ]]; then
+  sudo ln -s /usr/lib/x86_64-linux-gnu/libpng.so /usr/lib/libpng.so
+fi
+
+# Build OpenCV
 
 if [[ ! -d "opencv-3.1.0/build" ]]; then
   curl -sL https://github.com/Itseez/opencv/archive/3.1.0.zip > opencv.zip
