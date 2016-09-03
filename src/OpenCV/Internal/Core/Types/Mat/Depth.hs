@@ -46,7 +46,8 @@ instance ToDepth (proxy Double) where toDepth _proxy = Depth_64F
 class ToDepthDS a where
     toDepthDS :: a -> DS Depth
 
-instance ToDepthDS Depth where toDepthDS = const D
+instance ToDepthDS Depth      where toDepthDS _depth = D
+instance ToDepthDS (proxy 'D) where toDepthDS _proxy = D
 
 instance ToDepthDS (proxy ('S Word8 )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Word8 )
 instance ToDepthDS (proxy ('S Int8  )) where toDepthDS _proxy = S $ toDepth (Proxy :: Proxy Int8  )
