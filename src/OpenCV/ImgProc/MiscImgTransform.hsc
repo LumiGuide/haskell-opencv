@@ -141,6 +141,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.ImgProc.MiscImgTransform
+import "this" OpenCV.Internal.ImgProc.MiscImgTransform.TypeLevel
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -1026,7 +1027,12 @@ floodFillImg = exceptError $
              (Proxy :: Proxy depth)
              white $ \imgM -> do
       sailboatEvening_768x512 <- thaw sailboat_768x512
-      rect <- floodFill sailboatEvening_768x512 seedPoint eveningRed (Just tolerance) (Just tolerance) defaultFloodFillOperationFlags
+      mask <- mkMatM (Proxy :: Proxy [height + 2, width + 2])
+                     (Proxy :: Proxy 1)
+                     (Proxy :: Proxy Word8)
+                     black
+      circle mask (V2 450 120 :: V2 Int32) 45 white (-1) LineType_AA 0
+      rect <- floodFill sailboatEvening_768x512 (Just mask) seedPoint eveningRed (Just tolerance) (Just tolerance) defaultFloodFillOperationFlags
       rectangle sailboatEvening_768x512 rect blue 2 LineType_8 0
       frozenSailboatEvening_768x512 <- freeze sailboatEvening_768x512
       matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
@@ -1055,7 +1061,7 @@ floodFillImg = exceptError $
 
 <<doc/generated/examples/floodFillImg.png floodFillImg>>
 
-<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#floodFill OpenCV Sphinx Doc>
+<http://goo.gl/9XIIne OpenCV Sphinx Doc>
 -}
 floodFill
     :: ( PrimMonad m
@@ -1066,6 +1072,9 @@ floodFill
        )
     => Mut (Mat shape channels depth) (PrimState m)
         -- ^ Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the FLOODFILL_MASK_ONLY flag is set.
+    -> Maybe (Mut (Mat (WidthAndHeightPlusTwo shape) ('S 1) ('S Word8)) (PrimState m))
+        -- ^ Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller than image. Since this is both an input and output parameter, you must take responsibility of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example, an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags as described below. It is therefore possible to use the same mask in multiple calls to the function to make sure the filled areas do not overlap.
+        -- Note: Since the mask is larger than the filled image, a pixel  (x, y) in image corresponds to the pixel  (x+1, y+1) in the mask.
     -> point2 Int32
         -- ^ Starting point.
     -> color
@@ -1076,23 +1085,26 @@ floodFill
         -- ^ Maximal upper brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
     -> FloodFillOperationFlags
     -> m Rect2i
-floodFill img seedPoint color mLoDiff mUpDiff opFlags =
+floodFill img mbMask seedPoint color mLoDiff mUpDiff opFlags =
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
+    withPtr mbMask $ \maskPtr ->
     withPtr (toPoint seedPoint) $ \seedPointPtr ->
     withPtr (toScalar color) $ \colorPtr ->
     withPtr loDiff $ \loDiffPtr ->
     withPtr upDiff $ \upDiffPtr ->
     withPtr rect $ \rectPtr -> do
-      [C.exp|void {
+      [C.block|void {
+        cv::Mat * maskPtr = $(Mat * maskPtr);
         cv::floodFill( *$(Mat * matPtr)
+                     , maskPtr ? cv::_InputOutputArray(*maskPtr) : cv::_InputOutputArray(noArray())
                      , *$(Point2i * seedPointPtr)
                      , *$(Scalar * colorPtr)
                      , $(Rect2i * rectPtr)
                      , *$(Scalar * loDiffPtr)
                      , *$(Scalar * upDiffPtr)
                      , $(int32_t c'opFlags)
-                     )
+                     );
       }|]
       pure rect
   where

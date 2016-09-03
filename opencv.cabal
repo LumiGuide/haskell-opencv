@@ -127,6 +127,7 @@ library
         OpenCV.Internal.Exception
         OpenCV.Internal.ImgCodecs
         OpenCV.Internal.ImgProc.MiscImgTransform
+        OpenCV.Internal.ImgProc.MiscImgTransform.TypeLevel
         OpenCV.Internal.ImgProc.Types
 
 
