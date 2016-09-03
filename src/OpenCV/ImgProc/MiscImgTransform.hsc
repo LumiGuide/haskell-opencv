@@ -122,6 +122,9 @@ module OpenCV.ImgProc.MiscImgTransform
     , ThreshType(..)
     , ThreshValue(..)
     , threshold
+
+      -- * Watershed
+    , watershed
     ) where
 
 import "base" Data.Bits
@@ -1191,3 +1194,27 @@ threshold threshVal threshType src = unsafeWrapException $ do
     c'type = c'threshType .|. c'threshValMode
     (c'threshType, c'maxVal) = marshalThreshType threshType
     (c'threshValMode, c'threshVal) = marshalThreshValue threshVal
+
+
+{- | Performs a marker-based image segmentation using the watershed algorithm.
+
+The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer, F. Color Image Segmentation, ICIP92, 1992].
+
+Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (>0) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using 'findContours' and 'drawContours'. The markers are “seeds” of the future image regions. All the other pixels in markers , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0’s. In the function output, each pixel in markers is set to a value of the “seed” components or to -1 at boundaries between the regions.
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed OpenCV Sphinx doc>
+-}
+watershed
+  :: (PrimMonad m)
+  => Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input 8-bit 3-channel image
+  -> Mut (Mat ('S [h, w]) ('S 1) ('S Int32)) (PrimState m) -- ^ Input/output 32-bit single-channel image (map) of markers
+  -> CvExceptT m ()
+watershed img markers =
+    unsafePrimToPrim $
+    withPtr img $ \imgPtr ->
+    withPtr markers $ \markersPtr ->
+      [C.exp|void {
+        cv::watershed( *$(Mat * imgPtr)
+                     , *$(Mat * markersPtr)
+                     )
+      }|]
