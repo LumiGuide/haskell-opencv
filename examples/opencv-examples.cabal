@@ -29,6 +29,7 @@ executable videoio
 
   build-depends: base >=4.8 && < 4.10
                , opencv
+
 executable munihac
   main-is: munihac.hs
   hs-source-dirs: src

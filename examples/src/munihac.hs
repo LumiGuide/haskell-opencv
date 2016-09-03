@@ -4,7 +4,6 @@
 import Control.Monad ( unless )
 import Data.Foldable ( forM_ )
 import Data.Functor ( void )
-import Data.Monoid ( (<>) )
 import Data.Proxy
 import Data.Word ( Word8 )
 import Linear.V2 ( V2(..) )
@@ -37,26 +36,31 @@ main = do
         -- Out of frames, stop looping.
         Nothing -> pure ()
 
-fancy :: CV.Mat ('S ['D, 'D]) 'D 'D -> CV.CvExceptT IO (CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8))
+fancy :: CV.Mat ('S ['D, 'D]) 'D 'D
+      -> CV.CvExceptT IO (CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8))
 fancy inputImg = do
     (inputImg' :: CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8)) <- CV.pureExcept $ CV.coerceMat inputImg
+
     blurImg <- CV.pureExcept $ CV.gaussianBlur (V2 3 3) 0 0 inputImg'
     edgeImg <- CV.pureExcept $ CV.canny 30 200 Nothing CV.CannyNormL1 blurImg
     edgeImgBgr <- CV.pureExcept $ CV.cvtColor CV.gray CV.bgr edgeImg
     edgeImgM <- CV.thaw edgeImg
-    lineSegments <- CV.houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
+    lineSegments <- CV.houghLinesP 1 (pi / 180) 100 (Just 30) (Just 10) edgeImgM
+
     CV.pureExcept $ CV.withMatM
           (h ::: w ::: Z)
           (Proxy :: Proxy 3)
           (Proxy :: Proxy Word8)
           white $ \outImgM -> do
-      void $ CV.matCopyToM outImgM (V2 0 0) edgeImgBgr Nothing
+      void $ CV.matCopyToM outImgM (V2 0 0) inputImg' Nothing
+      void $ CV.matCopyToM outImgM (V2 0 0) edgeImgBgr (Just edgeImg)
+
+      -- Draw the lines found by houghLinesP
       forM_ lineSegments $ \lineSegment -> do
         CV.line outImgM
                 (CV.lineSegmentStart lineSegment)
                 (CV.lineSegmentStop  lineSegment)
                 red 2 CV.LineType_8 0
-
   where
     [h, w] = CV.miShape info -- evil!
     info = CV.matInfo inputImg
