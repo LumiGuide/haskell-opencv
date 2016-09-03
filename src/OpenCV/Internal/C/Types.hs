@@ -115,6 +115,9 @@ data C'Ptr_BackgroundSubtractorKNN
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
 data C'Ptr_BackgroundSubtractorMOG2
 
+-- | Haskell representation of an OpenCV @cv::VideoCapture@ object
+data C'VideoCapture
+
 -- | Callback function for mouse events
 type C'MouseCallback
    =  Int32 -- ^ One of the @cv::MouseEvenTypes@ constants.
