@@ -1,4 +1,6 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# language FlexibleInstances #-}
+{-# language TypeSynonymInstances #-}
+{-# options_ghc -fno-warn-orphans #-}
 
 module Main where
 
@@ -6,6 +8,7 @@ import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Matrix ( M23, M33 )
@@ -33,14 +36,17 @@ main = defaultMain $ testGroup "opencv"
       ]
     , testGroup "Core"
       [ testGroup "Iso"
-        [ testIso "isoPoint2iV2" (toPoint2i :: V2 Int32  -> Point2i) fromPoint2i
-        , testIso "isoPoint2fV2" (toPoint2f :: V2 Float  -> Point2f) fromPoint2f
-        , testIso "isoPoint2dV2" (toPoint2d :: V2 Double -> Point2d) fromPoint2d
-        , testIso "isoPoint3iV3" (toPoint3i :: V3 Int32  -> Point3i) fromPoint3i
-        , testIso "isoPoint3fV3" (toPoint3f :: V3 Float  -> Point3f) fromPoint3f
-        , testIso "isoPoint3dV3" (toPoint3d :: V3 Double -> Point3d) fromPoint3d
-        , testIso "isoSize2iV2"  (toSize2i  :: V2 Int32  -> Size2i ) fromSize2i
-        , testIso "isoSize2fV2"  (toSize2f  :: V2 Float  -> Size2f ) fromSize2f
+        [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32   -> Point2i) fromPoint
+        , testIso "isoPoint2fV2" (toPoint  :: V2 CFloat  -> Point2f) fromPoint
+        , testIso "isoPoint2dV2" (toPoint  :: V2 CDouble -> Point2d) fromPoint
+        , testIso "isoPoint3iV3" (toPoint  :: V3 Int32   -> Point3i) fromPoint
+        , testIso "isoPoint3fV3" (toPoint  :: V3 CFloat  -> Point3f) fromPoint
+        , testIso "isoPoint3dV3" (toPoint  :: V3 CDouble -> Point3d) fromPoint
+        , testIso "isoVec3fV3"   (toVec    :: V3 CFloat  -> Vec3f  ) fromVec
+        , testIso "isoVec4iV4"   (toVec    :: V4 Int32   -> Vec4i  ) fromVec
+        , testIso "isoSize2iV2"  (toSize   :: V2 Int32   -> Size2i ) fromSize
+        , testIso "isoSize2fV2"  (toSize   :: V2 CFloat  -> Size2f ) fromSize
+        , testIso "isoScalarV4"  (toScalar :: V4 CDouble -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
         [ QC.testProperty "basic-properties" rectBasicProperties
@@ -85,6 +91,9 @@ main = defaultMain $ testGroup "opencv"
       , testGroup "Structural Analysis and Shape Descriptors"
         [ HU.testCase "findContours" testFindContours
         ]
+      , testGroup "Feature Detection"
+        [ HU.testCase "houghLinesP"   testHoughLinesP
+        ]
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
@@ -118,7 +127,7 @@ testFindFundamentalMat_noPoints =
       Right Nothing -> pure ()
       Right (Just _) -> assertFailure "result despite lack of data"
   where
-    points :: V.Vector (V2 Double)
+    points :: V.Vector (V2 CDouble)
     points = V.empty
 
 testFindFundamentalMat :: HU.Assertion
@@ -130,7 +139,7 @@ testFindFundamentalMat =
           assertNull (typeCheckMat fm        ) (("fm: "         <>) . show)
           assertNull (typeCheckMat pointsMask) (("pointsMask: " <>) . show)
   where
-    points1, points2 :: V.Vector (V2 Double)
+    points1, points2 :: V.Vector (V2 CDouble)
     points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
     points2 = V.map (^+^ (V2 3 2)) points1
 
@@ -149,7 +158,7 @@ testComputeCorrespondEpilines =
                        assertNull (typeCheckMat epilines2) (("epilines2: " <>) . show)
       _ -> assertFailure "couldn't find fundamental matrix"
   where
-    points1, points2 :: V.Vector (V2 Double)
+    points1, points2 :: V.Vector (V2 CDouble)
     points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
     points2 = V.map (^+^ (V2 3 2)) points1
 
@@ -161,18 +170,19 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ fromPoint2i (rectTopLeft     rect) == tl
-      , fromPoint2i (rectBottomRight rect) == tl ^+^ size
-      , fromSize2i  (rectSize        rect) == size
-      ,              rectArea        rect  == (w  *  h)
+      [ fromPoint (rectTopLeft     rect) == tl
+      , fromPoint (rectBottomRight rect) == tl ^+^ size
+      , fromSize  (rectSize        rect) == size
+      ,           rectArea         rect  == (w  *  h)
       ]
     where
-      rect = mkRect tl size
+      rect :: Rect2i
+      rect = toRect $ HRect tl size
 
-rectContainsProperty :: Point2i -> Rect -> Bool
+rectContainsProperty :: Point2i -> Rect2i -> Bool
 rectContainsProperty point rect = rectContains point rect == myRectContains point rect
 
-myRectContains :: Point2i -> Rect -> Bool
+myRectContains :: Point2i -> Rect2i -> Bool
 myRectContains point rect =
     and [ rx <= px
         , ry <= py
@@ -182,13 +192,13 @@ myRectContains point rect =
         ]
   where
     px, py :: Int32
-    V2 px py = fromPoint2i point
+    V2 px py = fromPoint point
 
     rx, ry :: Int32
-    V2 rx ry = fromPoint2i $ rectTopLeft rect
+    V2 rx ry = fromPoint $ rectTopLeft rect
 
     w, h :: Int32
-    V2 w h = fromSize2i $ rectSize rect
+    V2 w h = fromSize $ rectSize rect
 
 testMatType
     :: ( ToShapeDS    (Proxy shape)
@@ -210,7 +220,7 @@ matHasInfoFP fp expectedInfo = HU.testCase fp $ do
 testGetRotationMatrix2D :: HU.Assertion
 testGetRotationMatrix2D = testMatType rot2D
   where
-    rot2D = getRotationMatrix2D (zero :: V2 Float) 0 0
+    rot2D = getRotationMatrix2D (zero :: V2 CFloat) 0 0
 
 hMatEncodeDecodeFP :: FilePath -> TestTree
 hMatEncodeDecodeFP fp = HU.testCase fp $ do
@@ -262,12 +272,24 @@ testOrbDetectAndCompute = do
 
 testFindContours :: HU.Assertion
 testFindContours =
-  do edges <- loadLambda >>= thaw . exceptError . canny 30 20 Nothing Nothing
-     contours <-
-       findContours ContourRetrievalExternal ContourApproximationSimple edges
+  do lambda <- loadLambda
+     edges <- unsafeThaw $ exceptError $ canny 30 20 Nothing CannyNormL1 lambda
+     contours <- findContours ContourRetrievalExternal
+                              ContourApproximationSimple
+                              edges
      assertEqual "Unexpected number of contours found"
                  (length contours)
                  1
+
+testHoughLinesP :: HU.Assertion
+testHoughLinesP = do
+    building <- loadImg ImreadUnchanged "building.jpg"
+    let building' :: Mat ('S ['D, 'D]) 'D ('S Word8)
+        building' = exceptError $ coerceMat building
+    let edgeImg = exceptError $ canny 50 200 Nothing CannyNormL1 building'
+    edgeImgM <- thaw edgeImg
+    lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
+    assertBool "no lines found" (V.length lineSegments > 0)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
@@ -294,14 +316,14 @@ testMatToM23
     => Mat (ShapeT [2, 3]) ('S 1) ('S e)
     -> V2 (V3 e)
     -> HU.Assertion
-testMatToM23 m v = assertEqual "" v $ matToM23 m
+testMatToM23 m v = assertEqual "" v $ fromMat m
 
 testMatToM33
     :: (Eq e, Show e, Storable e)
     => Mat (ShapeT [3, 3]) ('S 1) ('S e)
     -> V3 (V3 e)
     -> HU.Assertion
-testMatToM33 m v = assertEqual "" v $ matToM33 m
+testMatToM33 m v = assertEqual "" v $ fromMat m
 
 --------------------------------------------------------------------------------
 
@@ -323,6 +345,12 @@ eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 -- QuikcCheck Arbitrary Instances
 --------------------------------------------------------------------------------
 
+instance QC.Arbitrary CFloat where
+    arbitrary = CFloat <$> QC.arbitrary
+
+instance QC.Arbitrary CDouble where
+    arbitrary = CDouble <$> QC.arbitrary
+
 instance (QC.Arbitrary a) => QC.Arbitrary (V2 a) where
     arbitrary = V2 <$> QC.arbitrary <*> QC.arbitrary
 
@@ -332,11 +360,14 @@ instance (QC.Arbitrary a) => QC.Arbitrary (V3 a) where
 instance (QC.Arbitrary a) => QC.Arbitrary (V4 a) where
     arbitrary = V4 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
 
-instance QC.Arbitrary Rect where
-    arbitrary = mkRect <$> QC.arbitrary <*> QC.arbitrary
+instance (QC.Arbitrary a) => QC.Arbitrary (HRect a) where
+    arbitrary = HRect <$> QC.arbitrary <*> QC.arbitrary
+
+instance QC.Arbitrary Rect2i where
+    arbitrary = toRect <$> (QC.arbitrary :: QC.Gen (HRect Int32))
 
 instance QC.Arbitrary Point2i where
-    arbitrary = toPoint2i <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+    arbitrary = toPoint <$> (QC.arbitrary :: QC.Gen (V2 Int32))
 
 --------------------------------------------------------------------------------
 

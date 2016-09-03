@@ -10,6 +10,7 @@ import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Foreign.C.Types
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
@@ -42,6 +43,8 @@ type Flower_512x341   = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Sailboat_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Frog             = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
 type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
+type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
+type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -62,7 +65,7 @@ smallerKodakImg
     -> Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 smallerKodakImg img =
     exceptError $ coerceMat =<<
-      resize (ResizeAbs $ toSize2i (V2 512 341 :: V2 Int32))
+      resize (ResizeAbs $ toSize (V2 512 341 :: V2 Int32))
              InterArea
              img
 
@@ -85,7 +88,15 @@ lambda =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/lambda.png"
 
+circles_1000x625 :: Circles_1000x625
+circles_1000x625 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/circles.png"
 
+building_868x600 :: Building_868x600
+building_868x600 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/building.jpg"
 
 --------------------------------------------------------------------------------
 
@@ -107,7 +118,7 @@ lineTypeImg lineType = exceptError $ do
                     transparent $ \imgM -> do
              lift $ line imgM (pure p + V2 0 h) (pure p + V2 w 0) black 1 lineType 0
     resize (ResizeRel $ pure zoom) InterNearest
-           =<< matSubRect img (mkRect (pure p) (V2 w h))
+           =<< matSubRect img (toRect $ HRect (pure p) (V2 w h))
   where
     w, h, p :: Int32
     w = fromInteger $ natVal (Proxy :: Proxy w)
@@ -115,26 +126,32 @@ lineTypeImg lineType = exceptError $ do
     p = fromInteger $ natVal (Proxy :: Proxy p)
     zoom = 8
 
-fontFaceImg
-    :: FontFace
+fontImg
+    :: Font
     -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
-fontFaceImg fontFace = exceptError $
+fontImg font = exceptError $
     withMatM (th * 3 ::: tw ::: Z)
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \imgM -> do
-      putText imgM txt (V2 0 (th * 2 - baseLine) :: V2 Int32) fontFace scale black thickness LineType_AA False
+      putText
+        imgM
+        txt
+        (V2 0 (th * 2 - baseLine) :: V2 Int32)
+        font
+        black
+        thickness
+        LineType_AA False
   where
     txt = "The quick brown fox jumps over the lazy dog"
-    (size2i, baseLine) = getTextSize txt fontFace scale thickness
+    (size2i, baseLine) = getTextSize txt font thickness
     tw, th :: Int32
-    V2 tw th = fromSize2i size2i
-    scale     = 1
+    V2 tw th = fromSize size2i
     thickness = 1
 
 vennCircleA
     :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m)
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m)
     -> color
     -> Int32
     -> m ()
@@ -143,7 +160,7 @@ vennCircleA imgM color thickness =
 
 vennCircleB
     :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m)
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m)
     -> color
     -> Int32
     -> m ()
@@ -164,7 +181,8 @@ main = do
     render "sailboat_512x341.png" sailboat_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
       render (show lineType <> ".png") (lineTypeImg lineType)
-    forM_ [minBound .. maxBound] $ \fontFace ->
-      render (show fontFace <> ".png") (fontFaceImg fontFace)
+    forM_ [minBound .. maxBound] $ \fontFace -> do
+      render (show fontFace <> ".png")         (fontImg $ Font fontFace NotSlanted 1)
+      render (show fontFace <> "_slanted.png") (fontImg $ Font fontFace Slanted    1)
 
 --------------------------------------------------------------------------------

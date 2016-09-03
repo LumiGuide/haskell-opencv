@@ -6,15 +6,17 @@ module OpenCV.Video
       estimateRigidTransform
     ) where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Exception.Internal
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
-import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
@@ -37,11 +39,11 @@ C.using "namespace cv"
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/video/doc/motion_analysis_and_object_tracking.html#estimaterigidtransform OpenCV Sphinx doc>
 estimateRigidTransform
-    :: ( ToPoint2i  srcPoint2i
-       , ToPoint2i  dstPoint2i
+    :: ( IsPoint2 srcPoint2 Int32
+       , IsPoint2 dstPoint2 Int32
        )
-    => V.Vector srcPoint2i -- ^ Source
-    -> V.Vector dstPoint2i -- ^ Destination
+    => V.Vector (srcPoint2 Int32) -- ^ Source
+    -> V.Vector (dstPoint2 Int32) -- ^ Destination
     -> Bool -- ^ Full affine
     -> CvExcept (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
 estimateRigidTransform src dst fullAffine = do
@@ -57,8 +59,8 @@ estimateRigidTransform src dst fullAffine = do
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withArrayPtr (V.map toPoint2i src) $ \srcPtr ->
-        withArrayPtr (V.map toPoint2i dst) $ \dstPtr ->
+        withArrayPtr (V.map toPoint src) $ \srcPtr ->
+        withArrayPtr (V.map toPoint dst) $ \dstPtr ->
         withPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);

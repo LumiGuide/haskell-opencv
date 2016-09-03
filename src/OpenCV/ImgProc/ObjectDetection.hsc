@@ -1,8 +1,14 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.ImgProc.ObjectDetection
     ( MatchTemplateMethod(..)
+    , MatchTemplateNormalisation(..)
     , matchTemplate
     ) where
 
@@ -11,11 +17,11 @@ import "base" Data.Word
 import "base" GHC.TypeLits
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -48,6 +54,12 @@ data MatchTemplateMethod
        --   * where <<http://docs.opencv.org/3.0-last-rst/_images/math/ffb6954b6020b02e13b73c79bd852c1627cfb79c.png>>
        --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/235e42ec68d2d773899efcf0a4a9d35a7afedb64.png>>
      deriving Show
+
+-- | Whether to use normalisation. See 'MatchTemplateMethod'.
+data MatchTemplateNormalisation
+   = MatchTemplateNotNormed
+   | MatchTemplateNormed
+   deriving (Show, Eq)
 
 #num CV_TM_SQDIFF
 #num CV_TM_SQDIFF_NORMED
@@ -91,8 +103,8 @@ matchTemplate
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
     -> MatchTemplateMethod
        -- ^ Parameter specifying the comparison method.
-    -> Bool
-       -- ^ Normalise. See 'MatchTemplateMethod'.
+    -> MatchTemplateNormalisation
+       -- ^ Normalise
     -> CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
        -- ^ Map of comparison results. It must be single-channel 32-bit floating-point.
        -- If image is
@@ -101,7 +113,7 @@ matchTemplate
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/d47153257f0243694e5632bb23b85009eb9e5599.png>>
        -- , then result is
        -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
-matchTemplate image templ method normed = unsafeWrapException $ do
+matchTemplate image templ method normalisation = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
       withPtr result $ \resultPtr ->
@@ -115,4 +127,8 @@ matchTemplate image templ method normed = unsafeWrapException $ do
                            );
         |]
   where
+    normed =
+      case normalisation of
+        MatchTemplateNotNormed -> False
+        MatchTemplateNormed -> True
     c'method = marshalMatchTemplateMethod method normed

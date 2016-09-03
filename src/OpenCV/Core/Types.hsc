@@ -6,40 +6,19 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- For Show instances
 
 module OpenCV.Core.Types
-    ( -- * Point
-      -- ** 2D types
-      Point2i
-    , Point2f
-    , Point2d
-    , ToPoint2i(..), FromPoint2i(..)
-    , ToPoint2f(..), FromPoint2f(..)
-    , ToPoint2d(..), FromPoint2d(..)
-      -- ** 3D types
-    , Point3i
-    , Point3f
-    , Point3d
-    , ToPoint3i(..), FromPoint3i(..)
-    , ToPoint3f(..), FromPoint3f(..)
-    , ToPoint3d(..), FromPoint3d(..)
-      -- ** 4D types
-    , Vec4i(..)
-    , ToVec4i(..), FromVec4i(..)
+    ( -- * Mutable values
+      Mut
+    , Mutable
+    , FreezeThaw(..)
+      -- * Point
+    , module OpenCV.Core.Types.Point
       -- * Size
-    , Size2i
-    , Size2f
-    , ToSize2i(..), FromSize2i(..)
-    , ToSize2f(..), FromSize2f(..)
+    , module OpenCV.Core.Types.Size
       -- * Scalar
     , Scalar
     , ToScalar(..), FromScalar(..)
       -- * Rect
-    , Rect
-    , mkRect
-    , rectTopLeft
-    , rectBottomRight
-    , rectSize
-    , rectArea
-    , rectContains
+    , module OpenCV.Core.Types.Rect
       -- * RotatedRect
     , RotatedRect
     , mkRotatedRect
@@ -67,12 +46,14 @@ module OpenCV.Core.Types
     , dmatchAsRec
       -- * Matrix
     , module OpenCV.Core.Types.Mat
+    , module OpenCV.Core.Types.Matx
+      -- * Vec
+    , module OpenCV.Core.Types.Vec
       -- * Exception
     , module OpenCV.Exception
      -- * Algorithm
     , Algorithm(..)
       -- * Polymorphic stuff
-    , PointT
     , WithPtr
     , FromPtr
     , CSizeOf
@@ -80,9 +61,9 @@ module OpenCV.Core.Types
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Marshal.Utils ( toBool )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -90,14 +71,20 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.PlacementNew
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Constants
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
+import "this" OpenCV.Core.Types.Matx
+import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Rect
+import "this" OpenCV.Core.Types.Size
+import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.PlacementNew
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types.Constants
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Mutable
 
 --------------------------------------------------------------------------------
 
@@ -111,86 +98,16 @@ C.using "namespace cv"
 
 #include "namespace.hpp"
 
-
---------------------------------------------------------------------------------
--- Point
---------------------------------------------------------------------------------
-
-
-instance Show Point2i where
-    showsPrec prec point = showParen (prec >= 10) $
-                               showString "fromPoint2i "
-                             . shows (fromPoint2i point :: V2 Int32)
-
-instance Show Size2i where
-    showsPrec prec size = showParen (prec >= 10) $
-                              showString "fromSize2i "
-                            . shows (fromSize2i size :: V2 Int32)
-
-
---------------------------------------------------------------------------------
---  Rect
---------------------------------------------------------------------------------
-
-instance Show Rect where
-    showsPrec prec rect = showParen (prec >= 10) $
-                              showString "mkRect "
-                            . shows x . showString " "
-                            . shows y . showString " "
-                            . shows w . showString " "
-                            . shows h
-      where
-        x, y, w, h :: Int32
-        V2 x y = fromPoint2i $ rectTopLeft rect
-        V2 w h = fromSize2i  $ rectSize    rect
-
-mkRect
-    :: V2 Int32 -- ^ top left
-    -> V2 Int32 -- ^ size
-    -> Rect
-mkRect pos size = unsafePerformIO $ newRect pos size
-
--- | The top-left corner
-rectTopLeft :: Rect -> Point2i
-rectTopLeft rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->tl()) }|]
-
--- | The bottom-right corner
-rectBottomRight :: Rect -> Point2i
-rectBottomRight rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Point2i * { new Point2i($(Rect * rectPtr)->br()) }|]
-
--- | Size (width, height) of the rectangle
-rectSize :: Rect -> Size2i
-rectSize rect = unsafePerformIO $ fromPtr $ withPtr rect $ \rectPtr ->
-    [CU.exp| Size2i * { new Size2i($(Rect * rectPtr)->size()) }|]
-
--- | Area (width*height) of the rectangle
-rectArea :: Rect -> Int32
-rectArea rect = unsafePerformIO $ withPtr rect $ \rectPtr ->
-    [CU.exp| int32_t { $(Rect * rectPtr)->area() }|]
-
-
--- | Checks whether the rectangle contains the point
-rectContains :: (ToPoint2i point2i) => point2i -> Rect -> Bool
-rectContains point rect =
-    toBool $
-      unsafePerformIO $
-        withPtr (toPoint2i point) $ \pointPtr ->
-          withPtr rect $ \rectPtr ->
-            [CU.exp| int { $(Rect * rectPtr)->contains(*$(Point2i * pointPtr)) }|]
-
-
 --------------------------------------------------------------------------------
 --  RotatedRect
 --------------------------------------------------------------------------------
 
 mkRotatedRect
-    :: ( ToPoint2f point2f
-       , ToSize2f  size2f
+    :: ( IsPoint2 point2 CFloat
+       , IsSize   size   CFloat
        )
-    => point2f -- ^ Rectangle mass center
-    -> size2f -- ^ Width and height of the rectangle
+    => point2 CFloat -- ^ Rectangle mass center
+    -> size   CFloat -- ^ Width and height of the rectangle
     -> Float
        -- ^ The rotation angle (in degrees). When the angle is 0, 90,
        -- 180, 270 etc., the rectangle becomes an up-right rectangle.
@@ -220,17 +137,17 @@ rotatedRectAngle rotRect = realToFrac $ unsafePerformIO $
       [CU.exp| float { $(RotatedRect * rotRectPtr)->angle }|]
 
 -- | The minimal up-right rectangle containing the rotated rectangle
-rotatedRectBoundingRect :: RotatedRect -> Rect
+rotatedRectBoundingRect :: RotatedRect -> Rect2i
 rotatedRectBoundingRect rotRect =
     unsafePerformIO $ fromPtr $ withPtr rotRect $ \rotRectPtr ->
-      [CU.exp| Rect * { new Rect($(RotatedRect * rotRectPtr)->boundingRect()) }|]
+      [CU.exp| Rect2i * { new Rect2i($(RotatedRect * rotRectPtr)->boundingRect()) }|]
 
 rotatedRectPoints :: RotatedRect -> (Point2f, Point2f, Point2f, Point2f)
 rotatedRectPoints rotRect = unsafePerformIO $ do
-    p1 <- newPoint2f zero
-    p2 <- newPoint2f zero
-    p3 <- newPoint2f zero
-    p4 <- newPoint2f zero
+    p1 <- toPointIO (zero :: V2 CFloat)
+    p2 <- toPointIO (zero :: V2 CFloat)
+    p3 <- toPointIO (zero :: V2 CFloat)
+    p4 <- toPointIO (zero :: V2 CFloat)
     withPtr rotRect $ \rotRectPtr ->
       withPtr p1 $ \p1Ptr ->
       withPtr p2 $ \p2Ptr ->

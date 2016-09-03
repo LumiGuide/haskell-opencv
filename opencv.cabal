@@ -5,7 +5,7 @@ license:       BSD3
 license-file:  LICENSE
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
-build-type:    Simple
+build-type:    Custom
 cabal-version: >=1.10
 
 extra-source-files:
@@ -20,14 +20,15 @@ library
     include-dirs: include
     c-sources:
         src/OpenCV/Calib3d.cpp
-      , src/OpenCV/C/PlacementNew.cpp
       , src/OpenCV/Core/ArrayOps.cpp
       , src/OpenCV/Core/Types.cpp
-      , src/OpenCV/Core/Types/Internal.cpp
       , src/OpenCV/Core/Types/Mat.cpp
-      , src/OpenCV/Core/Types/Mat/Internal.cpp
       , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/Exception/Internal.cpp
+      , src/OpenCV/Core/Types/Matx.cpp
+      , src/OpenCV/Core/Types/Point.cpp
+      , src/OpenCV/Core/Types/Rect.cpp
+      , src/OpenCV/Core/Types/Size.cpp
+      , src/OpenCV/Core/Types/Vec.cpp
       , src/OpenCV/Features2d.cpp
       , src/OpenCV/HighGui.cpp
       , src/OpenCV/ImgCodecs.cpp
@@ -39,39 +40,47 @@ library
       , src/OpenCV/ImgProc/MiscImgTransform.cpp
       , src/OpenCV/ImgProc/ObjectDetection.cpp
       , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+      , src/OpenCV/Internal/Core/Types.cpp
+      , src/OpenCV/Internal/Core/Types/Mat.cpp
+      , src/OpenCV/Internal/Core/Types/Mat/ToFrom.cpp
+      , src/OpenCV/Internal/Exception.cpp
       , src/OpenCV/Video.cpp
       , src/OpenCV/Video/MotionAnalysis.cpp
 
     cc-options: -Wall -O2 -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
 
     build-depends:
-        aeson             >=0.9.0.1
-      , base              >=4.8     && <5
-      , base64-bytestring >=1.0.0.1
-      , bindings-DSL      >=1.0.23
-      , bytestring        >=0.10.6
-      , containers        >=0.5.6.2
-      , deepseq           >=1.4.1.1
-      , inline-c          >=0.5.5.2
-      , inline-c-cpp      >=0.1
-      , linear            >=1.20.4
-      , primitive         >=0.6.1
-      , repa              >=3.4.0.2
-      , template-haskell  >=2.10
-      , text              >=1.2.2.1
-      , transformers      >=0.4.2
-      , vector            >=0.11
+        aeson             >= 0.9.0.1
+      , base              >= 4.8     && <5
+      , base64-bytestring >= 1.0.0.1
+      , bindings-DSL      >= 1.0.23
+      , bytestring        >= 0.10.6
+      , containers        >= 0.5.6.2
+      , deepseq           >= 1.4.1.1
+      , inline-c          >= 0.5.5.5
+      , inline-c-cpp      >= 0.1
+      , linear            >= 1.20.4
+      , primitive         >= 0.6.1
+      , repa              >= 3.4.0.2
+      , template-haskell  >= 2.10
+      , text              >= 1.2.2.1
+      , transformers      >= 0.4.2
+      , vector            >= 0.11
 
     exposed-modules:
         OpenCV
         OpenCV.Calib3d
-        OpenCV.Core
         OpenCV.Core.ArrayOps
         OpenCV.Core.Types
         OpenCV.Core.Types.Mat
         OpenCV.Core.Types.Mat.HMat
         OpenCV.Core.Types.Mat.Repa
+        OpenCV.Core.Types.Matx
+        OpenCV.Core.Types.Point
+        OpenCV.Core.Types.Rect
+        OpenCV.Core.Types.Size
+        OpenCV.Core.Types.Vec
         OpenCV.Exception
         OpenCV.Features2d
         OpenCV.HighGui
@@ -90,21 +99,36 @@ library
         OpenCV.Unsafe
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
-    other-modules:
-        OpenCV.Calib3d.Constants
-        OpenCV.C.Inline
-        OpenCV.Core.ArrayOps.Internal
-        OpenCV.Core.Types.Constants
-        OpenCV.Core.Types.Internal
-        OpenCV.Core.Types.Mat.Depth
-        OpenCV.Core.Types.Mat.Internal
-        OpenCV.C.PlacementNew
-        OpenCV.C.Types
-        OpenCV.Exception.Internal
-        OpenCV.ImgCodecs.Internal
-        OpenCV.ImgProc.MiscImgTransform.Internal
-        OpenCV.ImgProc.Types.Internal
+
         OpenCV.Internal
+        OpenCV.Internal.Mutable
+        OpenCV.Internal.C.Inline
+        OpenCV.Internal.C.PlacementNew
+        OpenCV.Internal.C.PlacementNew.TH
+        OpenCV.Internal.C.Types
+        OpenCV.Internal.Calib3d.Constants
+        OpenCV.Internal.Core.ArrayOps
+        OpenCV.Internal.Core.Types
+        OpenCV.Internal.Core.Types.Constants
+        OpenCV.Internal.Core.Types.Mat
+        OpenCV.Internal.Core.Types.Mat.Depth
+        OpenCV.Internal.Core.Types.Mat.Marshal
+        OpenCV.Internal.Core.Types.Mat.ToFrom
+        OpenCV.Internal.Core.Types.Matx
+        OpenCV.Internal.Core.Types.Matx.TH
+        OpenCV.Internal.Core.Types.Point
+        OpenCV.Internal.Core.Types.Point.TH
+        OpenCV.Internal.Core.Types.Rect
+        OpenCV.Internal.Core.Types.Rect.TH
+        OpenCV.Internal.Core.Types.Size
+        OpenCV.Internal.Core.Types.Size.TH
+        OpenCV.Internal.Core.Types.Vec
+        OpenCV.Internal.Core.Types.Vec.TH
+        OpenCV.Internal.Exception
+        OpenCV.Internal.ImgCodecs
+        OpenCV.Internal.ImgProc.MiscImgTransform
+        OpenCV.Internal.ImgProc.Types
+
 
     default-extensions:
         BangPatterns
@@ -122,6 +146,7 @@ library
 
     default-language:   Haskell2010
     pkgconfig-depends:  opencv
+    extra-libraries:    stdc++
 
 test-suite opencv-doc-images
     type: exitcode-stdio-1.0

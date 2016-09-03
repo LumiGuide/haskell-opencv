@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, fetchzip, fetchgit
+{ lib, stdenv, fetchurl, fetchzip
 , cmake, gtk, qt, libjpeg, libpng, libtiff, jasper, ffmpeg
 , pkgconfig, gstreamer, xineLib, glib, python27, python27Packages, unzip, doxygen, perl
 , enableIpp ? false
@@ -13,6 +13,11 @@ let
 
   enabled = condition : if condition then "ON" else "OFF";
 
+  contribSrc = fetchzip {
+    url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
+    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
+    name = "opencv-contrib-${v}-src";
+  };
 in
 
 stdenv.mkDerivation rec {
@@ -21,13 +26,8 @@ stdenv.mkDerivation rec {
     url = "https://github.com/Itseez/opencv/archive/${v}.zip";
     sha256 = "1912wrsb6nfl9fp7w9z3n0x04jcrv6k6zsa0zx7q10nvkwj90s8z";
   };
-  contribSrc = fetchzip {
-    url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
-    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
-    name = "opencv-contrib-${v}-src";
-  };
 
-  postPatch =
+  preConfigure =
     let ippicv = fetchurl {
           url = "https://raw.githubusercontent.com/Itseez/opencv_3rdparty/${ippicvBinariesCommit}/ippicv/${ippicvName}";
           md5 = ippicvHash;

@@ -1,5 +1,10 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 {- |
 
@@ -33,9 +38,11 @@ module OpenCV.ImgProc.ImgFiltering
     , medianBlur
     , erode
     , dilate
+    , filter2D
     , morphologyEx
     , getStructuringElement
     , blur
+    , gaussianBlur
     ) where
 
 import "base" Data.Int
@@ -45,13 +52,13 @@ import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgProc.Types
-import "this" OpenCV.ImgProc.Types.Internal ( marshalBorderMode )
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
+import "this" OpenCV.Internal.ImgProc.Types ( marshalBorderMode )
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -75,7 +82,7 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 defaultAnchor :: Point2i
-defaultAnchor = toPoint2i (pure (-1) :: V2 Int32)
+defaultAnchor = toPoint (pure (-1) :: V2 Int32)
 
 
 --------------------------------------------------------------------------------
@@ -270,8 +277,10 @@ boxBlurImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc>
 -}
 blur
-  :: (depth `In` '[Word8, Word16, Float], ToSize2i size2i)
-  => size2i -- ^ Blurring kernel size.
+  :: ( depth `In` '[Word8, Word16, Int16, Float, Double]
+     , IsSize  size  Int32
+     )
+  => size  Int32 -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
   -> CvExcept (Mat shape ('S channels) ('S depth))
 blur size matIn =
@@ -289,7 +298,39 @@ blur size matIn =
            );
        |]
   where ksize :: Size2i
-        ksize = toSize2i size
+        ksize = toSize size
+
+gaussianBlur
+  :: ( depth `In` '[Word8, Word16, Float, Double]
+     , IsSize size Int32
+     )
+  => size Int32 -- ^ Blurring kernel size.
+  -> Double -- ^ sigmaX
+  -> Double -- ^ sigmaY
+  -> Mat shape ('S channels) ('S depth)
+  -> CvExcept (Mat shape ('S channels) ('S depth))
+gaussianBlur size sigmaX sigmaY matIn =
+  unsafeWrapException $
+  do matOut <- newEmptyMat
+     handleCvException (pure $ unsafeCoerceMat matOut) $
+       withPtr ksize $ \ksizePtr ->
+       withPtr matIn $ \matInPtr ->
+       withPtr matOut $ \matOutPtr ->
+       [cvExcept|
+           cv::GaussianBlur
+           ( *$(Mat * matInPtr)
+           , *$(Mat * matOutPtr)
+           , *$(Size2i * ksizePtr)
+           , $(double c'sigmaX)
+           , $(double c'sigmaY)
+           );
+       |]
+  where
+    ksize :: Size2i
+    ksize = toSize size
+
+    c'sigmaX = realToFrac sigmaX
+    c'sigmaY = realToFrac sigmaY
 
 {- | Erodes an image by using a specific structuring element
 
@@ -324,7 +365,7 @@ erodeImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc>
 -}
 erode
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -332,8 +373,8 @@ erode
        -- ^ Structuring element used for erosion. If `emptyMat` is
        -- used a @3x3@ rectangular structuring element is used. Kernel
        -- can be created using `getStructuringElement`.
-    -> Maybe point2i -- ^ anchor
-    -> Int           -- ^ iterations
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Int -- ^ iterations
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
@@ -360,10 +401,94 @@ erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
+
+{- | Convolves an image with the kernel.
+
+Example:
+
+@
+filter2DImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+filter2DImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      filteredBird <-
+        pureExcept $ filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) filteredBird Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    kernel =
+      exceptError $
+      withMatM (Proxy :: Proxy [3, 3])
+               (Proxy :: Proxy 1)
+               (Proxy :: Proxy Double)
+               black $ \imgM -> do
+        lift $ line imgM (V2 0 0 :: V2 Int32) (V2 0 0 :: V2 Int32) (V4 (-2) (-2) (-2) 1 :: V4 Double) 0 LineType_8 0
+        lift $ line imgM (V2 1 0 :: V2 Int32) (V2 0 1 :: V2 Int32) (V4 (-1) (-1) (-1) 1 :: V4 Double) 0 LineType_8 0
+        lift $ line imgM (V2 1 1 :: V2 Int32) (V2 1 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
+        lift $ line imgM (V2 1 2 :: V2 Int32) (V2 2 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
+        lift $ line imgM (V2 2 2 :: V2 Int32) (V2 2 2 :: V2 Int32) (V4   2    2    2  1 :: V4 Double) 0 LineType_8 0
+@
+
+<<doc/generated/examples/filter2DImg.png filter2DImg>>
+
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#filter2d OpenCV Sphinx doc>
+-}
+filter2D
+    :: ( IsPoint2 point2 Int32
+       , depth `In` [Word8, Word16, Int16, Float, Double]
+       )
+    => Mat shape channels ('S depth) -- ^ Input image.
+    -> Mat ('S [sh, sw]) ('S 1) ('S Double)
+       -- ^ convolution kernel (or rather a correlation kernel),
+       -- a single-channel floating point matrix; if you want to
+       -- apply different kernels to different channels, split the
+       -- image into separate color planes using split and process
+       -- them individually.
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Double -- ^ delta
+    -> BorderMode
+    -> CvExcept (Mat shape channels ('S depth))
+filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src    $ \srcPtr    ->
+      withPtr dst    $ \dstPtr    ->
+      withPtr kernel $ \kernelPtr ->
+      withPtr anchor $ \anchorPtr ->
+        [cvExcept|
+          cv::filter2D
+          ( *$(Mat     * srcPtr        )
+          , *$(Mat     * dstPtr        )
+          , -1
+          , *$(Mat     * kernelPtr     )
+          , *$(Point2i * anchorPtr     )
+          ,  $(double    c'delta       )
+          ,  $(int32_t   c'borderType  )
+          );
+        |]
+  where
+    anchor :: Point2i
+    anchor = maybe defaultAnchor toPoint mbAnchor
+
+    c'delta = realToFrac delta
+    (c'borderType, _) = marshalBorderMode borderMode
 
 {- | Dilates an image by using a specific structuring element
 
@@ -399,7 +524,7 @@ dilateImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc>
 -}
 dilate
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
     => Mat shape channels ('S depth) -- ^ Input image.
@@ -407,8 +532,8 @@ dilate
        -- ^ Structuring element used for dilation. If `emptyMat` is
        -- used a @3x3@ rectangular structuring element is used. Kernel
        -- can be created using `getStructuringElement`.
-    -> Maybe point2i -- ^ anchor
-    -> Int           -- ^ iterations
+    -> Maybe (point2 Int32) -- ^ anchor
+    -> Int -- ^ iterations
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
@@ -435,7 +560,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     kernel = maybe (relaxMat emptyMat) unsafeCoerceMat mbKernel
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
@@ -445,14 +570,14 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
-    :: ( ToPoint2i point2i
+    :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
        )
      => Mat shape channels ('S depth) -- ^ Source image.
-    -> MorphOperation  -- ^ Type of a morphological operation.
-    -> Mat 'D 'D 'D    -- ^ Structuring element.
-    -> Maybe point2i   -- ^ Anchor position with the kernel.
-    -> Int             -- ^ Number of times erosion and dilation are applied.
+    -> MorphOperation -- ^ Type of a morphological operation.
+    -> Mat 'D 'D 'D -- ^ Structuring element.
+    -> Maybe (point2 Int32) -- ^ Anchor position with the kernel.
+    -> Int -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
     -> CvExcept (Mat shape channels ('S depth))
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException $ do
@@ -480,7 +605,7 @@ morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException 
     c'op = marshalMorphOperation op
 
     anchor :: Point2i
-    anchor = maybe defaultAnchor toPoint2i mbAnchor
+    anchor = maybe defaultAnchor toPoint mbAnchor
 
     c'iterations = fromIntegral iterations
     (c'borderType, borderValue) = marshalBorderMode borderMode
@@ -507,7 +632,7 @@ morphEllipseImg :: StructureImg
 morphEllipseImg = structureImg MorphEllipse
 
 morphCrossImg :: StructureImg
-morphCrossImg = structureImg $ MorphCross $ toPoint2i (pure (-1) :: V2 Int32)
+morphCrossImg = structureImg $ MorphCross $ toPoint (pure (-1) :: V2 Int32)
 @
 
 <<doc/generated/examples/morphRectImg.png morphRectImg>>
@@ -538,5 +663,5 @@ getStructuringElement morphShape height width = unsafeWrapException $ do
        |]
   where
     ksize :: Size2i
-    ksize = toSize2i $ V2 (toInt32 width) (toInt32 height)
+    ksize = toSize $ V2 (toInt32 width) (toInt32 height)
     (c'morphShape, anchor) = marshalMorphShape morphShape

@@ -1,10 +1,15 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ExistentialQuantification #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language InstanceSigs #-}
+{-# language ConstraintKinds #-}
+{-# language TemplateHaskell #-}
+{-# language UndecidableInstances #-}
+{-# language MultiParamTypeClasses #-}
+{-# language ExistentialQuantification #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 module OpenCV.Core.Types.Mat.Repa
     ( M
@@ -29,10 +34,9 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "repa" Data.Array.Repa as Repa
 import           "repa" Data.Array.Repa.Index ( (:.) )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
 
 

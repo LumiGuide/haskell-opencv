@@ -32,13 +32,13 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.ArrayOps.Internal
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal ( cvExcept, unsafeWrapException )
 import "this" OpenCV.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.ArrayOps
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException )
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
@@ -361,7 +361,7 @@ bfMatcherImg = do
 
     rotatedFrog = exceptError $
                   warpAffine frog rotMat InterArea False False (BorderConstant black)
-    rotMat = getRotationMatrix2D (V2 250 195 :: V2 Float) 45 0.8
+    rotMat = getRotationMatrix2D (V2 250 195 :: V2 CFloat) 45 0.8
 @
 
 <<doc/generated/examples/bfMatcherImg.png bfMatcherImg>>

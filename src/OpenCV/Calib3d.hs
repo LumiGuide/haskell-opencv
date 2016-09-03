@@ -14,13 +14,13 @@ import "base" Data.Word
 import "base" Foreign.C.Types
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Calib3d.Constants
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Calib3d.Constants
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
@@ -99,9 +99,9 @@ contains 3 rows.
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc>
 -}
 findFundamentalMat
-    :: (ToPoint2d point2d)
-    => V.Vector point2d -- ^ Points from the first image.
-    -> V.Vector point2d -- ^ Points from the second image.
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble) -- ^ Points from the first image.
+    -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FundamentalMatMethod
     -> CvExcept ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
@@ -123,8 +123,8 @@ findFundamentalMat pts1 pts2 method = do
       handleCvException (pure (fm, pointMask)) $
         withPtr fm $ \fmPtr ->
         withPtr pointMask $ \pointMaskPtr ->
-        withArrayPtr (V.map toPoint2d pts1) $ \pts1Ptr ->
-        withArrayPtr (V.map toPoint2d pts2) $ \pts2Ptr ->
+        withArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
+        withArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
           [cvExcept|
             cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
             cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
@@ -148,15 +148,15 @@ findFundamentalMat pts1 pts2 method = do
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc>
 -}
 computeCorrespondEpilines
-    :: (ToPoint2d point2d)
-    => V.Vector point2d -- ^ Points.
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble) -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
     -> CvExcept (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
 computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
-      withArrayPtr (V.map toPoint2d points) $ \pointsPtr ->
+      withArrayPtr (V.map toPoint points) $ \pointsPtr ->
       withPtr fm       $ \fmPtr       ->
       withPtr epilines $ \epilinesPtr -> do
         -- Destroy type information about the pointsPtr. We wan't to generate

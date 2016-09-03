@@ -2,12 +2,13 @@
 
 module OpenCV
     ( module OpenCV.Calib3d
-    , module OpenCV.Core
     , module OpenCV.Core.ArrayOps
     , module OpenCV.Core.Types
     , module OpenCV.Core.Types.Mat
     , module OpenCV.Core.Types.Mat.HMat
     , module OpenCV.Core.Types.Mat.Repa
+    , module OpenCV.Core.Types.Matx
+    , module OpenCV.Core.Types.Point
     , module OpenCV.Features2d
     , module OpenCV.HighGui
     , module OpenCV.ImgCodecs
@@ -29,12 +30,13 @@ module OpenCV
     ) where
 
 import OpenCV.Calib3d
-import OpenCV.Core
 import OpenCV.Core.ArrayOps
 import OpenCV.Core.Types
 import OpenCV.Core.Types.Mat
 import OpenCV.Core.Types.Mat.HMat
 import OpenCV.Core.Types.Mat.Repa
+import OpenCV.Core.Types.Matx
+import OpenCV.Core.Types.Point
 import OpenCV.Features2d
 import OpenCV.HighGui
 import OpenCV.ImgCodecs

@@ -3,9 +3,10 @@
 
 module OpenCV.ImgProc.Drawing
     ( LineType(..)
+    , Font(..)
     , FontFace(..)
+    , FontSlant(..)
     , ContourDrawMode(..)
-
     , arrowedLine
     , circle
     , ellipse
@@ -19,11 +20,7 @@ module OpenCV.ImgProc.Drawing
     , drawContours
     ) where
 
-import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "base" Data.Int
-import "text" Data.Text ( Text )
-import qualified "text" Data.Text as T ( append )
-import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -33,11 +30,14 @@ import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+import "text" Data.Text ( Text )
+import qualified "text" Data.Text as T ( append )
+import qualified "text" Data.Text.Foreign as T ( withCStringLen )
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
 import "base" System.IO.Unsafe ( unsafePerformIO )
 
@@ -82,45 +82,75 @@ marshalLineType = \case
   LineType_4  -> c'LINE_4
   LineType_AA -> c'LINE_AA
 
--- TODO (RvD): FontItalic is not a font but a flag!
+data Font
+   = Font
+     { _fontFace  :: !FontFace
+     , _fontSlant :: !FontSlant
+     , _fontScale :: !Double
+     } deriving (Show)
+
 data FontFace
    = FontHersheySimplex
-     -- ^ Normal size sans-serif font.
+     -- ^ Normal size sans-serif font. Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheySimplex.png FontHersheySimplex>>
    | FontHersheyPlain
      -- ^ Small size sans-serif font.
      --
      -- <<doc/generated/FontHersheyPlain.png FontHersheyPlain>>
+     --
+     -- <<doc/generated/FontHersheyPlain_slanted.png FontHersheyPlain>>
    | FontHersheyDuplex
-     -- ^ Normal size sans-serif font (more complex than 'FontHersheySimplex').
+     -- ^ Normal size sans-serif font (more complex than
+     -- 'FontHersheySimplex'). Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyDuplex.png FontHersheyDuplex>>
    | FontHersheyComplex
      -- ^ Normal size serif font.
      --
      -- <<doc/generated/FontHersheyComplex.png FontHersheyComplex>>
+     --
+     -- <<doc/generated/FontHersheyComplex_slanted.png FontHersheyComplex>>
    | FontHersheyTriplex
      -- ^ Normal size serif font (more complex than 'FontHersheyComplex').
      --
      -- <<doc/generated/FontHersheyTriplex.png FontHersheyTriplex>>
+     --
+     -- <<doc/generated/FontHersheyTriplex_slanted.png FontHersheyTriplex>>
    | FontHersheyComplexSmall
      -- ^ Smaller version of 'FontHersheyComplex'.
      --
      -- <<doc/generated/FontHersheyComplexSmall.png FontHersheyComplexSmall>>
+     --
+     -- <<doc/generated/FontHersheyComplexSmall_slanted.png FontHersheyComplexSmall>>
    | FontHersheyScriptSimplex
-     -- ^ Hand-writing style font.
+     -- ^ Hand-writing style font. Does not have a 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyScriptSimplex.png FontHersheyScriptSimplex>>
    | FontHersheyScriptComplex
-     -- ^ More complex variant of 'FontHersheyScriptSimplex'.
+     -- ^ More complex variant of 'FontHersheyScriptSimplex'. Does not have a
+     -- 'Slanted' variant.
      --
      -- <<doc/generated/FontHersheyScriptComplex.png FontHersheyScriptComplex>>
-   | FontItalic
-     -- ^ Flag for italic font.
-     --
-     -- <<doc/generated/FontItalic.png FontItalic>>
      deriving (Show, Enum, Bounded)
+
+data FontSlant
+   = NotSlanted
+   | Slanted
+     deriving (Show)
+
+marshalFont :: Font -> (Int32, C.CDouble)
+marshalFont (Font face slant scale) =
+    ( marshalFontFace face + marshalFontSlant slant
+    , realToFrac scale
+    )
+
+#num FONT_ITALIC
+
+marshalFontSlant :: FontSlant -> Int32
+marshalFontSlant = \case
+   NotSlanted -> 0
+   Slanted    -> c'FONT_ITALIC
 
 #num FONT_HERSHEY_SIMPLEX
 #num FONT_HERSHEY_PLAIN
@@ -130,7 +160,6 @@ data FontFace
 #num FONT_HERSHEY_COMPLEX_SMALL
 #num FONT_HERSHEY_SCRIPT_SIMPLEX
 #num FONT_HERSHEY_SCRIPT_COMPLEX
-#num FONT_ITALIC
 
 marshalFontFace :: FontFace -> Int32
 marshalFontFace = \case
@@ -142,7 +171,6 @@ marshalFontFace = \case
    FontHersheyComplexSmall  -> c'FONT_HERSHEY_COMPLEX_SMALL
    FontHersheyScriptSimplex -> c'FONT_HERSHEY_SCRIPT_SIMPLEX
    FontHersheyScriptComplex -> c'FONT_HERSHEY_SCRIPT_COMPLEX
-   FontItalic               -> c'FONT_ITALIC
 
 
 {- | Draws a arrow segment pointing from the first point to the second one
@@ -167,14 +195,14 @@ arrowedLineImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc>
 -}
 arrowedLine
-    :: ( ToPoint2i fromPoint2i
-       , ToPoint2i toPoint2i
+    :: ( IsPoint2 fromPoint2 Int32
+       , IsPoint2 toPoint2   Int32
        , ToScalar  color
        , PrimMonad m
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> fromPoint2i -- ^ The point the arrow starts from.
-    -> toPoint2i -- ^ The point the arrow points to.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> fromPoint2 Int32 -- ^ The point the arrow starts from.
+    -> toPoint2 Int32 -- ^ The point the arrow points to.
     -> color -- ^ Line color.
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -183,9 +211,9 @@ arrowedLine
     -> m ()
 arrowedLine img pt1 pt2 color thickness lineType shift tipLength =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withPtr (toPoint2i pt1) $ \pt1Ptr   ->
-    withPtr (toPoint2i pt2) $ \pt2Ptr   ->
+    withPtr img $ \matPtr ->
+    withPtr (toPoint pt1) $ \pt1Ptr   ->
+    withPtr (toPoint pt2) $ \pt2Ptr   ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::arrowedLine( *$(Mat * matPtr)
@@ -224,11 +252,11 @@ circleImg = exceptError $
 -}
 circle
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image where the circle is drawn.
-    -> point2i -- ^ Center of the circle.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image where the circle is drawn.
+    -> point2 Int32 -- ^ Center of the circle.
     -> Int32 -- ^ Radius of the circle.
     -> color -- ^ Circle color.
     -> Int32 -- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
@@ -237,9 +265,9 @@ circle
     -> m ()
 circle img center radius color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withPtr (toPoint2i center) $ \centerPtr ->
-    withPtr (toScalar color ) $ \colorPtr  ->
+    withPtr img $ \matPtr ->
+    withPtr (toPoint center) $ \centerPtr ->
+    withPtr (toScalar color) $ \colorPtr  ->
       [C.exp|void {
         cv::circle( *$(Mat * matPtr)
                   , *$(Point2i * centerPtr)
@@ -275,13 +303,13 @@ ellipseImg = exceptError $
 -}
 ellipse
     :: ( PrimMonad m
-       , ToPoint2i point2i
-       , ToSize2i  size2i
-       , ToScalar  color
+       , IsPoint2 point2 Int32
+       , IsSize   size   Int32
+       , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> point2i -- ^ Center of the ellipse.
-    -> size2i -- ^ Half of the size of the ellipse main axes.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> point2 Int32 -- ^ Center of the ellipse.
+    -> size   Int32  -- ^ Half of the size of the ellipse main axes.
     -> Double -- ^ Ellipse rotation angle in degrees.
     -> Double -- ^ Starting angle of the elliptic arc in degrees.
     -> Double -- ^ Ending angle of the elliptic arc in degrees.
@@ -295,10 +323,10 @@ ellipse
     -> m ()
 ellipse img center axes angle startAngle endAngle color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withPtr (toPoint2i center) $ \centerPtr ->
-    withPtr (toSize2i axes) $ \axesPtr   ->
-    withPtr (toScalar color) $ \colorPtr  ->
+    withPtr img $ \matPtr ->
+    withPtr (toPoint  center) $ \centerPtr ->
+    withPtr (toSize   axes  ) $ \axesPtr   ->
+    withPtr (toScalar color ) $ \colorPtr  ->
       [C.exp|void {
         cv::ellipse( *$(Mat * matPtr)
                    , *$(Point2i * centerPtr)
@@ -331,19 +359,19 @@ top-most and/or the bottom edge could be horizontal).
 -}
 fillConvexPoly
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar  color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> V.Vector point2i -- ^ Polygon vertices.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> V.Vector (point2 Int32) -- ^ Polygon vertices.
     -> color -- ^ Polygon color.
     -> LineType
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 fillConvexPoly img points color lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withArrayPtr (V.map toPoint2i points) $ \pointsPtr ->
+    withPtr img $ \matPtr ->
+    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::fillConvexPoly( *$(Mat * matPtr)
@@ -409,18 +437,18 @@ fillPolyImg = exceptError $
 -}
 fillPoly
     :: ( PrimMonad m
-       , ToPoint2i point2i
-       , ToScalar  color
+       , IsPoint2 point2 Int32
+       , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> V.Vector (V.Vector point2i) -- ^ Polygons.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> V.Vector (V.Vector (point2 Int32)) -- ^ Polygons.
     -> color -- ^ Polygon color.
     -> LineType
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 fillPoly img polygons color lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -467,11 +495,11 @@ polylinesImg = exceptError $
 -}
 polylines
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> V.Vector (V.Vector point2i) -- ^ Vertices.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> V.Vector (V.Vector (point2 Int32)) -- ^ Vertices.
     -> Bool
        -- ^ Flag indicating whether the drawn polylines are closed or not. If
        -- they are closed, the function draws a line from the last vertex of
@@ -483,7 +511,7 @@ polylines
     -> m ()
 polylines img curves isClosed color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
     VS.unsafeWith npts $ \nptsPtr ->
     withPtr (toScalar color) $ \colorPtr ->
@@ -529,13 +557,13 @@ lineImg = exceptError $
 -}
 line
     :: ( PrimMonad m
-       , ToPoint2i fromPoint2i
-       , ToPoint2i toPoint2i
-       , ToScalar  color
+       , IsPoint2 fromPoint2 Int32
+       , IsPoint2 toPoint2   Int32
+       , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> fromPoint2i -- ^ First point of the line segment.
-    -> toPoint2i -- ^ Scond point of the line segment.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> fromPoint2 Int32 -- ^ First point of the line segment.
+    -> toPoint2   Int32 -- ^ Scond point of the line segment.
     -> color -- ^ Line color.
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -543,10 +571,10 @@ line
     -> m ()
 line img pt1 pt2 color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withPtr (toPoint2i pt1) $ \pt1Ptr ->
-    withPtr (toPoint2i pt2) $ \pt2Ptr ->
-    withPtr (toScalar  color) $ \colorPtr ->
+    withPtr img $ \matPtr ->
+    withPtr (toPoint pt1) $ \pt1Ptr ->
+    withPtr (toPoint pt2) $ \pt2Ptr ->
+    withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::line( *$(Mat * matPtr)
                 , *$(Point2i * pt1Ptr)
@@ -566,14 +594,13 @@ line img pt1 pt2 color thickness lineType shift =
 -}
 getTextSize
     :: Text
-    -> FontFace
-    -> Double  -- ^ Font scale.
+    -> Font
     -> Int32 -- ^ Thickness of lines used to render the text.
     -> (Size2i, Int32)
        -- ^ (size, baseLine) =
        -- (The size of a box that contains the specified text.
        -- , y-coordinate of the baseline relative to the bottom-most text point)
-getTextSize text fontFace fontScale thickness = unsafePerformIO $
+getTextSize text font thickness = unsafePerformIO $
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
     alloca $ \(c'baseLinePtr :: Ptr Int32) -> do
       size <- fromPtr $
@@ -589,9 +616,7 @@ getTextSize text fontFace fontScale thickness = unsafePerformIO $
       baseLine <- peek c'baseLinePtr
       pure (size, baseLine)
   where
-    c'fontFace  = marshalFontFace fontFace
-    c'fontScale = realToFrac fontScale
-
+    (c'fontFace, c'fontScale) = marshalFont font
 
 {- | Draws a text string.
 
@@ -612,8 +637,7 @@ putTextImg = exceptError $
         lift $ putText imgM
                        (T.pack $ show fontFace)
                        (V2 10 (35 + n * 30) :: V2 Int32)
-                       fontFace
-                       1.0
+                       (Font fontFace NotSlanted 1.0)
                        black
                        1
                        LineType_AA
@@ -629,24 +653,23 @@ putTextImg = exceptError $
 -}
 putText
     :: ( PrimMonad m
-       , ToPoint2i point2i
+       , IsPoint2 point2 Int32
        , ToScalar color
        )
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
     -> Text -- ^ Text string to be drawn.
-    -> point2i -- ^ Bottom-left corner of the text string in the image.
-    -> FontFace
-    -> Double -- ^ Font scale factor that is multiplied by the font-specific base size.
+    -> point2 Int32 -- ^ Bottom-left corner of the text string in the image.
+    -> Font
     -> color -- ^ Text color.
     -> Int32 -- ^ Thickness of the lines used to draw a text.
     -> LineType
     -> Bool -- ^ When 'True', the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner.
     -> m ()
-putText img text org fontFace fontScale color thickness lineType bottomLeftOrigin =
+putText img text org font color thickness lineType bottomLeftOrigin =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
+    withPtr img $ \matPtr ->
     T.withCStringLen (T.append text "\0") $ \(c'text, _textLength) ->
-    withPtr (toPoint2i org) $ \orgPtr   ->
+    withPtr (toPoint org) $ \orgPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::putText( *$(Mat * matPtr)
@@ -661,9 +684,8 @@ putText img text org fontFace fontScale color thickness lineType bottomLeftOrigi
                    )
       }|]
   where
-    c'fontFace         = marshalFontFace fontFace
-    c'fontScale        = realToFrac fontScale
-    c'lineType         = marshalLineType lineType
+    (c'fontFace, c'fontScale) = marshalFont font
+    c'lineType = marshalLineType lineType
     c'bottomLeftOrigin = fromBool bottomLeftOrigin
 
 {- | Draws a simple, thick, or filled up-right rectangle
@@ -677,8 +699,8 @@ rectangleImg = exceptError $
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \imgM -> do
-      lift $ rectangle imgM (mkRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
-      lift $ rectangle imgM (mkRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
+      lift $ rectangle imgM (toRect $ HRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+      lift $ rectangle imgM (toRect $ HRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
 @
 
 <<doc/generated/examples/rectangleImg.png rectangleImg>>
@@ -686,9 +708,9 @@ rectangleImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc>
 -}
 rectangle
-    :: (PrimMonad m, ToScalar color)
-    => MutMat ('S [height, width]) channels depth (PrimState m) -- ^ Image.
-    -> Rect
+    :: (PrimMonad m, ToScalar color, IsRect rect Int32)
+    => Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+    -> rect Int32
     -> color -- ^ Rectangle color or brightness (grayscale image).
     -> Int32 -- ^ Line thickness.
     -> LineType
@@ -696,12 +718,12 @@ rectangle
     -> m ()
 rectangle img rect color thickness lineType shift =
     unsafePrimToPrim $
-    withPtr (unMutMat img) $ \matPtr ->
-    withPtr rect $ \rectPtr ->
+    withPtr img $ \matPtr ->
+    withPtr (toRect rect) $ \rectPtr ->
     withPtr (toScalar color) $ \colorPtr ->
       [C.exp|void {
         cv::rectangle( *$(Mat * matPtr)
-                     , *$(Rect * rectPtr)
+                     , *$(Rect2i * rectPtr)
                      , *$(Scalar * colorPtr)
                      , $(int32_t thickness)
                      , $(int32_t c'lineType)
@@ -738,15 +760,15 @@ flowerContours = exceptError $
            black $ \imgM -> do
     let edges = exceptError $
           cvtColor bgr gray flower_768x512 >>=
-          canny 30 20 Nothing Nothing
+          canny 30 20 Nothing CannyNormL1
     contours <-
       thaw edges >>=
       findContours ContourRetrievalList
                    ContourApproximationSimple
-    lift ( drawContours (V.map contourPoints contours)
+    lift $ drawContours (V.map contourPoints contours)
                         red
                         (OutlineContour LineType_AA 1)
-                        imgM)
+                        imgM
 @
 
 <<doc/generated/examples/flowerContours.png flowerContours>>
@@ -756,13 +778,13 @@ drawContours :: (ToScalar color, PrimMonad m)
              => V.Vector (V.Vector Point2i)
              -> color -- ^ Color of the contours.
              -> ContourDrawMode
-             -> MutMat ('S [h, w]) channels depth (PrimState m) -- ^ Image.
+             -> Mut (Mat ('S [h, w]) channels depth) (PrimState m) -- ^ Image.
              -> m ()
 drawContours contours color drawMode img = unsafePrimToPrim $
   withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
   withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
   withPtr (toScalar color) $ \colorPtr ->
-  withPtr (unMutMat img) $ \dstPtr ->
+  withPtr img $ \dstPtr ->
     [C.exp|void {
       int32_t *contourLengths = $(int32_t * contourLengthsPtr);
       Point2i * contoursPtr = $(Point2i * contoursPtrPtr);

@@ -1,17 +1,25 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#if __GLASGOW_HASKELL__ >= 800
+{-# options_ghc -Wno-redundant-constraints #-}
+#endif
 
 {- | Operations on arrays
 -}
 module OpenCV.Core.ArrayOps
     ( -- * Per element operations
       -- $per_element_intro
-      matAbs
+      matScalarAdd
+    , matScalarMult
+    , matAbs
     , matAbsDiff
     , matAdd
     , matSubtract
     , matAddWeighted
     , matScaleAdd
+    , matMax
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -35,27 +43,30 @@ module OpenCV.Core.ArrayOps
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
-import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
+import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
+import "base" Data.Int ( Int32 )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
+import "linear" Linear.V2 ( V2(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Internal
 import "this" OpenCV.Core.Types.Mat
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Core.ArrayOps.Internal
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.ArrayOps
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
+import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
-import "this" OpenCV.Unsafe ( unsafeThaw )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
-import qualified "vector" Data.Vector.Mutable as VM
 
 --------------------------------------------------------------------------------
 
@@ -78,6 +89,36 @@ Examples are based on the following two images:
 <<doc/generated/flower_512x341.png Flower>>
 <<doc/generated/sailboat_512x341.png Sailboat>>
 -}
+
+matScalarAdd
+    :: (ToScalar scalar)
+    => Mat shape channels depth -- ^
+    -> scalar
+    -> Mat shape channels depth
+matScalarAdd src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr (toScalar x) $ \xPtr ->
+      withPtr dst $ \dstPtr ->
+        withPtr src $ \srcPtr ->
+          [C.block| void {
+            *$(Mat * dstPtr) = *$(Mat * srcPtr) + *$(Scalar * xPtr);
+          }|]
+    pure $ unsafeCoerceMat dst
+
+matScalarMult
+    :: Mat shape channels depth -- ^
+    -> Double
+    -> Mat shape channels depth
+matScalarMult src x = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          *$(Mat * dstPtr) = *$(Mat * srcPtr) * $(double c'x);
+        }|]
+    pure $ unsafeCoerceMat dst
+  where
+    c'x = realToFrac x
 
 {- | Calculates an absolute value of each matrix element.
 
@@ -272,6 +313,23 @@ matScaleAdd src1 scale src2 = unsafeWrapException $ do
   where
     c'scale = realToFrac scale
 
+matMax
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+matMax src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+        [cvExcept|
+          cv::max
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          );
+        |]
 
 --------------------------------------------------------------------------------
 -- Per element bitwise operations
@@ -528,25 +586,22 @@ matSplit
     -> V.Vector (Mat shape ('S 1) depth)
 matSplit src = unsafePerformIO $
     withPtr src $ \srcPtr ->
-    allocaBytes (numChans * cSizeOfMat) $ \(mvBeginPtr :: Ptr C'Mat) -> do
+    allocaArray numChans $ \(splitsArray :: Ptr (Ptr C'Mat)) -> do
       [C.block| void {
-        cv::split
-        ( *$(Mat * srcPtr)
-        , $(Mat * mvBeginPtr)
-        );
+        cv::Mat * srcPtr = $(Mat * srcPtr);
+        int32_t numChans = $(int32_t c'numChans);
+        cv::Mat splits[numChans];
+        cv::split(*srcPtr, splits);
+        for(int i = 0; i < numChans; i++){
+          $(Mat * * splitsArray)[i] = new cv::Mat(splits[i]);
+        }
       }|]
-      dstVecM <- VM.unsafeNew numChans
-      let go !n | n == numChans = V.freeze dstVecM
-                | otherwise = do
-                    mat <- fromPtr $ pure $ mvBeginPtr `plusPtr` (n * cSizeOfMat)
-                    VM.unsafeWrite dstVecM n $ unsafeCoerceMat mat
-                    go $ n + 1
-      go 0
+      fmap V.fromList . mapM (fromPtr . pure) =<< peekArray numChans splitsArray
   where
-    cSizeOfMat :: Int
-    cSizeOfMat = cSizeOf (Proxy :: Proxy C'Mat)
-
     numChans = fromIntegral $ miChannels $ matInfo src
+
+    c'numChans :: Int32
+    c'numChans = fromIntegral numChans
 
 {- | Finds the global minimum and maximum in an array
 
@@ -558,8 +613,8 @@ minMaxLoc
     :: Mat ('S [height, width]) channels depth -- ^
     -> CvExcept (Double, Double, Point2i, Point2i)
 minMaxLoc src = unsafeWrapException $ do
-    minLoc <- newPoint2i zero
-    maxLoc <- newPoint2i zero
+    minLoc <- toPointIO $ V2 0 0
+    maxLoc <- toPointIO $ V2 0 0
     withPtr src $ \srcPtr ->
       withPtr minLoc $ \minLocPtr ->
       withPtr maxLoc $ \maxLocPtr ->
@@ -699,8 +754,7 @@ matSumImg = exceptError $
         lift $ putText imgM
                        (T.pack $ show approxPi)
                        (V2 40 110 :: V2 Int32)
-                       FontHersheyDuplex
-                       1.0
+                       (Font FontHersheyDuplex NotSlanted 1)
                        blue
                        1
                        LineType_AA
@@ -722,7 +776,7 @@ matSum src = runCvExceptST $ matSumM =<< unsafeThaw src
 
 matSumM
     :: (PrimMonad m)
-    => MutMat shape channels depth (PrimState m)
+    => Mut (Mat shape channels depth) (PrimState m)
        -- ^ Input array that must have from 1 to 4 channels.
     -> CvExceptT m Scalar
 matSumM srcM = ExceptT $ unsafePrimToPrim $ do

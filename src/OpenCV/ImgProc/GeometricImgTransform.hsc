@@ -53,20 +53,20 @@ module OpenCV.ImgProc.GeometricImgTransform
     ) where
 
 import "base" Data.Int ( Int32 )
-import "base" Foreign.C.Types ( CDouble )
+import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
 import "this" OpenCV.ImgProc.Types
-import "this" OpenCV.ImgProc.Types.Internal
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
+import "this" OpenCV.Internal.ImgProc.Types
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ marshalResizeAbsRel (ResizeAbs s) = (s, 0   , 0   )
 marshalResizeAbsRel (ResizeRel f) = (s, c'fx, c'fy)
   where
     s :: Size2i
-    s = toSize2i (zero :: V2 Int32)
+    s = toSize (zero :: V2 Int32)
 
     (V2 c'fx c'fy) = realToFrac <$> f
 
@@ -167,7 +167,7 @@ Example:
 
 @
 rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
-rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 Float) 45 0.75
+rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 CFloat) 45 0.75
 
 warpAffineImg :: Birds_512x341
 warpAffineImg = exceptError $
@@ -275,15 +275,15 @@ invertAffineTransform matIn = unsafeWrapException $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
 -}
 getRotationMatrix2D
-    :: (ToPoint2f point2f)
-    => point2f -- ^ Center of the rotation in the source image.
+    :: (IsPoint2 point2 CFloat)
+    => point2 CFloat -- ^ Center of the rotation in the source image.
     -> Double
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
        -- rotation (the coordinate origin is assumed to be the top-left corner).
     -> Double -- ^ Isotropic scale factor.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
-    withPtr (toPoint2f center) $ \centerPtr ->
+    withPtr (toPoint center) $ \centerPtr ->
       fromPtr
       [CU.block| Mat * {
         return new cv::Mat

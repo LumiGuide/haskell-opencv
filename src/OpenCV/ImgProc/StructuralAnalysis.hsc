@@ -6,8 +6,10 @@ module OpenCV.ImgProc.StructuralAnalysis
     , pointPolygonTest
     , findContours
     , Contour(..)
+    , ContourAreaOriented(..)
     , ContourRetrievalMode(..)
     , ContourApproximationMethod(..)
+    , minAreaRect
     ) where
 
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
@@ -19,20 +21,25 @@ import "base" Data.Maybe (mapMaybe)
 import "base" Data.Traversable (for)
 import qualified "vector" Data.Vector as V
 import "base" Data.Word
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
-import "this" OpenCV.C.Inline ( openCvCtx )
-import "this" OpenCV.C.Types
-import "this" OpenCV.Core.Types.Internal
-import "this" OpenCV.Core.Types.Mat.Internal
-import "this" OpenCV.Exception.Internal
+import "this" OpenCV.Core.Types ( Mut )
+import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Vec ( fromVec )
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
+import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types
+import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
@@ -61,17 +68,14 @@ will most certainly give a wrong results for contours with self-intersections.
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#cv2.contourArea OpenCV Sphinx doc>
 -}
 contourArea
-    :: (ToPoint2f point2f)
-    => V.Vector point2f
+    :: (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat)
        -- ^ Input vector of 2D points (contour vertices).
-    -> Bool
-       -- ^ Oriented area flag. If it is true, the function returns a signed
-       -- area value, depending on the contour orientation (clockwise or
-       -- counter-clockwise). Using this feature you can determine orientation
-       -- of a contour by taking the sign of an area.
+    -> ContourAreaOriented
+       -- ^ Signed or unsigned area
     -> CvExcept Double
-contourArea contour oriented = unsafeWrapException $
-    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
+contourArea contour areaOriented = unsafeWrapException $
+    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
     alloca $ \c'area ->
     handleCvException (realToFrac <$> peek c'area) $
       [cvExcept|
@@ -82,6 +86,10 @@ contourArea contour oriented = unsafeWrapException $
         *$(double * c'area) = cv::contourArea(contour, $(bool c'oriented));
       |]
   where
+    oriented =
+      case areaOriented of
+        ContourAreaOriented -> True
+        ContourAreaAbsoluteValue -> False
     c'numPoints = fromIntegral $ V.length contour
     c'oriented = fromBool oriented
 
@@ -96,19 +104,19 @@ contourArea contour oriented = unsafeWrapException $
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html#pointpolygontest OpenCV Sphinx doc>
 pointPolygonTest
-    :: ( ToPoint2f contourPoint2f
-       , ToPoint2f testPoint2f
+    :: ( IsPoint2 contourPoint2 CFloat
+       , IsPoint2 testPoint2    CFloat
        )
-    => V.Vector contourPoint2f -- ^ Contour.
-    -> testPoint2f -- ^ Point tested against the contour.
+    => V.Vector (contourPoint2 CFloat) -- ^ Contour.
+    -> testPoint2 CFloat -- ^ Point tested against the contour.
     -> Bool
        -- ^ If true, the function estimates the signed distance from the point
        -- to the nearest contour edge. Otherwise, the function only checks if
        -- the point is inside a contour or not.
     -> CvExcept Double
 pointPolygonTest contour pt measureDist = unsafeWrapException $
-    withArrayPtr (V.map toPoint2f contour) $ \contourPtr ->
-    withPtr (toPoint2f pt) $ \ptPtr ->
+    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
+    withPtr (toPoint pt) $ \ptPtr ->
     alloca $ \c'resultPtr ->
     handleCvException (realToFrac <$> peek c'resultPtr) $
       [cvExcept|
@@ -125,6 +133,15 @@ pointPolygonTest contour pt measureDist = unsafeWrapException $
   where
     c'numPoints = fromIntegral $ V.length contour
     c'measureDist = fromBool measureDist
+
+-- | Oriented area flag.
+data ContourAreaOriented
+  = ContourAreaOriented
+    -- ^ Return a signed area value, depending on the contour orientation (clockwise or
+    -- counter-clockwise). Using this feature you can determine orientation
+    -- of a contour by taking the sign of an area.
+  | ContourAreaAbsoluteValue
+    -- ^ Return the area as an absolute value.
 
 data ContourRetrievalMode
   = ContourRetrievalExternal
@@ -177,10 +194,10 @@ findContours
   :: (PrimMonad m)
   => ContourRetrievalMode
   -> ContourApproximationMethod
-  -> MutMat ('S [h, w]) ('S 1) ('S Word8) (PrimState m)
+  -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
   -> m (V.Vector Contour)
 findContours mode method src = unsafePrimToPrim $
-  withPtr (unMutMat src) $ \srcPtr ->
+  withPtr src $ \srcPtr ->
   alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
   alloca $ \(contoursPtrPtr :: Ptr (Ptr (Ptr (Ptr C'Point2i)))) ->
   alloca $ \(hierarchyPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
@@ -246,8 +263,9 @@ findContours mode method src = unsafePrimToPrim $
            (peekArray (fromIntegral n) contourPointsPtr >>= mapM (fromPtr . pure))
 
     hierarchyPtr <- peek hierarchyPtrPtr
-    (hierarchy :: [V4 Int32]) <- peekArray numContours hierarchyPtr >>=
-                 mapM (fmap fromVec4i . fromPtr . pure)
+    (hierarchy :: [V4 Int32]) <-
+        peekArray numContours hierarchyPtr >>=
+        mapM (fmap fromVec . fromPtr . pure)
 
     let treeHierarchy =
           zipWith (\(V4 nextSibling previousSibling firstChild parent) points ->
@@ -274,3 +292,19 @@ findContours mode method src = unsafePrimToPrim $
   where
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method
+
+minAreaRect :: (IsPoint2 point2 Int32)
+            => V.Vector (point2 Int32) -> RotatedRect
+minAreaRect points =
+  unsafePerformIO $ fromPtr $
+  withArrayPtr (V.map toPoint points) $
+  \pointsPtr ->
+    [CU.exp|
+      RotatedRect * {
+        new RotatedRect(
+          cv::minAreaRect(
+              cv::_InputArray( $(Point2i * pointsPtr)
+                             , $(int32_t c'numPoints))))
+      }
+    |]
+  where c'numPoints = fromIntegral (V.length points)
