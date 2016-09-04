@@ -88,6 +88,7 @@ library
       , text              >= 1.2.2.1
       , transformers      >= 0.4.2
       , vector            >= 0.11
+      , JuicyPixels       >= 3.2
 
     exposed-modules:
         OpenCV
@@ -161,6 +162,7 @@ library
         OpenCV.Internal.Photo.Constants
         OpenCV.Internal.VideoIO.Constants
         OpenCV.Internal.VideoIO.Types
+        OpenCV.Contrib.Juicy
 
     default-extensions:
         BangPatterns
