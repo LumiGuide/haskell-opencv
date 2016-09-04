@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE GADTs #-}
 
 module OpenCV.TypeLevel
     ( -- * Kinds and types
@@ -24,12 +25,16 @@ module OpenCV.TypeLevel
       -- ** Type conversions
     , DSNat
     , DSNats
+      -- ** Equality of @'DS' 'Nat'@
+    , sameDSNat
+    , SameDSNat
     ) where
 
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Type.Bool
 import "base" GHC.TypeLits
+import "base" Data.Type.Equality ((:~:)(..))
 
 --------------------------------------------------------------------------------
 -- Kinds and types
@@ -166,3 +171,24 @@ type MayRelax a b = Relax a b ~ 'True
 --     MinLengthDS_F  a bs = LeDS_F a (LengthDS bs)
 
 -- type MinLengthDS a bs = MinLengthDS_F a bs ~ 'True
+
+sameDSNat :: forall (a :: DS Nat) (b :: DS Nat). (SameDSNat a b) => Proxy a -> Proxy b -> Maybe (a :~: b)
+sameDSNat = sameDSNat_
+
+class SameDSNat (a :: DS Nat) (b :: DS Nat) where
+    -- | Function useful to "pattern match" on type-level @'DS' 'Nat'@s.
+    sameDSNat_ :: Proxy a -> Proxy b -> Maybe (a :~: b)
+
+instance (KnownNat a, KnownNat b) => SameDSNat ('S a) ('S b) where
+    sameDSNat_ _proxy1 _proxy2 = case sameNat (Proxy :: Proxy a) (Proxy :: Proxy b) of
+        Nothing -> Nothing
+        Just Refl -> Just Refl
+
+instance SameDSNat 'D 'D where
+    sameDSNat_ _proxy1 _proxy2 = Just Refl
+
+instance SameDSNat ('S a) 'D where
+    sameDSNat_ _proxy1 _proxy2 = Nothing
+
+instance SameDSNat 'D ('S b) where
+    sameDSNat_ _proxy1 _proxy2 = Nothing
