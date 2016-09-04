@@ -50,6 +50,9 @@ marshalThreshValue = \case
     ThreshVal_Otsu     -> (c'THRESH_OTSU    , 0)
     ThreshVal_Triangle -> (c'THRESH_TRIANGLE, 0)
 
+#num FLOODFILL_FIXED_RANGE
+#num FLOODFILL_MASK_ONLY
+
 --------------------------------------------------------------------------------
 
 #num COLOR_BGR2BGRA
