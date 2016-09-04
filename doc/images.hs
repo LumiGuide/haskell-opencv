@@ -38,13 +38,16 @@ red         = toScalar (V4   0   0 255 255 :: V4 Double)
 type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Flower_768x512   = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Sailboat_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
+type Bikes_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
 type Birds_512x341    = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Flower_512x341   = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Sailboat_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+type Bikes_512x341    = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 type Frog             = Mat (ShapeT [390, 500]) ('S 3) ('S Word8)
 type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
 type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
+type DamageMask       = Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -59,6 +62,16 @@ sailboat_768x512 :: Sailboat_768x512
 sailboat_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim06.png"
+
+bikes_768x512 :: Sailboat_768x512
+bikes_768x512 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/kodim05.png"
+
+damageMask :: DamageMask
+damageMask =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/damage_mask.png"
 
 smallerKodakImg
     :: Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
@@ -77,6 +90,9 @@ flower_512x341 = smallerKodakImg flower_768x512
 
 sailboat_512x341 :: Flower_512x341
 sailboat_512x341 = smallerKodakImg sailboat_768x512
+
+bikes_512x341 :: Flower_512x341
+bikes_512x341 = smallerKodakImg bikes_768x512
 
 frog :: Frog
 frog =
@@ -179,6 +195,7 @@ main = do
     render "birds_512x341.png"    birds_512x341
     render "flower_512x341.png"   flower_512x341
     render "sailboat_512x341.png" sailboat_512x341
+    render "bikes_512x341.png"    bikes_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
       render (show lineType <> ".png") (lineTypeImg lineType)
     forM_ [minBound .. maxBound] $ \fontFace -> do
