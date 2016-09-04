@@ -23,6 +23,10 @@ module OpenCV.ImgProc.MiscImgTransform
 
       -- * Watershed
     , watershed
+
+      -- * GrabCut
+    , GrabCutOperationMode(..)
+    , grabCut
     ) where
 
 import "base" Data.Bits
@@ -384,3 +388,53 @@ watershed img markers =
                      , *$(Mat * markersPtr)
                      )
       }|]
+
+{- | Runs the <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#grabcut GrabCut> algorithm.
+-}
+grabCut
+    :: ( PrimMonad m
+       , depth `In` '[ 'D, 'S Word8 ]
+       , IsRect rect Int32
+       )
+    => Mat shape ('S 3) depth
+        -- ^ Input 8-bit 3-channel image.
+    -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+        -- ^ Input/output 8-bit single-channel mask. The mask is initialized by the function when mode is set to GC_INIT_WITH_RECT. Its elements may have one of following values:
+        --
+        --     * GC_BGD defines an obvious background pixels.
+        --
+        --     * GC_FGD defines an obvious foreground (object) pixel.
+        --
+        --     * GC_PR_BGD defines a possible background pixel.
+        --
+        --     * GC_PR_FGD defines a possible foreground pixel.
+    -> rect Int32
+        -- ^ ROI containing a segmented object. The pixels outside of the ROI are marked as “obvious background”. The parameter is only used when mode==GC_INIT_WITH_RECT .
+    -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+        -- ^ Temporary array for the background model. Do not modify it while you are processing the same image.
+    -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+        -- ^ Temporary arrays for the foreground model. Do not modify it while you are processing the same image.
+    -> Int32
+        -- ^ Number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with mode==GC_INIT_WITH_MASK or mode==GC_EVAL.
+    -> GrabCutOperationMode
+        -- ^ Operation mode
+    -> m ()
+grabCut img mask rect bgdModel fgdModel iterCount mode =
+    unsafePrimToPrim $
+    withPtr img $ \imgPtr ->
+    withPtr mask $ \maskPtr ->
+    withPtr (toRect rect) $ \rectPtr ->
+    withPtr bgdModel $ \bgdModelPtr ->
+    withPtr fgdModel $ \fgdModelPtr ->
+      [C.block|void {
+        cv::grabCut( *$(Mat * imgPtr)
+                   , *$(Mat * maskPtr)
+                   , *$(Rect2i * rectPtr)
+                   , *$(Mat * bgdModelPtr)
+                   , *$(Mat * fgdModelPtr)
+                   , $(int32_t iterCount)
+                   , $(int32_t c'modeFlags)
+                   );
+      }|]
+  where
+    c'modeFlags = marshalGrabCutOperationMode mode

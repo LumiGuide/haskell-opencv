@@ -1,5 +1,6 @@
 module OpenCV.Internal.ImgProc.MiscImgTransform where
 
+import "base" Data.Bits
 import "base" Data.Int
 import "base" Foreign.C.Types
 
@@ -52,6 +53,30 @@ marshalThreshValue = \case
 
 #num FLOODFILL_FIXED_RANGE
 #num FLOODFILL_MASK_ONLY
+
+--------------------------------------------------------------------------------
+
+data GrabCutOperationMode
+    = GrabCut_InitWithRect
+        -- ^ Initialize the state and the mask using the provided rectangle. After that, run iterCount iterations of the algorithm.
+    | GrabCut_InitWithMask
+        -- ^ Initialize the state using the provided mask.
+    | GrabCut_InitWithRectAndMask
+        -- ^ Combination of 'GCInitWithRect' and 'GCInitWithMask'. All the pixels outside of the ROI are automatically initialized with GC_BGD.
+    | GrabCut_Eval
+        -- ^ Just resume the algorithm.
+      deriving (Show)
+
+#num GC_INIT_WITH_RECT
+#num GC_INIT_WITH_MASK
+#num GC_EVAL
+
+marshalGrabCutOperationMode :: GrabCutOperationMode -> Int32
+marshalGrabCutOperationMode = \case
+    GrabCut_InitWithRect        -> c'GC_INIT_WITH_RECT
+    GrabCut_InitWithMask        -> c'GC_INIT_WITH_MASK
+    GrabCut_InitWithRectAndMask -> c'GC_INIT_WITH_RECT .|. c'GC_INIT_WITH_MASK
+    GrabCut_Eval                -> c'GC_EVAL
 
 --------------------------------------------------------------------------------
 
