@@ -16,6 +16,10 @@ import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
+{- | Valid color conversions described by the following graph:
+
+<<doc/color_conversions.png>>
+-}
 class ColorConversion (fromColor :: ColorCode) (toColor :: ColorCode) where
     colorConversionCode :: Proxy fromColor -> Proxy toColor -> Int32
 

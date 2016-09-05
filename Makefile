@@ -24,14 +24,14 @@ test:
 	./dist/build/test-opencv/test-opencv
 
 .PHONY: doc
-doc:
+doc: doc/color_conversions.png
 	cabal configure --enable-tests && \
 	cabal build && \
 	./dist/build/opencv-doc-images/opencv-doc-images && \
 	cabal haddock --hyperlink-source
 
 .PHONY: update-git-haddock
-update-git-haddock:
+update-git-haddock: doc/color_conversions.png
 	git checkout master && \
 	cabal configure --enable-tests && \
 	cabal build && \
@@ -45,3 +45,6 @@ update-git-haddock:
 	git push && \
 	git checkout master && \
 	git stash pop
+
+doc/color_conversions.png: doc/color_conversions.dot
+	dot $(<) -Tpng -Gsize=40 > $(@)
