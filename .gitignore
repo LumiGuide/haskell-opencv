@@ -1,4 +1,3 @@
 src/**/*.cpp
 dist
 .stack-work
-doc/color_conversions.png
