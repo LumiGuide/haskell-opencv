@@ -1,40 +1,46 @@
 {-# language DataKinds, Rank2Types, TypeFamilies, ScopedTypeVariables, FlexibleContexts, ViewPatterns, ExistentialQuantification #-}
-
+-- | A thin JuicyPixels layer.
 module OpenCV.Contrib.Juicy (
+    -- * Types
+    Mat2D,
     Filter ,
-    isoJuicy,
+    JC,
+    JD,
+    -- * Low level API
     fromImage,
-    toImage
+    toImage,
+    -- * High level API
+    isoJuicy
     )
-    
     where
     
+import GHC.TypeLits (Nat,KnownNat)
+import Data.Proxy (Proxy (Proxy))
 
-import Codec.Picture
-import Codec.Picture.Types
-import OpenCV
-import OpenCV.Unsafe
-import OpenCV.TypeLevel
-import Control.Exception
-import Control.Monad.Trans.Except
-import Control.Monad.Trans
-import Control.Monad.Primitive
-import Data.Word
-import Data.Int
-import Data.Proxy
-import Linear.V4
-import Foreign.Storable
-import Control.Monad
-import GHC.TypeLits
-import Foreign.Ptr
+import Foreign.Storable (Storable (..))
+import Foreign.Ptr (Ptr, plusPtr)
 import System.IO.Unsafe (unsafePerformIO)
-import Data.Type.Equality
 
+import Data.Word (Word8,Word16)
+import Data.Int (Int32)
 
+import Control.Monad (forM_)
+import Control.Monad.Primitive (PrimMonad)
+
+import Linear.V4 (V4)
+
+import OpenCV
+import OpenCV.Unsafe (unsafeRead, unsafeWrite)
+import Codec.Picture.Types 
+
+-- list of pointers at a given byte distance from a base one
 plusPtrS :: Ptr a -> Int -> [Ptr b]
 plusPtrS p n = map (plusPtr p) [0..n-1]
 
+-- multiple peek
 peekS p n = mapM peek (plusPtrS p n)
+
+-- multiple poke
 pokeS p n xs = sequence_ (zipWith poke (plusPtrS p n) xs)
 
 instance Storable (PixelRGB8) where
@@ -79,7 +85,10 @@ instance Storable (PixelYA16) where
     sizeOf _ = 2
     alignment _ = 0
 
+-- | map Pixel types to a depth
 type family JD a 
+
+-- | map Pixel types to a number of channels
 type family JC a :: Nat 
 
 type instance JD Pixel8 = Word8
@@ -110,12 +119,14 @@ type instance JC PixelYCbCr8 = 3
 type instance JC PixelCMYK8 = 4
 type instance JC PixelCMYK16 = 4
 
-type Mat2 h w c d = Mat ('S '[h,w]) c d 
+-- | An OpenCV bidimensional matrix
+type Mat2D h w c d = Mat ('S '[h,w]) c d 
 
+-- | Compute an OpenCV 2D-matrix from a JuicyPixels image
 fromImage 
     :: forall a c d . (ToDepth (Proxy d), KnownNat c, Pixel a, Storable a, c ~ JC a, d ~ JD a) 
-    => Image a 
-    -> CvExcept (Mat2 'D 'D ('S c) ('S d)) 
+    => Image a -- ^ JuicyPixels image
+    -> CvExcept (Mat2D 'D 'D ('S c) ('S d)) 
 fromImage i@(Image h w v) = withMatM 
     (fi h ::: fi w ::: Z) 
     (Proxy :: Proxy c) 
@@ -126,8 +137,9 @@ fromImage i@(Image h w v) = withMatM
     fi :: Int -> Int32
     fi = fromIntegral 
 
+-- | Compute a JuicyPixels image from an OpenCV 2D-matrix
 toImage :: forall a c d . (KnownNat c, Pixel a, Storable a, c ~ JC a, d ~ JD a) 
-    => Mat2 'D 'D ('S c) ('S d)
+    => Mat2D 'D 'D ('S c) ('S d)  -- ^ OpenCV 2D-matrix
     -> Image a
 toImage m  = let
     MatInfo [fromIntegral -> h, fromIntegral -> w] _ _  = matInfo m
@@ -135,20 +147,24 @@ toImage m  = let
         mat <- unsafeThaw m
         withImage h w $ \x y -> unsafeRead mat [y,x] >>= peek
       
-type Filter m h w c d = Mat2 h w c d -> CvExceptT m (Mat2 h w c d)
+-- | An OpenCV 2D-filter preserving the matrix type
+type Filter m h w c d = Mat2D h w c d -> CvExceptT m (Mat2D h w c d)
 
+-- | Apply an OpenCV 2D-filter to a JuicyPixels dynamic matrix, preserving the Juicy pixel encoding
 isoJuicy :: forall m c d . (PrimMonad m, ToDepthDS (Proxy d), ToNatDS (Proxy c)) 
-    => DynamicImage -> Filter m 'D 'D c d -> CvExceptT m DynamicImage 
+    => Filter m 'D 'D c d -- ^ OpenCV 2D-filter
+    -> DynamicImage -- ^ JuicyPixels dynamic image
+    -> CvExceptT m DynamicImage 
 
-isoJuicy (ImageRGB8 i) f =  ImageRGB8 <$> isoApply f i 
-isoJuicy (ImageRGB16 i) f =  ImageRGB16 <$> isoApply f i 
-isoJuicy (ImageRGBF i) f =  ImageRGBF <$> isoApply f i 
-isoJuicy (ImageY8 i) f =  ImageY8 <$> isoApply f i 
-isoJuicy (ImageY16 i) f =  ImageY16 <$> isoApply f i 
-isoJuicy (ImageRGBA8 i) f =  ImageRGBA8 <$> isoApply f i 
-isoJuicy (ImageRGBA16 i) f =  ImageRGBA16 <$> isoApply f i 
+isoJuicy f (ImageRGB8 i)    =  ImageRGB8    <$> isoApply f i 
+isoJuicy f (ImageRGB16 i)   =  ImageRGB16   <$> isoApply f i 
+isoJuicy f (ImageRGBF i)    =  ImageRGBF    <$> isoApply f i 
+isoJuicy f (ImageY8 i)      =  ImageY8      <$> isoApply f i 
+isoJuicy f (ImageY16 i)     =  ImageY16     <$> isoApply f i 
+isoJuicy f (ImageRGBA8 i)   =  ImageRGBA8   <$> isoApply f i 
+isoJuicy f (ImageRGBA16 i)  =  ImageRGBA16  <$> isoApply f i 
 
-
+-- apply a filter for a specific 'a'. Coerce failures are lifted to the monadic layer
 isoApply ::
      (PrimMonad m, KnownNat (JC a), Pixel a, Storable a, 
      ToShapeDS (Proxy ('S '[h,w])), 
@@ -161,9 +177,3 @@ isoApply ::
 
 isoApply f i = toImage <$> (pureExcept (fromImage i >>= coerceMat) >>= f >>= pureExcept . coerceMat)
 
-main = do 
-    Right r <- readImage "data/Lenna.png"
-    withWindow "test" $ \w -> do 
-        case r of 
-            ImageRGB8 i ->  imshow w $ exceptError (fromImage i)
-        waitKey 10000
