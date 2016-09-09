@@ -34,6 +34,8 @@ module OpenCV.Core.Types.Mat
     , cloneMatM
     , matCopyToM
 
+    , foldMat
+
       -- * Meta information
     , MatInfo(..)
     , matInfo
@@ -52,24 +54,33 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
+import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
+import "base" Foreign.C.Types ( CDouble )
+import "base" Foreign.Marshal.Array ( peekArray, pokeArray )
+import "base" Foreign.Ptr ( Ptr, castPtr, plusPtr )
+import "base" Foreign.Storable ( Storable )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V4 ( V4(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Core.Types.Mat.ToFrom
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Class ( lift )
 import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
@@ -242,3 +253,36 @@ matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
           --                       )
           --                 );
           -- srcPtr->copyTo(dstRoi);
+
+
+-- |Pixel-wise fold of the given function over the given matrices, i.e.
+-- fold over the first pixel of all matrices, then the second, etc.
+foldMat :: forall shape channels depth
+         . ( Storable depth )
+        => [Mat shape channels ('S depth)]
+        -> ([[depth]] -> [depth])
+        -> Maybe (Mat shape channels ('S depth))
+foldMat []   _ = Nothing
+foldMat mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
+    resultMat <- newMat shape numChannels depth (toScalar (zero :: V4 CDouble))
+    lift $ withMatData resultMat $ \newStep newPtr ->
+        go (fromIntegral <$> newStep) (castPtr newPtr)
+    return $ unsafeCoerceMat resultMat
+  where
+    MatInfo shape !depth !numChannels = matInfo (head mats)
+
+    positions :: [[Int]]
+    positions = sequence $ map (enumFromTo 0) $ map pred (fromIntegral <$> shape)
+
+    stepsAndPtrs :: [([Int], Ptr Word8)]
+    stepsAndPtrs = unsafePerformIO $ forM mats $ \mat ->
+        withMatData mat $ \step ptr -> return (fromIntegral <$> step, ptr)
+
+    go :: [Int] -> Ptr depth -> IO ()
+    go newStep newPtr =
+        forM_ positions $ \pos -> do
+            pixels <- forM stepsAndPtrs $ \(step, dataPtr) -> do
+                let addr = matElemAddress dataPtr step pos
+                peekArray (fromIntegral numChannels) (castPtr addr)
+            pokeArray (matElemAddress (castPtr newPtr) newStep pos) (f pixels)
+
