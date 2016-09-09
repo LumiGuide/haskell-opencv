@@ -6,6 +6,7 @@ module OpenCV.VideoIO.VideoCapture
   , VideoCaptureSource(..)
 
   , newVideoCapture
+  , newVideoCaptureUsingIndex
   , videoCaptureOpen
   , videoCaptureRelease
   , videoCaptureIsOpened
@@ -57,6 +58,12 @@ newVideoCapture :: IO VideoCapture
 newVideoCapture = fromPtr $
     [CU.exp|VideoCapture * {
       new cv::VideoCapture()
+    }|]
+
+newVideoCaptureUsingIndex :: C.CInt -> IO VideoCapture
+newVideoCaptureUsingIndex i = fromPtr $
+    [CU.exp|VideoCapture * {
+      new cv::VideoCapture($(int i))
     }|]
 
 videoCaptureOpen :: VideoCapture -> VideoCaptureSource -> CvExceptT IO ()
