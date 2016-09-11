@@ -343,22 +343,22 @@ threshBinaryBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 threshBinaryBirds =
     exceptError $ cvtColor gray bgr $ fst $ exceptError $
     threshold (ThreshVal_Abs 100) (Thresh_Binary 150) grayBirds
-    
+
 threshBinaryInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 threshBinaryInvBirds =
     exceptError $ cvtColor gray bgr $ fst $ exceptError $
     threshold (ThreshVal_Abs 100) (Thresh_BinaryInv 150) grayBirds
-    
+
 threshTruncateBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 threshTruncateBirds =
     exceptError $ cvtColor gray bgr $ fst $ exceptError $
     threshold (ThreshVal_Abs 100) Thresh_Truncate grayBirds
-    
+
 threshToZeroBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 threshToZeroBirds =
     exceptError $ cvtColor gray bgr $ fst $ exceptError $
     threshold (ThreshVal_Abs 100) Thresh_ToZero grayBirds
-    
+
 threshToZeroInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
 threshToZeroInvBirds =
     exceptError $ cvtColor gray bgr $ fst $ exceptError $
