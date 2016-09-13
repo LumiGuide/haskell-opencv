@@ -1,5 +1,9 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
@@ -34,7 +38,7 @@ module OpenCV.Core.Types.Mat
     , cloneMatM
     , matCopyToM
 
-    , foldMat
+    , zipWith
 
       -- * Meta information
     , MatInfo(..)
@@ -63,6 +67,9 @@ import "base" Foreign.C.Types ( CDouble )
 import "base" Foreign.Marshal.Array ( peekArray, pokeArray )
 import "base" Foreign.Ptr ( Ptr, castPtr, plusPtr )
 import "base" Foreign.Storable ( Storable )
+import "base" GHC.Exts ( Constraint(..) )
+import "base" GHC.TypeLits
+import "base" Prelude hiding ( zipWith )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -255,15 +262,14 @@ matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
           -- srcPtr->copyTo(dstRoi);
 
 
--- |Pixel-wise fold of the given function over the given matrices, i.e.
--- fold over the first pixel of all matrices, then the second, etc.
-foldMat :: forall shape channels depth
-         . ( Storable depth )
-        => [Mat shape channels ('S depth)]
+-- |TODO: Document, replace lists w/ vectors
+zipWith :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *)
+         . ( Storable depth, All IsStatic shape )
+        => [Mat ('S shape) ('S channels) ('S depth)]
         -> ([[depth]] -> [depth])
-        -> Maybe (Mat shape channels ('S depth))
-foldMat []   _ = Nothing
-foldMat mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
+        -> Maybe (Mat ('S shape) ('S channels) ('S depth))
+zipWith []   _ = Nothing
+zipWith mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
     resultMat <- newMat shape numChannels depth (toScalar (zero :: V4 CDouble))
     lift $ withMatData resultMat $ \newStep newPtr ->
         go (fromIntegral <$> newStep) (castPtr newPtr)
@@ -286,3 +292,9 @@ foldMat mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
                 peekArray (fromIntegral numChannels) (castPtr addr)
             pokeArray (matElemAddress (castPtr newPtr) newStep pos) (f pixels)
 
+class All (p :: k -> Constraint) (xs :: [k])
+instance All p '[]
+instance (p x, All p xs) => All p (x ': xs)
+
+class IsStatic (ds :: DS a)
+instance IsStatic ('S a)
