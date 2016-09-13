@@ -14,8 +14,7 @@ build:
 clean:
 	cabal clean && \
 	find doc/generated -name "*.png" -type f -delete && \
-	find src           -name "*.cpp" -type f -delete && \
-	rm doc/color_conversions.png
+	find src           -name "*.cpp" -type f -delete
 
 .PHONY: test
 test:
