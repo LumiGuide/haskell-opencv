@@ -9,6 +9,7 @@
 module OpenCV.Photo
   ( InpaintingMethod(..)
   , inpaint
+  , fastNlMeansDenoisingColored
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -106,3 +107,63 @@ inpaint inpaintRadius method src inpaintMask = unsafeWrapException $ do
   where
     c'method = marshalInpaintingMethod method
     c'inpaintRadius = realToFrac inpaintRadius
+
+{- | Preform fastNlMeansDenoising function for colored images.
+
+Example:
+
+@
+fastNlMeansDenoisingColoredImg
+    :: forall h w w2 c d
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Lenna_512x512
+       , w2 ~ ((*) w 2)
+       )
+    => Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+fastNlMeansDenoisingColoredImg= exceptError $ do
+    denoised <- fastNlMeansDenoisingColored 3 10 7 21 lenna_512x512
+    withMatM
+      (Proxy :: Proxy [h, w2])
+      (Proxy :: Proxy c)
+      (Proxy :: Proxy d)
+      black $ \imgM -> do
+        matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
+        matCopyToM imgM (V2 w 0) denoised Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy w)
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+@
+
+<<doc/generated/examples/fastNlMeansDenoisingColoredImg.png fastNlMeansDenoisingColoredImg>>
+-}
+
+fastNlMeansDenoisingColored
+   :: Double -- ^ Parameter regulating filter strength for luminance component.
+             -- Bigger h value perfectly removes noise but also removes image details,
+             -- smaller h value preserves details but also preserves some noise
+   -> Double -- ^ The same as h but for color components. For most images value equals 10 will be enough
+             -- to remove colored noise and do not distort colors
+   -> Int32  -- ^ templateWindowSize Size in pixels of the template patch that is used to compute weights.
+             -- Should be odd. Recommended value 7 pixels
+   -> Int32  -- ^ searchWindowSize. Size in pixels of the window that is used to compute weighted average
+             -- for given pixel. Should be odd. Affect performance linearly:
+             -- greater searchWindowsSize - greater denoising time.
+             -- Recommended value 21 pixels
+   -> Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image 8-bit 3-channel image.
+   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output image same size and type as input.
+fastNlMeansDenoisingColored h hColor templateWindowSize searchWindowSize src = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src         $ \srcPtr         ->
+      withPtr dst         $ \dstPtr         ->
+      [cvExcept|
+        cv::fastNlMeansDenoisingColored( *$(Mat * srcPtr)
+                                       , *$(Mat * dstPtr)
+                                       , $(double c'h)
+                                       , $(double c'hColor)
+                                       , $(int32_t templateWindowSize)
+                                       , $(int32_t searchWindowSize)
+                                       );
+      |]
+  where
+    c'h = realToFrac h
+    c'hColor = realToFrac hColor

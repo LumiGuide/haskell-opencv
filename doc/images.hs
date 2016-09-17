@@ -48,6 +48,7 @@ type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
 type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
 type DamageMask       = Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
+type Lenna_512x512    = Mat (ShapeT [512, 512]) ('S 3) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -113,6 +114,11 @@ building_868x600 :: Building_868x600
 building_868x600 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/building.jpg"
+
+lenna_512x512 :: Lenna_512x512
+lenna_512x512 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/Lenna.png"
 
 --------------------------------------------------------------------------------
 
