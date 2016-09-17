@@ -342,56 +342,94 @@
 <a name="line-333"></a>too small or too large values. There are several types of thresholding
 <a name="line-334"></a>supported by the function.
 <a name="line-335"></a>
-<a name="line-336"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold</a> OpenCV Sphinx doc&gt;
-<a name="line-337"></a>-}</span>
-<a name="line-338"></a><span class='hs-definition'>threshold</span>
-<a name="line-339"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-varid'>depth</span> <span class='hs-varop'>`In`</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Word8</span><span class='hs-layout'>,</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
-<a name="line-340"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>ThreshValue</span> <span class='hs-comment'>-- ^</span>
-<a name="line-341"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ThreshType</span>
-<a name="line-342"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-343"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>Double</span><span class='hs-layout'>)</span>
-<a name="line-344"></a><span class='hs-definition'>threshold</span> <span class='hs-varid'>threshVal</span> <span class='hs-varid'>threshType</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-345"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
-<a name="line-346"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>calcThreshPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-347"></a>      <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>,</span> <span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>calcThreshPtr</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
-<a name="line-348"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-349"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-350"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-351"></a>          <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varop'>*</span> <span class='hs-varid'>calcThreshPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
-<a name="line-352"></a>            <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>threshold</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-353"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
-<a name="line-354"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshVal</span><span class='hs-layout'>)</span>
-<a name="line-355"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'maxVal</span><span class='hs-layout'>)</span>
-<a name="line-356"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'type</span><span class='hs-layout'>)</span>
-<a name="line-357"></a>                         <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-358"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-359"></a>  <span class='hs-keyword'>where</span>
-<a name="line-360"></a>    <span class='hs-varid'>c'type</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'threshType</span> <span class='hs-varop'>.|.</span> <span class='hs-varid'>c'threshValMode</span>
-<a name="line-361"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>c'threshType</span><span class='hs-layout'>,</span> <span class='hs-varid'>c'maxVal</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalThreshType</span> <span class='hs-varid'>threshType</span>
-<a name="line-362"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>c'threshValMode</span><span class='hs-layout'>,</span> <span class='hs-varid'>c'threshVal</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalThreshValue</span> <span class='hs-varid'>threshVal</span>
-<a name="line-363"></a>
-<a name="line-364"></a>
-<a name="line-365"></a><a name="watershed"></a><span class='hs-comment'>{- | Performs a marker-based image segmentation using the watershed algorithm.
-<a name="line-366"></a>
-<a name="line-367"></a>The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer, F. Color Image Segmentation, ICIP92, 1992].
-<a name="line-368"></a>
-<a name="line-369"></a>Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (&gt;0) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using 'findContours' and 'drawContours'. The markers are “seeds” of the future image regions. All the other pixels in markers , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0’s. In the function output, each pixel in markers is set to a value of the “seed” components or to -1 at boundaries between the regions.
-<a name="line-370"></a>
-<a name="line-371"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed</a> OpenCV Sphinx doc&gt;
-<a name="line-372"></a>-}</span>
-<a name="line-373"></a><span class='hs-definition'>watershed</span>
-<a name="line-374"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
-<a name="line-375"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>3</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Input 8-bit 3-channel image</span>
-<a name="line-376"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Input/output 32-bit single-channel image (map) of markers</span>
-<a name="line-377"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExceptT</span> <span class='hs-varid'>m</span> <span class='hs-conid'>()</span>
-<a name="line-378"></a><span class='hs-definition'>watershed</span> <span class='hs-varid'>img</span> <span class='hs-varid'>markers</span> <span class='hs-keyglyph'>=</span>
-<a name="line-379"></a>    <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span>
-<a name="line-380"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>img</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>imgPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-381"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>markers</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>markersPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-382"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>exp</span><span class='hs-keyglyph'>|</span><span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
-<a name="line-383"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>watershed</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>imgPtr</span><span class='hs-layout'>)</span>
-<a name="line-384"></a>                     <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>markersPtr</span><span class='hs-layout'>)</span>
-<a name="line-385"></a>                     <span class='hs-layout'>)</span>
-<a name="line-386"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-336"></a>Example:
+<a name="line-337"></a>
+<a name="line-338"></a>@
+<a name="line-339"></a>grayBirds :: Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
+<a name="line-340"></a>grayBirds = exceptError $ cvtColor bgr gray birds_512x341
+<a name="line-341"></a>
+<a name="line-342"></a>threshBinaryBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<a name="line-343"></a>threshBinaryBirds =
+<a name="line-344"></a>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<a name="line-345"></a>    threshold (ThreshVal_Abs 100) (Thresh_Binary 150) grayBirds
+<a name="line-346"></a>
+<a name="line-347"></a>threshBinaryInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<a name="line-348"></a>threshBinaryInvBirds =
+<a name="line-349"></a>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<a name="line-350"></a>    threshold (ThreshVal_Abs 100) (Thresh_BinaryInv 150) grayBirds
+<a name="line-351"></a>
+<a name="line-352"></a>threshTruncateBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<a name="line-353"></a>threshTruncateBirds =
+<a name="line-354"></a>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<a name="line-355"></a>    threshold (ThreshVal_Abs 100) Thresh_Truncate grayBirds
+<a name="line-356"></a>
+<a name="line-357"></a>threshToZeroBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<a name="line-358"></a>threshToZeroBirds =
+<a name="line-359"></a>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<a name="line-360"></a>    threshold (ThreshVal_Abs 100) Thresh_ToZero grayBirds
+<a name="line-361"></a>
+<a name="line-362"></a>threshToZeroInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<a name="line-363"></a>threshToZeroInvBirds =
+<a name="line-364"></a>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<a name="line-365"></a>    threshold (ThreshVal_Abs 100) Thresh_ToZeroInv grayBirds
+<a name="line-366"></a>@
+<a name="line-367"></a>
+<a name="line-368"></a>&lt;&lt;doc/generated/examples/threshBinaryBirds.png threshBinaryBirds&gt;&gt;
+<a name="line-369"></a>&lt;&lt;doc/generated/examples/threshBinaryInvBirds.png threshBinaryInvBirds&gt;&gt;
+<a name="line-370"></a>&lt;&lt;doc/generated/examples/threshTruncateBirds.png threshTruncateBirds&gt;&gt;
+<a name="line-371"></a>&lt;&lt;doc/generated/examples/threshToZeroBirds.png threshToZeroBirds&gt;&gt;
+<a name="line-372"></a>&lt;&lt;doc/generated/examples/threshToZeroInvBirds.png threshToZeroInvBirds&gt;&gt;
+<a name="line-373"></a>
+<a name="line-374"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold</a> OpenCV Sphinx doc&gt;
+<a name="line-375"></a>-}</span>
+<a name="line-376"></a><span class='hs-definition'>threshold</span>
+<a name="line-377"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-varid'>depth</span> <span class='hs-varop'>`In`</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Word8</span><span class='hs-layout'>,</span> <span class='hs-conid'>Float</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span>
+<a name="line-378"></a>    <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>ThreshValue</span> <span class='hs-comment'>-- ^</span>
+<a name="line-379"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ThreshType</span>
+<a name="line-380"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-381"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-varid'>depth</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>Double</span><span class='hs-layout'>)</span>
+<a name="line-382"></a><span class='hs-definition'>threshold</span> <span class='hs-varid'>threshVal</span> <span class='hs-varid'>threshType</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-383"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
+<a name="line-384"></a>    <span class='hs-varid'>alloca</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>calcThreshPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-385"></a>      <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>,</span> <span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>realToFrac</span> <span class='hs-varop'>&lt;$&gt;</span> <span class='hs-varid'>peek</span> <span class='hs-varid'>calcThreshPtr</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<a name="line-386"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-387"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-388"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-389"></a>          <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varop'>*</span> <span class='hs-varid'>calcThreshPtr</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span>
+<a name="line-390"></a>            <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>threshold</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-391"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
+<a name="line-392"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'threshVal</span><span class='hs-layout'>)</span>
+<a name="line-393"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>double</span> <span class='hs-varid'>c'maxVal</span><span class='hs-layout'>)</span>
+<a name="line-394"></a>                         <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'type</span><span class='hs-layout'>)</span>
+<a name="line-395"></a>                         <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-396"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-397"></a>  <span class='hs-keyword'>where</span>
+<a name="line-398"></a>    <span class='hs-varid'>c'type</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>c'threshType</span> <span class='hs-varop'>.|.</span> <span class='hs-varid'>c'threshValMode</span>
+<a name="line-399"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>c'threshType</span><span class='hs-layout'>,</span> <span class='hs-varid'>c'maxVal</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalThreshType</span> <span class='hs-varid'>threshType</span>
+<a name="line-400"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>c'threshValMode</span><span class='hs-layout'>,</span> <span class='hs-varid'>c'threshVal</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalThreshValue</span> <span class='hs-varid'>threshVal</span>
+<a name="line-401"></a>
+<a name="line-402"></a>
+<a name="line-403"></a><a name="watershed"></a><span class='hs-comment'>{- | Performs a marker-based image segmentation using the watershed algorithm.
+<a name="line-404"></a>
+<a name="line-405"></a>The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer, F. Color Image Segmentation, ICIP92, 1992].
+<a name="line-406"></a>
+<a name="line-407"></a>Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (&gt;0) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using 'findContours' and 'drawContours'. The markers are “seeds” of the future image regions. All the other pixels in markers , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0’s. In the function output, each pixel in markers is set to a value of the “seed” components or to -1 at boundaries between the regions.
+<a name="line-408"></a>
+<a name="line-409"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed</a> OpenCV Sphinx doc&gt;
+<a name="line-410"></a>-}</span>
+<a name="line-411"></a><span class='hs-definition'>watershed</span>
+<a name="line-412"></a>  <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimMonad</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span>
+<a name="line-413"></a>  <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>3</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Input 8-bit 3-channel image</span>
+<a name="line-414"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mut</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>h</span><span class='hs-layout'>,</span> <span class='hs-varid'>w</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Int32</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>PrimState</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-comment'>-- ^ Input/output 32-bit single-channel image (map) of markers</span>
+<a name="line-415"></a>  <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExceptT</span> <span class='hs-varid'>m</span> <span class='hs-conid'>()</span>
+<a name="line-416"></a><span class='hs-definition'>watershed</span> <span class='hs-varid'>img</span> <span class='hs-varid'>markers</span> <span class='hs-keyglyph'>=</span>
+<a name="line-417"></a>    <span class='hs-varid'>unsafePrimToPrim</span> <span class='hs-varop'>$</span>
+<a name="line-418"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>img</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>imgPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-419"></a>    <span class='hs-varid'>withPtr</span> <span class='hs-varid'>markers</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>markersPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-420"></a>      <span class='hs-keyglyph'>[</span><span class='hs-conid'>C</span><span class='hs-varop'>.</span><span class='hs-varid'>exp</span><span class='hs-keyglyph'>|</span><span class='hs-varid'>void</span> <span class='hs-layout'>{</span>
+<a name="line-421"></a>        <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>watershed</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>imgPtr</span><span class='hs-layout'>)</span>
+<a name="line-422"></a>                     <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>markersPtr</span><span class='hs-layout'>)</span>
+<a name="line-423"></a>                     <span class='hs-layout'>)</span>
+<a name="line-424"></a>      <span class='hs-layout'>}</span><span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
 </pre></body>
 </html>
