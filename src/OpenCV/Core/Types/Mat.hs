@@ -1,6 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -38,7 +37,7 @@ module OpenCV.Core.Types.Mat
     , cloneMatM
     , matCopyToM
 
-    , zipWith
+    , zipMatWith
 
       -- * Meta information
     , MatInfo(..)
@@ -66,10 +65,10 @@ import "base" Data.Word ( Word8 )
 import "base" Foreign.C.Types ( CDouble )
 import "base" Foreign.Marshal.Array ( peekArray, pokeArray )
 import "base" Foreign.Ptr ( Ptr, castPtr, plusPtr )
+import "base" Foreign.ForeignPtr.Safe ( ForeignPtr, newForeignPtr_ )
 import "base" Foreign.Storable ( Storable )
 import "base" GHC.Exts ( Constraint(..) )
 import "base" GHC.TypeLits
-import "base" Prelude hiding ( zipWith )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -77,6 +76,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
+import "vector" Data.Vector.Storable ( Vector, toList, unsafeFromForeignPtr )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -262,14 +262,16 @@ matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
           -- srcPtr->copyTo(dstRoi);
 
 
--- |TODO: Document, replace lists w/ vectors
-zipWith :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *)
+-- |Zips a given list of matrices of equal shape, channels, and depth,
+-- by applying the given function to the corresponding matrix elements
+-- at each position.
+zipMatWith :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *)
          . ( Storable depth, All IsStatic shape )
         => [Mat ('S shape) ('S channels) ('S depth)]
-        -> ([[depth]] -> [depth])
+        -> ([Vector depth] -> Vector depth)
         -> Maybe (Mat ('S shape) ('S channels) ('S depth))
-zipWith []   _ = Nothing
-zipWith mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
+zipMatWith []   _ = Nothing
+zipMatWith mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
     resultMat <- newMat shape numChannels depth (toScalar (zero :: V4 CDouble))
     lift $ withMatData resultMat $ \newStep newPtr ->
         go (fromIntegral <$> newStep) (castPtr newPtr)
@@ -278,19 +280,25 @@ zipWith mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
     MatInfo shape !depth !numChannels = matInfo (head mats)
 
     positions :: [[Int]]
-    positions = sequence $ map (enumFromTo 0) $ map pred (fromIntegral <$> shape)
+    positions = mapM (enumFromTo 0 . pred) (fromIntegral <$> shape)
 
-    stepsAndPtrs :: [([Int], Ptr Word8)]
+    stepsAndPtrs :: [([Int], ForeignPtr depth)]
     stepsAndPtrs = unsafePerformIO $ forM mats $ \mat ->
-        withMatData mat $ \step ptr -> return (fromIntegral <$> step, ptr)
+        withMatData mat $ \step ptr -> do
+            fptr <- newForeignPtr_ . castPtr $ ptr
+            return (fromIntegral <$> step, fptr)
 
     go :: [Int] -> Ptr depth -> IO ()
     go newStep newPtr =
         forM_ positions $ \pos -> do
             pixels <- forM stepsAndPtrs $ \(step, dataPtr) -> do
-                let addr = matElemAddress dataPtr step pos
-                peekArray (fromIntegral numChannels) (castPtr addr)
-            pokeArray (matElemAddress (castPtr newPtr) newStep pos) (f pixels)
+                let offs = sum $ zipWith (*) step pos
+                return $ unsafeFromForeignPtr dataPtr offs (fromIntegral numChannels)
+            pokeArray (dest pos) (toList $ f pixels)
+        where
+          dest :: [Int] -> Ptr depth
+          dest pos = matElemAddress (castPtr newPtr) newStep pos
+
 
 class All (p :: k -> Constraint) (xs :: [k])
 instance All p '[]
