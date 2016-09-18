@@ -134,7 +134,6 @@ fastNlMeansDenoisingColoredImg= exceptError $ do
         matCopyToM imgM (V2 w 0) denoised Nothing
   where
     w = fromInteger $ natVal (Proxy :: Proxy w)
-    h = fromInteger $ natVal (Proxy :: Proxy h)
 @
 
 <<doc/generated/examples/fastNlMeansDenoisingColoredImg.png fastNlMeansDenoisingColoredImg>>
@@ -199,7 +198,6 @@ fastNlMeansDenoisingColoredMultiImg = exceptError $ do
         matCopyToM imgM (V2 w 0) denoised Nothing
   where
     w = fromInteger $ natVal (Proxy :: Proxy w)
-    h = fromInteger $ natVal (Proxy :: Proxy h)
 @
 
 <<doc/generated/examples/fastNlMeansDenoisingColoredMultiImg.png fastNlMeansDenoisingColoredMultiImg>>
