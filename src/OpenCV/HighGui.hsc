@@ -82,6 +82,8 @@ C.context (C.cppCtx <> openCvCtx)
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/highgui.hpp"
+C.include "chrono"
+C.include "thread"
 C.using "namespace cv"
 
 #include <bindings.dsl.h>
@@ -146,7 +148,10 @@ makeWindow title = do
 -- | Close the window and free up all resources associated with the window.
 destroyWindow :: Window -> IO ()
 destroyWindow window = mask_ $ do
-    [C.exp| void { cv::destroyWindow($(char * c'name)); }|]
+    [C.block| void {
+       cv::destroyWindow($(char * c'name));
+       std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }|]
     free c'name
     modifyMVar_ (windowMouseCallback window) $ \mbMouseCallback -> do
       mapM_ freeHaskellFunPtr mbMouseCallback
