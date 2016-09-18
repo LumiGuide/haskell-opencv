@@ -5,7 +5,6 @@
 import Control.Monad ( unless )
 import qualified OpenCV as CV
 import OpenCV.TypeLevel
-import OpenCV.Photo
 import OpenCV.Video.MotionAnalysis
 
 main :: IO ()
@@ -32,7 +31,7 @@ main = do
           -- Assert that the retrieved frame is 2-dimensional.
           let img' :: CV.Mat ('S ['D, 'D]) 'D 'D
               img' = CV.exceptError $ CV.coerceMat img
-          bgSubApply bs 0.01 img'
+          _fgMask <- bgSubApply bs 0.01 img'
 
           CV.imshow window =<< getBackgroundImage bs
 

@@ -242,5 +242,7 @@ fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize sr
     c'hColor = realToFrac hColor
     c'srcVecLength = fromIntegral $ V.length srcVec
     -- if it is not odd we drop the last image
-    c'temporalWindowSize = if c'srcVecLength `mod` 2 == 1 then c'srcVecLength else c'srcVecLength - 1
+    c'temporalWindowSize
+        | c'srcVecLength `mod` 2 == 1 = c'srcVecLength
+        | otherwise                   = c'srcVecLength - 1
     c'imgToDenoiseIndex = (c'temporalWindowSize - 1) `div` 2
