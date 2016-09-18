@@ -10,6 +10,7 @@ module OpenCV.Photo
   ( InpaintingMethod(..)
   , inpaint
   , fastNlMeansDenoisingColored
+  , fastNlMeansDenoisingColoredMulti
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -21,7 +22,10 @@ import "this" OpenCV.Internal.C.Types ( withPtr )
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Photo.Constants
 import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.Core.Types ( withArrayPtr )
 import "this" OpenCV.TypeLevel
+
+import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
@@ -167,3 +171,76 @@ fastNlMeansDenoisingColored h hColor templateWindowSize searchWindowSize src = u
   where
     c'h = realToFrac h
     c'hColor = realToFrac hColor
+
+{- | Preform fastNlMeansDenoisingColoredMulti function for colored images.
+     it differs from the original OpenCV version by using all input images
+     and denoising the middle one. The original version would allow to have
+     some arbitrary length vector and slide window over it. As we have to copy the haskell vector
+     before we can use it as `std::vector` on the cpp side it is easier to trim the vector before sending
+     and use all frames.
+
+Example:
+
+@
+fastNlMeansDenoisingColoredMultiImg
+    :: forall h w w2 c d
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Lenna_512x512
+       , w2 ~ ((*) w 2)
+       )
+    => Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+fastNlMeansDenoisingColoredMultiImg = exceptError $ do
+    denoised <- fastNlMeansDenoisingColoredMulti 3 10 7 21 (V.singleton lenna_512x512)
+    withMatM
+      (Proxy :: Proxy [h, w2])
+      (Proxy :: Proxy c)
+      (Proxy :: Proxy d)
+      black $ \imgM -> do
+        matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
+        matCopyToM imgM (V2 w 0) denoised Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy w)
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+@
+
+<<doc/generated/examples/fastNlMeansDenoisingColoredMultiImg.png fastNlMeansDenoisingColoredMultiImg>>
+-}
+
+fastNlMeansDenoisingColoredMulti
+   :: Double -- ^ Parameter regulating filter strength for luminance component.
+             -- Bigger h value perfectly removes noise but also removes image details,
+             -- smaller h value preserves details but also preserves some noise
+   -> Double -- ^ The same as h but for color components. For most images value equals 10 will be enough
+             -- to remove colored noise and do not distort colors
+   -> Int32  -- ^ templateWindowSize Size in pixels of the template patch that is used to compute weights.
+             -- Should be odd. Recommended value 7 pixels
+   -> Int32  -- ^ searchWindowSize. Size in pixels of the window that is used to compute weighted average
+             -- for given pixel. Should be odd. Affect performance linearly:
+             -- greater searchWindowsSize - greater denoising time.
+             -- Recommended value 21 pixels
+   -> V.Vector (Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Vector of odd number of input 8-bit 3-channel images.
+   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output image same size and type as input.
+
+fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize srcVec = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withArrayPtr srcVec $ \srcVecPtr      ->
+      withPtr dst         $ \dstPtr         ->
+      [cvExcept|
+        std::vector<Mat> buffer( $(Mat * srcVecPtr), $(Mat * srcVecPtr) + $(int32_t c'temporalWindowSize) );
+        cv::fastNlMeansDenoisingColoredMulti( buffer
+                                            , *$(Mat * dstPtr)
+                                            , $(int32_t c'imgToDenoiseIndex)
+                                            , $(int32_t c'temporalWindowSize)
+                                            , $(double c'h)
+                                            , $(double c'hColor)
+                                            , $(int32_t templateWindowSize)
+                                            , $(int32_t searchWindowSize)
+                                            );
+      |]
+  where
+    c'h = realToFrac h
+    c'hColor = realToFrac hColor
+    c'srcVecLength = fromIntegral $ V.length srcVec
+    -- if it is not odd we drop the last image
+    c'temporalWindowSize = if c'srcVecLength `mod` 2 == 1 then c'srcVecLength else c'srcVecLength - 1
+    c'imgToDenoiseIndex = (c'temporalWindowSize - 1) `div` 2
