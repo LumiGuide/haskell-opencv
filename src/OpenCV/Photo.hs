@@ -113,7 +113,7 @@ inpaint inpaintRadius method src inpaintMask = unsafeWrapException $ do
     c'method = marshalInpaintingMethod method
     c'inpaintRadius = realToFrac inpaintRadius
 
-{- | Preform fastNlMeansDenoising function for colored images. Denoising is not
+{- | Perform fastNlMeansDenoising function for colored images. Denoising is not
      per channel but in a different colour space
 
 Example:
@@ -178,7 +178,7 @@ fastNlMeansDenoisingColored h hColor templateWindowSize searchWindowSize src =
     c'h = realToFrac h
     c'hColor = realToFrac hColor
 
-{- | Preform fastNlMeansDenoisingColoredMulti function for colored images.
+{- | Perform fastNlMeansDenoisingColoredMulti function for colored images.
      Denoising is not pre channel but in a different colour space.
      This wrapper differs from the original OpenCV version by using all input
      images and denoising the middle one. The original version would allow
@@ -260,13 +260,11 @@ fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize sr
         | otherwise                   = c'srcVecLength - 1
     c'imgToDenoiseIndex = (c'temporalWindowSize - 1) `div` 2
 
-{- | Preform denoise_TVL1
+{- | Perform denoise_TVL1
 
 Example:
 
 @
-
-eachChannel f img = unsafeCoerceMat . matMerge <$> V.mapM f (matSplit img)
 
 denoise_TVL1Img
     :: forall h w w2 c d
@@ -275,7 +273,7 @@ denoise_TVL1Img
        )
     => Mat ('S ['S h, 'S w2]) ('S c) ('S d)
 denoise_TVL1Img = exceptError $ do
-    denoised <- eachChannel (denoise_TVL1 2 50 . V.singleton) lenna_512x512
+    denoised <- matChannelMapM (denoise_TVL1 2 50 . V.singleton) lenna_512x512
     withMatM
       (Proxy :: Proxy [h, w2])
       (Proxy :: Proxy c)

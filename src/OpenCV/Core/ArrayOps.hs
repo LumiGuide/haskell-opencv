@@ -29,6 +29,7 @@ module OpenCV.Core.ArrayOps
       -- * Channel operations
     , matMerge
     , matSplit
+    , matChannelMapM
       -- * Other
     , minMaxLoc
     , NormType(..)
@@ -608,6 +609,16 @@ matSplit src = unsafePerformIO $
 
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
 -}
+
+{- | Apply the same 1 dimensional action to every channel
+-}
+matChannelMapM
+   :: Monad m
+   => (Mat shape ('S 1) depth -> m (Mat shape ('S 1) depth))
+   -> Mat shape channelsOut depth
+   -> m (Mat shape channelsOut depth)
+matChannelMapM f img = unsafeCoerceMat . matMerge <$> V.mapM f (matSplit img)
+
 
 -- TODO (RvD): implement mask
 minMaxLoc
