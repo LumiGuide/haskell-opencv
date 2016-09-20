@@ -605,11 +605,6 @@ matSplit src = unsafePerformIO $
     c'numChans :: Int32
     c'numChans = fromIntegral numChans
 
-{- | Finds the global minimum and maximum in an array
-
-<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
--}
-
 {- | Apply the same 1 dimensional action to every channel
 -}
 matChannelMapM
@@ -619,7 +614,10 @@ matChannelMapM
    -> m (Mat shape channelsOut depth)
 matChannelMapM f img = unsafeCoerceMat . matMerge <$> V.mapM f (matSplit img)
 
+{- | Finds the global minimum and maximum in an array
 
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc>
+-}
 -- TODO (RvD): implement mask
 minMaxLoc
     :: Mat ('S [height, width]) channels depth -- ^
