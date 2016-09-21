@@ -106,6 +106,8 @@ data C'Ptr_ORB
 -- data C'KAZE
 -- -- | Haskell representation of an OpenCV @cv::AKAZE@ object
 -- data C'AKAZE
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::SimpleBlobDetector>@ object
+data C'Ptr_SimpleBlobDetector
 
 -- | Haskell representation of an OpenCV @cv::BFMatcher@ object
 data C'BFMatcher
