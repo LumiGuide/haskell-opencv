@@ -7,4 +7,4 @@ main = do
     img <- CV.imdecode CV.ImreadUnchanged <$> B.readFile "data/Lenna.png"
     CV.withWindow "test" $ \window -> do
       CV.imshow window img
-      void $ CV.waitKey 10000
+      void $ CV.waitKey 0

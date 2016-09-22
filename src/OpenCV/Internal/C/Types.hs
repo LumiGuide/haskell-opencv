@@ -120,6 +120,9 @@ data C'Ptr_BackgroundSubtractorMOG2
 -- | Haskell representation of an OpenCV @cv::VideoCapture@ object
 data C'VideoCapture
 
+-- | Haskell representation of an OpenCV @cv::VideoWriter@ object
+data C'VideoWriter
+
 -- | Callback function for mouse events
 type C'MouseCallback
    =  Int32 -- ^ One of the @cv::MouseEvenTypes@ constants.

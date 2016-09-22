@@ -13,7 +13,7 @@ main = do
     cap <- CV.newVideoCapture
     -- Open the first available video capture device. Usually the
     -- webcam if run on a laptop.
-    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0
+    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0 Nothing
     isOpened <- CV.videoCaptureIsOpened cap
     case isOpened of
       False -> putStrLn "Couldn't open video capture device"
