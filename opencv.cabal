@@ -57,6 +57,7 @@ library
       , src/OpenCV/Video.cpp
       , src/OpenCV/Video/MotionAnalysis.cpp
       , src/OpenCV/VideoIO/VideoCapture.cpp
+      , src/OpenCV/VideoIO/VideoWriter.cpp
 
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
@@ -112,7 +113,9 @@ library
         OpenCV.Unsafe
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
+        OpenCV.VideoIO.Types
         OpenCV.VideoIO.VideoCapture
+        OpenCV.VideoIO.VideoWriter
 
         OpenCV.Internal
         OpenCV.Internal.Mutable

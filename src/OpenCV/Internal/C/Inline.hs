@@ -115,6 +115,7 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "Ptr_BackgroundSubtractorMOG2", [t| C'Ptr_BackgroundSubtractorMOG2 |] )
 
   , ( C.TypeName "VideoCapture", [t| C'VideoCapture |] )
+  , ( C.TypeName "VideoWriter" , [t| C'VideoWriter  |] )
 
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )
