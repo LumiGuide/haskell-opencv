@@ -32,7 +32,6 @@ addons:
 # change flags or use --stack-yaml to point to a different file.
 env:
 - ARGS="--resolver lts"
-- ARGS="--resolver nightly"
 
 before_install:
 # Install OpenCV 3
