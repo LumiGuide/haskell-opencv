@@ -23,6 +23,9 @@ module OpenCV.ImgProc.MiscImgTransform
 
       -- * Watershed
     , watershed
+
+      -- * In range
+    , inRange
     ) where
 
 import "base" Data.Bits
@@ -422,3 +425,21 @@ watershed img markers =
                      , *$(Mat * markersPtr)
                      )
       }|]
+
+{- | Returns 0 if the pixels are not in the range, 255 otherwise. -}
+inRange ::
+     (ToScalar scalar)
+  => Mat ('S [w, h]) channels depth
+  -> scalar -- ^ Lower bound
+  -> scalar -- ^ Upper bound
+  -> CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
+inRange src lo hi = unsafeWrapException $ do
+  dst <- newEmptyMat
+  withPtr src $ \srcPtr ->
+    handleCvException (return (unsafeCoerceMat dst)) $
+    withPtr (toScalar lo) $ \loPtr ->
+    withPtr (toScalar hi) $ \hiPtr ->
+    withPtr dst $ \dstPtr ->
+      [cvExcept|
+        cv::inRange(*$(Mat * srcPtr), *$(Scalar * loPtr), *$(Scalar * hiPtr), *$(Mat * dstPtr));
+      |]
