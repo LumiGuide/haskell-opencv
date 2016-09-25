@@ -539,6 +539,7 @@ type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDep
   ColorCodeDepth 'RGB     'BGR        ('S depth)  = 'S depth
   ColorCodeDepth 'BGR     'RGB        ('S depth)  = 'S depth
   ColorCodeDepth 'BGRA    'RGBA       ('S depth)  = 'S depth
+  ColorCodeDepth 'BGRA    'RGB        ('S depth)  = 'S depth
 
   ColorCodeDepth 'BGR     'BGR565     ('S Word8)  = 'S Word8
   ColorCodeDepth 'BGR     'BGR555     ('S Word8)  = 'S Word8
