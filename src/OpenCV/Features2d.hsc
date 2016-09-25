@@ -12,6 +12,18 @@ module OpenCV.Features2d
     , mkOrb
     , orbDetectAndCompute
 
+      -- * BLOB
+    , SimpleBlobDetector
+    , SimpleBlobDetectorParams(..)
+    , BlobFilterByArea(..)
+    , BlobFilterByCircularity(..)
+    , BlobFilterByColor(..)
+    , BlobFilterByConvexity(..)
+    , BlobFilterByInertia(..)
+    , defaultSimpleBlobDetectorParams
+    , mkSimpleBlobDetector
+    , blobDetect
+
       -- * DescriptorMatcher
     , DescriptorMatcher(..)
       -- ** BFMatcher
@@ -22,6 +34,7 @@ module OpenCV.Features2d
 import "base" Control.Exception ( mask_ )
 import "base" Data.Int
 import "base" Data.Word
+import "base" Data.Maybe
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
@@ -49,6 +62,7 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.include "opencv2/features2d.hpp"
 C.include "orb.hpp"
+C.include "simple_blob_detector.hpp"
 
 C.using "namespace cv"
 
@@ -58,6 +72,10 @@ C.using "namespace cv"
 
 #include "namespace.hpp"
 #include "orb.hpp"
+#include "simple_blob_detector.hpp"
+
+infinity :: Float
+infinity = 1 / 0
 
 --------------------------------------------------------------------------------
 -- ORB - Oriented BRIEF
@@ -285,6 +303,201 @@ orbDetectAndCompute orb img mbMask = unsafeWrapException $ do
 
           pure $ Right (V.fromList keypoints, relaxMat descriptors)
 
+--------------------------------------------------------------------------------
+-- BLOB - Binary Large OBject
+--------------------------------------------------------------------------------
+
+-- Internally, a SimpleBlobDetector is a pointer to a @cv::Ptr<cv::SimpleBlobDetector>@, which in turn points
+-- to an actual @cv::SimpleBlobDetector@ object.
+newtype SimpleBlobDetector = SimpleBlobDetector {unSimpleBlobDetector :: ForeignPtr C'Ptr_SimpleBlobDetector}
+
+type instance C SimpleBlobDetector = C'Ptr_SimpleBlobDetector
+
+instance WithPtr SimpleBlobDetector where
+    withPtr = withForeignPtr . unSimpleBlobDetector
+
+instance FromPtr SimpleBlobDetector where
+    fromPtr = objFromPtr SimpleBlobDetector $ \ptr ->
+                [CU.block| void {
+                  cv::Ptr<cv::SimpleBlobDetector> * simpleBlobDetector_ptr_ptr = $(Ptr_SimpleBlobDetector * ptr);
+                  simpleBlobDetector_ptr_ptr->release();
+                  delete simpleBlobDetector_ptr_ptr;
+                }|]
+
+data BlobFilterByArea
+     = BlobFilterByArea
+     { blob_minArea :: !Float
+     , blob_maxArea :: !Float
+     } deriving Eq
+
+data BlobFilterByCircularity
+     = BlobFilterByCircularity
+     { blob_minCircularity :: !Float
+     , blob_maxCircularity :: !Float
+     } deriving Eq
+
+data BlobFilterByColor
+     = BlobFilterByColor
+     { blob_blobColor :: !Word8
+     } deriving Eq
+
+data BlobFilterByConvexity
+     = BlobFilterByConvexity
+     { blob_minConvexity :: !Float
+     , blob_maxConvexity :: !Float
+     } deriving Eq
+
+data BlobFilterByInertia
+     = BlobFilterByInertia
+     { blob_minInertiaRatio :: !Float
+     , blob_maxInertiaRatio :: !Float
+     } deriving Eq
+
+data SimpleBlobDetectorParams
+   = SimpleBlobDetectorParams
+     { blob_minThreshold :: !Float
+     , blob_maxThreshold :: !Float
+     , blob_thresholdStep :: !Float
+     , blob_minRepeatability :: !Int32
+     , blob_minDistBetweenBlobs :: !Float
+     , blob_filterByArea :: !(Maybe BlobFilterByArea)
+       -- ^ Extracted blobs have an area between 'minArea' (inclusive) and
+       --   'maxArea' (exclusive).
+     , blob_filterByCircularity :: !(Maybe BlobFilterByCircularity)
+       -- ^ Extracted blobs have circularity
+       --   @(4 * pi * Area)/(perimeter * perimeter)@ between 'minCircularity'
+       --   (inclusive) and 'maxCircularity' (exclusive).
+     , blob_filterByColor :: !(Maybe BlobFilterByColor)
+       -- ^ This filter compares the intensity of a binary image at the center of
+       --   a blob to 'blobColor'. If they differ, the blob is filtered out. Use
+       --   @blobColor = 0@ to extract dark blobs and @blobColor = 255@ to extract
+       --   light blobs.
+     , blob_filterByConvexity :: !(Maybe BlobFilterByConvexity)
+       -- ^ Extracted blobs have convexity (area / area of blob convex hull) between
+       --   'minConvexity' (inclusive) and 'maxConvexity' (exclusive).
+     , blob_filterByInertia :: !(Maybe BlobFilterByInertia)
+       -- ^ Extracted blobs have this ratio between 'minInertiaRatio' (inclusive)
+       --   and 'maxInertiaRatio' (exclusive).
+     }
+
+defaultSimpleBlobDetectorParams :: SimpleBlobDetectorParams
+defaultSimpleBlobDetectorParams =
+    SimpleBlobDetectorParams
+    { blob_minThreshold = 50
+    , blob_maxThreshold = 220
+    , blob_thresholdStep = 10
+    , blob_minRepeatability = 2
+    , blob_minDistBetweenBlobs = 10
+    , blob_filterByArea = Just (BlobFilterByArea 25 5000)
+    , blob_filterByCircularity = Nothing
+    , blob_filterByColor = Just (BlobFilterByColor 0)
+    , blob_filterByConvexity = Just (BlobFilterByConvexity 0.95 infinity)
+    , blob_filterByInertia = Just (BlobFilterByInertia 0.1 infinity)
+    }
+
+--------------------------------------------------------------------------------
+
+newSimpleBlobDetector :: SimpleBlobDetectorParams -> IO SimpleBlobDetector
+newSimpleBlobDetector SimpleBlobDetectorParams{..} = fromPtr
+    [CU.block|Ptr_SimpleBlobDetector * {
+      cv::SimpleBlobDetector::Params params;
+      params.blobColor           = $(unsigned char c'blobColor);
+      params.filterByArea        = $(bool c'filterByArea);
+      params.filterByCircularity = $(bool c'filterByCircularity);
+      params.filterByColor       = $(bool c'filterByColor);
+      params.filterByConvexity   = $(bool c'filterByConvexity);
+      params.filterByInertia     = $(bool c'filterByInertia);
+      params.maxArea             = $(float c'maxArea);
+      params.maxCircularity      = $(float c'maxCircularity);
+      params.maxConvexity        = $(float c'maxConvexity);
+      params.maxInertiaRatio     = $(float c'maxInertiaRatio);
+      params.maxThreshold        = $(float c'maxThreshold);
+      params.minArea             = $(float c'minArea);
+      params.minCircularity      = $(float c'minCircularity);
+      params.minConvexity        = $(float c'minConvexity);
+      params.minDistBetweenBlobs = $(float c'minDistBetweenBlobs);
+      params.minInertiaRatio     = $(float c'minInertiaRatio);
+      params.minRepeatability    = $(float c'minRepeatability);
+      params.minThreshold        = $(float c'minThreshold);
+      params.thresholdStep       = $(float c'thresholdStep);
+      cv::Ptr<cv::SimpleBlobDetector> detectorPtr =
+        cv::SimpleBlobDetector::create(params);
+      return new cv::Ptr<cv::SimpleBlobDetector>(detectorPtr);
+    }|]
+  where
+    c'minThreshold        = realToFrac blob_minThreshold
+    c'maxThreshold        = realToFrac blob_maxThreshold
+    c'thresholdStep       = realToFrac blob_thresholdStep
+    c'minRepeatability    = realToFrac blob_minRepeatability
+    c'minDistBetweenBlobs = realToFrac blob_minDistBetweenBlobs
+    c'filterByArea        = fromBool (isJust blob_filterByArea)
+    c'filterByCircularity = fromBool (isJust blob_filterByCircularity)
+    c'filterByColor       = fromBool (isJust blob_filterByColor)
+    c'filterByConvexity   = fromBool (isJust blob_filterByConvexity)
+    c'filterByInertia     = fromBool (isJust blob_filterByInertia)
+    c'minArea             = realToFrac (fromMaybe 25 (fmap blob_minArea blob_filterByArea))
+    c'maxArea             = realToFrac (fromMaybe 5000 (fmap blob_maxArea blob_filterByArea))
+    c'minCircularity      = realToFrac (fromMaybe 0.8 (fmap blob_minCircularity blob_filterByCircularity))
+    c'maxCircularity      = realToFrac (fromMaybe infinity (fmap blob_maxCircularity blob_filterByCircularity))
+    c'blobColor           = fromIntegral (fromMaybe 0 (fmap blob_blobColor blob_filterByColor))
+    c'minConvexity        = realToFrac (fromMaybe 0.95 (fmap blob_minConvexity blob_filterByConvexity))
+    c'maxConvexity        = realToFrac (fromMaybe infinity (fmap blob_maxConvexity blob_filterByConvexity))
+    c'minInertiaRatio     = realToFrac (fromMaybe 0.1 (fmap blob_minInertiaRatio blob_filterByInertia))
+    c'maxInertiaRatio     = realToFrac (fromMaybe infinity (fmap blob_maxInertiaRatio blob_filterByInertia))
+
+mkSimpleBlobDetector :: SimpleBlobDetectorParams -> SimpleBlobDetector
+mkSimpleBlobDetector = unsafePerformIO . newSimpleBlobDetector
+
+--------------------------------------------------------------------------------
+
+{- | Detect keypoints and compute descriptors
+-}
+blobDetect
+    :: SimpleBlobDetector
+    -> Mat ('S [height, width]) channels depth -- ^ Image.
+    -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8)) -- ^ Mask.
+    -> CvExcept (V.Vector KeyPoint)
+blobDetect detector img mbMask = unsafeWrapException $ do
+    withPtr detector $ \detectorPtr ->
+      withPtr img $ \imgPtr ->
+      withPtr mbMask $ \maskPtr ->
+      alloca $ \(numPtsPtr :: Ptr Int32) ->
+      alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'KeyPoint))) -> mask_ $ do
+        ptrException <- [cvExcept|
+          cv::SimpleBlobDetector * detector = *$(Ptr_SimpleBlobDetector * detectorPtr);
+          cv::Mat * maskPtr = $(Mat * maskPtr);
+
+          std::vector<cv::KeyPoint> keypoints = std::vector<cv::KeyPoint>();
+          detector->
+            detect
+            ( *$(Mat * imgPtr)
+            , keypoints
+            , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(noArray())
+            );
+
+          *$(int32_t * numPtsPtr) = keypoints.size();
+
+          cv::KeyPoint * * * arrayPtrPtr = $(KeyPoint * * * arrayPtrPtr);
+          cv::KeyPoint * * arrayPtr = new cv::KeyPoint * [keypoints.size()];
+          *arrayPtrPtr = arrayPtr;
+
+          for (std::vector<cv::KeyPoint>::size_type ix = 0; ix != keypoints.size(); ix++)
+          {
+            arrayPtr[ix] = new cv::KeyPoint(keypoints[ix]);
+          }
+        |]
+        if ptrException /= nullPtr
+        then Left . BindingException <$> fromPtr (pure ptrException)
+        else do
+          numPts <- fromIntegral <$> peek numPtsPtr
+          arrayPtr <- peek arrayPtrPtr
+          keypoints <- mapM (fromPtr . pure) =<< peekArray numPts arrayPtr
+
+          [CU.block| void {
+            delete [] *$(KeyPoint * * * arrayPtrPtr);
+          }|]
+
+          pure $ Right (V.fromList keypoints)
 
 --------------------------------------------------------------------------------
 -- DescriptorMatcher
@@ -458,3 +671,4 @@ instance DescriptorMatcher BFMatcher where
         }|]
 
         pure $ V.fromList matches
+
