@@ -12,6 +12,7 @@ module OpenCV
   , module OpenCV.Features2d
   , module OpenCV.HighGui
   , module OpenCV.ImgCodecs
+  , module OpenCV.ImgProc.CascadeClassifier
   , module OpenCV.ImgProc.ColorMaps
   , module OpenCV.ImgProc.Drawing
   , module OpenCV.ImgProc.FeatureDetection
@@ -51,6 +52,7 @@ import OpenCV.ImgProc.MiscImgTransform
 import OpenCV.ImgProc.ObjectDetection
 import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types
+import OpenCV.ImgProc.CascadeClassifier
 import OpenCV.Photo
 import OpenCV.Video
 import OpenCV.Video.MotionAnalysis

@@ -94,6 +94,10 @@ main = defaultMain $ testGroup "opencv"
       , testGroup "Feature Detection"
         [ HU.testCase "houghLinesP"   testHoughLinesP
         ]
+      , testGroup "Cascade Classifier"
+        [ HU.testCase "newCascadeClassifier algorithm" testNewCascadeClassifierAlgorithm
+        , HU.testCase "cascadeClassifierDetectMultiScale Arnold" testCascadeClassifierDetectMultiScaleArnold
+        ]
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
@@ -290,6 +294,28 @@ testHoughLinesP = do
     edgeImgM <- thaw edgeImg
     lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
     assertBool "no lines found" (V.length lineSegments > 0)
+
+testNewCascadeClassifierAlgorithm :: HU.Assertion
+testNewCascadeClassifierAlgorithm = do
+  mbCC <- newCascadeClassifier "/this/is/bogus.xml"
+  case mbCC of
+    Nothing -> return ()
+    Just _cc -> fail "expected Nothing from newCascadeClassifier"
+
+testCascadeClassifierDetectMultiScaleArnold :: HU.Assertion
+testCascadeClassifierDetectMultiScaleArnold = do
+    Just ccFrontal <- newCascadeClassifier "data/haarcascade_frontalface_default.xml"
+    Just ccEyes <- newCascadeClassifier "data/haarcascade_eye.xml"
+    arnold :: Mat ('S ['D, 'D]) ('S 3) ('S Word8) <-
+      exceptError . coerceMat <$> loadImg ImreadUnchanged "arnold-schwarzenegger.jpg"
+    let arnoldGray :: Mat ('S ['D, 'D]) ('S 1) ('S Word8) = exceptError (cvtColor bgr gray arnold)
+    -- OpenCV detects the left eye twice for this pic.
+    let arnoldEyes =
+          cascadeClassifierDetectMultiScale ccEyes Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    assertBool "unexpected number of eyes detected" (V.length arnoldEyes == 3)
+    let arnoldFront =
+          cascadeClassifierDetectMultiScale ccFrontal Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    assertBool "unexpected number of faces detected" (V.length arnoldFront == 1)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 

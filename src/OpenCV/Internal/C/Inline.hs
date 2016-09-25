@@ -121,6 +121,8 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "VideoCapture", [t| C'VideoCapture |] )
   , ( C.TypeName "VideoWriter" , [t| C'VideoWriter  |] )
 
+  , ( C.TypeName "CascadeClassifier", [t| C'CascadeClassifier |] )
+
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )
   ]
