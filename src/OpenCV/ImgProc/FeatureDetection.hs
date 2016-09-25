@@ -306,7 +306,7 @@ houghCircles
      -- ^ Minimum circle radius.
   -> Maybe Int32
      -- ^ Maximum circle radius.
-  -> Mat ('S [w,h]) ('S 1) ('S Word8)
+  -> Mat ('S [h, w]) ('S 1) ('S Word8)
   -> V.Vector Circle
 houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO $
   withPtr src $ \srcPtr ->
