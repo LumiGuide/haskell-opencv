@@ -55,9 +55,9 @@ library
       , src/OpenCV/Internal/Exception.cpp
       , src/OpenCV/Photo.cpp
       , src/OpenCV/Video.cpp
-      , src/OpenCV/Video/MotionAnalysis.cpp
       , src/OpenCV/VideoIO/VideoCapture.cpp
       , src/OpenCV/VideoIO/VideoWriter.cpp
+      , src/OpenCV/Video/MotionAnalysis.cpp
 
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
@@ -148,7 +148,8 @@ library
         OpenCV.Internal.ImgProc.MiscImgTransform.ColorCodes
         OpenCV.Internal.ImgProc.Types
         OpenCV.Internal.Photo.Constants
-
+        OpenCV.Internal.VideoIO.Constants
+        OpenCV.Internal.VideoIO.Types
 
     default-extensions:
         BangPatterns

@@ -1,10 +1,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module OpenCV.VideoIO.VideoWriter
   ( VideoWriter
   , VideoWriterSink(..)
+  , VideoFileSink(..)
 
   , videoWriterOpen
   , videoWriterRelease
@@ -43,48 +43,60 @@ newtype VideoWriter = VideoWriter {unVideoWriter :: ForeignPtr (C VideoWriter)}
 
 type instance C VideoWriter = C'VideoWriter
 
-instance WithPtr VideoWriter where withPtr = withForeignPtr . unVideoWriter
+instance WithPtr VideoWriter where
+    withPtr = withForeignPtr . unVideoWriter
 
 instance FromPtr VideoWriter where
     fromPtr = objFromPtr VideoWriter $ \ptr ->
                 [CU.exp| void { delete $(VideoWriter * ptr) }|]
 
 data VideoWriterSink
+   = VideoFileSink' !VideoFileSink
+
+data VideoFileSink
    = VideoFileSink
-      { vfsFilePath  :: !FilePath
-      , vfsFourCC    :: !FourCC
-      , vfsFps       :: !Double
-      , vfsFrameDims :: !(Int32, Int32)
-      }
+     { vfsFilePath  :: !FilePath
+     , vfsFourCC    :: !FourCC
+     , vfsFps       :: !Double
+     , vfsFrameDims :: !(Int32, Int32)
+     }
 
 {- |
- The API might change in the future, but currently we can:
+The API might change in the future, but currently we can:
 
- Open/create a new file:
-     wr <- CV.videoWriterOpen
-        (CV.VideoFileSink
-              "tst.MOV"
-              "avc1"
-              30
-              (3840, 2160)
-        )
+Open/create a new file:
 
- Now, we can write some frames, but they need to have exactly the same size
-  as the one we have opened with:
-   CV.exceptErrorIO $ CV.videoWriterWrite wr img'
+@
+  wr <- 'videoWriterOpen' $ 'VideoFileSink''
+     ('VideoFileSink'
+        "tst.MOV"
+        "avc1"
+        30
+        (3840, 2160)
+     )
+@
 
- We need to close at the end or it will not finalize the file:
-   CV.exceptErrorIO $ CV.videoWriterRelease wr
+Now, we can write some frames, but they need to have exactly the same size
+ as the one we have opened with:
 
+@
+  'exceptErrorIO' $ 'videoWriterWrite' wr img
+@
+
+We need to close at the end or it will not finalize the file:
+
+@
+  'exceptErrorIO' $ 'videoWriterRelease' wr
+@
 -}
 
 videoWriterOpen :: VideoWriterSink -> IO VideoWriter
 videoWriterOpen sink =
     fromPtr $
       case sink of
-        VideoFileSink {..} ->
-          withCString vfsFilePath $ \c'filePath ->
-          withPtr (toSize $ uncurry V2 vfsFrameDims) $ \frameDimsPtr   ->
+        VideoFileSink' vfs ->
+          withCString (vfsFilePath vfs) $ \c'filePath ->
+          withPtr (toSize $ uncurry V2 $ vfsFrameDims vfs) $ \frameDimsPtr ->
             [CU.exp|VideoWriter * {
               new cv::VideoWriter( cv::String($(const char * c'filePath))
                                  , $(int32_t c'fourCC)
@@ -93,8 +105,8 @@ videoWriterOpen sink =
                                  )
             }|]
           where
-            c'fps = realToFrac vfsFps
-            c'fourCC = unFourCC vfsFourCC
+            c'fps = realToFrac (vfsFps vfs)
+            c'fourCC = unFourCC (vfsFourCC vfs)
 
 videoWriterRelease :: VideoWriter -> CvExceptT IO ()
 videoWriterRelease videoWriter =

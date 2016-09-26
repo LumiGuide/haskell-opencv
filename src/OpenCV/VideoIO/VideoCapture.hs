@@ -31,8 +31,8 @@ import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.VideoIO.Types
 import "this" OpenCV.TypeLevel
-import "this" OpenCV.VideoIO.Types
 import "transformers" Control.Monad.Trans.Except ( ExceptT(ExceptT) )
 
 --------------------------------------------------------------------------------
