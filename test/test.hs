@@ -304,8 +304,8 @@ testNewCascadeClassifierAlgorithm = do
 
 testCascadeClassifierDetectMultiScaleArnold :: HU.Assertion
 testCascadeClassifierDetectMultiScaleArnold = do
-  Just ccFrontal <- newCascadeClassifier "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_default.xml"
-  Just ccEyes <- newCascadeClassifier "/usr/local/share/OpenCV/haarcascades/haarcascade_eye.xml"
+  Just ccFrontal <- newCascadeClassifier "data/haarcascade_frontalface_default.xml"
+  Just ccEyes <- newCascadeClassifier "data/haarcascade_eye.xml"
   arnold :: Mat ('S ['D, 'D]) ('S 3) ('S Word8) <-
     exceptError . coerceMat <$> loadImg ImreadUnchanged "arnold-schwarzenegger.jpg"
   let arnoldGray :: Mat ('S ['D, 'D]) ('S 1) ('S Word8) = exceptError (cvtColor bgr gray arnold)
