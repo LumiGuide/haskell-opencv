@@ -11,6 +11,10 @@
 
 {-# options_ghc -fno-warn-orphans #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.Core.Types.Mat
     ( -- * Matrix
       Mat(..)

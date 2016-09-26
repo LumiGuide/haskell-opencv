@@ -24,6 +24,11 @@ extra-doc-files:
     doc/generated/examples/*.png
     doc/color_conversions.png
 
+flag internal-documentation
+    description: Enables documentation generation for internal modules.
+    default: False
+    manual: True
+
 library
     hs-source-dirs: src
     include-dirs: include
@@ -61,6 +66,8 @@ library
 
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
+    if flag(internal-documentation)
+        cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
     build-depends:
         aeson             >= 0.9.0.1

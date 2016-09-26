@@ -1,5 +1,10 @@
-{-# LANGUAGE QuasiQuotes     #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 -- | Interface between OpenCV and inline-c(pp) (Haskell)
 module OpenCV.Internal.C.Inline ( openCvCtx ) where

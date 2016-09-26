@@ -1,3 +1,9 @@
+{-# language CPP #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.C.Types where
 
 import "base" Foreign.C.Types

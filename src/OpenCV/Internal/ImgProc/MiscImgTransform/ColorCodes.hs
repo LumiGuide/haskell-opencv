@@ -1,6 +1,10 @@
 {-# language CPP #-}
 {-# language MultiParamTypeClasses #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 800
 {-# options_ghc -Wno-redundant-constraints #-}
 #endif

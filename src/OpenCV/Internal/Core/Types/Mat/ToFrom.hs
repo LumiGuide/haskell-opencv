@@ -3,6 +3,10 @@
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.Core.Types.Mat.ToFrom
   ( MatShape
   , MatChannels

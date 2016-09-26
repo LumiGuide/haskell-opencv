@@ -1,3 +1,9 @@
+{-# language CPP #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.ImgProc.Types where
 
 import "base" Data.Int ( Int32 )
@@ -6,7 +12,6 @@ import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
 import "this" OpenCV.Core.Types ( Scalar, toScalar )
 import "this" OpenCV.ImgProc.Types
-
 
 --------------------------------------------------------------------------------
 
