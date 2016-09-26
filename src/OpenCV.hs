@@ -21,6 +21,7 @@ module OpenCV
     , module OpenCV.ImgProc.ObjectDetection
     , module OpenCV.ImgProc.StructuralAnalysis
     , module OpenCV.ImgProc.Types
+    , module OpenCV.ImgProc.CascadeClassifier
     , module OpenCV.Photo
     , module OpenCV.Video
     , module OpenCV.Video.MotionAnalysis
@@ -51,6 +52,7 @@ import OpenCV.ImgProc.MiscImgTransform
 import OpenCV.ImgProc.ObjectDetection
 import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types
+import OpenCV.ImgProc.CascadeClassifier
 import OpenCV.Photo
 import OpenCV.Video
 import OpenCV.Video.MotionAnalysis

@@ -117,8 +117,12 @@ data C'Ptr_BackgroundSubtractorKNN
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
 data C'Ptr_BackgroundSubtractorMOG2
 
+
 -- | Haskell representation of an OpenCV @cv::VideoCapture@ object
 data C'VideoCapture
+
+-- | Haskell representation of an OpenCV @cv::CascadeClassifier@ object
+data C'CascadeClassifier
 
 -- | Callback function for mouse events
 type C'MouseCallback
@@ -134,6 +138,7 @@ type C'TrackbarCallback
    =  Int32 -- ^ Current position of the specified trackbar.
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
+
 
 --------------------------------------------------------------------------------
 

@@ -49,6 +49,7 @@ library
       , src/OpenCV/ImgProc/MiscImgTransform.cpp
       , src/OpenCV/ImgProc/ObjectDetection.cpp
       , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+      , src/OpenCV/ImgProc/CascadeClassifier.cpp
       , src/OpenCV/Internal/Core/Types.cpp
       , src/OpenCV/Internal/Core/Types/Mat.cpp
       , src/OpenCV/Internal/Core/Types/Mat/ToFrom.cpp
@@ -106,6 +107,7 @@ library
         OpenCV.ImgProc.ObjectDetection
         OpenCV.ImgProc.StructuralAnalysis
         OpenCV.ImgProc.Types
+        OpenCV.ImgProc.CascadeClassifier
         OpenCV.JSON
         OpenCV.Photo
         OpenCV.TypeLevel
