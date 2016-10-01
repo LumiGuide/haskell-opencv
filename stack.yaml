@@ -6,7 +6,5 @@ extra-deps:
 - inline-c-0.5.5.7
 - inline-c-cpp-0.1.0.0
 - repa-3.4.1.1
-flags:
-  opencv:
-    contrib-module-bgsegm: true
+flags: {}
 allow-newer: true

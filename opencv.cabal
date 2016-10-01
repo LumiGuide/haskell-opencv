@@ -29,11 +29,6 @@ flag internal-documentation
     default: False
     manual: True
 
-flag contrib-module-bgsegm
-    description: Enables Gaussian Mixture-based Background/Foreground Segmentation.
-    default: False
-    manual: True
-
 library
     hs-source-dirs: src
     include-dirs: include
@@ -162,11 +157,6 @@ library
         OpenCV.Internal.Photo.Constants
         OpenCV.Internal.VideoIO.Constants
         OpenCV.Internal.VideoIO.Types
-
-    if flag(contrib-module-bgsegm)
-        cpp-options:     -DENABLE_CONTRIB_MODULE_BGSEGM
-        c-sources:       src/OpenCV/Video/MotionAnalysis/Bgsegm.cpp
-        exposed-modules: OpenCV.Video.MotionAnalysis.Bgsegm
 
     default-extensions:
         BangPatterns

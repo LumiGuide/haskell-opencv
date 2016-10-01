@@ -3,14 +3,10 @@
 {-# language MultiParamTypeClasses #-}
 
 {- |
-  Two additional background subtraction algorithms. The OpenCV Library needs
-  to have the contrib `bgsegm` module build and the package needs to be build
-  with `contrib-module-bgsegm` flag enabled
-
-  Those algorithms does not support `getBackgroundImage` (and probably never will).
+Two additional background subtraction algorithms. These algorithms do
+not support `getBackgroundImage` (and probably never will).
 -}
-
-module OpenCV.Video.MotionAnalysis.Bgsegm
+module OpenCV.Extra.Bgsegm
     ( -- * Background subtractors
       BackgroundSubtractorGMG
     , BackgroundSubtractorMOG
@@ -29,32 +25,25 @@ import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "opencv" OpenCV.Core.Types
+import "opencv" OpenCV.Internal
+import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.Internal.C.Types
+import "opencv" OpenCV.Video.MotionAnalysis ( BackgroundSubtractor(..) )
 import "primitive" Control.Monad.Primitive
-import "this" OpenCV.Core.Types
-import "this" OpenCV.Internal
-import "this" OpenCV.Internal.C.Inline ( openCvCtx )
-import "this" OpenCV.Internal.Core.Types.Mat
-import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Video.MotionAnalysis ( BackgroundSubtractor(..) )
+import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
+import "this" OpenCV.Extra.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
-C.context openCvCtx
+C.context openCvExtraCtx
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/video.hpp"
 C.include "opencv2/bgsegm.hpp"
-C.include "video_motion_analysis_bgsegm.hpp"
+C.include "bgsegm.hpp"
 
 C.using "namespace cv"
-
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/bgsegm.hpp"
-
-#include "namespace.hpp"
-#include "video_motion_analysis_bgsegm.hpp"
 
 --------------------------------------------------------------------------------
 
