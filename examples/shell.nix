@@ -3,7 +3,6 @@
 }:
 
 let
-
   inherit (nixpkgs) pkgs;
 
   haskellPackages = if compiler == "default"
@@ -12,6 +11,4 @@ let
 
   drv = haskellPackages.callPackage (import ./opencv-examples.nix) {};
 
-in
-
-  if pkgs.lib.inNixShell then drv.env else drv
+in if pkgs.lib.inNixShell then drv.env else drv

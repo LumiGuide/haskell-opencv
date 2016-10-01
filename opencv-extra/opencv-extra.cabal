@@ -1,0 +1,64 @@
+name:          opencv-extra
+version:       0.0.0
+homepage:      https://github.com/LumiGuide/haskell-opencv
+license:       BSD3
+license-file:  LICENSE
+author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
+maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
+build-type:    Simple
+cabal-version: >=1.10
+category:      AI, Graphics
+synopsis:      Haskell binding to OpenCV-3.1 extra modules
+
+flag internal-documentation
+    description: Enables documentation generation for internal modules.
+    default: False
+    manual: True
+
+library
+    hs-source-dirs: src
+    include-dirs: include
+    c-sources:
+        src/OpenCV/Extra/Bgsegm.cpp
+
+    cc-options: -Wall -std=c++11
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
+    if flag(internal-documentation)
+        cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
+
+    build-depends:
+        base              >= 4.8     && <5
+      , bindings-DSL      >= 1.0.23
+      , bytestring        >= 0.10.6
+      , containers        >= 0.5.6.2
+      , inline-c          >= 0.5.5.5
+      , inline-c-cpp      >= 0.1
+      , opencv            == 0.0.0
+      , primitive         >= 0.6.1
+      , template-haskell  >= 2.10
+      , transformers      >= 0.4.2
+
+    exposed-modules:
+        OpenCV.Extra
+        OpenCV.Extra.Bgsegm
+
+        OpenCV.Extra.Internal.C.Inline
+        OpenCV.Extra.Internal.C.Types
+
+    default-extensions:
+        BangPatterns
+        DataKinds
+        FlexibleContexts
+        FlexibleInstances
+        LambdaCase
+        OverloadedStrings
+        PackageImports
+        PolyKinds
+        ScopedTypeVariables
+        TupleSections
+        TypeFamilies
+        TypeOperators
+
+    default-language:   Haskell2010
+    pkgconfig-depends:  opencv
+    extra-libraries:    stdc++
