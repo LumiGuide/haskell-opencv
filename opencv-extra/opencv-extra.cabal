@@ -20,6 +20,7 @@ library
     include-dirs: include
     c-sources:
         src/OpenCV/Extra/Bgsegm.cpp
+        src/OpenCV/Extra/XPhoto.cpp
 
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
@@ -41,6 +42,7 @@ library
     exposed-modules:
         OpenCV.Extra
         OpenCV.Extra.Bgsegm
+        OpenCV.Extra.XPhoto
 
         OpenCV.Extra.Internal.C.Inline
         OpenCV.Extra.Internal.C.Types
