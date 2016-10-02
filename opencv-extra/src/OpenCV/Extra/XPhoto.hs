@@ -30,7 +30,9 @@ C.include "opencv2/xphoto.hpp"
 C.using "namespace cv"
 
 {- | Perform dctDenoising function for colored images.
+
 Example:
+
 @
 dctDenoisingImg
     :: forall h w w2 c d
@@ -50,6 +52,7 @@ dctDenoisingImg = exceptError $ do
   where
     w = fromInteger $ natVal (Proxy :: Proxy w)
 @
+
 <<doc/generated/examples/dctDenoisingImg.png dctDenoisingImg>>
 -}
 
