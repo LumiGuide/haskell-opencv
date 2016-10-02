@@ -46,7 +46,7 @@ before_install:
 # around some quirks in Travis's terminal implementation.
 script: 
 - stack --no-terminal --install-ghc test $ARGS
-- stack --no-terminal haddock $ARGS
+#- stack --no-terminal haddock $ARGS
 
 # Caching so the next build will be fast too.
 cache:
