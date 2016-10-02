@@ -55,12 +55,13 @@ mkDerivation {
           # Filter out some other files or directories not needed for a build:
           && !(builtins.elem (toString path) (map (p: toString (./. + "/${p}")) [
                 "cabal.config"
-                "Makefile"
-                "README.md"
+                "dist"
+                "examples"
                 ".git"
                 ".gitignore"
-                "examples"
-                "dist"
+                "Makefile"
+                "opencv-extra"
+                "README.md"
               ]))
         ) ./.;
 

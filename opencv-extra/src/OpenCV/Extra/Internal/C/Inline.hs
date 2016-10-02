@@ -9,13 +9,11 @@
 -- | Interface between OpenCV (extra modules) and inline-c(pp) (Haskell)
 module OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx ) where
 
-import "base" Foreign.Ptr ( FunPtr )
 import "base" Data.Monoid ( (<>) )
 import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Types  as C
 import qualified "inline-c" Language.C.Inline.Context as C
-import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "opencv" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Extra.Internal.C.Types
 
@@ -30,7 +28,7 @@ import "this" OpenCV.Extra.Internal.C.Types
 openCvExtraCtx :: C.Context
 openCvExtraCtx = openCvCtx <> ctx
   where
-    ctx = mempty { C.ctxTypesTAble = openCvExtraTypesTable }
+    ctx = mempty { C.ctxTypesTable = openCvExtraTypesTable }
 
 openCvExtraTypesTable :: C.TypesTable
 openCvExtraTypesTable = M.fromList

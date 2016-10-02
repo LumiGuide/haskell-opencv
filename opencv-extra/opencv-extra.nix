@@ -30,14 +30,13 @@ mkDerivation {
           # Filter out some other files or directories not needed for a build:
           && !(builtins.elem (toString path) (map (p: toString (./. + "/${p}")) [
                 "cabal.config"
-                ".gitignore"
                 "dist"
+                ".gitignore"
+                "Makefile"
               ]))
         ) ./.;
 
-  isLibrary = false;
-  isExecutable = true;
-  executableHaskellDepends =
+  libraryHaskellDepends =
   [ base
     bindings-DSL
     bytestring
@@ -49,6 +48,14 @@ mkDerivation {
     template-haskell
     transformers
   ];
+
+  libraryPkgconfigDepends = [ opencv3_1 ];
+
+  configureFlags =
+    [ "--with-gcc=g++"
+      "--with-ld=g++"
+    ];
+
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.bsd3;
 }

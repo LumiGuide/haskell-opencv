@@ -31,7 +31,8 @@ import "opencv" OpenCV.Internal.Core.Types.Mat
 import "opencv" OpenCV.Internal.C.Types
 import "opencv" OpenCV.Video.MotionAnalysis ( BackgroundSubtractor(..) )
 import "primitive" Control.Monad.Primitive
-import "this" OpenCV.Internal.Extra.C.Inline ( openCvExtraCtx )
+import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
+import "this" OpenCV.Extra.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
@@ -40,7 +41,7 @@ C.context openCvExtraCtx
 C.include "opencv2/core.hpp"
 C.include "opencv2/video.hpp"
 C.include "opencv2/bgsegm.hpp"
-C.include "video_motion_analysis_bgsegm.hpp"
+C.include "bgsegm.hpp"
 
 C.using "namespace cv"
 
