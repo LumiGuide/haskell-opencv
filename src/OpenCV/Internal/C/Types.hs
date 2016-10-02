@@ -123,6 +123,13 @@ data C'Ptr_BackgroundSubtractorKNN
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
 data C'Ptr_BackgroundSubtractorMOG2
 
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::bgsegm::BackgroundSubtractorGMG>@ object
+-- requires contrib-module-bgsegm flag enabled
+data C'Ptr_BackgroundSubtractorGMG
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::bgsegm::Ptr_BackgroundSubtractorMOG>@ object
+-- requires contrib-module-bgsegm flag enabled
+data C'Ptr_BackgroundSubtractorMOG
+
 -- | Haskell representation of an OpenCV @cv::VideoCapture@ object
 data C'VideoCapture
 

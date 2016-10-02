@@ -120,6 +120,9 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "Ptr_BackgroundSubtractorKNN" , [t| C'Ptr_BackgroundSubtractorKNN  |] )
   , ( C.TypeName "Ptr_BackgroundSubtractorMOG2", [t| C'Ptr_BackgroundSubtractorMOG2 |] )
 
+  , ( C.TypeName "Ptr_BackgroundSubtractorGMG", [t| C'Ptr_BackgroundSubtractorGMG |] )
+  , ( C.TypeName "Ptr_BackgroundSubtractorMOG", [t| C'Ptr_BackgroundSubtractorMOG |] )
+
   , ( C.TypeName "VideoCapture", [t| C'VideoCapture |] )
   , ( C.TypeName "VideoWriter" , [t| C'VideoWriter  |] )
 
