@@ -10,6 +10,11 @@ cabal-version: >=1.10
 category:      AI, Graphics
 synopsis:      Haskell binding to OpenCV-3.1 extra modules
 
+extra-doc-files:
+    doc/generated/*.png
+    doc/generated/examples/*.png
+    doc/color_conversions.png
+
 flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
@@ -64,3 +69,41 @@ library
     default-language:   Haskell2010
     pkgconfig-depends:  opencv
     extra-libraries:    stdc++
+
+
+test-suite opencv-doc-images
+    type: exitcode-stdio-1.0
+    hs-source-dirs: doc
+    main-is: images.hs
+    other-modules: ExampleExtractor
+                   Language.Haskell.Meta.Syntax.Translate
+    default-language: Haskell2010
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    cpp-options: -DHAVE_OPENCV_EXTRA
+    build-depends:
+        base
+      , bytestring
+      , containers
+      , directory
+      , Glob
+      , haskell-src-exts
+      , linear
+      , opencv
+      , opencv-extra
+      , primitive
+      , template-haskell
+      , text
+      , transformers
+      , vector
+
+    default-extensions:
+        BangPatterns
+        DataKinds
+        LambdaCase
+        OverloadedStrings
+        PackageImports
+        PolyKinds
+        ScopedTypeVariables
+        TupleSections
+        TypeFamilies
+        TypeOperators

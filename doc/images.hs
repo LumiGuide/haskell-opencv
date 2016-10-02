@@ -1,6 +1,7 @@
 {-# language TemplateHaskell #-}
 {-# language OverloadedStrings #-}
 {-# language FlexibleContexts #-}
+{-# language CPP #-}
 
 module Main where
 
@@ -19,6 +20,9 @@ import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+#ifdef HAVE_OPENCV_EXTRA
+import "opencv-extra" OpenCV.Extra
+#endif
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import qualified "text" Data.Text as T
 import qualified "vector" Data.Vector as V
