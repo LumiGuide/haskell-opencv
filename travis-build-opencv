@@ -22,9 +22,14 @@ if [[ ! -d "opencv-3.1.0/build" ]]; then
   mkdir opencv-3.1.0/build
 fi
 
+if [[ ! -d "opencv_contrib-3.1.0/modules" ]]; then
+   curl -sL https://github.com/opencv/opencv_contrib/archive/3.1.0.zip > opencv-contrib.zip
+   unzip opencv-contrib.zip
+fi
+
 cd opencv-3.1.0/build
 
-cmake -D WITH_IPP=OFF -D WITH_OPENGL=OFF -D WITH_QT=OFF -D BUILD_EXAMPLES=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -D CMAKE_INSTALL_PREFIX=/usr ..
+cmake -D WITH_IPP=OFF -D WITH_OPENGL=OFF -D WITH_QT=OFF -D BUILD_EXAMPLES=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=OFF -D CMAKE_INSTALL_PREFIX=/usr -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.1.0/modules ..
 make -j2
 sudo make install
 cd ../..
