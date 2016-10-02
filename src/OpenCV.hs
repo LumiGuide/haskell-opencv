@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-dodgy-exports #-}
+{-# language CPP #-}
 
 module OpenCV
     ( module OpenCV.Calib3d
@@ -29,6 +30,9 @@ module OpenCV
     , module OpenCV.TypeLevel
 
     , module OpenCV.JSON
+#ifdef ENABLE_CONTRIB_MODULE_XPHOTO
+    , module OpenCV.XPhoto
+#endif
     ) where
 
 import OpenCV.Calib3d
@@ -59,3 +63,7 @@ import OpenCV.VideoIO.VideoCapture
 import OpenCV.TypeLevel
 
 import OpenCV.JSON ( )
+
+#ifdef ENABLE_CONTRIB_MODULE_XPHOTO
+import OpenCV.XPhoto
+#endif

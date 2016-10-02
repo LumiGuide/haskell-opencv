@@ -8,5 +8,5 @@ extra-deps:
 - repa-3.4.1.1
 flags:
   opencv:
-    contrib-module-bgsegm: true
+    contrib-modules: true
 allow-newer: true
