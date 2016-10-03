@@ -31,11 +31,15 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-- ARGS="--resolver lts"
+- ARGS="--jobs 2 --resolver lts"
 
 before_install:
 # Install OpenCV 3
 - ./travis-build-opencv
+- export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config):$HOME/usr/lib/pkgconfig
+- export INCLUDE_PATH=$HOME/usr/include:${INCLUDE_PATH}
+- export LD_LIBRARY_PATH=$HOME/usr/lib:${LD_LIBRARY_PATH}
+
 # Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
@@ -44,14 +48,19 @@ before_install:
 # This line does all of the work: installs GHC if necessary, build the library,
 # executables, and test suites, and runs the test suites. --no-terminal works
 # around some quirks in Travis's terminal implementation.
-script: 
-- stack --no-terminal --install-ghc test $ARGS
-- stack --no-terminal haddock $ARGS
+
+before_cache:
+- rm -f $HOME/fresh-cache
+
+script:
+- stack --no-terminal --install-ghc build --only-dependencies $ARGS
+- stack --no-terminal test    --only-dependencies $ARGS
+- stack --no-terminal haddock --only-dependencies $ARGS
+- bash trampoline.sh
 
 # Caching so the next build will be fast too.
 cache:
+  timeout: 1000
   directories:
   - $HOME/.stack
-  - .stack-work
-  - opencv-3.1.0
-  - opencv_contrib-3.1.0
+  - $HOME/usr
