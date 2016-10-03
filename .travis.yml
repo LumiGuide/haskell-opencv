@@ -31,7 +31,7 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-- ARGS="--jobs 2 --resolver lts"
+- ARGS="--jobs 2 --resolver lts7.2"
 
 before_install:
 # Install OpenCV 3
