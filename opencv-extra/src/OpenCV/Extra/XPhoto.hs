@@ -8,6 +8,7 @@
 
 module OpenCV.Extra.XPhoto
   ( dctDenoising
+  , autowbGrayworld
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -78,3 +79,51 @@ dctDenoising sigma mPSize src =
   where
     c'sigma = realToFrac sigma
     c'pSize = fromMaybe 16 mPSize
+
+{- | Perform autowbGrayworld a simple grayworld white balance algorithm.
+
+Example:
+
+@
+autowbGrayworldImg
+    :: forall h w w2 c d
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Sailboat_768x512
+       , w2 ~ ((*) w 2)
+       )
+    => Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+autowbGrayworldImg = exceptError $ do
+    autoWB <- autowbGrayworld Nothing sailboat_768x512
+    withMatM
+      (Proxy :: Proxy [h, w2])
+      (Proxy :: Proxy c)
+      (Proxy :: Proxy d)
+      black $ \imgM -> do
+        matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
+        matCopyToM imgM (V2 w 0) autoWB Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy w)
+@
+
+<<doc/generated/examples/autowbGrayworldImg.png autowbGrayworldImg>>
+-}
+
+autowbGrayworld
+   :: Maybe Double -- ^ Maximum saturation for a pixel
+                   -- to be included in the gray-world assumption.
+   -> Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image 8-bit 3-channel image.
+   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+             -- ^ Output image same size and type as input.
+autowbGrayworld thresh src =
+  unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src         $ \srcPtr         ->
+      withPtr dst         $ \dstPtr         ->
+      [cvExcept|
+        cv::xphoto::autowbGrayworld( *$(Mat * srcPtr)
+                                   , *$(Mat * dstPtr)
+                                   , $(double c'thresh)
+                                   );
+      |]
+  where
+    c'thresh = maybe 0.5 realToFrac thresh
