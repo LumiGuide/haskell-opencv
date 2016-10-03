@@ -42,7 +42,7 @@ update-git-haddock: doc/color_conversions.png
 	git add doc && \
 	git commit -m 'updated haddock documentation' && \
 	git push && \
-	git checkout master && \
+	git checkout master
 
 doc/color_conversions.png: doc/color_conversions.dot
 	dot $(<) -Tpng -Gsize=40 > $(@)
