@@ -32,11 +32,12 @@ import "this" ExampleExtractor ( render, extractExampleImages )
 
 --------------------------------------------------------------------------------
 
-transparent, white, black, blue, red :: Scalar
+transparent, white, black, blue, green, red :: Scalar
 transparent = toScalar (V4 255 255 255   0 :: V4 Double)
 white       = toScalar (V4 255 255 255 255 :: V4 Double)
 black       = toScalar (V4   0   0   0 255 :: V4 Double)
 blue        = toScalar (V4 255   0   0 255 :: V4 Double)
+green       = toScalar (V4   0 255   0 255 :: V4 Double)
 red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
 type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
@@ -53,6 +54,8 @@ type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
 type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
 type DamageMask       = Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
 type Lenna_512x512    = Mat (ShapeT [512, 512]) ('S 3) ('S Word8)
+type Arnold           = Mat (ShapeT [3504, 2336]) ('S 3) ('S Word8)
+type Arnold_small     = Mat (ShapeT [ 900,  600]) ('S 3) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -123,6 +126,18 @@ lenna_512x512 :: Lenna_512x512
 lenna_512x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/Lenna.png"
+
+arnold :: Arnold
+arnold =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/arnold-schwarzenegger.jpg"
+
+arnold_small :: Arnold_small
+arnold_small =
+    exceptError $ coerceMat =<<
+      resize (ResizeAbs $ toSize (V2 600 900 :: V2 Int32))
+             InterArea
+             arnold
 
 --------------------------------------------------------------------------------
 
