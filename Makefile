@@ -20,14 +20,14 @@ clean:
 test:
 	cabal configure --enable-tests && \
 	cabal build && \
-	./dist/build/opencv-doc-images/opencv-doc-images && \
+	./dist/build/doc-images-opencv/doc-images-opencv && \
 	./dist/build/test-opencv/test-opencv
 
 .PHONY: doc
 doc: doc/color_conversions.png
 	cabal configure --enable-tests && \
 	cabal build && \
-	./dist/build/opencv-doc-images/opencv-doc-images && \
+	./dist/build/doc-images-opencv/doc-images-opencv && \
 	cabal haddock --hyperlink-source
 
 .PHONY: update-git-haddock
@@ -35,7 +35,7 @@ update-git-haddock: doc/color_conversions.png
 	git checkout master && \
 	cabal configure --enable-tests && \
 	cabal build && \
-	./dist/build/opencv-doc-images/opencv-doc-images && \
+	./dist/build/doc-images-opencv/doc-images-opencv && \
 	cabal haddock --hyperlink-source && \
 	git checkout gh-pages && \
 	git rm -r doc && rm -rf doc && mv ./dist/doc/html/opencv doc && \

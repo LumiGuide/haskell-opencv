@@ -15,6 +15,11 @@
 , primitive
 , template-haskell
 , transformers
+
+# test dependencies
+, directory
+, Glob
+, haskell-src-exts
 }:
 mkDerivation {
   pname = "opencv-extra";
@@ -48,6 +53,15 @@ mkDerivation {
     template-haskell
     transformers
   ];
+
+  testHaskellDepends = [
+    base
+    containers
+    directory
+    Glob
+    haskell-src-exts
+  ];
+
 
   libraryPkgconfigDepends = [ opencv3_1 ];
 

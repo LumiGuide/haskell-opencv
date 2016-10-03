@@ -13,7 +13,6 @@ synopsis:      Haskell binding to OpenCV-3.1 extra modules
 extra-doc-files:
     doc/generated/*.png
     doc/generated/examples/*.png
-    doc/color_conversions.png
 
 flag internal-documentation
     description: Enables documentation generation for internal modules.
@@ -71,7 +70,7 @@ library
     extra-libraries:    stdc++
 
 
-test-suite opencv-doc-images
+test-suite doc-images-opencv-extra
     type: exitcode-stdio-1.0
     hs-source-dirs: doc
     main-is: images.hs
