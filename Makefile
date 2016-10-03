@@ -38,6 +38,7 @@ update-git-haddock: doc/color_conversions.png
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	cabal haddock --hyperlink-source && \
 	git checkout gh-pages && \
+	git pull && \
 	git rm -r doc && rm -rf doc && mv ./dist/doc/html/opencv doc && \
 	git add doc && \
 	git commit -m 'updated haddock documentation' && \
