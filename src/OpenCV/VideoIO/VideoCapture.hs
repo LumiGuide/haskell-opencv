@@ -18,7 +18,6 @@ module OpenCV.VideoIO.VideoCapture
   ) where
 
 import "base" Data.Int ( Int32 )
-import "base" Data.Maybe ( maybe )
 import "base" Foreign.C.String ( withCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Utils ( toBool )
