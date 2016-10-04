@@ -148,6 +148,9 @@ type C'TrackbarCallback
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 
+#ifdef ENABLE_CUDA
+data C'CudaMat
+#endif
 
 --------------------------------------------------------------------------------
 

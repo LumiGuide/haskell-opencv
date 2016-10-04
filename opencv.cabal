@@ -29,6 +29,10 @@ flag internal-documentation
     default: False
     manual: True
 
+flag cuda
+    description: Enable CUDA support. OpenCV must be build with CUDA enabled.
+    default: False
+
 library
     hs-source-dirs: src
     include-dirs: include
@@ -159,6 +163,14 @@ library
         OpenCV.Internal.Photo.Constants
         OpenCV.Internal.VideoIO.Constants
         OpenCV.Internal.VideoIO.Types
+
+    if flag(cuda)
+      cpp-options: -DENABLE_CUDA
+
+      exposed-modules:
+          OpenCV.Cuda
+
+          OpenCV.Cuda.Internal
 
     default-extensions:
         BangPatterns
