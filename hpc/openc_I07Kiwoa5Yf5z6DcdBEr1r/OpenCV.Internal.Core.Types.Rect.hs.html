@@ -1,0 +1,123 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language ConstraintKinds #-}
+<span class="lineno">    3 </span>{-# language DeriveFunctor #-}
+<span class="lineno">    4 </span>{-# language DeriveTraversable #-}
+<span class="lineno">    5 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    6 </span>{-# language UndecidableInstances #-}
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    9 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">   10 </span>#endif
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>module OpenCV.Internal.Core.Types.Rect
+<span class="lineno">   13 </span>  ( Rect(..)
+<span class="lineno">   14 </span>  , RectPoint
+<span class="lineno">   15 </span>  , RectSize
+<span class="lineno">   16 </span>  , HRect(..)
+<span class="lineno">   17 </span>  , IsRect(..)
+<span class="lineno">   18 </span>  ) where
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import &quot;aeson&quot; Data.Aeson
+<span class="lineno">   21 </span>import &quot;base&quot; Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+<span class="lineno">   22 </span>import &quot;linear&quot; Linear.V2 ( V2(..) )
+<span class="lineno">   23 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   24 </span>import &quot;this&quot; OpenCV.Core.Types.Point ( Point )
+<span class="lineno">   25 </span>import &quot;this&quot; OpenCV.Core.Types.Size ( Size )
+<span class="lineno">   26 </span>#if MIN_VERSION_base(4,9,0)
+<span class="lineno">   27 </span>import &quot;base&quot; Data.Foldable ( Foldable )
+<span class="lineno">   28 </span>import &quot;base&quot; Data.Traversable ( Traversable )
+<span class="lineno">   29 </span>#endif
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>--------------------------------------------------------------------------------
+<span class="lineno">   32 </span>
+<span class="lineno">   33 </span>newtype Rect (depth :: *)
+<span class="lineno">   34 </span>      = Rect {<span class="istickedoff"><span class="decl"><span class="istickedoff">unRect</span></span></span> :: ForeignPtr (C'Rect depth)}
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>type instance C (Rect depth) = C'Rect depth
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>instance WithPtr (Rect depth) where <span class="decl"><span class="istickedoff">withPtr = withForeignPtr . unRect</span></span>
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>-- | Native Haskell represenation of a rectangle.
+<span class="lineno">   41 </span>data HRect a
+<span class="lineno">   42 </span>   = HRect
+<span class="lineno">   43 </span>     { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">hRectTopLeft</span></span></span> :: !(V2 a)
+<span class="lineno">   44 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">hRectSize</span></span></span>    :: !(V2 a)
+<span class="lineno">   45 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Foldable</span></span></span></span>, <span class="decl"><span class="nottickedoff">Functor</span></span>, <span class="decl"><span class="nottickedoff">Traversable</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>type family RectPoint (r :: * -&gt; *) :: * -&gt; *
+<span class="lineno">   48 </span>type family RectSize  (r :: * -&gt; *) :: * -&gt; *
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>type instance RectPoint Rect = Point 2
+<span class="lineno">   51 </span>type instance RectSize  Rect = Size
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>type instance RectPoint HRect = V2
+<span class="lineno">   54 </span>type instance RectSize  HRect = V2
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>class IsRect (r :: * -&gt; *) (depth :: *) where
+<span class="lineno">   57 </span>    toRect   :: r depth -&gt; Rect depth
+<span class="lineno">   58 </span>    fromRect :: Rect depth -&gt; r depth
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>    toRectIO :: r depth -&gt; IO (Rect depth)
+<span class="lineno">   61 </span>    <span class="decl"><span class="nottickedoff">toRectIO = pure . toRect</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>    rectTopLeft     :: r depth -&gt; RectPoint r depth
+<span class="lineno">   64 </span>    rectBottomRight :: r depth -&gt; RectPoint r depth
+<span class="lineno">   65 </span>    rectSize        :: r depth -&gt; RectSize  r depth
+<span class="lineno">   66 </span>    rectArea        :: r depth -&gt; depth
+<span class="lineno">   67 </span>    rectContains    :: RectPoint r depth -&gt; r depth -&gt; Bool
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>--------------------------------------------------------------------------------
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>instance (IsRect HRect a, Show a)
+<span class="lineno">   72 </span>      =&gt; Show (Rect a) where
+<span class="lineno">   73 </span>    <span class="decl"><span class="nottickedoff">showsPrec prec rect = showParen (prec &gt;= 10) $</span>
+<span class="lineno">   74 </span><span class="spaces">                              </span><span class="nottickedoff">showString &quot;toRect &quot;</span>
+<span class="lineno">   75 </span><span class="spaces">                            </span><span class="nottickedoff">. showParen True (shows hr)</span>
+<span class="lineno">   76 </span><span class="spaces">      </span><span class="nottickedoff">where</span>
+<span class="lineno">   77 </span><span class="spaces">        </span><span class="nottickedoff">hr :: HRect a</span>
+<span class="lineno">   78 </span><span class="spaces">        </span><span class="nottickedoff">hr = fromRect rect</span></span>
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>instance (ToJSON a) =&gt; ToJSON (HRect a) where
+<span class="lineno">   81 </span>    <span class="decl"><span class="nottickedoff">toJSON hr = object [ &quot;pos&quot;  .= (x, y)</span>
+<span class="lineno">   82 </span><span class="spaces">                       </span><span class="nottickedoff">, &quot;size&quot; .= (w, h)</span>
+<span class="lineno">   83 </span><span class="spaces">                       </span><span class="nottickedoff">]</span>
+<span class="lineno">   84 </span><span class="spaces">      </span><span class="nottickedoff">where</span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="nottickedoff">V2 x y = hRectTopLeft hr</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="nottickedoff">V2 w h = hRectSize    hr</span></span>
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>instance (FromJSON a) =&gt; FromJSON (HRect a) where
+<span class="lineno">   89 </span>    <span class="decl"><span class="nottickedoff">parseJSON = withObject &quot;HRect&quot; $ \obj -&gt;</span>
+<span class="lineno">   90 </span><span class="spaces">                  </span><span class="nottickedoff">HRect  &lt;$&gt; (uncurry V2 &lt;$&gt; obj .: &quot;pos&quot;)</span>
+<span class="lineno">   91 </span><span class="spaces">                         </span><span class="nottickedoff">&lt;*&gt; (uncurry V2 &lt;$&gt; obj .: &quot;size&quot;)</span></span>
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>instance ( ToJSON a
+<span class="lineno">   94 </span>         , IsRect HRect a
+<span class="lineno">   95 </span>         )
+<span class="lineno">   96 </span>      =&gt; ToJSON (Rect a) where
+<span class="lineno">   97 </span>    <span class="decl"><span class="nottickedoff">toJSON = toJSON . (fromRect :: Rect a -&gt; HRect a)</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>instance ( FromJSON a
+<span class="lineno">  100 </span>         , IsRect HRect a
+<span class="lineno">  101 </span>         )
+<span class="lineno">  102 </span>      =&gt; FromJSON (Rect a) where
+<span class="lineno">  103 </span>    <span class="decl"><span class="nottickedoff">parseJSON value = (toRect :: HRect a -&gt; Rect a) &lt;$&gt; parseJSON value</span></span>
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>module OpenCV.ImgProc.Types
+<span class="lineno">    2 </span>    ( InterpolationMethod(..)
+<span class="lineno">    3 </span>    , BorderMode(..)
+<span class="lineno">    4 </span>    ) where
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>import &quot;this&quot; OpenCV.Core.Types ( Scalar )
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>--------------------------------------------------------------------------------
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>data InterpolationMethod
+<span class="lineno">   11 </span>   = InterNearest -- ^ Nearest neighbor interpolation.
+<span class="lineno">   12 </span>   | InterLinear -- ^ Bilinear interpolation.
+<span class="lineno">   13 </span>   | InterCubic -- ^ Bicubic interpolation.
+<span class="lineno">   14 </span>   | InterArea
+<span class="lineno">   15 </span>     -- ^ Resampling using pixel area relation. It may be a preferred method for
+<span class="lineno">   16 </span>     -- image decimation, as it gives moire'-free results. But when the image is
+<span class="lineno">   17 </span>     -- zoomed, it is similar to the 'InterNearest' method.
+<span class="lineno">   18 </span>   | InterLanczos4 -- ^ Lanczos interpolation over 8x8 neighborhood
+<span class="lineno">   19 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>-- TODO (RvD): Show instance
+<span class="lineno">   22 </span>-- Needs a Show instance for Scalar
+<span class="lineno">   23 </span>data BorderMode
+<span class="lineno">   24 </span>   = BorderConstant Scalar -- ^ 1D example: @iiiiii|abcdefgh|iiiiiii@  with some specified @i@
+<span class="lineno">   25 </span>   | BorderReplicate   -- ^ 1D example: @aaaaaa|abcdefgh|hhhhhhh@
+<span class="lineno">   26 </span>   | BorderReflect     -- ^ 1D example: @fedcba|abcdefgh|hgfedcb@
+<span class="lineno">   27 </span>   | BorderWrap        -- ^ 1D example: @cdefgh|abcdefgh|abcdefg@
+<span class="lineno">   28 </span>   | BorderReflect101  -- ^ 1D example: @gfedcb|abcdefgh|gfedcba@
+<span class="lineno">   29 </span>   | BorderTransparent -- ^ 1D example: @uvwxyz|absdefgh|ijklmno@
+<span class="lineno">   30 </span>   | BorderIsolated    -- ^ do not look outside of ROI
+
+</pre>
+</body>
+</html>

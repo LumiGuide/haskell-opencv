@@ -1,0 +1,54 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    4 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    5 </span>#endif
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>module OpenCV.Internal.C.PlacementNew ( PlacementNew(..) ) where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>import &quot;base&quot; Foreign.Ptr ( Ptr )
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>--------------------------------------------------------------------------------
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>-- | Copy source to destination using C++'s placement new feature
+<span class="lineno">   14 </span>class PlacementNew a where
+<span class="lineno">   15 </span>    -- | Copy source to destination using C++'s placement new feature
+<span class="lineno">   16 </span>    --
+<span class="lineno">   17 </span>    -- This method is intended for types that are proxies for actual
+<span class="lineno">   18 </span>    -- types in C++.
+<span class="lineno">   19 </span>    --
+<span class="lineno">   20 </span>    -- &gt; new(dst) CType(*src)
+<span class="lineno">   21 </span>    --
+<span class="lineno">   22 </span>    -- The copy should be performed by constructing a new object in
+<span class="lineno">   23 </span>    -- the memory pointed to by @dst@. The new object is initialised
+<span class="lineno">   24 </span>    -- using the value of @src@. This design allow underlying
+<span class="lineno">   25 </span>    -- structures to be shared depending on the implementation of
+<span class="lineno">   26 </span>    -- @CType@.
+<span class="lineno">   27 </span>    placementNew
+<span class="lineno">   28 </span>        :: Ptr a -- ^ Source
+<span class="lineno">   29 </span>        -&gt; Ptr a -- ^ Destination
+<span class="lineno">   30 </span>        -&gt; IO ()
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>    placementDelete
+<span class="lineno">   33 </span>        :: Ptr a
+<span class="lineno">   34 </span>        -&gt; IO ()
+
+</pre>
+</body>
+</html>

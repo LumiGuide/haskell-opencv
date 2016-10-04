@@ -1,0 +1,489 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language DeriveFunctor #-}
+<span class="lineno">    3 </span>{-# language DeriveTraversable #-}
+<span class="lineno">    4 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    5 </span>{-# language NoImplicitPrelude #-}
+<span class="lineno">    6 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    7 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    8 </span>{-# language UndecidableInstances #-}
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">   11 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">   12 </span>#endif
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>module OpenCV.ImgProc.FeatureDetection
+<span class="lineno">   15 </span>    ( canny
+<span class="lineno">   16 </span>    , goodFeaturesToTrack
+<span class="lineno">   17 </span>    , houghCircles
+<span class="lineno">   18 </span>    , houghLinesP
+<span class="lineno">   19 </span>    , GoodFeaturesToTrackDetectionMethod(..)
+<span class="lineno">   20 </span>    , CannyNorm(..)
+<span class="lineno">   21 </span>    , Circle(..)
+<span class="lineno">   22 </span>    , LineSegment(..)
+<span class="lineno">   23 </span>    ) where
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>import &quot;base&quot; Control.Exception ( mask_ )
+<span class="lineno">   26 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   27 </span>import &quot;base&quot; Data.Maybe
+<span class="lineno">   28 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   29 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   30 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca )
+<span class="lineno">   31 </span>import &quot;base&quot; Foreign.Marshal.Array ( peekArray )
+<span class="lineno">   32 </span>import &quot;base&quot; Foreign.Marshal.Utils ( fromBool )
+<span class="lineno">   33 </span>import &quot;base&quot; Foreign.Ptr ( Ptr )
+<span class="lineno">   34 </span>import &quot;base&quot; Foreign.Storable ( peek )
+<span class="lineno">   35 </span>import &quot;base&quot; Prelude hiding ( lines )
+<span class="lineno">   36 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   37 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   38 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   39 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   40 </span>import &quot;linear&quot; Linear ( V2(..), V3(..), V4(..) )
+<span class="lineno">   41 </span>import &quot;primitive&quot; Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+<span class="lineno">   42 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   43 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   44 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   45 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   46 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   47 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   48 </span>#if MIN_VERSION_base(4,9,0)
+<span class="lineno">   49 </span>import &quot;base&quot; Data.Foldable ( Foldable )
+<span class="lineno">   50 </span>import &quot;base&quot; Data.Traversable ( Traversable )
+<span class="lineno">   51 </span>#endif
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>--------------------------------------------------------------------------------
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>C.context openCvCtx
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   58 </span>C.include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   59 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>--------------------------------------------------------------------------------
+<span class="lineno">   62 </span>-- Feature Detection
+<span class="lineno">   63 </span>--------------------------------------------------------------------------------
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>{- |
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>Finds edges in an image using the
+<span class="lineno">   68 </span>&lt;http://docs.opencv.org/2.4/modules/imgproc/doc/feature_detection.html#canny86 Canny86&gt;
+<span class="lineno">   69 </span>algorithm.
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>Example:
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>@
+<span class="lineno">   74 </span>cannyImg
+<span class="lineno">   75 </span>    :: forall shape channels depth
+<span class="lineno">   76 </span>     . (Mat shape channels depth ~ Lambda)
+<span class="lineno">   77 </span>    =&gt; Mat shape ('S 1) depth
+<span class="lineno">   78 </span>cannyImg = exceptError $
+<span class="lineno">   79 </span>  canny 30 200 Nothing CannyNormL1 lambda
+<span class="lineno">   80 </span>@
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>&lt;&lt;doc/generated/examples/cannyImg.png cannyImg&gt;&gt;
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>-}
+<span class="lineno">   85 </span>canny
+<span class="lineno">   86 </span>    :: Double
+<span class="lineno">   87 </span>       -- ^ First threshold for the hysteresis procedure.
+<span class="lineno">   88 </span>    -&gt; Double
+<span class="lineno">   89 </span>       -- ^ Second threshold for the hysteresis procedure.
+<span class="lineno">   90 </span>    -&gt; Maybe Int32
+<span class="lineno">   91 </span>       -- ^ Aperture size for the @Sobel()@ operator. If not specified defaults
+<span class="lineno">   92 </span>       -- to @3@. Must be 3, 5 or 7.
+<span class="lineno">   93 </span>    -&gt; CannyNorm
+<span class="lineno">   94 </span>       -- ^ A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.
+<span class="lineno">   95 </span>    -&gt; Mat ('S [h, w]) channels ('S Word8)
+<span class="lineno">   96 </span>       -- ^ 8-bit input image.
+<span class="lineno">   97 </span>    -&gt; CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
+<span class="lineno">   98 </span><span class="decl"><span class="istickedoff">canny threshold1 threshold2 apertureSize norm src = unsafeWrapException $ do</span>
+<span class="lineno">   99 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  101 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  104 </span><span class="spaces">          </span><span class="istickedoff">cv::Canny</span>
+<span class="lineno">  105 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  106 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  107 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'threshold1)</span>
+<span class="lineno">  108 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'threshold2)</span>
+<span class="lineno">  109 </span><span class="spaces">          </span><span class="istickedoff">, $(int32_t c'apertureSize)</span>
+<span class="lineno">  110 </span><span class="spaces">          </span><span class="istickedoff">, $(bool c'l2Gradient)</span>
+<span class="lineno">  111 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  112 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">c'threshold1 = realToFrac threshold1</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">c'threshold2 = realToFrac threshold2</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">c'apertureSize = fromMaybe 3 apertureSize</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">c'l2Gradient =</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">fromBool $</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="istickedoff">case norm of</span>
+<span class="lineno">  120 </span><span class="spaces">          </span><span class="istickedoff">CannyNormL1 -&gt; False</span>
+<span class="lineno">  121 </span><span class="spaces">          </span><span class="istickedoff">CannyNormL2 -&gt; <span class="nottickedoff">True</span></span></span>
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>-- | A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.
+<span class="lineno">  124 </span>data CannyNorm
+<span class="lineno">  125 </span>   = CannyNormL1
+<span class="lineno">  126 </span>   | CannyNormL2
+<span class="lineno">  127 </span>   deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>data Circle
+<span class="lineno">  130 </span>   = Circle
+<span class="lineno">  131 </span>     { <span class="istickedoff"><span class="decl"><span class="istickedoff">circleCenter</span></span></span> :: V2 Float
+<span class="lineno">  132 </span>     , <span class="istickedoff"><span class="decl"><span class="istickedoff">circleRadius</span></span></span> :: Float
+<span class="lineno">  133 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">  134 </span>
+<span class="lineno">  135 </span>{- |
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>Determines strong corners on an image.
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>The function finds the most prominent corners in the image or in the specified image region.
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>* Function calculates the corner quality measure at every source image pixel using the cornerMinEigenVal or cornerHarris.
+<span class="lineno">  142 </span>* Function performs a non-maximum suppression (the local maximums in 3 x 3 neighborhood are retained).
+<span class="lineno">  143 </span>* The corners with the minimal eigenvalue less than @𝚚𝚞𝚊𝚕𝚒𝚝𝚢𝙻𝚎𝚟𝚎𝚕 * max(x,y) qualityMeasureMap(x,y)@ are rejected.
+<span class="lineno">  144 </span>* The remaining corners are sorted by the quality measure in the descending order.
+<span class="lineno">  145 </span>* Function throws away each corner for which there is a stronger corner at a distance less than maxDistance.
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>Example:
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>@
+<span class="lineno">  150 </span>goodFeaturesToTrackTraces
+<span class="lineno">  151 </span>    :: forall (width    :: Nat)
+<span class="lineno">  152 </span>              (height   :: Nat)
+<span class="lineno">  153 </span>              (channels :: Nat)
+<span class="lineno">  154 </span>              (depth    :: *)
+<span class="lineno">  155 </span>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
+<span class="lineno">  156 </span>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<span class="lineno">  157 </span>goodFeaturesToTrackTraces = exceptError $ do
+<span class="lineno">  158 </span>  imgG &lt;- cvtColor bgr gray frog
+<span class="lineno">  159 </span>  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
+<span class="lineno">  160 </span>  withMatM (Proxy :: Proxy [height, width])
+<span class="lineno">  161 </span>           (Proxy :: Proxy channels)
+<span class="lineno">  162 </span>           (Proxy :: Proxy depth)
+<span class="lineno">  163 </span>           white $ \imgM -&gt; do
+<span class="lineno">  164 </span>    void $ matCopyToM imgM (V2 0 0) frog Nothing
+<span class="lineno">  165 </span>    forM_ features $ \f -&gt; do
+<span class="lineno">  166 </span>      circle imgM (round \&lt;$&gt; f :: V2 Int32) 2 blue 5 LineType_AA 0
+<span class="lineno">  167 </span>@
+<span class="lineno">  168 </span>
+<span class="lineno">  169 </span>&lt;&lt;doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces&gt;&gt;
+<span class="lineno">  170 </span>-}
+<span class="lineno">  171 </span>goodFeaturesToTrack
+<span class="lineno">  172 </span>  :: (depth `In` ['S Word8, 'S Float, 'D])
+<span class="lineno">  173 </span>  =&gt; Mat ('S [h, w]) ('S 1) depth
+<span class="lineno">  174 </span>  -- ^ Input 8-bit or floating-point 32-bit, single-channel image.
+<span class="lineno">  175 </span>  -&gt; Int32
+<span class="lineno">  176 </span>  -- ^ Maximum number of corners to return. If there are more corners than are
+<span class="lineno">  177 </span>  -- found, the strongest of them is returned.
+<span class="lineno">  178 </span>  -&gt; Double
+<span class="lineno">  179 </span>  -- ^ Parameter characterizing the minimal accepted quality of image corners.
+<span class="lineno">  180 </span>  -- The parameter value is multiplied by the best corner quality measure,
+<span class="lineno">  181 </span>  -- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris
+<span class="lineno">  182 </span>  -- function response (see cornerHarris ). The corners with the quality measure
+<span class="lineno">  183 </span>  -- less than the product are rejected. For example, if the best corner has the
+<span class="lineno">  184 </span>  -- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with
+<span class="lineno">  185 </span>  -- the quality measure less than 15 are rejected.
+<span class="lineno">  186 </span>  -&gt; Double
+<span class="lineno">  187 </span>  -- ^ Minimum possible Euclidean distance between the returned corners.
+<span class="lineno">  188 </span>  -&gt; Maybe (Mat ('S [h, w]) ('S 1) ('S Word8))
+<span class="lineno">  189 </span>  -- ^ Optional region of interest. If the image is not empty (it needs to have
+<span class="lineno">  190 </span>  -- the type CV_8UC1 and the same size as image ), it specifies the region in which
+<span class="lineno">  191 </span>  -- the corners are detected.
+<span class="lineno">  192 </span>  -&gt; Maybe Int32
+<span class="lineno">  193 </span>  -- ^ Size of an average block for computing a derivative covariation matrix
+<span class="lineno">  194 </span>  -- over each pixel neighborhood. See cornerEigenValsAndVecs.
+<span class="lineno">  195 </span>  -&gt; GoodFeaturesToTrackDetectionMethod
+<span class="lineno">  196 </span>  -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
+<span class="lineno">  197 </span>  -- or cornerMinEigenVal.
+<span class="lineno">  198 </span>  -&gt; V.Vector (V2 Float)
+<span class="lineno">  199 </span><span class="decl"><span class="istickedoff">goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafePerformIO $ do</span>
+<span class="lineno">  200 </span><span class="spaces">  </span><span class="istickedoff">withPtr src  $ \srcPtr -&gt;</span>
+<span class="lineno">  201 </span><span class="spaces">    </span><span class="istickedoff">withPtr mbMask $ \mskPtr -&gt;</span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(cornersLengthsPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  203 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(cornersPtrPtr :: Ptr (Ptr (Ptr C'Point2f))) -&gt; mask_ $ do</span>
+<span class="lineno">  204 </span><span class="spaces">    </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="istickedoff">std::vector&lt;cv::Point2f&gt; corners;</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="istickedoff">Mat * mskPtr = $(Mat * mskPtr);</span>
+<span class="lineno">  207 </span><span class="spaces">      </span><span class="istickedoff">cv::goodFeaturesToTrack</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="istickedoff">, corners</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="istickedoff">, $(int32_t maxCorners)</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="istickedoff">, $(double c'qualityLevel)</span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="istickedoff">, $(double c'minDistance)</span>
+<span class="lineno">  213 </span><span class="spaces">      </span><span class="istickedoff">, mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())</span>
+<span class="lineno">  214 </span><span class="spaces">      </span><span class="istickedoff">, $(int32_t c'blockSize)</span>
+<span class="lineno">  215 </span><span class="spaces">      </span><span class="istickedoff">, $(bool c'useHarrisDetector)</span>
+<span class="lineno">  216 </span><span class="spaces">      </span><span class="istickedoff">, $(double c'harrisK)</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="istickedoff">);</span>
+<span class="lineno">  218 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  219 </span><span class="spaces">      </span><span class="istickedoff">cv::Point2f * * * cornersPtrPtr = $(Point2f * * * cornersPtrPtr);</span>
+<span class="lineno">  220 </span><span class="spaces">      </span><span class="istickedoff">cv::Point2f * * cornersPtr = new cv::Point2f * [corners.size()];</span>
+<span class="lineno">  221 </span><span class="spaces">      </span><span class="istickedoff">*cornersPtrPtr = cornersPtr;</span>
+<span class="lineno">  222 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  223 </span><span class="spaces">      </span><span class="istickedoff">*$(int32_t * cornersLengthsPtr) = corners.size();</span>
+<span class="lineno">  224 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">for (std::vector&lt;cv::Point2f&gt;::size_type i = 0; i != corners.size(); i++) {</span>
+<span class="lineno">  226 </span><span class="spaces">        </span><span class="istickedoff">cornersPtr[i] = new cv::Point2f( corners[i] );</span>
+<span class="lineno">  227 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  228 </span><span class="spaces">    </span><span class="istickedoff">}|]</span>
+<span class="lineno">  229 </span><span class="spaces">    </span><span class="istickedoff">numCorners &lt;- fromIntegral &lt;$&gt; peek cornersLengthsPtr</span>
+<span class="lineno">  230 </span><span class="spaces">    </span><span class="istickedoff">cornersPtr &lt;- peek cornersPtrPtr</span>
+<span class="lineno">  231 </span><span class="spaces">    </span><span class="istickedoff">(corners :: [V2 Float]) &lt;-</span>
+<span class="lineno">  232 </span><span class="spaces">        </span><span class="istickedoff">peekArray numCorners cornersPtr &gt;&gt;=</span>
+<span class="lineno">  233 </span><span class="spaces">        </span><span class="istickedoff">mapM (fmap (fmap fromCFloat . fromPoint) . fromPtr . pure)</span>
+<span class="lineno">  234 </span><span class="spaces">    </span><span class="istickedoff">[CU.block| void {</span>
+<span class="lineno">  235 </span><span class="spaces">      </span><span class="istickedoff">delete [] *$(Point2f * * * cornersPtrPtr);</span>
+<span class="lineno">  236 </span><span class="spaces">    </span><span class="istickedoff">}|]</span>
+<span class="lineno">  237 </span><span class="spaces">    </span><span class="istickedoff">pure (V.fromList  corners)</span>
+<span class="lineno">  238 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  239 </span><span class="spaces">    </span><span class="istickedoff">c'qualityLevel = realToFrac qualityLevel</span>
+<span class="lineno">  240 </span><span class="spaces">    </span><span class="istickedoff">c'minDistance  = realToFrac minDistance</span>
+<span class="lineno">  241 </span><span class="spaces">    </span><span class="istickedoff">c'blockSize    = fromMaybe 3 blockSize</span>
+<span class="lineno">  242 </span><span class="spaces">    </span><span class="istickedoff">c'useHarrisDetector =</span>
+<span class="lineno">  243 </span><span class="spaces">      </span><span class="istickedoff">fromBool $</span>
+<span class="lineno">  244 </span><span class="spaces">        </span><span class="istickedoff">case detector of</span>
+<span class="lineno">  245 </span><span class="spaces">          </span><span class="istickedoff">HarrisDetector _kValue -&gt; <span class="nottickedoff">True</span></span>
+<span class="lineno">  246 </span><span class="spaces">          </span><span class="istickedoff">CornerMinEigenVal -&gt; False</span>
+<span class="lineno">  247 </span><span class="spaces">    </span><span class="istickedoff">c'harrisK =</span>
+<span class="lineno">  248 </span><span class="spaces">      </span><span class="istickedoff">realToFrac $</span>
+<span class="lineno">  249 </span><span class="spaces">        </span><span class="istickedoff">case detector of</span>
+<span class="lineno">  250 </span><span class="spaces">          </span><span class="istickedoff">HarrisDetector kValue -&gt; <span class="nottickedoff">kValue</span></span>
+<span class="lineno">  251 </span><span class="spaces">          </span><span class="istickedoff">CornerMinEigenVal -&gt; 0.04</span></span>
+<span class="lineno">  252 </span>
+<span class="lineno">  253 </span>data GoodFeaturesToTrackDetectionMethod
+<span class="lineno">  254 </span>   = HarrisDetector Double -- ^ Harris detector and it free k parameter
+<span class="lineno">  255 </span>   | CornerMinEigenVal
+<span class="lineno">  256 </span>   deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  257 </span>
+<span class="lineno">  258 </span>{- |
+<span class="lineno">  259 </span>
+<span class="lineno">  260 </span>Finds circles in a grayscale image using a modification of the Hough
+<span class="lineno">  261 </span>transformation.
+<span class="lineno">  262 </span>
+<span class="lineno">  263 </span>Example:
+<span class="lineno">  264 </span>
+<span class="lineno">  265 </span>@
+<span class="lineno">  266 </span>houghCircleTraces
+<span class="lineno">  267 </span>    :: forall (width    :: Nat)
+<span class="lineno">  268 </span>              (height   :: Nat)
+<span class="lineno">  269 </span>              (channels :: Nat)
+<span class="lineno">  270 </span>              (depth    :: *)
+<span class="lineno">  271 </span>     . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Circles_1000x625)
+<span class="lineno">  272 </span>    =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<span class="lineno">  273 </span>houghCircleTraces = exceptError $ do
+<span class="lineno">  274 </span>  imgG &lt;- cvtColor bgr gray circles_1000x625
+<span class="lineno">  275 </span>  let circles = houghCircles 1 10 Nothing Nothing Nothing Nothing imgG
+<span class="lineno">  276 </span>  withMatM (Proxy :: Proxy [height, width])
+<span class="lineno">  277 </span>           (Proxy :: Proxy channels)
+<span class="lineno">  278 </span>           (Proxy :: Proxy depth)
+<span class="lineno">  279 </span>           white $ \imgM -&gt; do
+<span class="lineno">  280 </span>    void $ matCopyToM imgM (V2 0 0) circles_1000x625 Nothing
+<span class="lineno">  281 </span>    forM_ circles $ \c -&gt; do
+<span class="lineno">  282 </span>      circle imgM (round \&lt;$&gt; circleCenter c :: V2 Int32) (round (circleRadius c)) blue 1 LineType_AA 0
+<span class="lineno">  283 </span>@
+<span class="lineno">  284 </span>
+<span class="lineno">  285 </span>&lt;&lt;doc/generated/examples/houghCircleTraces.png houghCircleTraces&gt;&gt;
+<span class="lineno">  286 </span>-}
+<span class="lineno">  287 </span>houghCircles
+<span class="lineno">  288 </span>  :: Double
+<span class="lineno">  289 </span>     -- ^ Inverse ratio of the accumulator resolution to the image resolution.
+<span class="lineno">  290 </span>     -- For example, if @dp=1@, the accumulator has the same resolution as the
+<span class="lineno">  291 </span>     -- input image. If @dp=2@, the accumulator has half as big width and height.
+<span class="lineno">  292 </span>  -&gt; Double
+<span class="lineno">  293 </span>     -- ^ Minimum distance between the centers of the detected circles. If the
+<span class="lineno">  294 </span>     -- parameter is too small, multiple neighbor circles may be falsely
+<span class="lineno">  295 </span>     -- detected in addition to a true one. If it is too large, some circles may
+<span class="lineno">  296 </span>     -- be missed.
+<span class="lineno">  297 </span>  -&gt; Maybe Double
+<span class="lineno">  298 </span>     -- ^ The higher threshold of the two passed to the 'canny' edge detector
+<span class="lineno">  299 </span>     -- (the lower one is twice smaller). Default is 100.
+<span class="lineno">  300 </span>  -&gt; Maybe Double
+<span class="lineno">  301 </span>     -- ^ The accumulator threshold for the circle centers at the detection
+<span class="lineno">  302 </span>     -- stage. The smaller it is, the more false circles may be detected.
+<span class="lineno">  303 </span>     -- Circles, corresponding to the larger accumulator values, will be returned
+<span class="lineno">  304 </span>     -- first. Default is 100.
+<span class="lineno">  305 </span>  -&gt; Maybe Int32
+<span class="lineno">  306 </span>     -- ^ Minimum circle radius.
+<span class="lineno">  307 </span>  -&gt; Maybe Int32
+<span class="lineno">  308 </span>     -- ^ Maximum circle radius.
+<span class="lineno">  309 </span>  -&gt; Mat ('S [h, w]) ('S 1) ('S Word8)
+<span class="lineno">  310 </span>  -&gt; V.Vector Circle
+<span class="lineno">  311 </span><span class="decl"><span class="istickedoff">houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO $</span>
+<span class="lineno">  312 </span><span class="spaces">  </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  313 </span><span class="spaces">  </span><span class="istickedoff">alloca $ \(circleLengthsPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) -&gt; mask_ $ do</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">_ &lt;- [cvExcept|</span>
+<span class="lineno">  316 </span><span class="spaces">      </span><span class="istickedoff">std::vector&lt;cv::Vec3f&gt; circles;</span>
+<span class="lineno">  317 </span><span class="spaces">      </span><span class="istickedoff">cv::HoughCircles(</span>
+<span class="lineno">  318 </span><span class="spaces">        </span><span class="istickedoff">*$(Mat * srcPtr),</span>
+<span class="lineno">  319 </span><span class="spaces">        </span><span class="istickedoff">circles,</span>
+<span class="lineno">  320 </span><span class="spaces">        </span><span class="istickedoff">CV_HOUGH_GRADIENT,</span>
+<span class="lineno">  321 </span><span class="spaces">        </span><span class="istickedoff">$(double c'dp),</span>
+<span class="lineno">  322 </span><span class="spaces">        </span><span class="istickedoff">$(double c'minDist),</span>
+<span class="lineno">  323 </span><span class="spaces">        </span><span class="istickedoff">$(double c'param1),</span>
+<span class="lineno">  324 </span><span class="spaces">        </span><span class="istickedoff">$(double c'param2),</span>
+<span class="lineno">  325 </span><span class="spaces">        </span><span class="istickedoff">$(int32_t c'minRadius),</span>
+<span class="lineno">  326 </span><span class="spaces">        </span><span class="istickedoff">$(int32_t c'maxRadius)</span>
+<span class="lineno">  327 </span><span class="spaces">      </span><span class="istickedoff">);</span>
+<span class="lineno">  328 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  329 </span><span class="spaces">      </span><span class="istickedoff">cv::Vec3f * * * circlesPtrPtr = $(Vec3f * * * circlesPtrPtr);</span>
+<span class="lineno">  330 </span><span class="spaces">      </span><span class="istickedoff">cv::Vec3f * * circlesPtr = new cv::Vec3f * [circles.size()];</span>
+<span class="lineno">  331 </span><span class="spaces">      </span><span class="istickedoff">*circlesPtrPtr = circlesPtr;</span>
+<span class="lineno">  332 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  333 </span><span class="spaces">      </span><span class="istickedoff">*$(int32_t * circleLengthsPtr) = circles.size();</span>
+<span class="lineno">  334 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  335 </span><span class="spaces">      </span><span class="istickedoff">for (std::vector&lt;cv::Vec3f&gt;::size_type i = 0; i != circles.size(); i++) {</span>
+<span class="lineno">  336 </span><span class="spaces">        </span><span class="istickedoff">circlesPtr[i] = new cv::Vec3f( circles[i] );</span>
+<span class="lineno">  337 </span><span class="spaces">      </span><span class="istickedoff">}</span>
+<span class="lineno">  338 </span><span class="spaces">    </span><span class="istickedoff">|]</span>
+<span class="lineno">  339 </span><span class="spaces">    </span><span class="istickedoff">numCircles &lt;- fromIntegral &lt;$&gt; peek circleLengthsPtr</span>
+<span class="lineno">  340 </span><span class="spaces">    </span><span class="istickedoff">circlesPtr &lt;- peek circlesPtrPtr</span>
+<span class="lineno">  341 </span><span class="spaces">    </span><span class="istickedoff">(circles :: [V3 Float]) &lt;-</span>
+<span class="lineno">  342 </span><span class="spaces">        </span><span class="istickedoff">peekArray numCircles circlesPtr &gt;&gt;=</span>
+<span class="lineno">  343 </span><span class="spaces">        </span><span class="istickedoff">mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)</span>
+<span class="lineno">  344 </span><span class="spaces">    </span><span class="istickedoff">[CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]</span>
+<span class="lineno">  345 </span><span class="spaces">    </span><span class="istickedoff">pure (V.fromList (map (\(V3 x y r) -&gt; Circle (V2 x y) r) circles))</span>
+<span class="lineno">  346 </span><span class="spaces">  </span><span class="istickedoff">where c'dp = realToFrac dp</span>
+<span class="lineno">  347 </span><span class="spaces">        </span><span class="istickedoff">c'minDist = realToFrac minDist</span>
+<span class="lineno">  348 </span><span class="spaces">        </span><span class="istickedoff">c'param1 = realToFrac (fromMaybe 100 param1)</span>
+<span class="lineno">  349 </span><span class="spaces">        </span><span class="istickedoff">c'param2 = realToFrac (fromMaybe 100 param2)</span>
+<span class="lineno">  350 </span><span class="spaces">        </span><span class="istickedoff">c'minRadius = fromIntegral (fromMaybe 0 minRadius)</span>
+<span class="lineno">  351 </span><span class="spaces">        </span><span class="istickedoff">c'maxRadius = fromIntegral (fromMaybe 0 maxRadius)</span></span>
+<span class="lineno">  352 </span>
+<span class="lineno">  353 </span>data LineSegment depth
+<span class="lineno">  354 </span>   = LineSegment
+<span class="lineno">  355 </span>     { <span class="istickedoff"><span class="decl"><span class="istickedoff">lineSegmentStart</span></span></span> :: !(V2 depth)
+<span class="lineno">  356 </span>     , <span class="istickedoff"><span class="decl"><span class="istickedoff">lineSegmentStop</span></span></span>  :: !(V2 depth)
+<span class="lineno">  357 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Foldable</span></span></span></span>, <span class="decl"><span class="nottickedoff">Functor</span></span>, <span class="decl"><span class="nottickedoff">Traversable</span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">  358 </span>
+<span class="lineno">  359 </span>type instance VecDim LineSegment = 4
+<span class="lineno">  360 </span>
+<span class="lineno">  361 </span>instance (IsVec V4 depth) =&gt; IsVec LineSegment depth where
+<span class="lineno">  362 </span>    <span class="decl"><span class="nottickedoff">toVec (LineSegment (V2 x1 y1) (V2 x2 y2)) =</span>
+<span class="lineno">  363 </span><span class="spaces">        </span><span class="nottickedoff">toVec (V4 x1 y1 x2 y2)</span></span>
+<span class="lineno">  364 </span>
+<span class="lineno">  365 </span>    <span class="decl"><span class="istickedoff">fromVec vec =</span>
+<span class="lineno">  366 </span><span class="spaces">        </span><span class="istickedoff">LineSegment</span>
+<span class="lineno">  367 </span><span class="spaces">        </span><span class="istickedoff">{ lineSegmentStart = V2 x1 y1</span>
+<span class="lineno">  368 </span><span class="spaces">        </span><span class="istickedoff">, lineSegmentStop  = V2 x2 y2</span>
+<span class="lineno">  369 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  370 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  371 </span><span class="spaces">        </span><span class="istickedoff">V4 x1 y1 x2 y2 = fromVec vec</span></span>
+<span class="lineno">  372 </span>
+<span class="lineno">  373 </span>{- |
+<span class="lineno">  374 </span>Example:
+<span class="lineno">  375 </span>
+<span class="lineno">  376 </span>@
+<span class="lineno">  377 </span>houghLinesPTraces
+<span class="lineno">  378 </span>  :: forall (width    :: Nat)
+<span class="lineno">  379 </span>            (height   :: Nat)
+<span class="lineno">  380 </span>            (channels :: Nat)
+<span class="lineno">  381 </span>            (depth    :: *  )
+<span class="lineno">  382 </span>   . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Building_868x600)
+<span class="lineno">  383 </span>  =&gt; Mat (ShapeT [height, width]) ('S channels) ('S depth)
+<span class="lineno">  384 </span>houghLinesPTraces = exceptError $ do
+<span class="lineno">  385 </span>    edgeImg &lt;- canny 50 200 Nothing CannyNormL1 building_868x600
+<span class="lineno">  386 </span>    edgeImgBgr &lt;- cvtColor gray bgr edgeImg
+<span class="lineno">  387 </span>    withMatM (Proxy :: Proxy [height, width])
+<span class="lineno">  388 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  389 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  390 </span>             white $ \imgM -&gt; do
+<span class="lineno">  391 </span>      edgeImgM &lt;- thaw edgeImg
+<span class="lineno">  392 </span>      lineSegments &lt;- houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
+<span class="lineno">  393 </span>      void $ matCopyToM imgM (V2 0 0) edgeImgBgr Nothing
+<span class="lineno">  394 </span>      forM_ lineSegments $ \lineSegment -&gt; do
+<span class="lineno">  395 </span>        line imgM
+<span class="lineno">  396 </span>             (lineSegmentStart lineSegment)
+<span class="lineno">  397 </span>             (lineSegmentStop  lineSegment)
+<span class="lineno">  398 </span>             red 2 LineType_8 0
+<span class="lineno">  399 </span>@
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>&lt;&lt;doc/generated/examples/houghLinesPTraces.png houghLinesPTraces&gt;&gt;
+<span class="lineno">  402 </span>-}
+<span class="lineno">  403 </span>houghLinesP
+<span class="lineno">  404 </span>  :: (PrimMonad m)
+<span class="lineno">  405 </span>  =&gt; Double
+<span class="lineno">  406 </span>     -- ^ Distance resolution of the accumulator in pixels.
+<span class="lineno">  407 </span>  -&gt; Double
+<span class="lineno">  408 </span>     -- ^ Angle resolution of the accumulator in radians.
+<span class="lineno">  409 </span>  -&gt; Int32
+<span class="lineno">  410 </span>     -- ^ Accumulator threshold parameter. Only those lines are returned that
+<span class="lineno">  411 </span>     -- get enough votes (&gt; threshold).
+<span class="lineno">  412 </span>  -&gt; Maybe Double
+<span class="lineno">  413 </span>     -- ^ Minimum line length. Line segments shorter than that are rejected.
+<span class="lineno">  414 </span>  -&gt; Maybe Double
+<span class="lineno">  415 </span>     -- ^ Maximum allowed gap between points on the same line to link them.
+<span class="lineno">  416 </span>  -&gt; Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
+<span class="lineno">  417 </span>     -- ^ Source image. May be modified by the function.
+<span class="lineno">  418 </span>  -&gt; m (V.Vector (LineSegment Int32))
+<span class="lineno">  419 </span><span class="decl"><span class="istickedoff">houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim $</span>
+<span class="lineno">  420 </span><span class="spaces">    </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  421 </span><span class="spaces">    </span><span class="istickedoff">-- Pointer to number of lines.</span>
+<span class="lineno">  422 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(numLinesPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  423 </span><span class="spaces">    </span><span class="istickedoff">-- Pointer to array of Vec4i pointers. The array is allocated in</span>
+<span class="lineno">  424 </span><span class="spaces">    </span><span class="istickedoff">-- C++. Each element of the array points to a Vec4i that is also</span>
+<span class="lineno">  425 </span><span class="spaces">    </span><span class="istickedoff">-- allocated in C++.</span>
+<span class="lineno">  426 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(linesPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) -&gt; mask_ $ do</span>
+<span class="lineno">  427 </span><span class="spaces">      </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="istickedoff">std::vector&lt;cv::Vec4i&gt; lines = std::vector&lt;cv::Vec4i&gt;();</span>
+<span class="lineno">  429 </span><span class="spaces">        </span><span class="istickedoff">cv::HoughLinesP</span>
+<span class="lineno">  430 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  431 </span><span class="spaces">          </span><span class="istickedoff">, lines</span>
+<span class="lineno">  432 </span><span class="spaces">          </span><span class="istickedoff">, $(double  c'rho)</span>
+<span class="lineno">  433 </span><span class="spaces">          </span><span class="istickedoff">, $(double  c'theta)</span>
+<span class="lineno">  434 </span><span class="spaces">          </span><span class="istickedoff">, $(int32_t threshold)</span>
+<span class="lineno">  435 </span><span class="spaces">          </span><span class="istickedoff">, $(double  c'minLineLength)</span>
+<span class="lineno">  436 </span><span class="spaces">          </span><span class="istickedoff">, $(double  c'maxLineGap)</span>
+<span class="lineno">  437 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  438 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  439 </span><span class="spaces">        </span><span class="istickedoff">*$(int32_t * numLinesPtr) = lines.size();</span>
+<span class="lineno">  440 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  441 </span><span class="spaces">        </span><span class="istickedoff">cv::Vec4i * * * linesPtrPtr = $(Vec4i * * * linesPtrPtr);</span>
+<span class="lineno">  442 </span><span class="spaces">        </span><span class="istickedoff">cv::Vec4i * * linesPtr = new cv::Vec4i * [lines.size()];</span>
+<span class="lineno">  443 </span><span class="spaces">        </span><span class="istickedoff">*linesPtrPtr = linesPtr;</span>
+<span class="lineno">  444 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  445 </span><span class="spaces">        </span><span class="istickedoff">for (std::vector&lt;cv::Vec4i&gt;::size_type ix = 0; ix != lines.size(); ix++)</span>
+<span class="lineno">  446 </span><span class="spaces">        </span><span class="istickedoff">{</span>
+<span class="lineno">  447 </span><span class="spaces">          </span><span class="istickedoff">cv::Vec4i &amp; org = lines[ix];</span>
+<span class="lineno">  448 </span><span class="spaces">          </span><span class="istickedoff">cv::Vec4i * newLine = new cv::Vec4i(org[0], org[1], org[2], org[3]);</span>
+<span class="lineno">  449 </span><span class="spaces">          </span><span class="istickedoff">linesPtr[ix] = newLine;</span>
+<span class="lineno">  450 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  451 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  452 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  453 </span><span class="spaces">      </span><span class="istickedoff">numLines &lt;- fromIntegral &lt;$&gt; peek numLinesPtr</span>
+<span class="lineno">  454 </span><span class="spaces">      </span><span class="istickedoff">linesPtr &lt;- peek linesPtrPtr</span>
+<span class="lineno">  455 </span><span class="spaces">      </span><span class="istickedoff">lineSegments  &lt;- mapM (fmap fromVec . fromPtr . pure) =&lt;&lt; peekArray numLines linesPtr</span>
+<span class="lineno">  456 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  457 </span><span class="spaces">      </span><span class="istickedoff">-- Free the array of Vec4i pointers. This does not free the</span>
+<span class="lineno">  458 </span><span class="spaces">      </span><span class="istickedoff">-- Vec4i's pointed to by the elements of the array. That is the</span>
+<span class="lineno">  459 </span><span class="spaces">      </span><span class="istickedoff">-- responsibility of Haskell's Vec4i finalizer.</span>
+<span class="lineno">  460 </span><span class="spaces">      </span><span class="istickedoff">[CU.block| void {</span>
+<span class="lineno">  461 </span><span class="spaces">        </span><span class="istickedoff">delete [] *$(Vec4i * * * linesPtrPtr);</span>
+<span class="lineno">  462 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  463 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">pure $ V.fromList lineSegments</span>
+<span class="lineno">  465 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  466 </span><span class="spaces">    </span><span class="istickedoff">c'rho           = realToFrac rho</span>
+<span class="lineno">  467 </span><span class="spaces">    </span><span class="istickedoff">c'theta         = realToFrac theta</span>
+<span class="lineno">  468 </span><span class="spaces">    </span><span class="istickedoff">c'minLineLength = maybe 0 realToFrac minLineLength</span>
+<span class="lineno">  469 </span><span class="spaces">    </span><span class="istickedoff">c'maxLineGap    = maybe 0 realToFrac maxLineGap</span></span>
+
+</pre>
+</body>
+</html>

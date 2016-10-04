@@ -1,0 +1,326 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    3 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    4 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>{-# OPTIONS_GHC -fno-warn-orphans #-}
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    9 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">   10 </span>#endif
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>module OpenCV.Internal.Core.Types
+<span class="lineno">   13 </span>    ( -- * Scalar
+<span class="lineno">   14 </span>      Scalar(..)
+<span class="lineno">   15 </span>    , newScalar
+<span class="lineno">   16 </span>    , ToScalar(..), FromScalar(..)
+<span class="lineno">   17 </span>      -- * RotatedRect
+<span class="lineno">   18 </span>    , RotatedRect(..)
+<span class="lineno">   19 </span>    , newRotatedRect
+<span class="lineno">   20 </span>      -- * TermCriteria
+<span class="lineno">   21 </span>    , TermCriteria(..)
+<span class="lineno">   22 </span>    , newTermCriteria
+<span class="lineno">   23 </span>      -- * Range
+<span class="lineno">   24 </span>    , Range(..)
+<span class="lineno">   25 </span>    , newRange
+<span class="lineno">   26 </span>    , newWholeRange
+<span class="lineno">   27 </span>      -- * Polygons
+<span class="lineno">   28 </span>    , withPolygons
+<span class="lineno">   29 </span>    , withArrayPtr
+<span class="lineno">   30 </span>    ) where
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>import &quot;base&quot; Control.Exception ( bracket_ )
+<span class="lineno">   33 </span>import &quot;base&quot; Data.Bits ( (.|.) )
+<span class="lineno">   34 </span>import &quot;base&quot; Data.Functor ( ($&gt;) )
+<span class="lineno">   35 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   36 </span>import &quot;base&quot; Data.Proxy ( Proxy(..) )
+<span class="lineno">   37 </span>import &quot;base&quot; Foreign.C.Types
+<span class="lineno">   38 </span>import &quot;base&quot; Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+<span class="lineno">   39 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca, allocaBytes )
+<span class="lineno">   40 </span>import &quot;base&quot; Foreign.Marshal.Array ( allocaArray )
+<span class="lineno">   41 </span>import &quot;base&quot; Foreign.Ptr ( Ptr, plusPtr )
+<span class="lineno">   42 </span>import &quot;base&quot; Foreign.Storable ( sizeOf, peek, poke )
+<span class="lineno">   43 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   44 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   45 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   46 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   47 </span>import &quot;linear&quot; Linear.V4 ( V4(..) )
+<span class="lineno">   48 </span>import &quot;this&quot; OpenCV.Core.Types.Point
+<span class="lineno">   49 </span>import &quot;this&quot; OpenCV.Core.Types.Size
+<span class="lineno">   50 </span>import &quot;this&quot; OpenCV.Internal
+<span class="lineno">   51 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   52 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Constants
+<span class="lineno">   53 </span>import &quot;this&quot; OpenCV.Internal.C.PlacementNew
+<span class="lineno">   54 </span>import &quot;this&quot; OpenCV.Internal.C.PlacementNew.TH
+<span class="lineno">   55 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   56 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>--------------------------------------------------------------------------------
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>C.context openCvCtx
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   63 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>--------------------------------------------------------------------------------
+<span class="lineno">   67 </span>-- Types
+<span class="lineno">   68 </span>--------------------------------------------------------------------------------
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>-- | A 4-element vector with 64 bit floating point elements
+<span class="lineno">   71 </span>--
+<span class="lineno">   72 </span>-- The type 'Scalar' is widely used in OpenCV to pass pixel values.
+<span class="lineno">   73 </span>--
+<span class="lineno">   74 </span>-- &lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#scalar OpenCV Sphinx doc&gt;
+<span class="lineno">   75 </span>newtype Scalar = Scalar {<span class="istickedoff"><span class="decl"><span class="istickedoff">unScalar</span></span></span> :: ForeignPtr (C Scalar)}
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>-- | Rotated (i.e. not up-right) rectangles on a plane
+<span class="lineno">   78 </span>--
+<span class="lineno">   79 </span>-- Each rectangle is specified by the center point (mass center), length of each
+<span class="lineno">   80 </span>-- side (represented by 'Size2f') and the rotation angle in degrees.
+<span class="lineno">   81 </span>--
+<span class="lineno">   82 </span>-- &lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#rotatedrect OpenCV Sphinx doc&gt;
+<span class="lineno">   83 </span>newtype RotatedRect = RotatedRect {<span class="nottickedoff"><span class="decl"><span class="nottickedoff">unRotatedRect</span></span></span> :: ForeignPtr (C RotatedRect)}
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>-- | Termination criteria for iterative algorithms
+<span class="lineno">   86 </span>--
+<span class="lineno">   87 </span>-- &lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#termcriteria OpenCV Sphinx doc&gt;
+<span class="lineno">   88 </span>newtype TermCriteria = TermCriteria {<span class="nottickedoff"><span class="decl"><span class="nottickedoff">unTermCriteria</span></span></span> :: ForeignPtr (C TermCriteria)}
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>-- | A continuous subsequence (slice) of a sequence
+<span class="lineno">   91 </span>--
+<span class="lineno">   92 </span>-- The type is used to specify a row or a column span in a matrix (`Mat`) and
+<span class="lineno">   93 </span>-- for many other purposes. @'mkRange' a b@ is basically the same as @a:b@ in
+<span class="lineno">   94 </span>-- Matlab or @a..b@ in Python. As in Python, start is an inclusive left boundary
+<span class="lineno">   95 </span>-- of the range and end is an exclusive right boundary of the range. Such a
+<span class="lineno">   96 </span>-- half-opened interval is usually denoted as @[start, end)@.
+<span class="lineno">   97 </span>--
+<span class="lineno">   98 </span>-- &lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#range OpenCV Sphinx doc&gt;
+<span class="lineno">   99 </span>newtype Range = Range {<span class="nottickedoff"><span class="decl"><span class="nottickedoff">unRange</span></span></span> :: ForeignPtr (C Range)}
+<span class="lineno">  100 </span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>--------------------------------------------------------------------------------
+<span class="lineno">  103 </span>-- Conversions
+<span class="lineno">  104 </span>--------------------------------------------------------------------------------
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>class ToScalar  a where toScalar  :: a -&gt; Scalar
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>instance ToScalar  Scalar  where <span class="decl"><span class="istickedoff">toScalar  = id</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>instance ToScalar  (V4 CDouble) where <span class="decl"><span class="istickedoff">toScalar  = unsafePerformIO . newScalar</span></span>
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>instance ToScalar  (V4 Double ) where <span class="decl"><span class="istickedoff">toScalar  = toScalar  . fmap (realToFrac :: Double -&gt; CDouble)</span></span>
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>class FromScalar  a where fromScalar  :: Scalar  -&gt; a
+<span class="lineno">  115 </span>
+<span class="lineno">  116 </span>instance FromScalar  Scalar  where <span class="decl"><span class="nottickedoff">fromScalar  = id</span></span>
+<span class="lineno">  117 </span>
+<span class="lineno">  118 </span>instance FromScalar (V4 CDouble) where
+<span class="lineno">  119 </span>    <span class="decl"><span class="istickedoff">fromScalar s = unsafePerformIO $</span>
+<span class="lineno">  120 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \xPtr -&gt;</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \yPtr -&gt;</span>
+<span class="lineno">  122 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \zPtr -&gt;</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \wPtr -&gt;</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">withPtr s $ \sPtr -&gt; do</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="istickedoff">[CU.block| void {</span>
+<span class="lineno">  126 </span><span class="spaces">          </span><span class="istickedoff">const Scalar &amp; s = *$(Scalar * sPtr);</span>
+<span class="lineno">  127 </span><span class="spaces">          </span><span class="istickedoff">*$(double * xPtr) = s[0];</span>
+<span class="lineno">  128 </span><span class="spaces">          </span><span class="istickedoff">*$(double * yPtr) = s[1];</span>
+<span class="lineno">  129 </span><span class="spaces">          </span><span class="istickedoff">*$(double * zPtr) = s[2];</span>
+<span class="lineno">  130 </span><span class="spaces">          </span><span class="istickedoff">*$(double * wPtr) = s[3];</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">V4 &lt;$&gt; peek xPtr</span>
+<span class="lineno">  133 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; peek yPtr</span>
+<span class="lineno">  134 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; peek zPtr</span>
+<span class="lineno">  135 </span><span class="spaces">           </span><span class="istickedoff">&lt;*&gt; peek wPtr</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>instance FromScalar (V4 Double) where <span class="decl"><span class="istickedoff">fromScalar = fmap (realToFrac :: CDouble -&gt; Double) . fromScalar</span></span>
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>--------------------------------------------------------------------------------
+<span class="lineno">  140 </span>-- Constructing new values
+<span class="lineno">  141 </span>--------------------------------------------------------------------------------
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>newScalar :: V4 CDouble -&gt; IO Scalar
+<span class="lineno">  144 </span><span class="decl"><span class="istickedoff">newScalar (V4 x y z w) = fromPtr $</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">[CU.exp|Scalar * { new cv::Scalar( $(double x)</span>
+<span class="lineno">  146 </span><span class="spaces">                                     </span><span class="istickedoff">, $(double y)</span>
+<span class="lineno">  147 </span><span class="spaces">                                     </span><span class="istickedoff">, $(double z)</span>
+<span class="lineno">  148 </span><span class="spaces">                                     </span><span class="istickedoff">, $(double w)</span>
+<span class="lineno">  149 </span><span class="spaces">                                     </span><span class="istickedoff">)</span>
+<span class="lineno">  150 </span><span class="spaces">                     </span><span class="istickedoff">}|]</span></span>
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>newRotatedRect
+<span class="lineno">  153 </span>    :: ( IsPoint2 point2 CFloat
+<span class="lineno">  154 </span>       , IsSize   size   CFloat
+<span class="lineno">  155 </span>       )
+<span class="lineno">  156 </span>    =&gt; point2 CFloat -- ^ Rectangle mass center
+<span class="lineno">  157 </span>    -&gt; size   CFloat -- ^ Width and height of the rectangle
+<span class="lineno">  158 </span>    -&gt; CFloat
+<span class="lineno">  159 </span>       -- ^ The rotation angle (in degrees). When the angle is 0, 90,
+<span class="lineno">  160 </span>       -- 180, 270 etc., the rectangle becomes an up-right rectangle.
+<span class="lineno">  161 </span>    -&gt; IO RotatedRect
+<span class="lineno">  162 </span><span class="decl"><span class="nottickedoff">newRotatedRect center size angle = fromPtr $</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="nottickedoff">withPtr (toPoint center) $ \centerPtr -&gt;</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="nottickedoff">withPtr (toSize  size)   $ \sizePtr   -&gt;</span>
+<span class="lineno">  165 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| RotatedRect * {</span>
+<span class="lineno">  166 </span><span class="spaces">          </span><span class="nottickedoff">new cv::RotatedRect( *$(Point2f * centerPtr)</span>
+<span class="lineno">  167 </span><span class="spaces">                             </span><span class="nottickedoff">, *$(Size2f * sizePtr)</span>
+<span class="lineno">  168 </span><span class="spaces">                             </span><span class="nottickedoff">, $(float angle)</span>
+<span class="lineno">  169 </span><span class="spaces">                             </span><span class="nottickedoff">)</span>
+<span class="lineno">  170 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span></span>
+<span class="lineno">  171 </span>
+<span class="lineno">  172 </span>newTermCriteria
+<span class="lineno">  173 </span>    :: Maybe Int    -- ^ Optionally the maximum number of iterations/elements.
+<span class="lineno">  174 </span>    -&gt; Maybe Double -- ^ Optionally the desired accuracy.
+<span class="lineno">  175 </span>    -&gt; IO TermCriteria
+<span class="lineno">  176 </span><span class="decl"><span class="nottickedoff">newTermCriteria mbMaxCount mbEpsilon = fromPtr $</span>
+<span class="lineno">  177 </span><span class="spaces">    </span><span class="nottickedoff">[CU.exp|TermCriteria * {</span>
+<span class="lineno">  178 </span><span class="spaces">      </span><span class="nottickedoff">new cv::TermCriteria( $(int32_t c'type    )</span>
+<span class="lineno">  179 </span><span class="spaces">                          </span><span class="nottickedoff">, $(int32_t c'maxCount)</span>
+<span class="lineno">  180 </span><span class="spaces">                          </span><span class="nottickedoff">, $(double  c'epsilon )</span>
+<span class="lineno">  181 </span><span class="spaces">                          </span><span class="nottickedoff">)</span>
+<span class="lineno">  182 </span><span class="spaces">    </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  183 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  184 </span><span class="spaces">    </span><span class="nottickedoff">c'type =   maybe 0 (const c'TERMCRITERIA_COUNT) mbMaxCount</span>
+<span class="lineno">  185 </span><span class="spaces">           </span><span class="nottickedoff">.|. maybe 0 (const c'TERMCRITERIA_EPS  ) mbEpsilon</span>
+<span class="lineno">  186 </span><span class="spaces">    </span><span class="nottickedoff">c'maxCount = maybe 0 fromIntegral mbMaxCount</span>
+<span class="lineno">  187 </span><span class="spaces">    </span><span class="nottickedoff">c'epsilon  = maybe 0 realToFrac   mbEpsilon</span></span>
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>newRange
+<span class="lineno">  190 </span>    :: Int32 -- ^ Inclusive start
+<span class="lineno">  191 </span>    -&gt; Int32 -- ^ Exlusive end
+<span class="lineno">  192 </span>    -&gt; IO Range
+<span class="lineno">  193 </span><span class="decl"><span class="nottickedoff">newRange start end = fromPtr $</span>
+<span class="lineno">  194 </span><span class="spaces">    </span><span class="nottickedoff">[CU.exp|Range * { new cv::Range( $(int32_t start), $(int32_t end)) }|]</span></span>
+<span class="lineno">  195 </span>
+<span class="lineno">  196 </span>-- | Special 'Range' value which means &quot;the whole sequence&quot; or &quot;the whole range&quot;
+<span class="lineno">  197 </span>newWholeRange :: IO Range
+<span class="lineno">  198 </span><span class="decl"><span class="nottickedoff">newWholeRange = fromPtr $</span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="nottickedoff">[CU.block|Range * {</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="nottickedoff">cv::Range a = cv::Range::all();</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="nottickedoff">return new cv::Range(a.start, a.end);</span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="nottickedoff">}|]</span></span>
+<span class="lineno">  203 </span>
+<span class="lineno">  204 </span>
+<span class="lineno">  205 </span>--------------------------------------------------------------------------------
+<span class="lineno">  206 </span>-- Polygons
+<span class="lineno">  207 </span>--------------------------------------------------------------------------------
+<span class="lineno">  208 </span>
+<span class="lineno">  209 </span>withPolygons
+<span class="lineno">  210 </span>    :: forall a point2
+<span class="lineno">  211 </span>     . (IsPoint2 point2 Int32)
+<span class="lineno">  212 </span>    =&gt; V.Vector (V.Vector (point2 Int32))
+<span class="lineno">  213 </span>    -&gt; (Ptr (Ptr (C Point2i)) -&gt; IO a)
+<span class="lineno">  214 </span>    -&gt; IO a
+<span class="lineno">  215 </span><span class="decl"><span class="istickedoff">withPolygons polygons act =</span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff">allocaArray (V.length polygons) $ \polygonsPtr -&gt; do</span>
+<span class="lineno">  217 </span><span class="spaces">      </span><span class="istickedoff">let go :: Ptr (Ptr (C Point2i)) -&gt; Int -&gt; IO a</span>
+<span class="lineno">  218 </span><span class="spaces">          </span><span class="istickedoff">go !acc !ix</span>
+<span class="lineno">  219 </span><span class="spaces">            </span><span class="istickedoff">| ix &lt; V.length polygons =</span>
+<span class="lineno">  220 </span><span class="spaces">                </span><span class="istickedoff">let pts = V.map toPoint $ V.unsafeIndex polygons ix</span>
+<span class="lineno">  221 </span><span class="spaces">                </span><span class="istickedoff">in withArrayPtr pts $ \ptsPtr -&gt; do</span>
+<span class="lineno">  222 </span><span class="spaces">                     </span><span class="istickedoff">poke acc ptsPtr</span>
+<span class="lineno">  223 </span><span class="spaces">                     </span><span class="istickedoff">go (acc `plusPtr` sizeOf <span class="nottickedoff">(undefined :: Ptr (Ptr (C Point2i)))</span>) (ix + 1)</span>
+<span class="lineno">  224 </span><span class="spaces">            </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = act polygonsPtr</span>
+<span class="lineno">  225 </span><span class="spaces">      </span><span class="istickedoff">go polygonsPtr 0</span></span>
+<span class="lineno">  226 </span>
+<span class="lineno">  227 </span>-- | Perform an action with a temporary pointer to an array of values
+<span class="lineno">  228 </span>--
+<span class="lineno">  229 </span>-- The input values are placed consecutively in memory using the 'PlacementNew'
+<span class="lineno">  230 </span>-- mechanism.
+<span class="lineno">  231 </span>--
+<span class="lineno">  232 </span>-- This function is intended for types which are not managed by the Haskell
+<span class="lineno">  233 </span>-- runtime, but by a foreign system (such as C).
+<span class="lineno">  234 </span>--
+<span class="lineno">  235 </span>-- The pointer is not guaranteed to be usuable outside the scope of this
+<span class="lineno">  236 </span>-- function. The same warnings apply as for 'withForeignPtr'.
+<span class="lineno">  237 </span>withArrayPtr
+<span class="lineno">  238 </span>    :: forall a b
+<span class="lineno">  239 </span>     . (WithPtr a, CSizeOf (C a), PlacementNew (C a))
+<span class="lineno">  240 </span>    =&gt; V.Vector a
+<span class="lineno">  241 </span>    -&gt; (Ptr (C a) -&gt; IO b)
+<span class="lineno">  242 </span>    -&gt; IO b
+<span class="lineno">  243 </span><span class="decl"><span class="istickedoff">withArrayPtr arr act =</span>
+<span class="lineno">  244 </span><span class="spaces">    </span><span class="istickedoff">allocaBytes arraySize $ \arrPtr -&gt;</span>
+<span class="lineno">  245 </span><span class="spaces">      </span><span class="istickedoff">bracket_</span>
+<span class="lineno">  246 </span><span class="spaces">        </span><span class="istickedoff">(V.foldM'_ copyNext arrPtr arr)</span>
+<span class="lineno">  247 </span><span class="spaces">        </span><span class="istickedoff">(deconstructArray arrPtr )</span>
+<span class="lineno">  248 </span><span class="spaces">        </span><span class="istickedoff">(act arrPtr)</span>
+<span class="lineno">  249 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  250 </span><span class="spaces">    </span><span class="istickedoff">elemSize = cSizeOf <span class="nottickedoff">(Proxy :: Proxy (C a))</span></span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">arraySize = elemSize * V.length arr</span>
+<span class="lineno">  252 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  253 </span><span class="spaces">    </span><span class="istickedoff">copyNext :: Ptr (C a) -&gt; a -&gt; IO (Ptr (C a))</span>
+<span class="lineno">  254 </span><span class="spaces">    </span><span class="istickedoff">copyNext !ptr obj = copyObj ptr obj $&gt; plusPtr ptr elemSize</span>
+<span class="lineno">  255 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">copyObj :: Ptr (C a) -&gt; a -&gt; IO ()</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">copyObj dstPtr src =</span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  259 </span><span class="spaces">          </span><span class="istickedoff">placementNew srcPtr dstPtr</span>
+<span class="lineno">  260 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  261 </span><span class="spaces">    </span><span class="istickedoff">deconstructArray :: Ptr (C a) -&gt; IO ()</span>
+<span class="lineno">  262 </span><span class="spaces">    </span><span class="istickedoff">deconstructArray !begin = deconstructNext begin</span>
+<span class="lineno">  263 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">deconstructNext !ptr</span>
+<span class="lineno">  265 </span><span class="spaces">            </span><span class="istickedoff">| ptr == end = pure <span class="nottickedoff">()</span></span>
+<span class="lineno">  266 </span><span class="spaces">            </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = do placementDelete ptr</span>
+<span class="lineno">  267 </span><span class="spaces">                             </span><span class="istickedoff">deconstructNext $ ptr `plusPtr` elemSize</span>
+<span class="lineno">  268 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  269 </span><span class="spaces">        </span><span class="istickedoff">end :: Ptr (C a)</span>
+<span class="lineno">  270 </span><span class="spaces">        </span><span class="istickedoff">end = begin `plusPtr` arraySize</span></span>
+<span class="lineno">  271 </span>
+<span class="lineno">  272 </span>--------------------------------------------------------------------------------
+<span class="lineno">  273 </span>
+<span class="lineno">  274 </span>type instance C Scalar       = C'Scalar
+<span class="lineno">  275 </span>type instance C RotatedRect  = C'RotatedRect
+<span class="lineno">  276 </span>type instance C TermCriteria = C'TermCriteria
+<span class="lineno">  277 </span>type instance C Range        = C'Range
+<span class="lineno">  278 </span>
+<span class="lineno">  279 </span>--------------------------------------------------------------------------------
+<span class="lineno">  280 </span>
+<span class="lineno">  281 </span>instance WithPtr Scalar       where <span class="decl"><span class="istickedoff">withPtr = withForeignPtr . unScalar</span></span>
+<span class="lineno">  282 </span>instance WithPtr RotatedRect  where <span class="decl"><span class="nottickedoff">withPtr = withForeignPtr . unRotatedRect</span></span>
+<span class="lineno">  283 </span>instance WithPtr TermCriteria where <span class="decl"><span class="nottickedoff">withPtr = withForeignPtr . unTermCriteria</span></span>
+<span class="lineno">  284 </span>instance WithPtr Range        where <span class="decl"><span class="nottickedoff">withPtr = withForeignPtr . unRange</span></span>
+<span class="lineno">  285 </span>
+<span class="lineno">  286 </span>--------------------------------------------------------------------------------
+<span class="lineno">  287 </span>
+<span class="lineno">  288 </span><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">mkPlacementNewInstance ''Scalar</span></span></span></span></span>
+<span class="lineno">  289 </span>
+<span class="lineno">  290 </span>--------------------------------------------------------------------------------
+<span class="lineno">  291 </span>
+<span class="lineno">  292 </span>instance FromPtr Scalar where
+<span class="lineno">  293 </span>    <span class="decl"><span class="istickedoff">fromPtr = objFromPtr Scalar $ \ptr -&gt;</span>
+<span class="lineno">  294 </span><span class="spaces">                </span><span class="istickedoff">[CU.exp| void { delete $(Scalar * ptr) }|]</span></span>
+<span class="lineno">  295 </span>
+<span class="lineno">  296 </span>instance FromPtr RotatedRect where
+<span class="lineno">  297 </span>    <span class="decl"><span class="nottickedoff">fromPtr = objFromPtr RotatedRect $ \ptr -&gt;</span>
+<span class="lineno">  298 </span><span class="spaces">                </span><span class="nottickedoff">[CU.exp| void { delete $(RotatedRect * ptr) }|]</span></span>
+<span class="lineno">  299 </span>
+<span class="lineno">  300 </span>instance FromPtr TermCriteria where
+<span class="lineno">  301 </span>    <span class="decl"><span class="nottickedoff">fromPtr = objFromPtr TermCriteria $ \ptr -&gt;</span>
+<span class="lineno">  302 </span><span class="spaces">                </span><span class="nottickedoff">[CU.exp| void { delete $(TermCriteria * ptr) }|]</span></span>
+<span class="lineno">  303 </span>
+<span class="lineno">  304 </span>instance FromPtr Range where
+<span class="lineno">  305 </span>    <span class="decl"><span class="nottickedoff">fromPtr = objFromPtr Range $ \ptr -&gt;</span>
+<span class="lineno">  306 </span><span class="spaces">                </span><span class="nottickedoff">[CU.exp| void { delete $(Range * ptr) }|]</span></span>
+
+</pre>
+</body>
+</html>

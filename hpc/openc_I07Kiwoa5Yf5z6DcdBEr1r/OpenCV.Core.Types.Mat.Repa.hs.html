@@ -1,0 +1,192 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language InstanceSigs #-}
+<span class="lineno">    4 </span>{-# language ConstraintKinds #-}
+<span class="lineno">    5 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    6 </span>{-# language UndecidableInstances #-}
+<span class="lineno">    7 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    8 </span>{-# language ExistentialQuantification #-}
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">   11 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">   12 </span>#endif
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>module OpenCV.Core.Types.Mat.Repa
+<span class="lineno">   15 </span>    ( M
+<span class="lineno">   16 </span>    , DIM
+<span class="lineno">   17 </span>    , toRepa
+<span class="lineno">   18 </span>    ) where
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   21 </span>import &quot;base&quot; Data.Monoid
+<span class="lineno">   22 </span>import &quot;base&quot; Data.Proxy
+<span class="lineno">   23 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   24 </span>import &quot;base&quot; Foreign.C.Types
+<span class="lineno">   25 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca )
+<span class="lineno">   26 </span>import &quot;base&quot; Foreign.Marshal.Array ( peekArray )
+<span class="lineno">   27 </span>import &quot;base&quot; Foreign.Ptr ( Ptr, plusPtr )
+<span class="lineno">   28 </span>import &quot;base&quot; Foreign.Storable ( Storable(..), peek, sizeOf )
+<span class="lineno">   29 </span>import &quot;base&quot; GHC.TypeLits
+<span class="lineno">   30 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   31 </span>import &quot;deepseq&quot; Control.DeepSeq (NFData, rnf)
+<span class="lineno">   32 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   33 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   34 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   35 </span>import qualified &quot;repa&quot; Data.Array.Repa as Repa
+<span class="lineno">   36 </span>import           &quot;repa&quot; Data.Array.Repa.Index ( (:.) )
+<span class="lineno">   37 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   38 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   39 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   40 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>--------------------------------------------------------------------------------
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>C.context openCvCtx
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   48 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   49 </span>
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>--------------------------------------------------------------------------------
+<span class="lineno">   52 </span>--  Repa
+<span class="lineno">   53 </span>--------------------------------------------------------------------------------
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>-- | Representation tag for Repa @'Repa.Array's@ for OpenCV @'Mat's@.
+<span class="lineno">   56 </span>data M (shape :: [DS Nat]) (channels :: Nat)
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>type family DIM (n :: Nat) :: * where
+<span class="lineno">   59 </span>    DIM 0 = Repa.Z
+<span class="lineno">   60 </span>    DIM n = DIM (n-1) :. Int
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>-- | Converts an OpenCV @'Mat'rix@ into a Repa array.
+<span class="lineno">   63 </span>--
+<span class="lineno">   64 </span>-- This is a zero-copy operation.
+<span class="lineno">   65 </span>toRepa
+<span class="lineno">   66 </span>    :: forall (shape    :: [DS Nat])
+<span class="lineno">   67 </span>              (channels :: Nat)
+<span class="lineno">   68 </span>              (depth    :: *)
+<span class="lineno">   69 </span>              (dims     :: Nat)
+<span class="lineno">   70 </span>              (sh       :: *)
+<span class="lineno">   71 </span>     . ( Storable depth
+<span class="lineno">   72 </span>       , KnownNat channels
+<span class="lineno">   73 </span>       , KnownNat dims
+<span class="lineno">   74 </span>       , dims ~ Length shape
+<span class="lineno">   75 </span>       , sh ~ DIM ((dims + 1))
+<span class="lineno">   76 </span>       )
+<span class="lineno">   77 </span>    =&gt; Mat ('S shape) ('S channels) ('S depth) -- ^
+<span class="lineno">   78 </span>    -&gt; Repa.Array (M shape channels) sh depth
+<span class="lineno">   79 </span><span class="decl"><span class="istickedoff">toRepa mat = unsafePerformIO $ withPtr mat $ \matPtr -&gt;</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(sizePtr    :: Ptr (Ptr Int32)) -&gt;</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(stepPtr    :: Ptr (Ptr CSize)) -&gt;</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(dataPtrPtr :: Ptr (Ptr Word8)) -&gt; do</span>
+<span class="lineno">   83 </span><span class="spaces">      </span><span class="istickedoff">[CU.block| void {</span>
+<span class="lineno">   84 </span><span class="spaces">        </span><span class="istickedoff">const Mat * const matPtr = $(Mat * matPtr);</span>
+<span class="lineno">   85 </span><span class="spaces">        </span><span class="istickedoff">*$(int32_t * * const sizePtr   ) = matPtr-&gt;size.p;</span>
+<span class="lineno">   86 </span><span class="spaces">        </span><span class="istickedoff">*$(size_t  * * const stepPtr   ) = matPtr-&gt;step.p;</span>
+<span class="lineno">   87 </span><span class="spaces">        </span><span class="istickedoff">*$(uint8_t * * const dataPtrPtr) = matPtr-&gt;data;</span>
+<span class="lineno">   88 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">   89 </span><span class="spaces">      </span><span class="istickedoff">let dims = fromInteger $ natVal <span class="nottickedoff">(Proxy :: Proxy dims)</span></span>
+<span class="lineno">   90 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   91 </span><span class="spaces">      </span><span class="istickedoff">(size :: Ptr Int32) &lt;- peek sizePtr</span>
+<span class="lineno">   92 </span><span class="spaces">      </span><span class="istickedoff">sizeShape &lt;- map fromIntegral &lt;$&gt; peekArray dims size</span>
+<span class="lineno">   93 </span><span class="spaces">      </span><span class="istickedoff">let sizes = sizeShape &lt;&gt; [fromInteger $ natVal <span class="nottickedoff">(Proxy :: Proxy channels)</span>]</span>
+<span class="lineno">   94 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   95 </span><span class="spaces">      </span><span class="istickedoff">(step :: Ptr CSize) &lt;- peek stepPtr</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">stepShape &lt;- map fromIntegral &lt;$&gt; peekArray dims step</span>
+<span class="lineno">   97 </span><span class="spaces">      </span><span class="istickedoff">let steps = stepShape &lt;&gt; [sizeOf <span class="nottickedoff">(undefined :: depth)</span>]</span>
+<span class="lineno">   98 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">   99 </span><span class="spaces">      </span><span class="istickedoff">(dataPtr :: Ptr Word8) &lt;- peek dataPtrPtr</span>
+<span class="lineno">  100 </span><span class="spaces">      </span><span class="istickedoff">pure $ Array mat dataPtr sizes steps</span></span>
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>instance (Repa.Shape sh, Storable depth) =&gt; NFData (Repa.Array (M shape channels) sh depth) where
+<span class="lineno">  103 </span>    <span class="decl"><span class="nottickedoff">rnf a = Repa.deepSeqArray a ()</span></span>
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>instance (Storable depth) =&gt; Repa.Source (M shape channels) depth where
+<span class="lineno">  106 </span>    -- TODO (BvD): We might want to check for isContinuous() to optimize certain operations.
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span>    data Array (M shape channels) sh depth =
+<span class="lineno">  109 </span>          Array !(Mat ('S shape) ('S channels) ('S depth))
+<span class="lineno">  110 </span>                 -- The Mat is kept around so that the data doesn't get garbage collected.
+<span class="lineno">  111 </span>                !(Ptr Word8) -- Pointer to the data.
+<span class="lineno">  112 </span>                ![Int] -- The shape of the extent which is determined by mat-&gt;dims and mat-&gt;size.p.
+<span class="lineno">  113 </span>                ![Int] -- The shape of the data which is determined by mat-&gt;dims and mat-&gt;step.p.
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>    extent :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; sh
+<span class="lineno">  116 </span>    <span class="decl"><span class="istickedoff">extent (Array _ _ sizeShape _) = Repa.shapeOfList sizeShape</span></span>
+<span class="lineno">  117 </span>
+<span class="lineno">  118 </span>    index :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; sh -&gt; depth
+<span class="lineno">  119 </span>    <span class="decl"><span class="nottickedoff">index (Array mat dataPtr sizeShape stepShape) ix =</span>
+<span class="lineno">  120 </span><span class="spaces">        </span><span class="nottickedoff">unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr</span>
+<span class="lineno">  121 </span><span class="spaces">      </span><span class="nottickedoff">where</span>
+<span class="lineno">  122 </span><span class="spaces">        </span><span class="nottickedoff">elemPtr :: Ptr depth</span>
+<span class="lineno">  123 </span><span class="spaces">        </span><span class="nottickedoff">elemPtr = dataPtr `plusPtr` offset</span>
+<span class="lineno">  124 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="nottickedoff">offset :: Int</span>
+<span class="lineno">  126 </span><span class="spaces">        </span><span class="nottickedoff">offset = sum $ zipWith3 mul sizeShape stepShape (Repa.listOfShape ix)</span>
+<span class="lineno">  127 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="nottickedoff">mul size step i</span>
+<span class="lineno">  129 </span><span class="spaces">            </span><span class="nottickedoff">| i &lt; size  = step * i</span>
+<span class="lineno">  130 </span><span class="spaces">            </span><span class="nottickedoff">| otherwise = error $</span>
+<span class="lineno">  131 </span><span class="spaces">                </span><span class="nottickedoff">&quot;Index &quot; &lt;&gt; show i &lt;&gt; &quot; &gt;= size: &quot; &lt;&gt; show size</span></span>
+<span class="lineno">  132 </span>
+<span class="lineno">  133 </span>    unsafeIndex :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; sh -&gt; depth
+<span class="lineno">  134 </span>    <span class="decl"><span class="istickedoff">unsafeIndex (Array mat dataPtr _ stepShape) ix =</span>
+<span class="lineno">  135 </span><span class="spaces">        </span><span class="istickedoff">unsafePerformIO $ keepMatAliveDuring mat $ peek elemPtr</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  137 </span><span class="spaces">        </span><span class="istickedoff">elemPtr :: Ptr depth</span>
+<span class="lineno">  138 </span><span class="spaces">        </span><span class="istickedoff">elemPtr = matElemAddress dataPtr stepShape (Repa.listOfShape ix)</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>    linearIndex :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; Int -&gt; depth
+<span class="lineno">  141 </span>    <span class="decl"><span class="nottickedoff">linearIndex a ix = Repa.index a sh</span>
+<span class="lineno">  142 </span><span class="spaces">        </span><span class="nottickedoff">where</span>
+<span class="lineno">  143 </span><span class="spaces">          </span><span class="nottickedoff">sh = Repa.fromIndex (Repa.extent a) ix</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>    unsafeLinearIndex :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; Int -&gt; depth
+<span class="lineno">  146 </span>    <span class="decl"><span class="nottickedoff">unsafeLinearIndex a ix = Repa.unsafeIndex a sh</span>
+<span class="lineno">  147 </span><span class="spaces">        </span><span class="nottickedoff">where</span>
+<span class="lineno">  148 </span><span class="spaces">          </span><span class="nottickedoff">sh = Repa.fromIndex (Repa.extent a) ix</span></span>
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>    deepSeqArray :: (Repa.Shape sh) =&gt; Repa.Array (M shape channels) sh depth -&gt; b -&gt; b
+<span class="lineno">  151 </span>    <span class="decl"><span class="nottickedoff">deepSeqArray = seq</span></span>
+<span class="lineno">  152 </span>
+<span class="lineno">  153 </span>-- TODO (BvD): Is it possible to define something like the following?
+<span class="lineno">  154 </span>--
+<span class="lineno">  155 </span>-- instance (Storable depth) =&gt; Repa.Target (M shape channels) depth where
+<span class="lineno">  156 </span>--
+<span class="lineno">  157 </span>--     newtype MVec (M shape channels) depth = MVec IOMat
+<span class="lineno">  158 </span>--
+<span class="lineno">  159 </span>--     newMVec :: Int -&gt; IO (MVec (M shape channels) depth)
+<span class="lineno">  160 </span>--     newMVec size = _todo_newMVec
+<span class="lineno">  161 </span>--
+<span class="lineno">  162 </span>--     unsafeWriteMVec :: MVec (M shape channels) depth -&gt; Int -&gt; depth -&gt; IO ()
+<span class="lineno">  163 </span>--     unsafeWriteMVec = _todo_unsafeWriteMVec
+<span class="lineno">  164 </span>--
+<span class="lineno">  165 </span>--     unsafeFreezeMVec :: sh  -&gt; MVec (M shape channels) depth -&gt; IO (Array (M shape channels) sh depth)
+<span class="lineno">  166 </span>--     unsafeFreezeMVec = _todo_unsafeFreezeMVec
+<span class="lineno">  167 </span>--
+<span class="lineno">  168 </span>--     deepSeqMVec :: MVec (M shape channels) depth -&gt; a -&gt; a
+<span class="lineno">  169 </span>--     deepSeqMVec = _todo_deepSeqMVec
+<span class="lineno">  170 </span>--
+<span class="lineno">  171 </span>--     touchMVec :: MVec (M shape channels) depth -&gt; IO ()
+<span class="lineno">  172 </span>--     touchMVec = _todo_touchMVec
+
+</pre>
+</body>
+</html>

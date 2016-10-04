@@ -1,0 +1,54 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>module OpenCV.Unsafe
+<span class="lineno">    2 </span>    ( unsafeCoerceMat
+<span class="lineno">    3 </span>    , unsafeCoerceMatM
+<span class="lineno">    4 </span>      -- * Mutable Matrix
+<span class="lineno">    5 </span>    , unsafeFreeze
+<span class="lineno">    6 </span>    , unsafeThaw
+<span class="lineno">    7 </span>    , unsafeRead
+<span class="lineno">    8 </span>    , unsafeWrite
+<span class="lineno">    9 </span>    ) where
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import &quot;base&quot; Foreign.Storable ( Storable, peek, poke )
+<span class="lineno">   12 </span>import &quot;primitive&quot; Control.Monad.Primitive
+<span class="lineno">   13 </span>    ( PrimMonad, PrimState, unsafePrimToPrim )
+<span class="lineno">   14 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   15 </span>import &quot;this&quot; OpenCV.Internal.Mutable
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>unsafeRead
+<span class="lineno">   18 </span>    :: (PrimMonad m, Storable value)
+<span class="lineno">   19 </span>    =&gt; Mut (Mat shape channels depth) (PrimState m)
+<span class="lineno">   20 </span>    -&gt; [Int]
+<span class="lineno">   21 </span>    -&gt; m value
+<span class="lineno">   22 </span><span class="decl"><span class="nottickedoff">unsafeRead matM pos =</span>
+<span class="lineno">   23 </span><span class="spaces">    </span><span class="nottickedoff">unsafePrimToPrim $ withMatData (unMut matM) $ \step dataPtr -&gt;</span>
+<span class="lineno">   24 </span><span class="spaces">      </span><span class="nottickedoff">let elemPtr = matElemAddress dataPtr (fromIntegral &lt;$&gt; step) pos</span>
+<span class="lineno">   25 </span><span class="spaces">      </span><span class="nottickedoff">in peek elemPtr</span></span>
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>unsafeWrite
+<span class="lineno">   28 </span>    :: (PrimMonad m, Storable value)
+<span class="lineno">   29 </span>    =&gt; Mut (Mat shape channels depth) (PrimState m)
+<span class="lineno">   30 </span>    -&gt; [Int] -&gt; value -&gt; m ()
+<span class="lineno">   31 </span><span class="decl"><span class="istickedoff">unsafeWrite matM pos value =</span>
+<span class="lineno">   32 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $ withMatData (unMut matM) $ \step dataPtr -&gt;</span>
+<span class="lineno">   33 </span><span class="spaces">      </span><span class="istickedoff">let elemPtr = matElemAddress dataPtr (fromIntegral &lt;$&gt; step) pos</span>
+<span class="lineno">   34 </span><span class="spaces">      </span><span class="istickedoff">in poke elemPtr value</span></span>
+
+</pre>
+</body>
+</html>
