@@ -8,6 +8,7 @@ import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Data.Foldable ( forM_ )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
@@ -18,12 +19,14 @@ import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
 import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import qualified "QuickCheck" Test.QuickCheck as QC
+import           "QuickCheck" Test.QuickCheck ( (==>) )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
@@ -59,7 +62,11 @@ main = defaultMain $ testGroup "opencv"
         [
         ]
       , testGroup "Types"
-        [ testGroup "Mat"
+        [ testGroup "Depth"
+          [ HU.testCase "marshal unmarshal" depthMarshalUnmarshal
+          , QC.testProperty "unmarshal unknown" depthUnmarshalUnknown
+          ]
+        , testGroup "Mat"
           [ HU.testCase "emptyMat" $ testMatType emptyMat
           , testGroup "matInfo"
             [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
@@ -203,6 +210,18 @@ myRectContains point rect =
 
     w, h :: Int32
     V2 w h = fromSize $ rectSize rect
+
+-- | Roundtrip every 'Depth' through the `Int32` encoding.
+depthMarshalUnmarshal :: HU.Assertion
+depthMarshalUnmarshal =
+    forM_ [minBound .. maxBound] $ \depth ->
+      assertEqual "" depth (unmarshalDepth . marshalDepth $ depth)
+
+depthUnmarshalUnknown :: Int32 -> QC.Property
+depthUnmarshalUnknown n =
+    n `notElem` knownEncodings ==> QC.expectFailure (unmarshalDepth n `seq` True)
+  where
+    knownEncodings = map marshalDepth [minBound .. maxBound]
 
 testMatType
     :: ( ToShapeDS    (Proxy shape)

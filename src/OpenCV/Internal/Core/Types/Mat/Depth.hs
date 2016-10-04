@@ -28,7 +28,7 @@ data Depth =
    | Depth_32F
    | Depth_64F
    | Depth_USRTYPE1
-     deriving (Show, Eq)
+     deriving (Bounded, Enum, Eq, Show)
 
 --------------------------------------------------------------------------------
 
