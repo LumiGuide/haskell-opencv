@@ -6,24 +6,17 @@ import Control.Monad ( unless )
 import qualified OpenCV as CV
 import OpenCV.TypeLevel
 import OpenCV.Video.MotionAnalysis
+import OpenCV.Example
 
 main :: IO ()
 main = do
-    cap <- CV.newVideoCapture
-    -- Open the first available video capture device. Usually the
-    -- webcam if run on a laptop.
-    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0 Nothing
-    isOpened <- CV.videoCaptureIsOpened cap
+    cap <- createCaptureArg
+    bs <- newBackgroundSubtractorMOG2 Nothing Nothing Nothing
+--     bs <- newBackgroundSubtractorKNN Nothing Nothing Nothing
 
---     bs <- newBackgroundSubtractorMOG2 Nothing Nothing Nothing
-    bs <- newBackgroundSubtractorKNN Nothing Nothing Nothing
-
-    case isOpened of
-      False -> putStrLn "Couldn't open video capture device"
-      True -> CV.withWindow "video" $ \window -> do
-                loop cap window bs
+    CV.withWindow "video" $ loop cap bs
   where
-    loop cap window bs = do
+    loop cap bs window = do
       _ok <- CV.videoCaptureGrab cap
       mbImg <- CV.videoCaptureRetrieve cap
       case mbImg of
@@ -37,6 +30,6 @@ main = do
 
           key <- CV.waitKey 20
           -- Loop unless the escape key is pressed.
-          unless (key == 27) $ loop cap window bs
+          unless (key == 27) $ loop cap bs window
         -- Out of frames, stop looping.
         Nothing -> pure ()

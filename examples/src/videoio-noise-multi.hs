@@ -7,21 +7,15 @@ import OpenCV.TypeLevel
 import OpenCV.Photo
 import GHC.Word (Word8)
 import qualified Data.Vector as V
+import OpenCV.Example
 
 main :: IO ()
 main = do
-    cap <- CV.newVideoCapture
-    -- Open the first available video capture device. Usually the
-    -- webcam if run on a laptop.
-    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0 Nothing
-    isOpened <- CV.videoCaptureIsOpened cap
-    case isOpened of
-      False -> putStrLn "Couldn't open video capture device"
-      True -> CV.withWindow "video" $ \window -> do
-                loop cap window V.empty
+    cap <- createCaptureArg
+    CV.withWindow "video" $ loop cap V.empty
   where
     wind = 11
-    loop cap window vect = do
+    loop cap vect window = do
       _ok <- CV.videoCaptureGrab cap
       mbImg <- CV.videoCaptureRetrieve cap
       case mbImg of
@@ -35,6 +29,6 @@ main = do
 
           key <- CV.waitKey 20
           -- Loop unless the escape key is pressed.
-          unless (key == 27) $ loop cap window vect'
+          unless (key == 27) $ loop cap vect' window
         -- Out of frames, stop looping.
         Nothing -> pure ()
