@@ -19,10 +19,14 @@ missing functionality.
 Documentation
 -------------
 
-The project hasn't been released to Hackage yet so you won't find any
-documentation there. Instead, we've uploaded the docs to
-[our website](http://lumiguide.github.io/haskell-opencv/doc/index.html).
+[Haddock documentation](http://lumiguide.github.io/haskell-opencv/doc/index.html).
 
+(The project hasn't been released to Hackage yet so you won't find any documentation there).
+
+Test Coverage
+-------------
+
+[HPC Coverage Report](http://lumiguide.github.io/haskell-opencv/hpc/hpc_index.html)
 
 Examples
 --------

@@ -4,17 +4,25 @@
 import Control.Monad ( unless )
 import qualified OpenCV as CV
 import OpenCV.TypeLevel
+import OpenCV.VideoIO.Types
 
 main :: IO ()
 main = do
     cap <- CV.newVideoCapture
     -- Open the first available video capture device. Usually the
     -- webcam if run on a laptop.
-    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0
+    CV.exceptErrorIO $ CV.videoCaptureOpen cap $ CV.VideoDeviceSource 0 Nothing
     isOpened <- CV.videoCaptureIsOpened cap
+
     case isOpened of
       False -> putStrLn "Couldn't open video capture device"
-      True -> CV.withWindow "video" $ \window -> do
+      True -> do
+         w <- CV.videoCaptureGetI cap VideoCapPropFrameWidth
+         h <- CV.videoCaptureGetI cap VideoCapPropFrameHeight
+
+         putStrLn $ "Video size: " ++ show w ++ " x " ++ show h
+
+         CV.withWindow "video" $ \window -> do
                 loop cap window
   where
     loop cap window = do

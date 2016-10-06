@@ -1,4 +1,9 @@
+{-# language CPP #-}
 {-# language MultiParamTypeClasses #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 module OpenCV.Internal.Core.Types.Mat.Depth
     ( Depth(..)
@@ -23,7 +28,7 @@ data Depth =
    | Depth_32F
    | Depth_64F
    | Depth_USRTYPE1
-     deriving (Show, Eq)
+     deriving (Bounded, Enum, Eq, Show)
 
 --------------------------------------------------------------------------------
 

@@ -1,8 +1,13 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language MultiParamTypeClasses #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 module OpenCV.Internal.Core.Types
     ( -- * Scalar

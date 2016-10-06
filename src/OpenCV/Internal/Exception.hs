@@ -1,7 +1,12 @@
+{-# language CPP #-}
 {-# language DeriveFunctor #-}
 {-# language QuasiQuotes #-}
 {-# language RankNTypes #-}
 {-# language TemplateHaskell #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 module OpenCV.Internal.Exception
     ( -- * Exception type
@@ -119,17 +124,18 @@ cvExceptU :: QuasiQuoter
 cvExceptU = CU.block {quoteExp = \s -> quoteExp CU.block $ cvExceptWrap s}
 
 cvExceptWrap :: String -> String
-cvExceptWrap s =
-    "Exception * {\n\
-    \  try\n\
-    \  {\n   " <> s <> "\n\
-    \    return NULL;\n\
-    \  }\n\
-    \  catch (const cv::Exception & e)\n\
-    \  {\n\
-    \    return new cv::Exception(e);\n\
-    \  }\n\
-    \}"
+cvExceptWrap s = unlines
+   [ "Exception * {"
+   , "  try"
+   , "  {   " <> s <> ""
+   , "    return NULL;"
+   , "  }"
+   , "  catch (const cv::Exception & e)"
+   , "  {"
+   , "    return new cv::Exception(e);"
+   , "  }"
+   , "}"
+   ]
 
 type CvExcept    a = Except  CvException   a
 type CvExceptT m a = ExceptT CvException m a

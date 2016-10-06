@@ -31,3 +31,24 @@ executable videoio
                , opencv
 
   default-language: Haskell2010
+
+executable videoio-noise-multi
+  main-is: videoio-noise-multi.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends: base >=4.8 && < 4.10
+               , opencv
+               , vector
+
+  default-language: Haskell2010
+
+executable videoio-background-sub
+  main-is: videoio-background-sub.hs
+  hs-source-dirs: src
+  ghc-options: -Wall -O2
+
+  build-depends: base >=4.8 && < 4.10
+               , opencv
+
+  default-language: Haskell2010

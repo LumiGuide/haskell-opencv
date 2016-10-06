@@ -1,9 +1,7 @@
-resolver: lts-6.8
+resolver: lts-7.2
 packages:
 - '.'
+- opencv-extra/
 - examples/
-extra-deps:
-- inline-c-0.5.5.5
-- inline-c-cpp-0.1.0.0
-- repa-3.4.1.1
 flags: {}
+allow-newer: true

@@ -11,6 +11,10 @@ module OpenCV.VideoIO.VideoCapture
   , videoCaptureIsOpened
   , videoCaptureGrab
   , videoCaptureRetrieve
+  , videoCaptureGetD
+  , videoCaptureGetI
+  , videoCaptureSetD
+  , videoCaptureSetI
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -26,6 +30,7 @@ import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
+import "this" OpenCV.Internal.VideoIO.Types
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except ( ExceptT(ExceptT) )
 
@@ -50,8 +55,10 @@ instance FromPtr VideoCapture where
                 [CU.exp| void { delete $(VideoCapture * ptr) }|]
 
 data VideoCaptureSource
-   = VideoFileSource   !FilePath -- TODO (RvD): optional API preference
-   | VideoDeviceSource !Int32
+   = VideoFileSource      !FilePath !(Maybe VideoCaptureAPI)
+        -- ^ VideoFile and backend
+   | VideoDeviceSource    !Int32    !(Maybe VideoCaptureAPI)
+        -- ^ VideoDevice and backend
 
 newVideoCapture :: IO VideoCapture
 newVideoCapture = fromPtr $
@@ -65,15 +72,19 @@ videoCaptureOpen videoCapture src =
     handleCvException (pure ()) $
     withPtr videoCapture $ \videoCapturePtr ->
       case src of
-        VideoFileSource filePath ->
+        VideoFileSource filePath api ->
           withCString filePath $ \c'filePath ->
             [cvExcept|
-              $(VideoCapture * videoCapturePtr)->open(cv::String($(const char * c'filePath)));
+              $(VideoCapture * videoCapturePtr)->open(cv::String($(const char * c'filePath)), $(int32_t c'api));
             |]
-        VideoDeviceSource device ->
+           where
+             c'api = maybe 0 marshalVideoCaptureAPI api
+        VideoDeviceSource device api ->
           [cvExcept|
-            $(VideoCapture * videoCapturePtr)->open($(int32_t device));
+            $(VideoCapture * videoCapturePtr)->open($(int32_t c'device ));
           |]
+            where
+              c'device = device + maybe 0 marshalVideoCaptureAPI api
 
 videoCaptureRelease :: VideoCapture -> CvExceptT IO ()
 videoCaptureRelease videoCapture =
@@ -111,3 +122,48 @@ videoCaptureRetrieve videoCapture = do
     pure $ case toBool ok of
       False -> Nothing
       True  -> Just $ unsafeCoerceMat frame
+
+videoCaptureGetD :: VideoCapture -> VideoCaptureProperties -> IO Double
+videoCaptureGetD videoCapture prop =
+    fmap realToFrac $
+    withPtr videoCapture $ \videoCapturePtr ->
+      [CU.exp| double {
+        $(VideoCapture * videoCapturePtr)->get( $(int32_t c'prop) )
+      }|]
+   where
+     c'prop = marshalCaptureProperties prop
+
+videoCaptureGetI :: VideoCapture -> VideoCaptureProperties -> IO Int32
+videoCaptureGetI videoCapture prop =
+    withPtr videoCapture $ \videoCapturePtr ->
+      [CU.exp| int32_t {
+        $(VideoCapture * videoCapturePtr)->get( $(int32_t c'prop) )
+      }|]
+   where
+     c'prop = marshalCaptureProperties prop
+
+videoCaptureSetD :: VideoCapture -> VideoCaptureProperties -> Double -> IO Bool
+videoCaptureSetD videoCapture prop val =
+    fmap toBool $
+    withPtr videoCapture $ \videoCapturePtr ->
+      [CU.exp| bool {
+        $(VideoCapture * videoCapturePtr)->set( $(int32_t c'prop)
+                                              , $(double c'val)
+                                              )
+      }|]
+   where
+     c'prop = marshalCaptureProperties prop
+     c'val = realToFrac val
+
+
+videoCaptureSetI :: VideoCapture -> VideoCaptureProperties -> Int32 -> IO Bool
+videoCaptureSetI videoCapture prop val =
+    fmap toBool $
+    withPtr videoCapture $ \videoCapturePtr ->
+      [CU.exp| bool {
+        $(VideoCapture * videoCapturePtr)->set( $(int32_t c'prop)
+                                              , $(int32_t val)
+                                              )
+      }|]
+   where
+     c'prop = marshalCaptureProperties prop

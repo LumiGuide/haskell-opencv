@@ -8,6 +8,7 @@ import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Data.Foldable ( forM_ )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
@@ -18,12 +19,14 @@ import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
 import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import qualified "QuickCheck" Test.QuickCheck as QC
+import           "QuickCheck" Test.QuickCheck ( (==>) )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
@@ -59,7 +62,11 @@ main = defaultMain $ testGroup "opencv"
         [
         ]
       , testGroup "Types"
-        [ testGroup "Mat"
+        [ testGroup "Depth"
+          [ HU.testCase "marshal unmarshal" depthMarshalUnmarshal
+          , QC.testProperty "unmarshal unknown" depthUnmarshalUnknown
+          ]
+        , testGroup "Mat"
           [ HU.testCase "emptyMat" $ testMatType emptyMat
           , testGroup "matInfo"
             [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
@@ -93,6 +100,10 @@ main = defaultMain $ testGroup "opencv"
         ]
       , testGroup "Feature Detection"
         [ HU.testCase "houghLinesP"   testHoughLinesP
+        ]
+      , testGroup "Cascade Classifier"
+        [ HU.testCase "newCascadeClassifier algorithm" testNewCascadeClassifierAlgorithm
+        , HU.testCase "cascadeClassifierDetectMultiScale Arnold" testCascadeClassifierDetectMultiScaleArnold
         ]
       ]
     , testGroup "ImgCodecs"
@@ -200,6 +211,18 @@ myRectContains point rect =
     w, h :: Int32
     V2 w h = fromSize $ rectSize rect
 
+-- | Roundtrip every 'Depth' through the `Int32` encoding.
+depthMarshalUnmarshal :: HU.Assertion
+depthMarshalUnmarshal =
+    forM_ [minBound .. maxBound] $ \depth ->
+      assertEqual "" depth (unmarshalDepth . marshalDepth $ depth)
+
+depthUnmarshalUnknown :: Int32 -> QC.Property
+depthUnmarshalUnknown n =
+    n `notElem` knownEncodings ==> QC.expectFailure (unmarshalDepth n `seq` True)
+  where
+    knownEncodings = map marshalDepth [minBound .. maxBound]
+
 testMatType
     :: ( ToShapeDS    (Proxy shape)
        , ToChannelsDS (Proxy channels)
@@ -290,6 +313,28 @@ testHoughLinesP = do
     edgeImgM <- thaw edgeImg
     lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
     assertBool "no lines found" (V.length lineSegments > 0)
+
+testNewCascadeClassifierAlgorithm :: HU.Assertion
+testNewCascadeClassifierAlgorithm = do
+  mbCC <- newCascadeClassifier "/this/is/bogus.xml"
+  case mbCC of
+    Nothing -> return ()
+    Just _cc -> fail "expected Nothing from newCascadeClassifier"
+
+testCascadeClassifierDetectMultiScaleArnold :: HU.Assertion
+testCascadeClassifierDetectMultiScaleArnold = do
+    Just ccFrontal <- newCascadeClassifier "data/haarcascade_frontalface_default.xml"
+    Just ccEyes <- newCascadeClassifier "data/haarcascade_eye.xml"
+    arnold :: Mat ('S ['D, 'D]) ('S 3) ('S Word8) <-
+      exceptError . coerceMat <$> loadImg ImreadUnchanged "arnold-schwarzenegger.jpg"
+    let arnoldGray :: Mat ('S ['D, 'D]) ('S 1) ('S Word8) = exceptError (cvtColor bgr gray arnold)
+    -- OpenCV detects the left eye twice for this pic.
+    let arnoldEyes =
+          cascadeClassifierDetectMultiScale ccEyes Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    assertBool "unexpected number of eyes detected" (V.length arnoldEyes == 3)
+    let arnoldFront =
+          cascadeClassifierDetectMultiScale ccFrontal Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    assertBool "unexpected number of faces detected" (V.length arnoldFront == 1)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 

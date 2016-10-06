@@ -1,3 +1,9 @@
+{-# language CPP #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.C.Types where
 
 import "base" Foreign.C.Types
@@ -106,6 +112,8 @@ data C'Ptr_ORB
 -- data C'KAZE
 -- -- | Haskell representation of an OpenCV @cv::AKAZE@ object
 -- data C'AKAZE
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::SimpleBlobDetector>@ object
+data C'Ptr_SimpleBlobDetector
 
 -- | Haskell representation of an OpenCV @cv::BFMatcher@ object
 data C'BFMatcher
@@ -115,8 +123,15 @@ data C'Ptr_BackgroundSubtractorKNN
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
 data C'Ptr_BackgroundSubtractorMOG2
 
+
 -- | Haskell representation of an OpenCV @cv::VideoCapture@ object
 data C'VideoCapture
+
+-- | Haskell representation of an OpenCV @cv::VideoWriter@ object
+data C'VideoWriter
+
+-- | Haskell representation of an OpenCV @cv::CascadeClassifier@ object
+data C'CascadeClassifier
 
 -- | Callback function for mouse events
 type C'MouseCallback
@@ -132,6 +147,7 @@ type C'TrackbarCallback
    =  Int32 -- ^ Current position of the specified trackbar.
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
+
 
 --------------------------------------------------------------------------------
 
