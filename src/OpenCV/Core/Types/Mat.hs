@@ -38,6 +38,7 @@ module OpenCV.Core.Types.Mat
     , matCopyToM
 
     , zipMatWith
+    , foldMat
 
       -- * Meta information
     , MatInfo(..)
@@ -60,6 +61,7 @@ module OpenCV.Core.Types.Mat
 import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
+import "base" Data.List ( foldl' )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
 import "base" Foreign.C.Types ( CDouble )
@@ -76,7 +78,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
-import "vector" Data.Vector.Storable ( Vector, toList, unsafeFromForeignPtr )
+import "vector" Data.Vector.Storable as DV ( Vector, fromList, toList, replicate, unsafeFromForeignPtr ) 
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -262,47 +264,85 @@ matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
           -- srcPtr->copyTo(dstRoi);
 
 
--- |Zips a given list of matrices of equal shape, channels, and depth,
--- by applying the given function to the corresponding matrix elements
--- at each position.
-zipMatWith :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *)
-         . ( Storable depth, All IsStatic shape )
-        => [Mat ('S shape) ('S channels) ('S depth)]
-        -> ([Vector depth] -> Vector depth)
-        -> Maybe (Mat ('S shape) ('S channels) ('S depth))
-zipMatWith []   _ = Nothing
-zipMatWith mats f = unsafePerformIO . exceptErrorIO . (Just <$>) $ do
-    resultMat <- newMat shape numChannels depth (toScalar (zero :: V4 CDouble))
-    lift $ withMatData resultMat $ \newStep newPtr ->
-        go (fromIntegral <$> newStep) (castPtr newPtr)
-    return $ unsafeCoerceMat resultMat
-  where
-    MatInfo shape !depth !numChannels = matInfo (head mats)
-
-    positions :: [[Int]]
-    positions = mapM (enumFromTo 0 . pred) (fromIntegral <$> shape)
-
-    stepsAndPtrs :: [([Int], ForeignPtr depth)]
-    stepsAndPtrs = unsafePerformIO $ forM mats $ \mat ->
-        withMatData mat $ \step ptr -> do
-            fptr <- newForeignPtr_ . castPtr $ ptr
-            return (fromIntegral <$> step, fptr)
-
-    go :: [Int] -> Ptr depth -> IO ()
-    go newStep newPtr =
-        forM_ positions $ \pos -> do
-            pixels <- forM stepsAndPtrs $ \(step, dataPtr) -> do
-                let offs = sum $ zipWith (*) step pos
-                return $ unsafeFromForeignPtr dataPtr offs (fromIntegral numChannels)
-            pokeArray (dest pos) (toList $ f pixels)
-        where
-          dest :: [Int] -> Ptr depth
-          dest pos = matElemAddress (castPtr newPtr) newStep pos
-
-
 class All (p :: k -> Constraint) (xs :: [k])
 instance All p '[]
 instance (p x, All p xs) => All p (x ': xs)
 
 class IsStatic (ds :: DS a)
 instance IsStatic ('S a)
+
+
+type Pixel = Vector
+type Steps = [Int]
+type Position = [Int]
+
+
+-- |Zips a given list of matrices of equal shape, channels, and depth, by
+-- applying the given function to the corresponding matrix elements at each
+-- position and storing the result at the corresponding position in a newly
+-- created matrix of the same shape, number of channels, and depth.
+zipMatWith :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *)
+         . ( Storable depth, All IsStatic shape )
+        => ([Pixel depth] -> Pixel depth)
+        -> [Mat ('S shape) ('S channels) ('S depth)]
+        -> Maybe (Mat ('S shape) ('S channels) ('S depth))
+zipMatWith _ []   = Nothing
+zipMatWith f mats = Just . unsafePerformIO . exceptErrorIO $ do
+    resultMat <- newMat shape numChannels depth (toScalar (zero :: V4 CDouble))
+    lift $ withMatData resultMat $ \newStep newPtr ->
+        go (fromIntegral <$> newStep) (castPtr newPtr)
+    return $ unsafeCoerceMat resultMat
+  where
+    -- TODO: Compute the following from the statically known types
+    MatInfo shape !depth !numChannels = matInfo (head mats)
+
+    go :: Steps -> Ptr depth -> IO ()
+    go newStep newPtr =
+        forM_ (allPos shape) $ \pos ->
+            let pixels = getAllPixels (stepsAndPtrs mats) (fromIntegral numChannels) pos
+            in pokeArray (dest pos) (toList $ f pixels)
+      where
+        dest pos = matElemAddress (castPtr newPtr) newStep pos
+
+
+-- |Transforms a given list of matrices of equal shape, channels, and depth,
+-- by folding the given function over all matrix elements at each position.
+foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
+         . ( Storable depth, Storable a, All IsStatic shape )
+        => (a -> Pixel depth -> a)
+        -> a
+        -> [Mat ('S shape) ('S channels) ('S depth)]
+        -> Maybe (Vector a)
+foldMat _ _ []   = Nothing
+foldMat f z mats = Just . DV.fromList . map go $ allPos shape
+  where
+    go :: Position -> a
+    go = foldl' f z . getAllPixels (stepsAndPtrs mats) (fromIntegral numChannels)
+
+    -- TODO: Compute the following from the statically known types
+    MatInfo shape _ !numChannels = matInfo (head mats)
+
+
+stepsAndPtrs :: [Mat shape channels ('S depth)]
+             -> [(Steps, ForeignPtr depth)]
+stepsAndPtrs mats = unsafePerformIO $ forM mats $ \mat ->
+    withMatData mat $ \step ptr -> do
+        fptr <- newForeignPtr_ . castPtr $ ptr
+        return (fromIntegral <$> step, fptr)
+
+
+getAllPixels :: (Storable depth)
+             => [(Steps, ForeignPtr depth)]
+             -> Int
+             -> Position
+             -> [Pixel depth]
+getAllPixels stepsAndPtrs numChannels pos = map getAllPixels' stepsAndPtrs
+  where
+    getAllPixels' (step, dataPtr) =
+        let !offset = sum $ zipWith (*) step pos
+        in DV.unsafeFromForeignPtr dataPtr offset numChannels
+
+
+allPos :: [Int32] -> [Position]
+allPos shape = mapM (enumFromTo 0 . pred) (fromIntegral <$> shape)
+
