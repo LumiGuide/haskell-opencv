@@ -34,7 +34,7 @@
 # benchmark dependencies
 , criterion
 }:
-mkDerivation {
+mkDerivation ({
   pname = "opencv";
   version = "0.0.0";
   src = builtins.filterSource (path: type:
@@ -108,4 +108,9 @@ mkDerivation {
   homepage = "https://github.com/LumiGuide/haskell-opencv";
   license = stdenv.lib.licenses.bsd3;
   maintainers = [ "engineering@lumi.guide" ];
-}
+} // (lib.optionalAttrs (lib.hasPrefix "16.09" lib.nixpkgsVersion) {
+        hardeningDisable = [ "bindnow" ];
+        shellHook = ''
+          export hardeningDisable=bindnow
+        '';
+     }))
