@@ -8,27 +8,36 @@ module OpenCV.Unsafe
     , unsafeWrite
     ) where
 
-import "base" Foreign.Storable ( Storable, peek, poke )
+import "base" Foreign.Ptr ( plusPtr )
+import "base" Foreign.Storable ( Storable, peek, poke, sizeOf )
 import "primitive" Control.Monad.Primitive
     ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Mutable
 
 unsafeRead
-    :: (PrimMonad m, Storable value)
+    :: forall m shape channels depth value
+     . (PrimMonad m, Storable value)
     => Mut (Mat shape channels depth) (PrimState m)
-    -> [Int]
+    -> [Int] -- ^ position
+    -> Int -- ^ channel
     -> m value
-unsafeRead matM pos =
+unsafeRead matM pos channel =
     unsafePrimToPrim $ withMatData (unMut matM) $ \step dataPtr ->
       let elemPtr = matElemAddress dataPtr (fromIntegral <$> step) pos
-      in peek elemPtr
+      in peek (elemPtr `plusPtr` (channel * sizeOf dummyValue))
+  where
+    dummyValue :: value
+    dummyValue = error "dummy"
 
 unsafeWrite
     :: (PrimMonad m, Storable value)
     => Mut (Mat shape channels depth) (PrimState m)
-    -> [Int] -> value -> m ()
-unsafeWrite matM pos value =
+    -> [Int] -- ^ position
+    -> Int -- ^ channel
+    -> value
+    -> m ()
+unsafeWrite matM pos channel value =
     unsafePrimToPrim $ withMatData (unMut matM) $ \step dataPtr ->
       let elemPtr = matElemAddress dataPtr (fromIntegral <$> step) pos
-      in poke elemPtr value
+      in poke (elemPtr `plusPtr` (channel * sizeOf value)) value

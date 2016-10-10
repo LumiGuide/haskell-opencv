@@ -100,7 +100,7 @@ grayscaleImg = exceptError $
              black $ \imgM -> do
       forM_ [0..w-1] $ \x ->
         forM_ [0..h-1] $ \y ->
-          unsafeWrite imgM [y, x] (fromIntegral x :: depth)
+          unsafeWrite imgM [y, x] 0 (fromIntegral x :: depth)
   where
     w = fromInteger $ natVal (Proxy :: Proxy width)
     h = fromInteger $ natVal (Proxy :: Proxy height)
