@@ -21,6 +21,8 @@ module OpenCV.Core.Types.Mat
     , matCopyTo
     , matConvertTo
 
+    , matFromFunc
+
       -- * Mutable Matrix
     , typeCheckMatM
     , relaxMatM
@@ -53,14 +55,17 @@ module OpenCV.Core.Types.Mat
     ) where
 
 import "base" Control.Monad.ST ( runST )
+import "base" Data.Foldable ( forM_ )
 import "base" Data.Int ( Int32 )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
+import "base" Foreign.Storable ( Storable )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V4 ( V4 )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -70,7 +75,9 @@ import "this" OpenCV.Internal.Core.Types.Mat.ToFrom
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
+import "this" OpenCV.Unsafe ( unsafeWrite )
 import "transformers" Control.Monad.Trans.Except
+import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
@@ -204,6 +211,67 @@ matConvertTo alpha beta src = unsafeWrapException $ do
     c'alpha = maybe 1 realToFrac alpha
     c'beta  = maybe 0 realToFrac beta
 
+{- | Create a matrix whose elements are defined by a function.
+
+Example:
+
+@
+matFromFuncImg
+  :: forall size. (size ~ 300)
+  => Mat (ShapeT [size, size]) ('S 4) ('S Word8)
+matFromFuncImg = exceptError $
+    matFromFunc
+      (Proxy :: Proxy [size, size])
+      (Proxy :: Proxy 4)
+      (Proxy :: Proxy Word8)
+      example
+  where
+    example [y, x] 0 = 255 - normDist (V2 x y ^-^ bluePt )
+    example [y, x] 1 = 255 - normDist (V2 x y ^-^ greenPt)
+    example [y, x] 2 = 255 - normDist (V2 x y ^-^ redPt  )
+    example [y, x] 3 =       normDist (V2 x y ^-^ alphaPt)
+    example _pos _channel = error "impossible"
+
+    normDist :: V2 Int -> Word8
+    normDist v = floor $ min 255 $ 255 * Linear.norm (fromIntegral \<$> v) / s'
+
+    bluePt  = V2 0 0
+    greenPt = V2 s s
+    redPt   = V2 s 0
+    alphaPt = V2 0 s
+
+    s = fromInteger $ natVal (Proxy :: Proxy size) :: Int
+    s' = fromIntegral s :: Double
+@
+
+<<doc/generated/examples/matFromFuncImg.png matFromFuncImg>>
+-}
+matFromFunc
+    :: forall shape channels depth
+     . ( ToShape    shape
+       , ToChannels channels
+       , ToDepth    depth
+       , Storable   (StaticDepthT depth)
+       )
+    => shape
+    -> channels
+    -> depth
+    -> ([Int] -> Int -> StaticDepthT depth) -- ^
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+matFromFunc shape channels depth func =
+    withMatM shape channels depth (0 :: V4 Double) $ \matM ->
+      forM_ positions $ \pos ->
+        forM_ [0 .. fromIntegral channels' - 1] $ \channel ->
+           unsafeWrite matM pos channel $ func pos channel
+  where
+    positions :: [[Int]]
+    positions = dimPositions $ V.toList $ V.map fromIntegral shapeVec
+
+    shapeVec :: V.Vector Int32
+    shapeVec = toShape shape
+
+    channels' :: Int32
+    channels' = toChannels channels
 
 --------------------------------------------------------------------------------
 -- Mutable Matrix

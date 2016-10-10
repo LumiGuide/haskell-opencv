@@ -58,6 +58,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ShapeT
     , ChannelsT
     , DepthT
+    , StaticDepthT
 
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)

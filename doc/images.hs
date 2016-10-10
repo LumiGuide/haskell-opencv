@@ -15,7 +15,8 @@ import "base" Foreign.C.Types
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
-import "linear" Linear.Vector ( (^+^) )
+import qualified "linear" Linear.Metric as Linear ( norm )
+import "linear" Linear.Vector ( (^+^), (^-^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV

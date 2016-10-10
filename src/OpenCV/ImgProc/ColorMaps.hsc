@@ -94,16 +94,15 @@ grayscaleImg
      . (height ~ 30, width ~ 256, depth ~ Word8)
     => Mat (ShapeT [height, width]) ('S 1) ('S depth)
 grayscaleImg = exceptError $
-    withMatM (Proxy :: Proxy [height, width])
-             (Proxy :: Proxy 1)
-             (Proxy :: Proxy depth)
-             black $ \imgM -> do
-      forM_ [0..w-1] $ \x ->
-        forM_ [0..h-1] $ \y ->
-          unsafeWrite imgM [y, x] 0 (fromIntegral x :: depth)
+    matFromFunc
+      (Proxy :: Proxy [height, width])
+      (Proxy :: Proxy 1)
+      (Proxy :: Proxy depth)
+      grayscale
   where
-    w = fromInteger $ natVal (Proxy :: Proxy width)
-    h = fromInteger $ natVal (Proxy :: Proxy height)
+    grayscale :: [Int] -> Int -> Word8
+    grayscale [_y, x] 0 = fromIntegral x
+    grayscale _pos _channel = error "impossible"
 
 type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
 
