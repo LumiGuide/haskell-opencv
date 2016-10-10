@@ -48,30 +48,30 @@ span.spaces    { background: white }
 <span class="lineno">   32 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num CV_32S</span>
 <span class="lineno">   33 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num CV_32F</span>
 <span class="lineno">   34 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num CV_64F</span>
-<span class="lineno">   35 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CV_USRTYPE1</span>
-<span class="lineno">   36 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">   35 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num CV_USRTYPE1</span>
+<span class="lineno">   36 </span><span class="spaces"></span><span class="istickedoff"></span></span>
 <span class="lineno">   37 </span>marshalDepth :: Depth -&gt; Int32
 <span class="lineno">   38 </span><span class="decl"><span class="istickedoff">marshalDepth = \case</span>
 <span class="lineno">   39 </span><span class="spaces">    </span><span class="istickedoff">Depth_8U       -&gt; c'CV_8U</span>
-<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">Depth_8S       -&gt; <span class="nottickedoff">c'CV_8S</span></span>
-<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">Depth_16U      -&gt; <span class="nottickedoff">c'CV_16U</span></span>
-<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">Depth_16S      -&gt; <span class="nottickedoff">c'CV_16S</span></span>
-<span class="lineno">   43 </span><span class="spaces">    </span><span class="istickedoff">Depth_32S      -&gt; <span class="nottickedoff">c'CV_32S</span></span>
-<span class="lineno">   44 </span><span class="spaces">    </span><span class="istickedoff">Depth_32F      -&gt; <span class="nottickedoff">c'CV_32F</span></span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="istickedoff">Depth_8S       -&gt; c'CV_8S</span>
+<span class="lineno">   41 </span><span class="spaces">    </span><span class="istickedoff">Depth_16U      -&gt; c'CV_16U</span>
+<span class="lineno">   42 </span><span class="spaces">    </span><span class="istickedoff">Depth_16S      -&gt; c'CV_16S</span>
+<span class="lineno">   43 </span><span class="spaces">    </span><span class="istickedoff">Depth_32S      -&gt; c'CV_32S</span>
+<span class="lineno">   44 </span><span class="spaces">    </span><span class="istickedoff">Depth_32F      -&gt; c'CV_32F</span>
 <span class="lineno">   45 </span><span class="spaces">    </span><span class="istickedoff">Depth_64F      -&gt; c'CV_64F</span>
-<span class="lineno">   46 </span><span class="spaces">    </span><span class="istickedoff">Depth_USRTYPE1 -&gt; <span class="nottickedoff">c'CV_USRTYPE1</span></span></span>
+<span class="lineno">   46 </span><span class="spaces">    </span><span class="istickedoff">Depth_USRTYPE1 -&gt; c'CV_USRTYPE1</span></span>
 <span class="lineno">   47 </span>
 <span class="lineno">   48 </span>unmarshalDepth :: Int32 -&gt; Depth
 <span class="lineno">   49 </span><span class="decl"><span class="istickedoff">unmarshalDepth n</span>
 <span class="lineno">   50 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_8U       = Depth_8U</span>
-<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">n == c'CV_8S</span>       = <span class="nottickedoff">Depth_8S</span></span>
-<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">n == c'CV_16U</span>      = <span class="nottickedoff">Depth_16U</span></span>
-<span class="lineno">   53 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">n == c'CV_16S</span>      = <span class="nottickedoff">Depth_16S</span></span>
-<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">n == c'CV_32S</span>      = <span class="nottickedoff">Depth_32S</span></span>
-<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">n == c'CV_32F</span>      = <span class="nottickedoff">Depth_32F</span></span>
-<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">n == c'CV_64F</span>      = Depth_64F</span>
-<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">| <span class="nottickedoff">n == c'CV_USRTYPE1</span> = <span class="nottickedoff">Depth_USRTYPE1</span></span>
-<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span>          = <span class="nottickedoff">error $ &quot;unknown depth &quot; &lt;&gt; show n</span></span></span>
+<span class="lineno">   51 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_8S       = Depth_8S</span>
+<span class="lineno">   52 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_16U      = Depth_16U</span>
+<span class="lineno">   53 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_16S      = Depth_16S</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_32S      = Depth_32S</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_32F      = Depth_32F</span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_64F      = Depth_64F</span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">| n == c'CV_USRTYPE1 = Depth_USRTYPE1</span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>          = error $ &quot;unknown depth &quot; &lt;&gt; show n</span></span>
 <span class="lineno">   59 </span>
 <span class="lineno">   60 </span><span class="decl"><span class="istickedoff">#num CV_CN_SHIFT</span>
 <span class="lineno">   61 </span><span class="spaces"></span><span class="istickedoff"></span></span>
