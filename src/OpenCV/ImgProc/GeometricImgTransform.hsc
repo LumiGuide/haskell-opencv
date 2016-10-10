@@ -1,5 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
 
 {- |
 
@@ -144,7 +144,7 @@ resize factor interpolationMethod src = unsafeWrapException $ do
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src   $ \srcPtr   ->
       withPtr dst   $ \dstPtr   ->
-      withPtr    dsize $ \dsizePtr ->
+      withPtr dsize $ \dsizePtr ->
         [cvExcept|
           cv::resize
           ( *$(Mat * srcPtr)
@@ -301,34 +301,74 @@ getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
 
 {- | Applies a generic geometrical transformation to an image.
 
-<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap>
+The function remap transforms the source image using the specified map:
+
+@dst(x,y) = src(map(x,y))@
+
+Example:
+
+@
+remapImg
+  :: forall (width    :: Nat)
+            (height   :: Nat)
+            (channels :: Nat)
+            (depth    :: *  )
+   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Birds_512x341)
+  => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
+remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConstant black)
+  where
+    transform = exceptError $
+                matFromFunc (Proxy :: Proxy [height, width])
+                            (Proxy :: Proxy 2)
+                            (Proxy :: Proxy Float)
+                            exampleFunc
+
+    exampleFunc [_y,  x] 0 = wobble x w
+    exampleFunc [ y, _x] 1 = wobble y h
+    exampleFunc _pos _channel = error "impossible"
+
+    wobble :: Int -> Float -> Float
+    wobble v s = let v' = fromIntegral v
+                     n = v' / s
+                 in v' + (s * 0.05 * sin (n * 2 * pi * 5))
+
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    h = fromInteger $ natVal (Proxy :: Proxy height)
+@
+
+<<doc/generated/birds_512x341.png original>>
+<<doc/generated/examples/remapImg.png remapImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap OpenCV documentation>
 -}
 remap
     :: Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
+       -- ^ Source image.
     -> Mat ('S [outputHeight, outputWidth]) ('S 2) ('S Float)
+       -- ^ A map of @(x, y)@ points.
     -> InterpolationMethod
+       -- ^ Interpolation method to use. Note that 'InterArea' is not
+       -- supported by this function.
     -> BorderMode
-    -> Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth
-remap src mapping interpolationMethod borderMode =
-  unsafeCoerceMat $ unsafePerformIO $ do
+    -> CvExcept (Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth)
+remap src mapping interpolationMethod borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
-    withPtr src $ \srcPtr ->
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src $ \srcPtr ->
       withPtr dst $ \dstPtr ->
-        withPtr mapping $ \mappingPtr ->
-          withPtr borderValue $ \borderValuePtr ->
-            [CU.block| void {
-              Mat * src = $(Mat * srcPtr);
-              cv::remap
-                ( *src
-                , *$(Mat * dstPtr)
-                , *$(Mat * mappingPtr)
-                , {}
-                , $(int32_t c'interpolationMethod)
-                , $(int32_t c'borderMode)
-                , *$(Scalar * borderValuePtr)
-                );
-              } |]
-    return dst
+      withPtr mapping $ \mappingPtr ->
+      withPtr borderValue $ \borderValuePtr ->
+        [cvExcept|
+          cv::remap
+            ( *$(Mat * srcPtr)
+            , *$(Mat * dstPtr)
+            , *$(Mat * mappingPtr)
+            , {}
+            , $(int32_t c'interpolation)
+            , $(int32_t c'borderMode)
+            , *$(Scalar * borderValuePtr)
+            );
+        |]
   where
-    c'interpolationMethod = marshalInterpolationMethod interpolationMethod
+    c'interpolation = marshalInterpolationMethod interpolationMethod
     (c'borderMode, borderValue) = marshalBorderMode borderMode
