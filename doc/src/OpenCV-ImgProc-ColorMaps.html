@@ -148,71 +148,70 @@
 <a name="line-139"></a>     . (height ~ 30, width ~ 256, depth ~ Word8)
 <a name="line-140"></a>    =&gt; Mat (ShapeT [height, width]) ('S 1) ('S depth)
 <a name="line-141"></a>grayscaleImg = exceptError $
-<a name="line-142"></a>    withMatM (Proxy :: Proxy [height, width])
-<a name="line-143"></a>             (Proxy :: Proxy 1)
-<a name="line-144"></a>             (Proxy :: Proxy depth)
-<a name="line-145"></a>             black $ \imgM -&gt; do
-<a name="line-146"></a>      forM_ [0..w-1] $ \x -&gt;
-<a name="line-147"></a>        forM_ [0..h-1] $ \y -&gt;
-<a name="line-148"></a>          unsafeWrite imgM [y, x] (fromIntegral x :: depth)
-<a name="line-149"></a>  where
-<a name="line-150"></a>    w = fromInteger $ natVal (Proxy :: Proxy width)
-<a name="line-151"></a>    h = fromInteger $ natVal (Proxy :: Proxy height)
-<a name="line-152"></a>
-<a name="line-153"></a>type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
-<a name="line-154"></a>
-<a name="line-155"></a>mkColorMapImg :: ColorMap -&gt; ColorMapImg
-<a name="line-156"></a>mkColorMapImg cmap = exceptError $ applyColorMap cmap grayscaleImg
-<a name="line-157"></a>
-<a name="line-158"></a>colorMapAutumImg   :: ColorMapImg
-<a name="line-159"></a>colorMapBoneImg    :: ColorMapImg
-<a name="line-160"></a>colorMapJetImg     :: ColorMapImg
-<a name="line-161"></a>colorMapWinterImg  :: ColorMapImg
-<a name="line-162"></a>colorMapRainbowImg :: ColorMapImg
-<a name="line-163"></a>colorMapOceanImg   :: ColorMapImg
-<a name="line-164"></a>colorMapSummerImg  :: ColorMapImg
-<a name="line-165"></a>colorMapSpringImg  :: ColorMapImg
-<a name="line-166"></a>colorMapCoolImg    :: ColorMapImg
-<a name="line-167"></a>colorMapHsvImg     :: ColorMapImg
-<a name="line-168"></a>colorMapPinkImg    :: ColorMapImg
-<a name="line-169"></a>colorMapHotImg     :: ColorMapImg
-<a name="line-170"></a>colorMapParulaImg  :: ColorMapImg
-<a name="line-171"></a>
-<a name="line-172"></a>colorMapAutumImg   = mkColorMapImg ColorMapAutumn
-<a name="line-173"></a>colorMapBoneImg    = mkColorMapImg ColorMapBone
-<a name="line-174"></a>colorMapJetImg     = mkColorMapImg ColorMapJet
-<a name="line-175"></a>colorMapWinterImg  = mkColorMapImg ColorMapWinter
-<a name="line-176"></a>colorMapRainbowImg = mkColorMapImg ColorMapRainbow
-<a name="line-177"></a>colorMapOceanImg   = mkColorMapImg ColorMapOcean
-<a name="line-178"></a>colorMapSummerImg  = mkColorMapImg ColorMapSummer
-<a name="line-179"></a>colorMapSpringImg  = mkColorMapImg ColorMapSpring
-<a name="line-180"></a>colorMapCoolImg    = mkColorMapImg ColorMapCool
-<a name="line-181"></a>colorMapHsvImg     = mkColorMapImg ColorMapHsv
-<a name="line-182"></a>colorMapPinkImg    = mkColorMapImg ColorMapPink
-<a name="line-183"></a>colorMapHotImg     = mkColorMapImg ColorMapHot
-<a name="line-184"></a>colorMapParulaImg  = mkColorMapImg ColorMapParula
-<a name="line-185"></a>@
-<a name="line-186"></a>
-<a name="line-187"></a>&lt;&lt;doc/generated/examples/grayscaleImg.png grayscaleImg&gt;&gt;
-<a name="line-188"></a>
-<a name="line-189"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap</a> OpenCV Sphinx doc&gt;
-<a name="line-190"></a>-}</span>
-<a name="line-191"></a><span class='hs-definition'>applyColorMap</span>
-<a name="line-192"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>ColorMap</span>
-<a name="line-193"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
-<a name="line-194"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>3</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-195"></a><span class='hs-definition'>applyColorMap</span> <span class='hs-varid'>colorMap</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
-<a name="line-196"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
-<a name="line-197"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
-<a name="line-198"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-199"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
-<a name="line-200"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
-<a name="line-201"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>applyColorMap</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
-<a name="line-202"></a>                           <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
-<a name="line-203"></a>                           <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'colorMap</span><span class='hs-layout'>)</span>
-<a name="line-204"></a>                           <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
-<a name="line-205"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
-<a name="line-206"></a>  <span class='hs-keyword'>where</span>
-<a name="line-207"></a>    <span class='hs-varid'>c'colorMap</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalColorMap</span> <span class='hs-varid'>colorMap</span>
+<a name="line-142"></a>    matFromFunc
+<a name="line-143"></a>      (Proxy :: Proxy [height, width])
+<a name="line-144"></a>      (Proxy :: Proxy 1)
+<a name="line-145"></a>      (Proxy :: Proxy depth)
+<a name="line-146"></a>      grayscale
+<a name="line-147"></a>  where
+<a name="line-148"></a>    grayscale :: [Int] -&gt; Int -&gt; Word8
+<a name="line-149"></a>    grayscale [_y, x] 0 = fromIntegral x
+<a name="line-150"></a>    grayscale _pos _channel = error "impossible"
+<a name="line-151"></a>
+<a name="line-152"></a>type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
+<a name="line-153"></a>
+<a name="line-154"></a>mkColorMapImg :: ColorMap -&gt; ColorMapImg
+<a name="line-155"></a>mkColorMapImg cmap = exceptError $ applyColorMap cmap grayscaleImg
+<a name="line-156"></a>
+<a name="line-157"></a>colorMapAutumImg   :: ColorMapImg
+<a name="line-158"></a>colorMapBoneImg    :: ColorMapImg
+<a name="line-159"></a>colorMapJetImg     :: ColorMapImg
+<a name="line-160"></a>colorMapWinterImg  :: ColorMapImg
+<a name="line-161"></a>colorMapRainbowImg :: ColorMapImg
+<a name="line-162"></a>colorMapOceanImg   :: ColorMapImg
+<a name="line-163"></a>colorMapSummerImg  :: ColorMapImg
+<a name="line-164"></a>colorMapSpringImg  :: ColorMapImg
+<a name="line-165"></a>colorMapCoolImg    :: ColorMapImg
+<a name="line-166"></a>colorMapHsvImg     :: ColorMapImg
+<a name="line-167"></a>colorMapPinkImg    :: ColorMapImg
+<a name="line-168"></a>colorMapHotImg     :: ColorMapImg
+<a name="line-169"></a>colorMapParulaImg  :: ColorMapImg
+<a name="line-170"></a>
+<a name="line-171"></a>colorMapAutumImg   = mkColorMapImg ColorMapAutumn
+<a name="line-172"></a>colorMapBoneImg    = mkColorMapImg ColorMapBone
+<a name="line-173"></a>colorMapJetImg     = mkColorMapImg ColorMapJet
+<a name="line-174"></a>colorMapWinterImg  = mkColorMapImg ColorMapWinter
+<a name="line-175"></a>colorMapRainbowImg = mkColorMapImg ColorMapRainbow
+<a name="line-176"></a>colorMapOceanImg   = mkColorMapImg ColorMapOcean
+<a name="line-177"></a>colorMapSummerImg  = mkColorMapImg ColorMapSummer
+<a name="line-178"></a>colorMapSpringImg  = mkColorMapImg ColorMapSpring
+<a name="line-179"></a>colorMapCoolImg    = mkColorMapImg ColorMapCool
+<a name="line-180"></a>colorMapHsvImg     = mkColorMapImg ColorMapHsv
+<a name="line-181"></a>colorMapPinkImg    = mkColorMapImg ColorMapPink
+<a name="line-182"></a>colorMapHotImg     = mkColorMapImg ColorMapHot
+<a name="line-183"></a>colorMapParulaImg  = mkColorMapImg ColorMapParula
+<a name="line-184"></a>@
+<a name="line-185"></a>
+<a name="line-186"></a>&lt;&lt;doc/generated/examples/grayscaleImg.png grayscaleImg&gt;&gt;
+<a name="line-187"></a>
+<a name="line-188"></a>&lt;<a href="http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap">http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap</a> OpenCV Sphinx doc&gt;
+<a name="line-189"></a>-}</span>
+<a name="line-190"></a><span class='hs-definition'>applyColorMap</span>
+<a name="line-191"></a>    <span class='hs-keyglyph'>::</span> <span class='hs-conid'>ColorMap</span>
+<a name="line-192"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>1</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span>
+<a name="line-193"></a>    <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>CvExcept</span> <span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varid'>shape</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-num'>3</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-chr'>'</span><span class='hs-conid'>S</span> <span class='hs-conid'>Word8</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-194"></a><span class='hs-definition'>applyColorMap</span> <span class='hs-varid'>colorMap</span> <span class='hs-varid'>src</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>unsafeWrapException</span> <span class='hs-varop'>$</span> <span class='hs-keyword'>do</span>
+<a name="line-195"></a>    <span class='hs-varid'>dst</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>newEmptyMat</span>
+<a name="line-196"></a>    <span class='hs-varid'>handleCvException</span> <span class='hs-layout'>(</span><span class='hs-varid'>pure</span> <span class='hs-varop'>$</span> <span class='hs-varid'>unsafeCoerceMat</span> <span class='hs-varid'>dst</span><span class='hs-layout'>)</span> <span class='hs-varop'>$</span>
+<a name="line-197"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>src</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>srcPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-198"></a>      <span class='hs-varid'>withPtr</span> <span class='hs-varid'>dst</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>dstPtr</span> <span class='hs-keyglyph'>-&gt;</span>
+<a name="line-199"></a>        <span class='hs-keyglyph'>[</span><span class='hs-varid'>cvExcept</span><span class='hs-keyglyph'>|</span>
+<a name="line-200"></a>          <span class='hs-varid'>cv</span><span class='hs-keyglyph'>::</span><span class='hs-varid'>applyColorMap</span><span class='hs-layout'>(</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>srcPtr</span><span class='hs-layout'>)</span>
+<a name="line-201"></a>                           <span class='hs-layout'>,</span> <span class='hs-varop'>*$</span><span class='hs-layout'>(</span><span class='hs-conid'>Mat</span> <span class='hs-varop'>*</span> <span class='hs-varid'>dstPtr</span><span class='hs-layout'>)</span>
+<a name="line-202"></a>                           <span class='hs-layout'>,</span> <span class='hs-varop'>$</span><span class='hs-layout'>(</span><span class='hs-varid'>int32_t</span> <span class='hs-varid'>c'colorMap</span><span class='hs-layout'>)</span>
+<a name="line-203"></a>                           <span class='hs-layout'>)</span><span class='hs-layout'>;</span>
+<a name="line-204"></a>        <span class='hs-keyglyph'>|</span><span class='hs-keyglyph'>]</span>
+<a name="line-205"></a>  <span class='hs-keyword'>where</span>
+<a name="line-206"></a>    <span class='hs-varid'>c'colorMap</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>marshalColorMap</span> <span class='hs-varid'>colorMap</span>
 </pre></body>
 </html>

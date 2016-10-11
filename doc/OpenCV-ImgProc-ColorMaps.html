@@ -10,16 +10,15 @@ your computer vision application.</p><p>Example:</p><pre>grayscaleImg
      . (height ~ 30, width ~ 256, depth ~ Word8)
     =&gt; Mat (ShapeT [height, width]) ('S 1) ('S depth)
 grayscaleImg = exceptError $
-    withMatM (Proxy :: Proxy [height, width])
-             (Proxy :: Proxy 1)
-             (Proxy :: Proxy depth)
-             black $ imgM -&gt; do
-      forM_ [0..w-1] $ x -&gt;
-        forM_ [0..h-1] $ y -&gt;
-          unsafeWrite imgM [y, x] (fromIntegral x :: depth)
+    matFromFunc
+      (Proxy :: Proxy [height, width])
+      (Proxy :: Proxy 1)
+      (Proxy :: Proxy depth)
+      grayscale
   where
-    w = fromInteger $ natVal (Proxy :: Proxy width)
-    h = fromInteger $ natVal (Proxy :: Proxy height)
+    grayscale :: [Int] -&gt; Int -&gt; Word8
+    grayscale [_y, x] 0 = fromIntegral x
+    grayscale _pos _channel = error &quot;impossible&quot;
 
 type ColorMapImg = Mat (ShapeT [30, 256]) ('S 3) ('S Word8)
 
