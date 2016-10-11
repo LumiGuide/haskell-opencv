@@ -10,6 +10,7 @@ module OpenCV.Internal.Core.Types.Mat.Depth
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
     , DepthT
+    , StaticDepthT
     ) where
 
 import "base" Data.Int
@@ -67,3 +68,7 @@ instance ToDepthDS (proxy ('S Double)) where toDepthDS _proxy = S $ toDepth (Pro
 type family DepthT a :: DS * where
     DepthT Depth     = 'D
     DepthT (proxy d) = 'S d
+
+type family StaticDepthT a :: * where
+    StaticDepthT (proxy d) = d
+    StaticDepthT d         = d
