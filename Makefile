@@ -23,6 +23,12 @@ test:
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	./dist/build/test-opencv/test-opencv
 
+.PHONY: coverage
+coverage:
+	cabal configure --enable-tests --enable-coverage && \
+	cabal test && \
+	chromium dist/hpc/vanilla/html/opencv-0.0.0/hpc_index.html
+
 .PHONY: doc
 doc: doc/color_conversions.png
 	cabal configure --enable-tests && \

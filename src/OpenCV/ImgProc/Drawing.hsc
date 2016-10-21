@@ -355,6 +355,32 @@ self-intersections, that is, a polygon whose contour intersects
 every horizontal line (scan line) twice at the most (though, its
 top-most and/or the bottom edge could be horizontal).
 
+Example:
+
+@
+fillConvexPolyImg
+    :: forall (h :: Nat) (w :: Nat)
+     . (h ~ 300, w ~ 300)
+    => Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+fillConvexPolyImg = exceptError $
+    withMatM (Proxy :: Proxy [h, w])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      lift $ fillConvexPoly imgM pentagon blue LineType_AA 0
+  where
+    pentagon :: V.Vector (V2 Int32)
+    pentagon = V.fromList
+               [ V2 150   0
+               , V2   7 104
+               , V2  62 271
+               , V2 238 271
+               , V2 293 104
+               ]
+@
+
+<<doc/generated/examples/fillConvexPolyImg.png fillConvexPolyImg>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc>
 -}
 fillConvexPoly

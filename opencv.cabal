@@ -138,6 +138,7 @@ library
         OpenCV.Internal.Core.Types.Constants
         OpenCV.Internal.Core.Types.Mat
         OpenCV.Internal.Core.Types.Mat.Depth
+        OpenCV.Internal.Core.Types.Mat.HMat
         OpenCV.Internal.Core.Types.Mat.Marshal
         OpenCV.Internal.Core.Types.Mat.ToFrom
         OpenCV.Internal.Core.Types.Matx

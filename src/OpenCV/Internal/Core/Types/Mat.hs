@@ -47,6 +47,8 @@ module OpenCV.Internal.Core.Types.Mat
     , MatInfo(..)
     , matInfo
 
+    , dimPositions
+
     , Depth(..)
     , marshalDepth
     , unmarshalDepth
@@ -56,6 +58,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ShapeT
     , ChannelsT
     , DepthT
+    , StaticDepthT
 
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)
@@ -485,6 +488,11 @@ matInfo mat = unsafePerformIO $
            , miDepth    = depth
            , miChannels = channels
            }
+
+-- | All possible positions (indexes) for a given shape (list of
+-- sizes per dimension).
+dimPositions :: (Num a, Enum a) => [a] -> [[a]]
+dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape
 
 --------------------------------------------------------------------------------
 
