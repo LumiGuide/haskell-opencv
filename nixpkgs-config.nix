@@ -19,13 +19,9 @@
 
       opencv3_1 = pkgs.callPackage ./opencv-3.1.0.nix
                                   # ./opencv-HEAD.nix
-      { gtk = pkgs.gtk3;
-        qt  = pkgs.qt5;
-        enableIpp     = !osx;
+      { enableGtk3    = true;
         enableContrib = true;
-        enableBloat   = !osx;
-        enableOpenGL  = true;
-        enableQT      = false;
+        enableIpp     = !osx;
       };
     };
 }
