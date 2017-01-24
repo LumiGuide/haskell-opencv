@@ -11,8 +11,8 @@
     in {
       haskellPackages = pkgs.haskellPackages.override haskellOverrides;
 
-      opencv3_1 = pkgs.callPackage ./opencv-3.1.0.nix
-                                  # ./opencv-HEAD.nix
+      opencv3 = pkgs.callPackage ./opencv-3.1.0.nix
+                                 # ./opencv-HEAD.nix
       { enableGtk3    = true;
         enableContrib = true;
         enableIpp     = !osx;

@@ -2,7 +2,7 @@
 , stdenv
 , lib
 
-, opencv3_1
+, opencv3
 
 # library dependencies
 , aeson
@@ -98,7 +98,7 @@ mkDerivation ({
     criterion
   ];
 
-  libraryPkgconfigDepends = [ opencv3_1 ];
+  libraryPkgconfigDepends = [ opencv3 ];
 
   configureFlags =
     [ "--with-gcc=g++"
