@@ -111,7 +111,7 @@ frog =
 lambda :: Lambda
 lambda =
     exceptError $ coerceMat $ unsafePerformIO $
-      imdecode ImreadUnchanged <$> B.readFile "data/lambda.png"
+      imdecode ImreadGrayscale <$> B.readFile "data/lambda.png"
 
 circles_1000x625 :: Circles_1000x625
 circles_1000x625 =
