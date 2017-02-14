@@ -491,8 +491,16 @@ matInfo mat = unsafePerformIO $
 
 -- | All possible positions (indexes) for a given shape (list of
 -- sizes per dimension).
+--
+-- @
+-- dimPositions [3, 4]
+-- [ [0, 0], [0, 1], [0, 2], [0, 3]
+-- , [1, 0], [1, 1], [1, 2], [1, 3]
+-- , [2, 0], [2, 1], [2, 2], [2, 3]
+-- ]
+-- @
 dimPositions :: (Num a, Enum a) => [a] -> [[a]]
-dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape
+dimPositions = traverse (enumFromTo 0 . pred)
 
 --------------------------------------------------------------------------------
 
