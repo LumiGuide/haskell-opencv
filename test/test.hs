@@ -340,7 +340,7 @@ type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
 loadLambda :: IO Lambda
 loadLambda =
-  fmap (exceptError . coerceMat . imdecode ImreadUnchanged)
+  fmap (exceptError . coerceMat . imdecode ImreadGrayscale)
        (B.readFile "data/lambda.png")
 
 loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
