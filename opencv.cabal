@@ -8,8 +8,8 @@ maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 build-type:    Custom
 cabal-version: >=1.10
 category:      AI, Graphics
-synopsis:      Haskell binding to OpenCV-3.1
-description:   This is a Haskell library providing a binding to OpenCV-3.1.
+synopsis:      Haskell binding to OpenCV-3.x
+description:   This is a Haskell library providing a binding to OpenCV-3.x.
                It binds directly with the C++ API using the @inline-c@ Haskell library.
                .
                The library is far from complete but the framework is there to easily

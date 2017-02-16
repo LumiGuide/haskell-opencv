@@ -1,13 +1,13 @@
 [![Hackage](https://img.shields.io/hackage/v/opencv.svg)](https://hackage.haskell.org/package/opencv)
 [![Build Status](https://travis-ci.org/LumiGuide/haskell-opencv.svg)](https://travis-ci.org/LumiGuide/haskell-opencv)
 
-Haskell OpenCV-3.1 binding
+Haskell OpenCV-3.x binding
 ==========================
 
-<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo.png" width="200px" alt="Haskell OpenCV-3.1 logo" />
+<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo.png" width="200px" alt="Haskell OpenCV-3.x logo" />
 
 
-This is a Haskell library providing a binding to OpenCV-3.1. It binds directly
+This is a Haskell library providing a binding to OpenCV-3.x. It binds directly
 with the C++ API using the
 [inline-c](https://github.com/fpco/inline-c/blob/master/README.md) Haskell
 library.
@@ -52,7 +52,7 @@ Development
 
 We use Nix to enter an environment containing all the needed dependencies. For
 the moment the following commands only work on Linux. The Nix expression for
-OpenCV-3.1 currently fails to build on OS X.
+OpenCV currently fails to build on OS X.
 
     curl https://nixos.org/nix/install | sh   # Only execute this if you haven't installed Nix yet.
     nix-shell

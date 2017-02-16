@@ -8,7 +8,7 @@ maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 build-type:    Simple
 cabal-version: >=1.10
 category:      AI, Graphics
-synopsis:      Haskell binding to OpenCV-3.1 extra modules
+synopsis:      Haskell binding to OpenCV-3.x extra modules
 
 extra-doc-files:
     doc/generated/*.png
