@@ -333,7 +333,7 @@ foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
            , Storable a
            , All IsStatic shape
            )
-        => (a -> DV.Vector depth -> a)
+        => (a -> DV.Vector depth -> a) -- ^
         -> a
         -> [Mat ('S shape) ('S channels) ('S depth)]
         -> Maybe (DV.Vector a)
