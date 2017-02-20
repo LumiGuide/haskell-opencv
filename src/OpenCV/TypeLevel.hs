@@ -3,6 +3,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module OpenCV.TypeLevel
     ( -- * Kinds and types
       DS(D, S), dsToMaybe
@@ -18,9 +20,13 @@ module OpenCV.TypeLevel
     , Length
     , Elem
     , Relax
+
       -- ** Predicates (constraints)
     , In
     , MayRelax
+    , All
+    , IsStatic
+
       -- ** Type conversions
     , DSNat
     , DSNats
@@ -29,6 +35,7 @@ module OpenCV.TypeLevel
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Type.Bool
+import "base" GHC.Exts ( Constraint )
 import "base" GHC.TypeLits
 
 --------------------------------------------------------------------------------
@@ -166,3 +173,13 @@ type MayRelax a b = Relax a b ~ 'True
 --     MinLengthDS_F  a bs = LeDS_F a (LengthDS bs)
 
 -- type MinLengthDS a bs = MinLengthDS_F a bs ~ 'True
+
+class PrivateIsStatic (ds :: DS a)
+instance PrivateIsStatic ('S a)
+
+class All (p :: k -> Constraint) (xs :: [k])
+instance All p '[]
+instance (p x, All p xs) => All p (x ': xs)
+
+class (PrivateIsStatic ds) => IsStatic (ds :: DS a)
+instance IsStatic ('S a)
