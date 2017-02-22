@@ -72,6 +72,9 @@ main = defaultMain $ testGroup "opencv"
             [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
             , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
             ]
+          , testGroup "median"
+            [ medianEquals "kodim05.png" ["kodim05.png", "kodim06.png", "kodim05.png"]
+            ]
           , testGroup "HMat"
             [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
             -- , HU.testCase "eye 33" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
@@ -237,8 +240,17 @@ testMatType mat =
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
-    mat <- loadImg ImreadUnchanged fp
+    mat <- loadImg ImreadGrayscale fp
     assertEqual "" expectedInfo (matInfo mat)
+
+medianEquals :: FilePath -> [FilePath] -> TestTree
+medianEquals fp images = HU.testCase fp $ do
+    mats <- mapM loadGrayscaleKodim images
+    toBeEqual <- loadGrayscaleKodim fp
+
+    let eMedian = exceptError $ matMedian $ V.fromList mats
+
+    assertBool "Median failure" (eMedian == toBeEqual)
 
 testGetRotationMatrix2D :: HU.Assertion
 testGetRotationMatrix2D = testMatType rot2D
@@ -345,6 +357,10 @@ loadLambda =
 
 loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
 loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
+
+loadGrayscaleKodim :: FilePath -> IO (Mat (ShapeT [512, 768]) ('S 1) ('S Word8))
+loadGrayscaleKodim fp =
+    (exceptError . coerceMat . imdecode ImreadGrayscale) <$> B.readFile ("data/" <> fp)
 
 imgToRepa :: HU.Assertion
 imgToRepa = do

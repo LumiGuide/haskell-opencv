@@ -46,6 +46,8 @@ module OpenCV.Core.Types.Mat
     , foldMat
     , foldPixels
 
+    , matMedian
+
       -- * Meta information
     , MatInfo(..)
     , matInfo
@@ -68,9 +70,9 @@ import "base" Control.Monad.ST ( ST )
 import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
-import "base" Data.List ( foldl' )
+import "base" Data.List ( foldl', partition )
 import "base" Data.Proxy ( Proxy(..) )
-import "base" Data.Word ( Word8 )
+import "base" Data.Word ( Word8, Word16 )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Ptr ( Ptr, castPtr, plusPtr )
 import "base" Foreign.Storable ( Storable )
@@ -367,7 +369,7 @@ foldPixels
      . ( ToShape    (Proxy shape)
        , ToChannels (Proxy channels)
        , ToDepth    (Proxy depth)
-       -- , All IsStatic shape
+       , All IsStatic shape
        , Storable depth
        )
     => ([depth] -> acc -> acc) -- ^
@@ -424,3 +426,31 @@ foldPixels f acc g mats = withMatM shape channels depth scalar $ \matM -> do
 
     scalar :: V4 Double
     scalar = 0
+
+matMedian
+    :: ( ToShape    (Proxy shape)
+       , ToDepth    (Proxy depth)
+       , All IsStatic shape
+       , Storable depth
+       , Ord depth
+       , depth `In` '[Word8, Word16, Float]
+       )
+    => V.Vector (Mat ('S shape) ('S 1) ('S depth))
+    -> CvExcept (Mat ('S shape) ('S 1) ('S depth))
+matMedian mats = foldPixels ((:) . head) [] median mats
+  where
+    median :: Ord depth => [depth] -> [depth]
+    median ds = [med ds]
+      where
+        nth [] _ = undefined
+        nth (x:xs) n
+            | k == n    = x
+            | k > n     = nth ys n
+            | otherwise = nth zs $ n - k - 1
+          where
+            (ys, zs) = partition (< x) xs
+            k = length ys
+
+        med xs = nth xs (div n 2)
+          where
+            n = length xs

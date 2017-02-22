@@ -31,6 +31,7 @@ module OpenCV.Internal.Core.Types.Mat
     , matElemAddress
     , mkMat
     , cloneMat
+    , matEquals
 
       -- * Mutable matrix
     , typeCheckMatM
@@ -134,6 +135,13 @@ instance FreezeThaw (Mat shape channels depth) where
 
     unsafeFreeze = pure . unMut
     unsafeThaw = pure . Mut
+
+
+matEquals :: Mat shapel ('S 1) depthl -> Mat shaper ('S 1) depthr -> Bool
+matEquals l r = unsafePerformIO $
+      withPtr l $ \lPtr ->
+      withPtr r $ \rPtr ->
+        (== 0) <$> [CU.exp| int { cv::countNonZero(( * $(Mat * lPtr)) != ( * $(Mat * rPtr)) ) } |]
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 

@@ -30,6 +30,12 @@ module OpenCV.TypeLevel
       -- ** Type conversions
     , DSNat
     , DSNats
+
+    , Even
+    , Odd
+
+    , IsEven
+    , IsOdd
     ) where
 
 import "base" Data.Int
@@ -85,6 +91,9 @@ instance ToInt32 Int32 where
 -- | type level: reify the known natural number @n@
 instance (KnownNat n) => ToInt32 (proxy n) where
     toInt32 = fromInteger . natVal
+
+instance (KnownNat n) => ToInt32 (proxy ('S n)) where
+    toInt32 _ = fromInteger $ natVal (Proxy :: Proxy n)
 
 --------------------------------------------------------------------------------
 
@@ -153,6 +162,18 @@ type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
     Relax x      y      = 'False
 
 type MayRelax a b = Relax a b ~ 'True
+
+type family Even (n :: Nat) :: Bool where
+    Even 0 = 'False
+    Even 1 = 'True
+    Even n = Even (n - 2)
+
+
+type family Odd (n :: Nat) :: Bool where
+    Odd n = Not (Even n)
+
+type IsEven n = Even n ~ 'True
+type IsOdd n  = Odd n ~ 'True
 
 -- type family LeDS_F (a :: Nat) (b :: DS Nat) :: Bool where
 --     LeDS_F _a 'D     = 'True
