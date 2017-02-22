@@ -1,4 +1,4 @@
-{-# language QuasiQuotes #-}
+    {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
 {- |
@@ -49,13 +49,17 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpAffine
     , warpPerspective
     , invertAffineTransform
+    , getPerspectiveTransform
     , getRotationMatrix2D
     , remap
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Data.Monoid ((<>))
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import qualified Data.Vector as V
+import qualified Data.Vector.Storable.Mutable as VM
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -65,6 +69,7 @@ import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.ImgProc.Types
@@ -72,7 +77,7 @@ import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
-C.context openCvCtx
+C.context (openCvCtx <> C.vecCtx)
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
@@ -112,7 +117,7 @@ whereas to enlarge an image, it will generally look best with 'InterCubic'
 Example:
 
 @
-resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S     3) ('S Word8)
 resizeInterAreaImg = exceptError $
     withMatM (h ::: w + (w \`div` 2) ::: Z)
              (Proxy :: Proxy 3)
@@ -271,6 +276,25 @@ invertAffineTransform matIn = unsafeWrapException $ do
            cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
         |]
 
+{- | Calculates a perspective transformation matrix for 2D perspective transform
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getperspectivetransform OpenCV Sphinx doc>
+-}
+getPerspectiveTransform
+    :: (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
+    -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
+    -> Mat (ShapeT [3,3]) ('S 1) ('S Double) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
+getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $ 
+    withArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
+        withArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
+        fromPtr
+        [CU.block| Mat * {
+            return new cv::Mat
+            ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
+            );
+        }|]
+ 
 {- | Calculates an affine matrix of 2D rotation
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
