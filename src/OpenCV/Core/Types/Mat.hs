@@ -361,11 +361,6 @@ foldMat f z mats = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions 
             vals <- peekArray (fromIntegral channels) (dataPtr `plusPtr` offset)
             return $ DV.fromList vals
 
--- type family Foo (shape :: [DS Nat]) :: [Nat] where
---   Foo '[] = '[]
---   Foo ('S n ': ns) = n ': Foo ns
---   Foo ('D _ ': ns) = Foo ns
-
 -- | Create a new Mat by combining a 'Vector' of Mats
 foldPixels
     :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) (acc :: *)
@@ -383,38 +378,40 @@ foldPixels
 foldPixels f acc g mats = withMatM shape channels depth scalar $ \matM -> do
     forM_ positions $ \pos -> do
       x <- V.foldM' (foldPixel pos) acc mats
-      let res = g x
 
-
-      unsafeWrite matM _ _ _
-      pure ()
+      forM_ (zip [1..] $ g x) $ \(i, value) ->
+        unsafeWrite matM pos i value
 
   where
     -- Folds over one pixel
     foldPixel
-      :: [Int32]
+      :: [Int]
       -> acc
       -> Mat ('S shape) ('S channels) ('S depth)
       -> ExceptT CvException (ST s) acc
-    foldPixel pos acc mat =
+    foldPixel pos initial mat =
       pure $ unsafePerformIO $
         withMatData mat $ \step ptr -> do
           vals <- peekArray (fromIntegral (miChannels mi)) (pixelRef pos step ptr)
-          pure $ f vals acc
+          pure $ f vals initial
 
-    pixelRef :: [Int32] -> [C.CSize] -> Ptr Word8 -> Ptr depth
+    pixelRef :: [Int] -> [C.CSize] -> Ptr Word8 -> Ptr depth
     pixelRef pos step ptr = ptrD `plusPtr` offset
       where
-        stepI :: [Int32]
+        stepI :: [Int]
         stepI = fromIntegral <$> step
 
         ptrD :: Ptr depth
         ptrD = castPtr ptr
 
         offset :: Int
-        offset = fromIntegral . sum $ zipWith (*) stepI pos
+        offset = sum $ zipWith (*) stepI pos
 
+    positions :: [[Int]]
+    positions = dimPositions (fromIntegral <$> miShape mi)
 
+    mi :: MatInfo
+    mi = matInfo (V.head mats)
 
     shape :: Proxy shape
     shape = Proxy
@@ -427,23 +424,3 @@ foldPixels f acc g mats = withMatM shape channels depth scalar $ \matM -> do
 
     scalar :: V4 Double
     scalar = 0
-
-    positions :: [[Int32]]
-    positions = dimPositions (miShape mi)
-
-    mi :: MatInfo
-    mi = matInfo (V.head mats)
-
-  --withMatM (Proxy @ shape) _ (Proxy @ dstDepth) (0 :: V4 Double) (\matM ->
-    -- forM_ positions $ \pos -> _
-  -- where
-  --   go :: [Int32] -> IO dstDepth
-  --   go pos = undefined
-
-  --   positions = dimPositions (miShape mi)
-
-
-  --   -- scalar = 0
-
-  --   mi = matInfo (DV.head mats)
-
