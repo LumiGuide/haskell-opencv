@@ -509,6 +509,7 @@ type family ShapeT (a :: ka) :: DS [DS Nat] where
     ShapeT (V.Vector Int32) = 'D
     ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
     ShapeT (xs :: [Nat])    = 'S (DSNats xs)
+    ShapeT (xs :: [DS Nat]) = 'S xs
     ShapeT (Proxy a)        = ShapeT a
 
 type ChannelsT a = DSNat a

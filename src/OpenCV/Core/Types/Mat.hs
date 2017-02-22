@@ -44,6 +44,7 @@ module OpenCV.Core.Types.Mat
     , All
     , IsStatic
     , foldMat
+    , foldPixels
 
       -- * Meta information
     , MatInfo(..)
@@ -63,6 +64,7 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
+import "base" Control.Monad.ST ( ST )
 import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
@@ -358,3 +360,90 @@ foldMat f z mats = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions 
             let !offset = fromIntegral . sum $ zipWith (*) step pos
             vals <- peekArray (fromIntegral channels) (dataPtr `plusPtr` offset)
             return $ DV.fromList vals
+
+-- type family Foo (shape :: [DS Nat]) :: [Nat] where
+--   Foo '[] = '[]
+--   Foo ('S n ': ns) = n ': Foo ns
+--   Foo ('D _ ': ns) = Foo ns
+
+-- | Create a new Mat by combining a 'Vector' of Mats
+foldPixels
+    :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) (acc :: *)
+     . ( ToShape    (Proxy shape)
+       , ToChannels (Proxy channels)
+       , ToDepth    (Proxy depth)
+       -- , All IsStatic shape
+       , Storable depth
+       )
+    => ([depth] -> acc -> acc) -- ^
+    -> acc
+    -> (acc -> [depth])
+    -> V.Vector (Mat ('S shape) ('S channels) ('S depth))
+    -> CvExcept  (Mat ('S shape) ('S channels) ('S depth))
+foldPixels f acc g mats = withMatM shape channels depth scalar $ \matM -> do
+    forM_ positions $ \pos -> do
+      x <- V.foldM' (foldPixel pos) acc mats
+      let res = g x
+
+
+      unsafeWrite matM _ _ _
+      pure ()
+
+  where
+    -- Folds over one pixel
+    foldPixel
+      :: [Int32]
+      -> acc
+      -> Mat ('S shape) ('S channels) ('S depth)
+      -> ExceptT CvException (ST s) acc
+    foldPixel pos acc mat =
+      pure $ unsafePerformIO $
+        withMatData mat $ \step ptr -> do
+          vals <- peekArray (fromIntegral (miChannels mi)) (pixelRef pos step ptr)
+          pure $ f vals acc
+
+    pixelRef :: [Int32] -> [C.CSize] -> Ptr Word8 -> Ptr depth
+    pixelRef pos step ptr = ptrD `plusPtr` offset
+      where
+        stepI :: [Int32]
+        stepI = fromIntegral <$> step
+
+        ptrD :: Ptr depth
+        ptrD = castPtr ptr
+
+        offset :: Int
+        offset = fromIntegral . sum $ zipWith (*) stepI pos
+
+
+
+    shape :: Proxy shape
+    shape = Proxy
+
+    channels :: Proxy channels
+    channels = Proxy
+
+    depth :: Proxy depth
+    depth = Proxy
+
+    scalar :: V4 Double
+    scalar = 0
+
+    positions :: [[Int32]]
+    positions = dimPositions (miShape mi)
+
+    mi :: MatInfo
+    mi = matInfo (V.head mats)
+
+  --withMatM (Proxy @ shape) _ (Proxy @ dstDepth) (0 :: V4 Double) (\matM ->
+    -- forM_ positions $ \pos -> _
+  -- where
+  --   go :: [Int32] -> IO dstDepth
+  --   go pos = undefined
+
+  --   positions = dimPositions (miShape mi)
+
+
+  --   -- scalar = 0
+
+  --   mi = matInfo (DV.head mats)
+
