@@ -55,11 +55,9 @@ module OpenCV.ImgProc.GeometricImgTransform
     ) where
 
 import "base" Data.Int ( Int32 )
-import "base" Data.Monoid ((<>))
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified Data.Vector as V
-import qualified Data.Vector.Storable.Mutable as VM
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -77,7 +75,7 @@ import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
-C.context (openCvCtx <> C.vecCtx)
+C.context (openCvCtx)
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
