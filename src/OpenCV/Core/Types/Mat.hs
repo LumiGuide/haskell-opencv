@@ -427,6 +427,22 @@ foldPixels f acc g mats = withMatM shape channels depth scalar $ \matM -> do
     scalar :: V4 Double
     scalar = 0
 
+{-|
+
+Generate a median image from multiple images.
+
+Example:
+
+@
+grayscaleMedian :: Mat ('S ['S 512, 'S 768]) ('S 1) ('S Word8)
+grayscaleMedian = exceptError $ do
+  imgs <- mapM (cvtColor bgr gray) [sailboat_768x512, bikes_768x512, flower_768x512]
+  matMedian $ V.fromList imgs
+@
+
+<<doc/generated/examples/grayscaleMedian.png grayscaleMedian>>
+
+-}
 matMedian
     :: ( ToShape    (Proxy shape)
        , ToDepth    (Proxy depth)
