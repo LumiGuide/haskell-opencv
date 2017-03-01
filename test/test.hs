@@ -240,7 +240,7 @@ testMatType mat =
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
-    mat <- loadImg ImreadGrayscale fp
+    mat <- loadImg ImreadUnchanged fp
     assertEqual "" expectedInfo (matInfo mat)
 
 -- medianEquals :: FilePath -> [FilePath] -> TestTree
