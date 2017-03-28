@@ -1,11 +1,12 @@
 { lib, stdenv, fetchurl, fetchzip
-, cmake, gtk, qt, libjpeg, libpng, libtiff, jasper, ffmpeg
+, cmake, cudatoolkit75, gtk, qt, libjpeg, libpng, libtiff, jasper, ffmpeg
 , pkgconfig, gstreamer, xineLib, glib, python27, python27Packages, unzip, doxygen, perl
 , enableIpp ? false
 , enableContrib ? false
 , enableBloat   ? false
 , enableOpenGL  ? false
 , enableQT      ? false
+, enableCuda    ? false
 }:
 
 let
@@ -15,8 +16,8 @@ let
 
   contribSrc = fetchzip {
     url = "https://github.com/Itseez/opencv_contrib/archive/${v}.tar.gz";
-    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
     name = "opencv-contrib-${v}-src";
+    sha256 = "153yx62f34gl3zd6vgxv0fj3wccwmq78lnawlda1f6xhrclg9bax";
   };
 in
 
@@ -60,7 +61,8 @@ stdenv.mkDerivation rec {
   buildInputs =
     [ unzip doxygen perl libjpeg libpng libtiff ]
     ++ lib.optionals enableBloat [ gtk glib jasper ffmpeg xineLib gstreamer python27 python27Packages.numpy ]
-    ++ lib.optionals enableQT [ qt.base ];
+    ++ lib.optionals enableQT [ qt.base ]
+    ++ lib.optionals enableCuda [ cudatoolkit75 ];
 
   nativeBuildInputs = [ cmake pkgconfig ];
 
@@ -68,6 +70,7 @@ stdenv.mkDerivation rec {
     "-DWITH_IPP=${enabled enableIpp}"
     "-DWITH_OPENGL=${enabled enableOpenGL}"
     "-DWITH_QT=${enabled enableQT}"
+    "-DWITH_CUDA=${enabled enableCuda}"
   ] ++ stdenv.lib.optionals enableContrib [ "-DOPENCV_EXTRA_MODULES_PATH=${contribSrc}/modules" ];
 
   enableParallelBuilding = true;

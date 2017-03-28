@@ -26,6 +26,9 @@
         enableBloat   = !osx;
         enableOpenGL  = true;
         enableQT      = false;
+        enableCuda    = true;
       };
     };
+
+  allowUnfree = true;
 }

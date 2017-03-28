@@ -1,5 +1,5 @@
-{-# language FlexibleInstances #-}
-{-# language TypeSynonymInstances #-}
+{-# language CPP #-}
+
 {-# options_ghc -fno-warn-orphans #-}
 
 module Main where
@@ -23,8 +23,9 @@ import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshal
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
-import "tasty-hunit" Test.Tasty.HUnit as HU
-import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
+import qualified "tasty-hunit" Test.Tasty.HUnit as HU
+import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC ( testProperty )
+import "this" TestUtils
 import qualified "QuickCheck" Test.QuickCheck as QC
 import           "QuickCheck" Test.QuickCheck ( (==>) )
 import "transformers" Control.Monad.Trans.Except
@@ -74,7 +75,7 @@ main = defaultMain $ testGroup "opencv"
             ]
           , testGroup "HMat"
             [ HU.testCase "hElemsSize" $ hmatElemSize "Lenna.png" (512 * 512 * 3)
-            -- , HU.testCase "eye 33" $ assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
+            -- , HU.testCase "eye 33" $ HU.assertEqual "" (HMat [3,3] 1 $ HElems_8U $ VU.fromList [1,0,0, 0,1,0, 0,0,1]) $ eye33_c1 ^. hmat
             , testGroup "mat -> hmat -> mat -> hmat"
               [ HU.testCase "eye 33 - 1 channel"  $ hMatEncodeDecode eye33_8u_1c
               , HU.testCase "eye 22 - 3 channels" $ hMatEncodeDecode eye22_8u_3c
@@ -134,9 +135,9 @@ main = defaultMain $ testGroup "opencv"
 testFindFundamentalMat_noPoints :: HU.Assertion
 testFindFundamentalMat_noPoints =
     case runExcept $ findFundamentalMat points points (FM_Ransac Nothing Nothing) of
-      Left err -> assertFailure (show err)
+      Left err -> HU.assertFailure (show err)
       Right Nothing -> pure ()
-      Right (Just _) -> assertFailure "result despite lack of data"
+      Right (Just _) -> HU.assertFailure "result despite lack of data"
   where
     points :: V.Vector (V2 CDouble)
     points = V.empty
@@ -144,8 +145,8 @@ testFindFundamentalMat_noPoints =
 testFindFundamentalMat :: HU.Assertion
 testFindFundamentalMat =
     case runExcept $ findFundamentalMat points1 points2 (FM_Ransac Nothing Nothing) of
-      Left err -> assertFailure (show err)
-      Right Nothing -> assertFailure "couldn't find fundamental matrix"
+      Left err -> HU.assertFailure (show err)
+      Right Nothing -> HU.assertFailure "couldn't find fundamental matrix"
       Right (Just (fm, pointsMask)) -> do
           assertNull (typeCheckMat fm        ) (("fm: "         <>) . show)
           assertNull (typeCheckMat pointsMask) (("pointsMask: " <>) . show)
@@ -160,14 +161,14 @@ testComputeCorrespondEpilines =
       Right (Just (fm, _pointsMask)) ->
           let fm' = unsafeCoerceMat fm
           in case runExcept $ computeCorrespondEpilines points1 Image1 fm' of
-               Left err1 -> assertFailure (show err1)
+               Left err1 -> HU.assertFailure (show err1)
                Right epilines1 -> do
                  assertNull (typeCheckMat epilines1) (("epilines1: " <>) . show)
                  case runExcept $ computeCorrespondEpilines points2 Image2 fm' of
-                   Left err2 -> assertFailure (show err2)
+                   Left err2 -> HU.assertFailure (show err2)
                    Right epilines2 ->
                        assertNull (typeCheckMat epilines2) (("epilines2: " <>) . show)
-      _ -> assertFailure "couldn't find fundamental matrix"
+      _ -> HU.assertFailure "couldn't find fundamental matrix"
   where
     points1, points2 :: V.Vector (V2 CDouble)
     points1 = V.fromList [V2 x y | x <- [0..9], y <- [0..9]]
@@ -215,7 +216,7 @@ myRectContains point rect =
 depthMarshalUnmarshal :: HU.Assertion
 depthMarshalUnmarshal =
     forM_ [minBound .. maxBound] $ \depth ->
-      assertEqual "" depth (unmarshalDepth . marshalDepth $ depth)
+      HU.assertEqual "" depth (unmarshalDepth . marshalDepth $ depth)
 
 depthUnmarshalUnknown :: Int32 -> QC.Property
 depthUnmarshalUnknown n =
@@ -233,12 +234,12 @@ testMatType
 testMatType mat =
     case typeCheckMat mat of
       [] -> pure ()
-      errors -> assertFailure $ show errors
+      errors -> HU.assertFailure $ show errors
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
     mat <- loadImg ImreadUnchanged fp
-    assertEqual "" expectedInfo (matInfo mat)
+    HU.assertEqual "" expectedInfo (matInfo mat)
 
 testGetRotationMatrix2D :: HU.Assertion
 testGetRotationMatrix2D = testMatType rot2D
@@ -252,7 +253,7 @@ hMatEncodeDecodeFP fp = HU.testCase fp $ do
 
 hMatEncodeDecode :: Mat shape channels depth -> HU.Assertion
 hMatEncodeDecode m1 =
-    assertEqual "" h1 h2
+    HU.assertEqual "" h1 h2
     -- assertBool "mat hmat conversion failure" (h1 == h2)
   where
     h1 = matToHMat m1
@@ -262,7 +263,7 @@ hMatEncodeDecode m1 =
 hmatElemSize :: FilePath -> Int -> HU.Assertion
 hmatElemSize fp expectedElemSize = do
   mat <- loadImg ImreadUnchanged fp
-  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
+  HU.assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
 
 encodeDecode :: OutputFormat -> HU.Assertion
 encodeDecode outputFormat = do
@@ -273,8 +274,8 @@ encodeDecode outputFormat = do
 
         bs3  = exceptError $ imencode outputFormat mat2
 
-    assertBool "imencode . imdecode failure"
-               (bs2 == bs3)
+    HU.assertBool "imencode . imdecode failure"
+                  (bs2 == bs3)
 
 testOrbDetectAndCompute :: HU.Assertion
 testOrbDetectAndCompute = do
@@ -284,12 +285,12 @@ testOrbDetectAndCompute = do
         kpts2    = V.map mkKeyPoint    kptsRec
         kptsRec2 = V.map keyPointAsRec kpts2
         numDescs = head $ miShape $ matInfo descs
-    assertEqual "kpt conversion failure"
-                kptsRec
-                kptsRec2
-    assertEqual "number of kpts /= number of descriptors"
-                (fromIntegral $ V.length kpts)
-                numDescs
+    HU.assertEqual "kpt conversion failure"
+                   kptsRec
+                   kptsRec2
+    HU.assertEqual "number of kpts /= number of descriptors"
+                   (fromIntegral $ V.length kpts)
+                   numDescs
   where
     orb = mkOrb defaultOrbParams {orb_nfeatures = 10}
 
@@ -300,9 +301,9 @@ testFindContours =
      contours <- findContours ContourRetrievalExternal
                               ContourApproximationSimple
                               edges
-     assertEqual "Unexpected number of contours found"
-                 (length contours)
-                 1
+     HU.assertEqual "Unexpected number of contours found"
+                    (length contours)
+                    1
 
 testHoughLinesP :: HU.Assertion
 testHoughLinesP = do
@@ -312,7 +313,7 @@ testHoughLinesP = do
     let edgeImg = exceptError $ canny 50 200 Nothing CannyNormL1 building'
     edgeImgM <- thaw edgeImg
     lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
-    assertBool "no lines found" (V.length lineSegments > 0)
+    HU.assertBool "no lines found" (V.length lineSegments > 0)
 
 testNewCascadeClassifierAlgorithm :: HU.Assertion
 testNewCascadeClassifierAlgorithm = do
@@ -331,10 +332,10 @@ testCascadeClassifierDetectMultiScaleArnold = do
     -- OpenCV detects the left eye twice for this pic.
     let arnoldEyes =
           cascadeClassifierDetectMultiScale ccEyes Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
-    assertBool "unexpected number of eyes detected" (V.length arnoldEyes == 3)
+    HU.assertBool "unexpected number of eyes detected" (V.length arnoldEyes == 3)
     let arnoldFront =
           cascadeClassifierDetectMultiScale ccFrontal Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
-    assertBool "unexpected number of faces detected" (V.length arnoldFront == 1)
+    HU.assertBool "unexpected number of faces detected" (V.length arnoldFront == 1)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
@@ -350,25 +351,25 @@ imgToRepa :: HU.Assertion
 imgToRepa = do
     mat <- loadImg ImreadUnchanged "kikker.jpg"
     case runExcept $ coerceMat mat of
-      Left err -> assertFailure $ show err
+      Left err -> HU.assertFailure $ show err
       Right (mat' :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)) -> do
         let repaArray :: Repa.Array (M '[ 'D, 'D ] 3) Repa.DIM3 Word8
             repaArray = toRepa mat'
-        assertEqual "extent" (Repa.Z :. 3 :. 500 :. 390 ) (Repa.extent repaArray)
+        HU.assertEqual "extent" (Repa.Z :. 3 :. 500 :. 390 ) (Repa.extent repaArray)
 
 testMatToM23
     :: (Eq e, Show e, Storable e)
     => Mat (ShapeT [2, 3]) ('S 1) ('S e)
     -> V2 (V3 e)
     -> HU.Assertion
-testMatToM23 m v = assertEqual "" v $ fromMat m
+testMatToM23 m v = HU.assertEqual "" v $ fromMat m
 
 testMatToM33
     :: (Eq e, Show e, Storable e)
     => Mat (ShapeT [3, 3]) ('S 1) ('S e)
     -> V3 (V3 e)
     -> HU.Assertion
-testMatToM33 m v = assertEqual "" v $ fromMat m
+testMatToM33 m v = HU.assertEqual "" v $ fromMat m
 
 --------------------------------------------------------------------------------
 
@@ -385,40 +386,3 @@ eye_m33 :: (Num e) => M33 e
 
 eye_m23 = V2 (V3 1 0 0) (V3 0 1 0)
 eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
-
---------------------------------------------------------------------------------
--- QuikcCheck Arbitrary Instances
---------------------------------------------------------------------------------
-
-instance QC.Arbitrary CFloat where
-    arbitrary = CFloat <$> QC.arbitrary
-
-instance QC.Arbitrary CDouble where
-    arbitrary = CDouble <$> QC.arbitrary
-
-instance (QC.Arbitrary a) => QC.Arbitrary (V2 a) where
-    arbitrary = V2 <$> QC.arbitrary <*> QC.arbitrary
-
-instance (QC.Arbitrary a) => QC.Arbitrary (V3 a) where
-    arbitrary = V3 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
-
-instance (QC.Arbitrary a) => QC.Arbitrary (V4 a) where
-    arbitrary = V4 <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
-
-instance (QC.Arbitrary a) => QC.Arbitrary (HRect a) where
-    arbitrary = HRect <$> QC.arbitrary <*> QC.arbitrary
-
-instance QC.Arbitrary Rect2i where
-    arbitrary = toRect <$> (QC.arbitrary :: QC.Gen (HRect Int32))
-
-instance QC.Arbitrary Point2i where
-    arbitrary = toPoint <$> (QC.arbitrary :: QC.Gen (V2 Int32))
-
---------------------------------------------------------------------------------
-
-assertNull
-    :: [a] -- ^ List that should be empty.
-    -> ([a] -> String) -- ^ Error when the list is not empty.
-    -> IO ()
-assertNull [] _showError = pure ()
-assertNull xs  showError = assertFailure $ showError xs

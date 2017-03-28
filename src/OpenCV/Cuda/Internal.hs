@@ -8,8 +8,11 @@
 
 module OpenCV.Cuda.Internal
   ( CudaMat(..)
+
+  , getCudaEnabledDeviceCount
   ) where
 
+import "base" Data.Int ( Int32 )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" GHC.TypeLits
 import qualified "inline-c" Language.C.Inline as C
@@ -26,8 +29,9 @@ import "this" OpenCV.TypeLevel
 C.context openCvCtx
 
 C.include "opencv2/core.hpp"
-C.include "opencv2/cuda.hpp"
+C.include "opencv2/core/opengl.hpp"
 C.using "namespace cv"
+C.using "namespace cv::cuda"
 
 --------------------------------------------------------------------------------
 -- Cuda Matrix
@@ -50,3 +54,14 @@ instance WithPtr (CudaMat height width channels depth) where
 instance FromPtr (CudaMat height width channels depth) where
     fromPtr = objFromPtr CudaMat $ \ptr ->
                 [CU.exp| void { delete $(CudaMat * ptr) }|]
+
+
+--------------------------------------------------------------------------------
+
+-- | Returns the number of installed CUDA-enabled devices.
+--
+-- Use this function before any other CUDA functions calls. If OpenCV
+-- is compiled without CUDA support, this function returns 0.
+getCudaEnabledDeviceCount :: IO Int32
+getCudaEnabledDeviceCount =
+    [CU.block| int32_t { return cv::cuda::getCudaEnabledDeviceCount(); } |]

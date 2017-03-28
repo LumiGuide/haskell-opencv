@@ -7,7 +7,7 @@ shell:
 
 .PHONY: build
 build:
-	cabal configure --enable-tests && \
+	cabal configure --enable-tests --flags="cuda" && \
 	cabal build
 
 .PHONY: clean
@@ -18,14 +18,14 @@ clean:
 
 .PHONY: test
 test:
-	cabal configure --enable-tests && \
+	cabal configure --enable-tests --flags="cuda" && \
 	cabal build && \
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	./dist/build/test-opencv/test-opencv
 
 .PHONY: doc
 doc: doc/color_conversions.png
-	cabal configure --enable-tests && \
+	cabal configure --enable-tests --flags="cuda" && \
 	cabal build && \
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	cabal haddock --hyperlink-source
@@ -33,7 +33,7 @@ doc: doc/color_conversions.png
 .PHONY: update-git-haddock
 update-git-haddock: doc/color_conversions.png
 	git checkout master && \
-	cabal configure --enable-tests --enable-coverage && \
+	cabal configure --enable-tests --enable-coverage --flags="cuda" && \
 	cabal build && \
 	cabal test && \
 	cabal haddock --hyperlink-source && \
