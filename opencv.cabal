@@ -18,35 +18,6 @@ extra-doc-files:
 library
     hs-source-dirs: src
     include-dirs: include
-    c-sources:
-        src/OpenCV/Calib3d.cpp
-      , src/OpenCV/Core/ArrayOps.cpp
-      , src/OpenCV/Core/Types.cpp
-      , src/OpenCV/Core/Types/Internal.cpp
-      , src/OpenCV/Core/Types/Mat.cpp
-      , src/OpenCV/Core/Types/Mat/Internal.cpp
-      , src/OpenCV/Core/Types/Mat/Repa.cpp
-      , src/OpenCV/Core/Types/Mat/Internal/ToFrom.cpp
-      , src/OpenCV/Core/Types/Matx.cpp
-      , src/OpenCV/Core/Types/Point.cpp
-      , src/OpenCV/Core/Types/Rect.cpp
-      , src/OpenCV/Core/Types/Size.cpp
-      , src/OpenCV/Core/Types/Vec.cpp
-      , src/OpenCV/Exception/Internal.cpp
-      , src/OpenCV/Features2d.cpp
-      , src/OpenCV/HighGui.cpp
-      , src/OpenCV/ImgCodecs.cpp
-      , src/OpenCV/ImgProc/ColorMaps.cpp
-      , src/OpenCV/ImgProc/Drawing.cpp
-      , src/OpenCV/ImgProc/FeatureDetection.cpp
-      , src/OpenCV/ImgProc/GeometricImgTransform.cpp
-      , src/OpenCV/ImgProc/ImgFiltering.cpp
-      , src/OpenCV/ImgProc/MiscImgTransform.cpp
-      , src/OpenCV/ImgProc/ObjectDetection.cpp
-      , src/OpenCV/ImgProc/StructuralAnalysis.cpp
-      , src/OpenCV/Video.cpp
-      , src/OpenCV/Video/MotionAnalysis.cpp
-
     cc-options: -Wall -O2 -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
 
