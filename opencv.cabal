@@ -44,6 +44,7 @@ library
       , src/OpenCV/Core/Types/Size.cpp
       , src/OpenCV/Core/Types/Vec.cpp
       , src/OpenCV/Features2d.cpp
+      , src/OpenCV/XFeatures2d.cpp
       , src/OpenCV/HighGui.cpp
       , src/OpenCV/ImgCodecs.cpp
       , src/OpenCV/ImgProc/ColorMaps.cpp
@@ -103,6 +104,7 @@ library
         OpenCV.Core.Types.Vec
         OpenCV.Exception
         OpenCV.Features2d
+        OpenCV.XFeatures2d
         OpenCV.HighGui
         OpenCV.ImgCodecs
         OpenCV.ImgProc.ColorMaps
