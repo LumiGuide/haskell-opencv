@@ -1,7 +1,7 @@
 #ifndef __THEA_XFEATURES_SURF_H__
 #define __THEA_XFEATURES_SURF_H__
 
-#include <opencv2/xfeatures2d.hpp>
+#include "opencv2/xfeatures2d.hpp"
 
 /*
 This file defines some SURF related names that are used in

@@ -10,7 +10,6 @@ module OpenCV
   , module OpenCV.Core.Types.Matx
   , module OpenCV.Core.Types.Point
   , module OpenCV.Features2d
-  , module OpenCV.XFeatures2d
   , module OpenCV.HighGui
   , module OpenCV.ImgCodecs
   , module OpenCV.ImgProc.CascadeClassifier
@@ -42,7 +41,6 @@ import OpenCV.Core.Types.Mat.Repa
 import OpenCV.Core.Types.Matx
 import OpenCV.Core.Types.Point
 import OpenCV.Features2d
-import OpenCV.XFeatures2d
 import OpenCV.HighGui
 import OpenCV.ImgCodecs
 import OpenCV.ImgProc.ColorMaps

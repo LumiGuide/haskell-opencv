@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module OpenCV.XFeatures2d
+module OpenCV.Extra.XFeatures2d
     ( -- * SURF
       Surf
     , SurfParams(..)
@@ -25,31 +25,25 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "this" OpenCV.Core.Types
-import "this" OpenCV.Internal
-import "this" OpenCV.Internal.C.Inline ( openCvCtx )
-import "this" OpenCV.Internal.C.Types
-import "this" OpenCV.Internal.Core.Types.Mat
-import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException )
-import "this" OpenCV.TypeLevel
+import "opencv" OpenCV.Core.Types
+import "opencv" OpenCV.Internal
+import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.Internal.C.Types
+import "opencv" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException )
+import "opencv" OpenCV.TypeLevel
+import "this"   OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
+import "this"   OpenCV.Extra.Internal.C.Types
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
 
-C.context openCvCtx
+C.context openCvExtraCtx
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/xfeatures2d.hpp"
 C.include "xfeatures/surf.hpp"
 
 C.using "namespace cv"
-
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-
-#include "namespace.hpp"
-#include "xfeatures/surf.hpp"
 
 --------------------------------------------------------------------------------
 -- SURF - Speeded Up Roubst Features
@@ -216,4 +210,3 @@ surfDetectAndCompute surf img mbMask = unsafeWrapException $ do
 
 
 -- vim: ft=haskell
-

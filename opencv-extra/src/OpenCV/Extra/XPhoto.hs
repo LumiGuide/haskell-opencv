@@ -8,7 +8,7 @@
 
 module OpenCV.Extra.XPhoto
   ( dctDenoising
-  , autowbGrayworld
+  -- , autowbGrayworld
   ) where
 
 import "base" Data.Int ( Int32 )
@@ -80,10 +80,14 @@ dctDenoising sigma mPSize src =
     c'sigma = realToFrac sigma
     c'pSize = fromMaybe 16 mPSize
 
+
+{- FIXME: This used to work with OpenCV-3.1 but on OpenCV-3.2 it doesn't build:
+
 {- | Perform autowbGrayworld a simple grayworld white balance algorithm.
 
 Example:
 
+DISABLED
 @
 autowbGrayworldImg
     :: forall h w w2 c d
@@ -104,7 +108,7 @@ autowbGrayworldImg = exceptError $ do
     w = fromInteger $ natVal (Proxy :: Proxy w)
 @
 
-<<doc/generated/examples/autowbGrayworldImg.png autowbGrayworldImg>>
+<< DISABLED doc/generated/examples/autowbGrayworldImg.png autowbGrayworldImg>>
 -}
 
 autowbGrayworld
@@ -127,3 +131,4 @@ autowbGrayworld thresh src =
       |]
   where
     c'thresh = maybe 0.5 realToFrac thresh
+-}

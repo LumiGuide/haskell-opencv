@@ -2,7 +2,7 @@
 , stdenv
 , lib
 
-, opencv3_1
+, opencv3
 
 # library dependencies
 , base
@@ -62,13 +62,17 @@ mkDerivation {
     haskell-src-exts
   ];
 
-
-  libraryPkgconfigDepends = [ opencv3_1 ];
+  libraryPkgconfigDepends = [ opencv3 ];
 
   configureFlags =
     [ "--with-gcc=g++"
       "--with-ld=g++"
     ];
+
+  hardeningDisable = [ "bindnow" ];
+  shellHook = ''
+    export hardeningDisable=bindnow
+  '';
 
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.bsd3;

@@ -108,7 +108,6 @@ openCvTypesTable = M.fromList
 
 --, ( C.TypeName "MSER"                  , [t| C'MSER                   |] )
   , ( C.TypeName "Ptr_ORB"               , [t| C'Ptr_ORB                |] )
-  , ( C.TypeName "Ptr_SURF"              , [t| C'Ptr_SURF               |] )
 --, ( C.TypeName "BRISK"                 , [t| C'BRISK                  |] )
 --, ( C.TypeName "KAZE"                  , [t| C'KAZE                   |] )
 --, ( C.TypeName "AKAZE"                 , [t| C'AKAZE                  |] )
