@@ -2,12 +2,18 @@
 {-# language QuasiQuotes #-}
 {-# language MultiParamTypeClasses #-}
 
-module OpenCV.Extra.XPhoto.WhiteBalancer where
+module OpenCV.Extra.XPhoto.WhiteBalancer
+ ( WhiteBalancer (..)
+ , GrayworldWB
+ , LearningBasedWB
+ , SimpleWB
+ , newGrayworldWB
+ , newLearningBasedWB
+ , newSimpleWB
+ ) where
 
 import "base" Control.Exception ( mask_ )
 import "base" Data.Int
-import "base" Data.Word
-import "base" Data.Maybe
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( toBool )
@@ -38,12 +44,12 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 class WhiteBalancer a m where
-    balanceWhite
-        :: a
-        -> Mat ('S [h, w]) channels depth
-           -- ^ The input Image.
-        -> m (Mat ('S [h, w]) ('S 1) ('S Word8))
-           -- ^ The output image.
+ balanceWhite
+   :: a
+   -> Mat ('S [h, w]) channels depth
+   -- ^ The input Image.
+   -> m (Mat ('S [h, w]) channels depth)
+   -- ^ The output image.
 
 --------------------------------------------------------------------------------
 -- Background subtractors
@@ -200,3 +206,110 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (SimpleWB s) m where
               );
             }|]
             pure $ unsafeCoerceMat imgOut
+---
+
+{-| Perform GrayworldWB a simple grayworld white balance algorithm.
+
+Example:
+
+@
+grayworldWBImg
+    :: forall h w h2 w2 c d
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Sailboat_768x512
+       , w2 ~ ((*) w 2)
+       , h2 ~ ((*) h 2)
+       )
+    => IO (Mat ('S ['S h2, 'S w2]) ('S c) ('S d))
+grayworldWBImg = do
+    let
+      bw :: WhiteBalancer a IO => a -> IO (Mat (ShapeT [h, w]) ('S c) ('S d))
+      bw = flip balanceWhite sailboat_768x512
+    balancedGrayworldWB <- bw =<< newGrayworldWB Nothing
+    balancedLearningBasedWB <- bw =<< newLearningBasedWB Nothing Nothing Nothing
+    balancedSimpleWB <- bw =<< newSimpleWB Nothing Nothing Nothing Nothing Nothing
+    pure $ exceptError $
+        withMatM
+          (Proxy :: Proxy [h2, w2])
+          (Proxy :: Proxy c)
+          (Proxy :: Proxy d)
+          black $ \imgM -> do
+            matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
+            matCopyToM imgM (V2 w 0) balancedGrayworldWB Nothing
+            matCopyToM imgM (V2 0 h) balancedLearningBasedWB Nothing
+            matCopyToM imgM (V2 w h) balancedSimpleWB Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy w)
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+@
+
+<<doc/generated/examples/grayworldWBImg.png grayworldWBImg>>
+
+-}
+
+newGrayworldWB
+    :: (PrimMonad m)
+    => Maybe Double
+       -- ^ A threshold of 1 means that all pixels are used to white-balance,
+       -- while a threshold of 0 means no pixels are used. Lower thresholds
+       -- are useful in white-balancing saturated images.
+    -> m (GrayworldWB (PrimState m))
+newGrayworldWB mbVarThreshold = unsafePrimToPrim $ fromPtr
+    [CU.block|Ptr_GrayworldWB * {
+      cv::Ptr<cv::xphoto::GrayworldWB> wbAlg = cv::xphoto::createGrayworldWB ();
+      wbAlg->setSaturationThreshold($(double  c'varThreshold ));
+      return new cv::Ptr<cv::xphoto::GrayworldWB>(wbAlg);
+    }|]
+  where
+    c'varThreshold  = maybe 0.9 realToFrac mbVarThreshold
+
+newLearningBasedWB
+    :: (PrimMonad m)
+    => Maybe Int32
+      -- ^ default 64, Defines the size of one dimension of a
+      -- three-dimensional RGB histogram that is used internally by the algorithm.
+      -- It often makes sense to increase the number of bins for images with
+      -- higher bit depth (e.g. 256 bins for a 12 bit image).
+    -> Maybe Int32
+      -- ^ default 255, Maximum possible value of the input image (e.g. 255 for 8 bit images, 4095 for 12 bit images)
+    -> Maybe Double
+      -- ^ default 0.98, Threshold that is used to determine saturated pixels,
+      -- i.e. pixels where at least one of the channels exceeds
+    -> m (LearningBasedWB (PrimState m))
+newLearningBasedWB mnVarHistBinNum mbRangeMaxVal mbVarSaturationThreshold
+  = unsafePrimToPrim $ fromPtr
+    [CU.block|Ptr_LearningBasedWB * {
+      cv::Ptr<cv::xphoto::LearningBasedWB> wbAlg = cv::xphoto::createLearningBasedWB ();
+      wbAlg->setHistBinNum($(int  c'varHistBinNum ));
+      wbAlg->setRangeMaxVal($(int  c'varRangeMaxVal ));
+      wbAlg->setSaturationThreshold($(double  c'varSaturationThreshold ));
+      return new cv::Ptr<cv::xphoto::LearningBasedWB>(wbAlg);
+    }|]
+  where
+    c'varHistBinNum          = maybe 64   fromIntegral   mnVarHistBinNum
+    c'varRangeMaxVal         = maybe 255  fromIntegral mbRangeMaxVal
+    c'varSaturationThreshold = maybe 0.98 realToFrac   mbVarSaturationThreshold
+
+newSimpleWB
+    :: (PrimMonad m)
+    => Maybe Double -- ^ Input Min
+    -> Maybe Double -- ^ Input Max
+    -> Maybe Double -- ^ Output Min
+    -> Maybe Double -- ^ Output Max
+    -> Maybe Double -- ^ Percent of top/bottom values to ignore
+    -> m (SimpleWB (PrimState m))
+newSimpleWB mIMin mIMax mOMin mOMax mP = unsafePrimToPrim $ fromPtr
+    [CU.block|Ptr_SimpleWB * {
+      cv::Ptr<cv::xphoto::SimpleWB> wbAlg = cv::xphoto::createSimpleWB ();
+      wbAlg->setInputMin( $(double  c'varIMin  ));
+      wbAlg->setInputMax( $(double  c'varIMax  ));
+      wbAlg->setOutputMin($(double  c'varOMin  ));
+      wbAlg->setOutputMax($(double  c'varOMax  ));
+      wbAlg->setP($(double  c'varP     ));
+      return new cv::Ptr<cv::xphoto::SimpleWB>(wbAlg);
+    }|]
+  where
+    c'varIMin  = maybe 0   realToFrac mIMin
+    c'varIMax  = maybe 255 realToFrac mIMax
+    c'varOMin  = maybe 0   realToFrac mOMin
+    c'varOMax  = maybe 255 realToFrac mOMax
+    c'varP     = maybe 2   realToFrac mP
