@@ -25,6 +25,7 @@ library
     c-sources:
         src/OpenCV/Extra/Bgsegm.cpp
         src/OpenCV/Extra/XPhoto.cpp
+        src/OpenCV/Extra/XPhoto/WhiteBalancer.cpp
         src/OpenCV/Extra/XFeatures2d.cpp
 
     cc-options: -Wall -std=c++11
@@ -50,6 +51,7 @@ library
         OpenCV.Extra.Bgsegm
         OpenCV.Extra.XFeatures2d
         OpenCV.Extra.XPhoto
+        OpenCV.Extra.XPhoto.WhiteBalancer
 
         OpenCV.Extra.Internal.C.Inline
         OpenCV.Extra.Internal.C.Types

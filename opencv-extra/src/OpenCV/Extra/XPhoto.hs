@@ -87,7 +87,6 @@ dctDenoising sigma mPSize src =
 
 Example:
 
-DISABLED
 @
 autowbGrayworldImg
     :: forall h w w2 c d

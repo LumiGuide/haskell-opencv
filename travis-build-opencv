@@ -1,6 +1,12 @@
 #!/bin/bash
 set -eux -o pipefail
 
+#OPENCV_VERSION=3.1.0
+OPENCV_VERSION=${OPENCV_VERSION:-3.2.0}
+
+#GRAPHICAL=ON
+GRAPHICAL=${GRAPHICAL:-OFF}
+
 # OpenCV looks for libjpeg in /usr/lib/libjpeg.so, for some reason. However,
 # it does not seem to be there in 14.04. Create a link
 
@@ -18,20 +24,31 @@ fi
 
 # Build OpenCV
 if [[ ! -e "$HOME/usr/installed" ]]; then
-if [[ ! -d "opencv-3.1.0/build" ]]; then
-  curl -sL https://github.com/Itseez/opencv/archive/3.1.0.zip > opencv.zip
+if [[ ! -d "opencv-${OPENCV_VERSION}/build" ]]; then
+  curl -sL https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.zip > opencv.zip
   unzip -q opencv.zip
-  mkdir opencv-3.1.0/build
+  mkdir opencv-${OPENCV_VERSION}/build
 fi
 
-if [[ ! -d "opencv_contrib-3.1.0/modules" ]]; then
-   curl -sL https://github.com/opencv/opencv_contrib/archive/3.1.0.zip > opencv-contrib.zip
+if [[ ! -d "opencv_contrib-${OPENCV_VERSION}/modules" ]]; then
+   curl -sL https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip > opencv-contrib.zip
    unzip -q opencv-contrib.zip
 fi
 
-cd opencv-3.1.0/build
-cmake -D WITH_IPP=OFF -D WITH_OPENGL=OFF -D WITH_QT=OFF -D BUILD_EXAMPLES=OFF -D BUILD_TESTS=OFF -D BUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF -DBUILD_opencv_python=OFF -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=OFF -D CMAKE_INSTALL_PREFIX=$HOME/usr -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.1.0/modules ..
-make -j2
+cd opencv-${OPENCV_VERSION}/build
+cmake -D WITH_IPP=${GRAPHICAL} \
+      -D WITH_OPENGL=${GRAPHICAL} \
+      -D WITH_QT=${GRAPHICAL} \
+      -D BUILD_EXAMPLES=OFF \
+      -D BUILD_TESTS=OFF \
+      -D BUILD_PERF_TESTS=OFF  \
+      -D BUILD_opencv_java=OFF \
+      -D BUILD_opencv_python=OFF \
+      -D BUILD_opencv_python2=OFF \
+      -D BUILD_opencv_python3=OFF \
+      -D CMAKE_INSTALL_PREFIX=$HOME/usr \
+      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${OPENCV_VERSION}/modules ..
+make -j8
 make install && touch $HOME/usr/installed
 cd ../..
 touch $HOME/fresh-cache

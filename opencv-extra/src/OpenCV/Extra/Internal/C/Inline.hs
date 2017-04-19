@@ -35,4 +35,7 @@ openCvExtraTypesTable = M.fromList
   [ ( C.TypeName "Ptr_BackgroundSubtractorGMG", [t| C'Ptr_BackgroundSubtractorGMG |] )
   , ( C.TypeName "Ptr_BackgroundSubtractorMOG", [t| C'Ptr_BackgroundSubtractorMOG |] )
   , ( C.TypeName "Ptr_SURF"                   , [t| C'Ptr_SURF                    |] )
+  , ( C.TypeName "Ptr_GrayworldWB"            , [t| C'Ptr_GrayworldWB             |] )
+  , ( C.TypeName "Ptr_LearningBasedWB"        , [t| C'Ptr_LearningBasedWB         |] )
+  , ( C.TypeName "Ptr_SimpleWB"               , [t| C'Ptr_SimpleWB                |] )
   ]
