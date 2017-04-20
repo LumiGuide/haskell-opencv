@@ -12,7 +12,6 @@ module OpenCV.Extra.XPhoto.WhiteBalancer
  , newSimpleWB
  ) where
 
-import "base" Control.Exception ( mask_ )
 import "base" Data.Int
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -44,12 +43,10 @@ C.using "namespace cv"
 --------------------------------------------------------------------------------
 
 class WhiteBalancer a m where
- balanceWhite
-   :: a
-   -> Mat ('S [h, w]) channels depth
-   -- ^ The input Image.
-   -> m (Mat ('S [h, w]) channels depth)
-   -- ^ The output image.
+    balanceWhite
+        :: a
+        ->    Mat ('S [h, w]) channels depth  -- ^ The input Image.
+        -> m (Mat ('S [h, w]) channels depth) -- ^ The output image.
 
 --------------------------------------------------------------------------------
 -- Background subtractors
@@ -167,7 +164,7 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (GrayworldWB s) m where
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
           withPtr imgIn $ \imgInPtr ->
-          withPtr imgOut $ \imgOutPtr -> mask_ $ do
+          withPtr imgOut $ \imgOutPtr -> do
             [C.block| void {
               cv::xphoto::GrayworldWB * wb = *$(Ptr_GrayworldWB * wbAlgPtr);
               wb->balanceWhite
@@ -182,7 +179,7 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (LearningBasedWB s) m w
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
           withPtr imgIn $ \imgInPtr ->
-          withPtr imgOut $ \imgOutPtr -> mask_ $ do
+          withPtr imgOut $ \imgOutPtr -> do
             [C.block| void {
               cv::xphoto::LearningBasedWB * wb = *$(Ptr_LearningBasedWB * wbAlgPtr);
               wb->balanceWhite
@@ -197,7 +194,7 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (SimpleWB s) m where
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
           withPtr imgIn $ \imgInPtr ->
-          withPtr imgOut $ \imgOutPtr -> mask_ $ do
+          withPtr imgOut $ \imgOutPtr -> do
             [C.block| void {
               cv::xphoto::SimpleWB * wb = *$(Ptr_SimpleWB * wbAlgPtr);
               wb->balanceWhite
@@ -251,7 +248,7 @@ newGrayworldWB
     => Maybe Double
        -- ^ A threshold of 1 means that all pixels are used to white-balance,
        -- while a threshold of 0 means no pixels are used. Lower thresholds
-       -- are useful in white-balancing saturated images.
+       -- are useful in white-balancing saturated images. Default: 0.9.
     -> m (GrayworldWB (PrimState m))
 newGrayworldWB mbVarThreshold = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_GrayworldWB * {
@@ -260,7 +257,7 @@ newGrayworldWB mbVarThreshold = unsafePrimToPrim $ fromPtr
       return new cv::Ptr<cv::xphoto::GrayworldWB>(wbAlg);
     }|]
   where
-    c'varThreshold  = maybe 0.9 realToFrac mbVarThreshold
+    c'varThreshold = maybe 0.9 realToFrac mbVarThreshold
 
 newLearningBasedWB
     :: (PrimMonad m)
@@ -275,7 +272,7 @@ newLearningBasedWB
       -- ^ default 0.98, Threshold that is used to determine saturated pixels,
       -- i.e. pixels where at least one of the channels exceeds
     -> m (LearningBasedWB (PrimState m))
-newLearningBasedWB mnVarHistBinNum mbRangeMaxVal mbVarSaturationThreshold
+newLearningBasedWB mbVarHistBinNum mbRangeMaxVal mbVarSaturationThreshold
   = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_LearningBasedWB * {
       cv::Ptr<cv::xphoto::LearningBasedWB> wbAlg = cv::xphoto::createLearningBasedWB ();
@@ -285,19 +282,19 @@ newLearningBasedWB mnVarHistBinNum mbRangeMaxVal mbVarSaturationThreshold
       return new cv::Ptr<cv::xphoto::LearningBasedWB>(wbAlg);
     }|]
   where
-    c'varHistBinNum          = maybe 64   fromIntegral   mnVarHistBinNum
+    c'varHistBinNum          = maybe 64   fromIntegral mbVarHistBinNum
     c'varRangeMaxVal         = maybe 255  fromIntegral mbRangeMaxVal
     c'varSaturationThreshold = maybe 0.98 realToFrac   mbVarSaturationThreshold
 
 newSimpleWB
     :: (PrimMonad m)
-    => Maybe Double -- ^ Input Min
-    -> Maybe Double -- ^ Input Max
-    -> Maybe Double -- ^ Output Min
-    -> Maybe Double -- ^ Output Max
-    -> Maybe Double -- ^ Percent of top/bottom values to ignore
+    => Maybe Double -- ^ Input Min (default: 0)
+    -> Maybe Double -- ^ Input Max (default: 255)
+    -> Maybe Double -- ^ Output Min (default: 0)
+    -> Maybe Double -- ^ Output Max (default: 255)
+    -> Maybe Double -- ^ Percent of top/bottom values to ignore (default: 2)
     -> m (SimpleWB (PrimState m))
-newSimpleWB mIMin mIMax mOMin mOMax mP = unsafePrimToPrim $ fromPtr
+newSimpleWB mbIMin mbIMax mbOMin mbOMax mbP = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_SimpleWB * {
       cv::Ptr<cv::xphoto::SimpleWB> wbAlg = cv::xphoto::createSimpleWB ();
       wbAlg->setInputMin( $(double  c'varIMin  ));
@@ -308,8 +305,8 @@ newSimpleWB mIMin mIMax mOMin mOMax mP = unsafePrimToPrim $ fromPtr
       return new cv::Ptr<cv::xphoto::SimpleWB>(wbAlg);
     }|]
   where
-    c'varIMin  = maybe 0   realToFrac mIMin
-    c'varIMax  = maybe 255 realToFrac mIMax
-    c'varOMin  = maybe 0   realToFrac mOMin
-    c'varOMax  = maybe 255 realToFrac mOMax
-    c'varP     = maybe 2   realToFrac mP
+    c'varIMin  = maybe 0   realToFrac mbIMin
+    c'varIMax  = maybe 255 realToFrac mbIMax
+    c'varOMin  = maybe 0   realToFrac mbOMin
+    c'varOMax  = maybe 255 realToFrac mbOMax
+    c'varP     = maybe 2   realToFrac mbP

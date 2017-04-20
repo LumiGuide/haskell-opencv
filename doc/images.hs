@@ -11,7 +11,7 @@ import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Word
-import "base" Foreign.C.Types
+import "base" Foreign.C.Types ( CFloat )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
