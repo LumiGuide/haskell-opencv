@@ -193,7 +193,7 @@ test-suite doc-images-opencv
       , containers        >= 0.5.6.2
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
-      , haskell-src-exts  >= 1.17.1
+      , haskell-src-exts  >= 1.18.2
       , linear            >= 1.20.4
       , opencv            == 0.0.0
       , primitive         >= 0.6.1
