@@ -1,6 +1,5 @@
 {-# language TemplateHaskell #-}
 {-# language QuasiQuotes #-}
-{-# language MultiParamTypeClasses #-}
 
 {- |
 Two additional background subtraction algorithms. These algorithms do
@@ -137,7 +136,7 @@ newBackgroundSubtractorMOG mbHistory mbNumGausianMix mbBackgroundRatio mbNoise
 
 --------------------------------------------------------------------------------
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorGMG s) m where
+instance Algorithm BackgroundSubtractorGMG where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
           [C.block|void {
@@ -154,7 +153,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorGMG s)
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorMOG s) m where
+instance Algorithm BackgroundSubtractorMOG where
     algorithmClearState mog2 = unsafePrimToPrim $
         withPtr mog2 $ \mog2Ptr ->
           [C.block|void {
@@ -171,7 +170,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorMOG s)
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtractorGMG s) m where
+instance BackgroundSubtractor BackgroundSubtractorGMG where
     bgSubApply gmg learningRate img = unsafePrimToPrim $ do
         fgMask <- newEmptyMat
         withPtr gmg $ \gmgPtr ->
@@ -200,7 +199,7 @@ instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtr
             }|]
             pure $ unsafeCoerceMat img
 
-instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtractorMOG s) m where
+instance BackgroundSubtractor BackgroundSubtractorMOG where
     bgSubApply mog learningRate img = unsafePrimToPrim $ do
         fgMask <- newEmptyMat
         withPtr mog $ \mogPtr ->

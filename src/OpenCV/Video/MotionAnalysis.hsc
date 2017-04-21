@@ -1,6 +1,5 @@
 {-# language TemplateHaskell #-}
 {-# language QuasiQuotes #-}
-{-# language MultiParamTypeClasses #-}
 
 module OpenCV.Video.MotionAnalysis
     ( -- * BackgroundSubtractor
@@ -52,9 +51,10 @@ C.using "namespace cv"
 -- BackgroundSubtractor
 --------------------------------------------------------------------------------
 
-class BackgroundSubtractor a m where
+class BackgroundSubtractor a where
     bgSubApply
-        :: a
+        :: (PrimMonad m)
+        => a (PrimState m)
         -> Double
            -- ^ The value between 0 and 1 that indicates how fast the background
            -- model is learnt. Negative parameter value makes the algorithm to
@@ -67,7 +67,8 @@ class BackgroundSubtractor a m where
            -- ^ The output foreground mask as an 8-bit binary image.
 
     getBackgroundImage
-        :: a
+        :: (PrimMonad m)
+        => a (PrimState m)
         -> m (Mat ('S [h, w]) channels depth)
            -- ^ The output background image.
 
@@ -172,7 +173,7 @@ newBackgroundSubtractorMOG2 mbHistory mbVarThreshold mbDetectShadows = unsafePri
 
 --------------------------------------------------------------------------------
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorKNN s) m where
+instance Algorithm BackgroundSubtractorKNN where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
           [C.block|void {
@@ -189,7 +190,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorKNN s)
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorMOG2 s) m where
+instance Algorithm BackgroundSubtractorMOG2 where
     algorithmClearState mog2 = unsafePrimToPrim $
         withPtr mog2 $ \mog2Ptr ->
           [C.block|void {
@@ -206,7 +207,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (BackgroundSubtractorMOG2 s
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtractorKNN s) m where
+instance BackgroundSubtractor BackgroundSubtractorKNN where
     bgSubApply knn learningRate img = unsafePrimToPrim $ do
         fgMask <- newEmptyMat
         withPtr knn $ \knnPtr ->
@@ -234,7 +235,7 @@ instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtr
             }|]
             pure $ unsafeCoerceMat img
 
-instance (PrimMonad m, s ~ PrimState m) => BackgroundSubtractor (BackgroundSubtractorMOG2 s) m where
+instance BackgroundSubtractor BackgroundSubtractorMOG2 where
     bgSubApply mog2 learningRate img = unsafePrimToPrim $ do
         fgMask <- newEmptyMat
         withPtr mog2 $ \mog2Ptr ->

@@ -1,7 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-} -- For Show instances
 
@@ -71,6 +70,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
+import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Core.Types.Point
@@ -354,6 +354,6 @@ dmatchAsRec dmatch = unsafePerformIO $
 -- Algorithm
 --------------------------------------------------------------------------------
 
-class Algorithm a m where
-    algorithmClearState :: a -> m ()
-    algorithmIsEmpty :: a -> m Bool
+class Algorithm a where
+    algorithmClearState :: (PrimMonad m) => a (PrimState m) -> m ()
+    algorithmIsEmpty    :: (PrimMonad m) => a (PrimState m) -> m Bool

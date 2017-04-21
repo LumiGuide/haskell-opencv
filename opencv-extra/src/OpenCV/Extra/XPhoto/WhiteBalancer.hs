@@ -1,6 +1,5 @@
 {-# language TemplateHaskell #-}
 {-# language QuasiQuotes #-}
-{-# language MultiParamTypeClasses #-}
 
 module OpenCV.Extra.XPhoto.WhiteBalancer
  ( WhiteBalancer (..)
@@ -42,9 +41,10 @@ C.using "namespace cv"
 -- WhiteBalancer
 --------------------------------------------------------------------------------
 
-class WhiteBalancer a m where
+class WhiteBalancer a where
     balanceWhite
-        :: a
+        :: (PrimMonad m)
+        => a (PrimState m)
         ->    Mat ('S [h, w]) channels depth  -- ^ The input Image.
         -> m (Mat ('S [h, w]) channels depth) -- ^ The output image.
 
@@ -107,7 +107,7 @@ instance FromPtr (SimpleWB s) where
                 }|]
 
 ---
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (GrayworldWB s) m where
+instance Algorithm GrayworldWB where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
           [C.block|void {
@@ -124,7 +124,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (GrayworldWB s) m where
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (LearningBasedWB s) m where
+instance Algorithm LearningBasedWB where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
           [C.block|void {
@@ -141,7 +141,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (LearningBasedWB s) m where
           }|]
           toBool <$> peek emptyPtr
 
-instance (PrimMonad m, s ~ PrimState m) => Algorithm (SimpleWB s) m where
+instance Algorithm SimpleWB where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
           [C.block|void {
@@ -159,7 +159,7 @@ instance (PrimMonad m, s ~ PrimState m) => Algorithm (SimpleWB s) m where
           toBool <$> peek emptyPtr
 ---
 
-instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (GrayworldWB s) m where
+instance WhiteBalancer GrayworldWB where
     balanceWhite wbAlg imgIn = unsafePrimToPrim $ do
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
@@ -174,7 +174,7 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (GrayworldWB s) m where
             }|]
             pure $ unsafeCoerceMat imgOut
 
-instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (LearningBasedWB s) m where
+instance WhiteBalancer LearningBasedWB where
     balanceWhite wbAlg imgIn = unsafePrimToPrim $ do
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
@@ -189,7 +189,7 @@ instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (LearningBasedWB s) m w
             }|]
             pure $ unsafeCoerceMat imgOut
 
-instance (PrimMonad m, s ~ PrimState m) => WhiteBalancer (SimpleWB s) m where
+instance WhiteBalancer SimpleWB where
     balanceWhite wbAlg imgIn = unsafePrimToPrim $ do
         imgOut <- newEmptyMat
         withPtr wbAlg $ \wbAlgPtr ->
@@ -219,7 +219,7 @@ grayworldWBImg
     => IO (Mat ('S ['S h2, 'S w2]) ('S c) ('S d))
 grayworldWBImg = do
     let
-      bw :: WhiteBalancer a IO => a -> IO (Mat (ShapeT [h, w]) ('S c) ('S d))
+      bw :: (WhiteBalancer a) => a (PrimState IO) -> IO (Mat (ShapeT [h, w]) ('S c) ('S d))
       bw = flip balanceWhite sailboat_768x512
     balancedGrayworldWB <- bw =<< newGrayworldWB Nothing
     balancedLearningBasedWB <- bw =<< newLearningBasedWB Nothing Nothing Nothing
