@@ -1,4 +1,4 @@
-    {-# language QuasiQuotes #-}
+{-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 
 {- |
@@ -75,7 +75,7 @@ import "this" OpenCV.TypeLevel
 
 --------------------------------------------------------------------------------
 
-C.context (openCvCtx)
+C.context openCvCtx
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
@@ -115,7 +115,7 @@ whereas to enlarge an image, it will generally look best with 'InterCubic'
 Example:
 
 @
-resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S     3) ('S Word8)
+resizeInterAreaImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
 resizeInterAreaImg = exceptError $
     withMatM (h ::: w + (w \`div` 2) ::: Z)
              (Proxy :: Proxy 3)
@@ -283,7 +283,7 @@ getPerspectiveTransform
     => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
     -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
     -> Mat (ShapeT [3,3]) ('S 1) ('S Double) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
-getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $ 
+getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $
     withArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
         withArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
         fromPtr
@@ -292,7 +292,7 @@ getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $
             ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
             );
         }|]
- 
+
 {- | Calculates an affine matrix of 2D rotation
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
