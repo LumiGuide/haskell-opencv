@@ -3,5 +3,6 @@ packages:
 - '.'
 - opencv-extra/
 - examples/
+- opencv-extra/examples/
 flags: {}
 allow-newer: true

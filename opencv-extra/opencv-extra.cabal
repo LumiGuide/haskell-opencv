@@ -24,6 +24,7 @@ library
     include-dirs: include
     c-sources:
         src/OpenCV/Extra/Bgsegm.cpp
+        src/OpenCV/Extra/Tracking.cpp
         src/OpenCV/Extra/XPhoto.cpp
         src/OpenCV/Extra/XPhoto/WhiteBalancer.cpp
         src/OpenCV/Extra/XFeatures2d.cpp
@@ -50,6 +51,7 @@ library
         OpenCV.Extra
         OpenCV.Extra.Bgsegm
         OpenCV.Extra.XFeatures2d
+        OpenCV.Extra.Tracking
         OpenCV.Extra.XPhoto
         OpenCV.Extra.XPhoto.WhiteBalancer
 

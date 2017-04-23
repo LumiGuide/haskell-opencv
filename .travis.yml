@@ -31,7 +31,7 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-- ARGS="--jobs 2 --resolver lts-7.2" CACHE_NAME=LTS_7_2
+- ARGS="--jobs 2 --resolver lts-8.9" CACHE_NAME=LTS_8_9_CV_3_2_0
 
 before_install:
 # Install OpenCV 3
@@ -55,7 +55,7 @@ before_cache:
 script:
 - stack --no-terminal --install-ghc build --only-dependencies $ARGS
 - stack --no-terminal test    --only-dependencies $ARGS
-- stack --no-terminal haddock --only-dependencies $ARGS
+#- stack --no-terminal haddock --only-dependencies $ARGS -- too long :(
 - bash trampoline.sh
 
 # Caching so the next build will be fast too.

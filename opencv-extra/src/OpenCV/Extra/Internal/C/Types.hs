@@ -21,3 +21,12 @@ data C'Ptr_GrayworldWB
 data C'Ptr_LearningBasedWB
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::xphoto::SimpleWB>@ object
 data C'Ptr_SimpleWB
+
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::Tracker>@ object
+data C'Ptr_Tracker
+data C'Ptr_TrackerFeature
+data C'Ptr_MultiTracker
+data C'Ptr_MultiTrackerAlt
+
+data C'TrackerFeatureSet
+data C'Ptr_TrackerSamplerAlgorithm

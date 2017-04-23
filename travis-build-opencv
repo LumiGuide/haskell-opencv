@@ -23,17 +23,21 @@ if [[ ! -f "$HOME/usr/lib/libpng.so" ]]; then
 fi
 
 # Build OpenCV
-if [[ ! -e "$HOME/usr/installed" ]]; then
+if [[ ! -e "$HOME/usr/installed-${OPENCV_VERSION}" ]]; then
+TMP=$(mktemp -d)
 if [[ ! -d "opencv-${OPENCV_VERSION}/build" ]]; then
-  curl -sL https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.zip > opencv.zip
-  unzip -q opencv.zip
+  curl -sL https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.zip > ${TMP}/opencv.zip
+  unzip -q ${TMP}/opencv.zip
   mkdir opencv-${OPENCV_VERSION}/build
+  rm ${TMP}/opencv.zip
 fi
 
 if [[ ! -d "opencv_contrib-${OPENCV_VERSION}/modules" ]]; then
-   curl -sL https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip > opencv-contrib.zip
-   unzip -q opencv-contrib.zip
+   curl -sL https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip > ${TMP}/opencv-contrib.zip
+   unzip -q ${TMP}/opencv-contrib.zip
+   rm ${TMP}/opencv-contrib.zip
 fi
+rmdir ${TMP}
 
 cd opencv-${OPENCV_VERSION}/build
 cmake -D WITH_IPP=${GRAPHICAL} \
@@ -49,7 +53,7 @@ cmake -D WITH_IPP=${GRAPHICAL} \
       -D CMAKE_INSTALL_PREFIX=$HOME/usr \
       -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${OPENCV_VERSION}/modules ..
 make -j8
-make install && touch $HOME/usr/installed
+make install && touch $HOME/usr/installed-${OPENCV_VERSION}
 cd ../..
 touch $HOME/fresh-cache
 fi
