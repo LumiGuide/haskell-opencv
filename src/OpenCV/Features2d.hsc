@@ -33,6 +33,7 @@ module OpenCV.Features2d
     , FlannBasedMatcher
     , FlannIndexParams(..)
     , FlannSearchParams(..)
+    , FlannBasedMatcherParams(..)
     , newFlannBasedMatcher
     ) where
 
@@ -47,6 +48,7 @@ import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import "data-default" Data.Default
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -654,6 +656,7 @@ instance FromPtr BFMatcher where
     fromPtr = objFromPtr BFMatcher $ \ptr ->
                 [CU.exp| void { delete $(BFMatcher * ptr) }|]
 
+
 --------------------------------------------------------------------------------
 
 newBFMatcher
@@ -720,7 +723,7 @@ fbMatcherImg = do
     let (kpts1, descs1) = exceptError $ orbDetectAndCompute orb frog        Nothing
         (kpts2, descs2) = exceptError $ orbDetectAndCompute orb rotatedFrog Nothing
 
-    fbmatcher <- newFlannBasedMatcher (FlannLshIndexParams 20 10 2) (FlannSearchParams 32 0 True)
+    fbmatcher <- newFlannBasedMatcher (def { indexParams = FlannLshIndexParams 20 10 2 })
     matches <- match fbmatcher
                      descs1 -- Query descriptors
                      descs2 -- Train descriptors
@@ -783,6 +786,24 @@ data FlannIndexParams = FlannKDTreeIndexParams { trees :: Int }
 data FlannSearchParams = FlannSearchParams { checks :: Int, eps :: Float, sorted :: Bool }
 
 
+data FlannBasedMatcherParams = FlannBasedMatcherParams
+    { indexParams :: FlannIndexParams
+    , searchParams :: FlannSearchParams
+    }
+
+
+instance Default FlannIndexParams where
+    def = FlannKDTreeIndexParams { trees = 4 }
+
+
+instance Default FlannSearchParams where
+    def = FlannSearchParams { checks = 32, eps = 0, sorted = True }
+
+
+instance Default FlannBasedMatcherParams where
+    def = FlannBasedMatcherParams def def
+
+
 -- NB: 1) it's OK to pass these new object as raw pointers because these directly pass to Ptr() in FlannBasedMatcher
 --     2) also, these objects use only in this internal module, so we don't create inlinec-wrappers for it, but pass
 --        between calls as void* pointers
@@ -805,8 +826,8 @@ marshallSearchParams (FlannSearchParams checks eps sorted) = unsafePerformIO $
           c'sorted = fromBool sorted
 
 
-newFlannBasedMatcher :: FlannIndexParams -> FlannSearchParams -> IO FlannBasedMatcher
-newFlannBasedMatcher indexParams searchParams = fromPtr
+newFlannBasedMatcher :: FlannBasedMatcherParams -> IO FlannBasedMatcher
+newFlannBasedMatcher FlannBasedMatcherParams{..} = fromPtr
     [CU.exp|FlannBasedMatcher * {
       new cv::FlannBasedMatcher((flann::IndexParams*)($(void* c'indexParams)), (flann::SearchParams*)($(void* c'searchParams)))
     }|]
