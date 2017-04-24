@@ -29,13 +29,18 @@ module OpenCV.Features2d
       -- ** BFMatcher
     , BFMatcher
     , newBFMatcher
+      -- ** FlannBasedMatcher
+    , FlannBasedMatcher
+    , FlannIndexParams(..)
+    , FlannSearchParams(..)
+    , newFlannBasedMatcher
     ) where
 
 import "base" Control.Exception ( mask_ )
 import "base" Data.Int
 import "base" Data.Word
 import "base" Data.Maybe
-import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, castForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
@@ -65,6 +70,7 @@ C.include "orb.hpp"
 C.include "simple_blob_detector.hpp"
 
 C.using "namespace cv"
+C.using "namespace cv::flann"
 
 #include <bindings.dsl.h>
 #include "opencv2/core.hpp"
@@ -504,6 +510,7 @@ blobDetect detector img mbMask = unsafeWrapException $ do
 --------------------------------------------------------------------------------
 
 class DescriptorMatcher a where
+    upcast :: a -> BaseMatcher
     match
         :: a
         -> Mat 'D 'D 'D -- ^ Query set of descriptors.
@@ -512,6 +519,61 @@ class DescriptorMatcher a where
            -- ^ Mask specifying permissible matches between an input query and
            -- train matrices of descriptors..
         -> IO (V.Vector DMatch)
+    match dm queryDescriptors trainDescriptors mbMask =
+        withPtr (upcast dm)      $ \dmPtr    ->
+        withPtr queryDescriptors $ \queryPtr ->
+        withPtr trainDescriptors $ \trainPtr ->
+        withPtr mbMask           $ \maskPtr  ->
+        alloca $ \(numMatchesPtr :: Ptr Int32) ->
+        alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'DMatch))) -> mask_ $ do
+            [C.block| void {
+                cv::Mat * maskPtr = $(Mat * maskPtr);
+                std::vector<cv::DMatch> matches = std::vector<cv::DMatch>();
+
+                $(DescriptorMatcher * dmPtr)->match
+                    ( *$(Mat * queryPtr)
+                    , *$(Mat * trainPtr)
+                    , matches
+                    , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(noArray())
+                    );
+
+                *$(int32_t * numMatchesPtr) = matches.size();
+
+                cv::DMatch * * * arrayPtrPtr = $(DMatch * * * arrayPtrPtr);
+                cv::DMatch * * arrayPtr = new cv::DMatch * [matches.size()];
+                *arrayPtrPtr = arrayPtr;
+
+                for (std::vector<cv::DMatch>::size_type ix = 0; ix != matches.size(); ix++)
+                {
+                    cv::DMatch & org = matches[ix];
+                    cv::DMatch * newMatch =
+                        new cv::DMatch( org.queryIdx
+                                      , org.trainIdx
+                                      , org.imgIdx
+                                      , org.distance
+                                      );
+                    arrayPtr[ix] = newMatch;
+                }
+            }|]
+
+            (numMatches :: Int) <- fromIntegral <$> peek numMatchesPtr
+            arrayPtr <- peek arrayPtrPtr
+            matches <- mapM (fromPtr . pure) =<< peekArray numMatches arrayPtr
+
+            [CU.block| void {
+                delete [] *$(DMatch * * * arrayPtrPtr);
+            }|]
+
+            pure $ V.fromList matches
+
+
+newtype BaseMatcher = BaseMatcher {unBaseMatcher :: ForeignPtr C'DescriptorMatcher}
+
+type instance C BaseMatcher = C'DescriptorMatcher
+
+instance WithPtr BaseMatcher where
+    withPtr = withForeignPtr . unBaseMatcher
+
 
 --------------------------------------------------------------------------------
 -- BFMatcher
@@ -625,50 +687,134 @@ newBFMatcher normType crossCheck = fromPtr
 --------------------------------------------------------------------------------
 
 instance DescriptorMatcher BFMatcher where
-  match bf queryDescriptors trainDescriptors mbMask =
-      withPtr bf               $ \bfPtr    ->
-      withPtr queryDescriptors $ \queryPtr ->
-      withPtr trainDescriptors $ \trainPtr ->
-      withPtr mbMask           $ \maskPtr  ->
-      alloca $ \(numMatchesPtr :: Ptr Int32) ->
-      alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'DMatch))) -> mask_ $ do
-        [C.block| void {
-          cv::Mat * maskPtr = $(Mat * maskPtr);
-          std::vector<cv::DMatch> matches = std::vector<cv::DMatch>();
+    upcast (BFMatcher ptr) = BaseMatcher $ castForeignPtr ptr
 
-          $(BFMatcher * bfPtr)->match
-            ( *$(Mat * queryPtr)
-            , *$(Mat * trainPtr)
-            , matches
-            , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(noArray())
-            );
 
-          *$(int32_t * numMatchesPtr) = matches.size();
 
-          cv::DMatch * * * arrayPtrPtr = $(DMatch * * * arrayPtrPtr);
-          cv::DMatch * * arrayPtr = new cv::DMatch * [matches.size()];
-          *arrayPtrPtr = arrayPtr;
+--------------------------------------------------------------------------------
+-- FlannBasedMatcher
+--------------------------------------------------------------------------------
 
-          for (std::vector<cv::DMatch>::size_type ix = 0; ix != matches.size(); ix++)
-          {
-            cv::DMatch & org = matches[ix];
-            cv::DMatch * newMatch =
-              new cv::DMatch( org.queryIdx
-                            , org.trainIdx
-                            , org.imgIdx
-                            , org.distance
-                            );
-            arrayPtr[ix] = newMatch;
-          }
-        }|]
+{- | Flann-based descriptor matcher.
 
-        (numMatches :: Int) <- fromIntegral <$> peek numMatchesPtr
-        arrayPtr <- peek arrayPtrPtr
-        matches <- mapM (fromPtr . pure) =<< peekArray numMatches arrayPtr
+This matcher trains flann::Index_ on a train descriptor collection and calls it
+nearest search methods to find the best matches. So, this matcher may be faster
+when matching a large train collection than the brute force matcher.
+FlannBasedMatcher does not support masking permissible matches of descriptor
+sets because flann::Index does not support this.
 
-        [CU.block| void {
-          delete [] *$(DMatch * * * arrayPtrPtr);
-        }|]
+Example:
 
-        pure $ V.fromList matches
+@
+fbMatcherImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
+       , width2 ~ (*) width 2
+       )
+    => IO (Mat (ShapeT [height, width2]) ('S channels) ('S depth))
+fbMatcherImg = do
+    let (kpts1, descs1) = exceptError $ orbDetectAndCompute orb frog        Nothing
+        (kpts2, descs2) = exceptError $ orbDetectAndCompute orb rotatedFrog Nothing
 
+    fbmatcher <- newFlannBasedMatcher (FlannLshIndexParams 20 10 2) (FlannSearchParams 32 0 True)
+    matches <- match fbmatcher
+                     descs1 -- Query descriptors
+                     descs2 -- Train descriptors
+                     Nothing
+    exceptErrorIO $ pureExcept $
+      withMatM (Proxy :: Proxy [height, width2])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               white $ \imgM -> do
+        matCopyToM imgM (V2 0     0) frog        Nothing
+        matCopyToM imgM (V2 width 0) rotatedFrog Nothing
+
+        -- Draw the matches as lines from the query image to the train image.
+        forM_ matches $ \dmatch -> do
+          let matchRec = dmatchAsRec dmatch
+              queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
+              trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
+              queryPtRec = keyPointAsRec queryPt
+              trainPtRec = keyPointAsRec trainPt
+
+          -- We translate the train point one width to the right in order to
+          -- match the position of rotatedFrog in imgM.
+          line imgM
+               (round \<$> kptPoint queryPtRec :: V2 Int32)
+               ((round \<$> kptPoint trainPtRec :: V2 Int32) ^+^ V2 width 0)
+               blue 1 LineType_AA 0
+  where
+    orb = mkOrb defaultOrbParams {orb_nfeatures = 50}
+
+    width = fromInteger $ natVal (Proxy :: Proxy width)
+
+    rotatedFrog = exceptError $
+                  warpAffine frog rotMat InterArea False False (BorderConstant black)
+    rotMat = getRotationMatrix2D (V2 250 195 :: V2 CFloat) 45 0.8
+@
+
+<<doc/generated/examples/fbMatcherImg.png fbMatcherImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/features2d/doc/common_interfaces_of_descriptor_matchers.html#flannbasedmatcher OpenCV Sphinx doc>
+-}
+newtype FlannBasedMatcher = FlannBasedMatcher {unFlannBasedMatcher :: ForeignPtr C'FlannBasedMatcher}
+
+type instance C FlannBasedMatcher = C'FlannBasedMatcher
+
+instance WithPtr FlannBasedMatcher where
+    withPtr = withForeignPtr . unFlannBasedMatcher
+
+instance FromPtr FlannBasedMatcher where
+    fromPtr = objFromPtr FlannBasedMatcher $ \ptr ->
+                [CU.exp| void { delete $(FlannBasedMatcher * ptr) }|]
+
+
+--------------------------------------------------------------------------------
+
+
+data FlannIndexParams = FlannKDTreeIndexParams { trees :: Int }
+                      | FlannLshIndexParams { tableNumber :: Int, keySize :: Int, multiProbeLevel :: Int }
+
+
+data FlannSearchParams = FlannSearchParams { checks :: Int, eps :: Float, sorted :: Bool }
+
+
+-- NB: 1) it's OK to pass these new object as raw pointers because these directly pass to Ptr() in FlannBasedMatcher
+--     2) also, these objects use only in this internal module, so we don't create inlinec-wrappers for it, but pass
+--        between calls as void* pointers
+
+marshalIndexParams :: FlannIndexParams -> Ptr ()
+marshalIndexParams (FlannKDTreeIndexParams tree) = unsafePerformIO $
+    [CU.exp| void* { new flann::KDTreeIndexParams($(int32_t c'tree)) } |]
+    where c'tree = fromIntegral tree
+marshalIndexParams (FlannLshIndexParams tableNumber keySize multiProbeLevel) = unsafePerformIO $
+    [CU.exp| void* { new cv::flann::LshIndexParams($(int32_t c'tableNumber), $(int32_t c'keySize), $(int32_t c'multiProbeLevel)) } |]
+    where c'tableNumber     = fromIntegral tableNumber
+          c'keySize         = fromIntegral keySize
+          c'multiProbeLevel = fromIntegral multiProbeLevel
+
+marshallSearchParams :: FlannSearchParams -> Ptr ()
+marshallSearchParams (FlannSearchParams checks eps sorted) = unsafePerformIO $
+    [CU.exp| void* { new cv::flann::SearchParams($(int32_t c'checks), $(float c'eps), $(bool c'sorted)) } |]
+    where c'checks = fromIntegral checks
+          c'eps    = realToFrac eps
+          c'sorted = fromBool sorted
+
+
+newFlannBasedMatcher :: FlannIndexParams -> FlannSearchParams -> IO FlannBasedMatcher
+newFlannBasedMatcher indexParams searchParams = fromPtr
+    [CU.exp|FlannBasedMatcher * {
+      new cv::FlannBasedMatcher((flann::IndexParams*)($(void* c'indexParams)), (flann::SearchParams*)($(void* c'searchParams)))
+    }|]
+  where
+    c'indexParams  = marshalIndexParams indexParams
+    c'searchParams = marshallSearchParams searchParams
+
+--------------------------------------------------------------------------------
+
+instance DescriptorMatcher FlannBasedMatcher where
+    upcast (FlannBasedMatcher ptr) = BaseMatcher $ castForeignPtr ptr

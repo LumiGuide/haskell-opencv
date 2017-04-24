@@ -113,7 +113,9 @@ openCvTypesTable = M.fromList
 --, ( C.TypeName "AKAZE"                 , [t| C'AKAZE                  |] )
   , ( C.TypeName "Ptr_SimpleBlobDetector", [t| C'Ptr_SimpleBlobDetector |] )
 
-  , ( C.TypeName "BFMatcher"   , [t| C'BFMatcher   |] )
+  , ( C.TypeName "DescriptorMatcher"     , [t| C'DescriptorMatcher      |] )
+  , ( C.TypeName "BFMatcher"             , [t| C'BFMatcher              |] )
+  , ( C.TypeName "FlannBasedMatcher"     , [t| C'FlannBasedMatcher      |] )
 
   , ( C.TypeName "Ptr_BackgroundSubtractorKNN" , [t| C'Ptr_BackgroundSubtractorKNN  |] )
   , ( C.TypeName "Ptr_BackgroundSubtractorMOG2", [t| C'Ptr_BackgroundSubtractorMOG2 |] )
