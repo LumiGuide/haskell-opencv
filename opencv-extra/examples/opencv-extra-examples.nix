@@ -4,42 +4,33 @@
 , runCommand
 
 , opencv
+, opencv-examples
+, opencv-extra
 
 , base
-, bytestring
-, file-embed
-, filepath
 , linear
-, template-haskell
-, temporary
 , transformers
 , vector
 }:
 mkDerivation {
-  pname = "opencv-examples";
+  pname = "opencv-extra-examples";
   version = "0.0.0";
-  src = runCommand "opencv-examples-src"
+  src = runCommand "opencv-extra-examples-src"
     { files = lib.sourceByRegex ./. [
         "^src$"
         "^src/.*"
-        "^lib$"
-        "^lib/.*"
-        "^opencv-examples.cabal$"
+        "^opencv-extra-examples.cabal$"
       ];
-      data = ../data;
+      data = ../../data;
     } ''
       mkdir -p $out
       cp -r $files/* $out #*/
       cp -r $data    $out/data
     '';
-  isLibrary = true;
+  isLibrary = false;
   isExecutable = true;
-  libraryHaskellDepends = [
-    base bytestring file-embed filepath opencv template-haskell
-    temporary
-  ];
   executableHaskellDepends = [
-    base bytestring linear opencv transformers vector
+    base linear opencv opencv-examples opencv-extra transformers vector
   ];
   homepage = "lumiguide.eu";
   license = stdenv.lib.licenses.bsd3;

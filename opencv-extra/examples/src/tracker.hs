@@ -8,7 +8,6 @@
 
 import qualified OpenCV as CV
 import qualified OpenCV.Internal.Core.Types.Mat as CV
-import qualified OpenCV.Core.Types.Rect as CV
 import OpenCV.VideoIO.Types
 import GHC.Word (Word8)
 import OpenCV.Example
@@ -28,18 +27,18 @@ import System.IO.Unsafe
 
 class LoopEnum a where
   next :: a -> a
-  prev :: a -> a
+
 instance (Eq a, Bounded a, Enum a) => LoopEnum a where
   next x | x == maxBound = minBound
          | otherwise = succ x
-  prev x | x == minBound = maxBound
-         | otherwise = pred x
 
 blue ,white:: CV.Scalar
 blue   = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 white  = CV.toScalar (V4 255 255 255 255 :: V4 Double)
 
+ccCommon :: ((FilePath -> IO (Maybe CV.CascadeClassifier)) -> IO (Maybe a)) -> a
 ccCommon f = unsafePerformIO $ fromJust <$> f CV.newCascadeClassifier
+
 ccFrontal :: CV.CascadeClassifier
 ccFrontal = ccCommon $(withEmbededFile "data/haarcascade_frontalface_default.xml")
 
@@ -69,12 +68,19 @@ main = do
               imgGray = CV.exceptError $ CV.cvtColor CV.bgr CV.gray img'
 
               faces = ccDetectMultiscale ccFrontal imgGray
-          trac <- updateTracker tr $ CV.unsafeCoerceMat img
+          mbTrac <- updateTracker tr $ CV.unsafeCoerceMat img
           let box = CV.exceptError $
                 CV.withMatM (h ::: w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white $ \imgM -> do
                    void $ CV.matCopyToM imgM (V2 0 0) (CV.unsafeCoerceMat img) Nothing
                    forM_ faces $ \faceRect -> lift $ CV.rectangle imgM faceRect blue 2 CV.LineType_8 0
-                   when (isJust trac) $ lift $ CV.rectangle imgM (CV.fmapRect (fromIntegral . round . realToFrac) $ fromJust trac) white 2 CV.LineType_8 0
+                   forM_ mbTrac $ \trac ->
+                     lift $ CV.rectangle
+                              imgM
+                              (CV.fmapRect round trac)
+                              white
+                              2
+                              CV.LineType_8
+                              0
           CV.imshow window ( CV.unsafeCoerceMat box )
           key <- CV.waitKey 20
           -- Loop unless the escape key is pr sed.

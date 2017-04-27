@@ -76,7 +76,6 @@ library
     pkgconfig-depends:  opencv
     extra-libraries:    stdc++
 
-
 test-suite doc-images-opencv-extra
     type: exitcode-stdio-1.0
     hs-source-dirs: doc

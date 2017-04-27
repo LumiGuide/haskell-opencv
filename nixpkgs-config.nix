@@ -3,8 +3,10 @@
     let
       haskellOverrides = {
         overrides = self: super: {
-          opencv = /* TODO (BvD): Get this to work: pkgs.haskell.lib.buildStrictly */
-                   (self.callPackage (import ./haskell-opencv.nix) {});
+          opencv                = self.callPackage (import ./haskell-opencv.nix) {};
+          opencv-examples       = self.callPackage (import ./examples/opencv-examples.nix) {};
+          opencv-extra          = self.callPackage (import ./opencv-extra/opencv-extra.nix) {};
+          opencv-extra-examples = self.callPackage (import ./opencv-extra/examples/opencv-extra-examples.nix) {};
         };
       };
       osx = builtins.currentSystem == "x86_64-darwin";
