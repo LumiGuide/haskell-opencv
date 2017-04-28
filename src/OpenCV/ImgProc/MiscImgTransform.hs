@@ -448,15 +448,15 @@ grabCut
         --     * GC_PR_BGD defines a possible background pixel.
         --
         --     * GC_PR_FGD defines a possible foreground pixel.
-    -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+    -> Mut (Mat ('S ['S 1, S 65]) ('S 1) ('S Double)) (PrimState m)
         -- ^ Temporary array for the background model. Do not modify it while you are processing the same image.
-    -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+    -> Mut (Mat ('S ['S 1, S 65]) ('S 1) ('S Double)) (PrimState m)
         -- ^ Temporary arrays for the foreground model. Do not modify it while you are processing the same image.
     -> Int32
         -- ^ Number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with mode==GC_INIT_WITH_MASK or mode==GC_EVAL.
     -> GrabCutOperationMode
         -- ^ Operation mode
-    -> m ()
+    -> CvExceptT m ()
 grabCut img mask bgdModel fgdModel iterCount mode =
     unsafePrimToPrim $
     withPtr img $ \imgPtr ->
