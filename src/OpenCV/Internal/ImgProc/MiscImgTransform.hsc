@@ -9,6 +9,8 @@ module OpenCV.Internal.ImgProc.MiscImgTransform where
 import "base" Data.Bits
 import "base" Data.Int
 import "base" Foreign.C.Types
+import "linear" Linear.V2 ( V2(..) )
+import "this" OpenCV.Core.Types.Rect
 
 --------------------------------------------------------------------------------
 
@@ -63,11 +65,12 @@ marshalThreshValue = \case
 --------------------------------------------------------------------------------
 
 data GrabCutOperationMode
-    = GrabCut_InitWithRect
+    = GrabCut_InitWithRect (Rect Int32)
         -- ^ Initialize the state and the mask using the provided rectangle. After that, run iterCount iterations of the algorithm.
+        -- The rectangle represents a ROI containing a segmented object. The pixels outside of the ROI are marked as “obvious background”.
     | GrabCut_InitWithMask
         -- ^ Initialize the state using the provided mask.
-    | GrabCut_InitWithRectAndMask
+    | GrabCut_InitWithRectAndMask (Rect Int32)
         -- ^ Combination of 'GCInitWithRect' and 'GCInitWithMask'. All the pixels outside of the ROI are automatically initialized with GC_BGD.
     | GrabCut_Eval
         -- ^ Just resume the algorithm.
@@ -79,10 +82,19 @@ data GrabCutOperationMode
 
 marshalGrabCutOperationMode :: GrabCutOperationMode -> Int32
 marshalGrabCutOperationMode = \case
-    GrabCut_InitWithRect        -> c'GC_INIT_WITH_RECT
-    GrabCut_InitWithMask        -> c'GC_INIT_WITH_MASK
-    GrabCut_InitWithRectAndMask -> c'GC_INIT_WITH_RECT .|. c'GC_INIT_WITH_MASK
-    GrabCut_Eval                -> c'GC_EVAL
+    GrabCut_InitWithRect _        -> c'GC_INIT_WITH_RECT
+    GrabCut_InitWithMask          -> c'GC_INIT_WITH_MASK
+    GrabCut_InitWithRectAndMask _ -> c'GC_INIT_WITH_RECT .|. c'GC_INIT_WITH_MASK
+    GrabCut_Eval                  -> c'GC_EVAL
+
+marshalGrabCutOperationModeRect :: GrabCutOperationMode -> Rect Int32
+marshalGrabCutOperationModeRect = \case
+    GrabCut_InitWithRect r        -> r
+    GrabCut_InitWithMask          -> emptyRect
+    GrabCut_InitWithRectAndMask r -> r
+    GrabCut_Eval                  -> emptyRect
+  where
+    emptyRect = toRect (HRect { hRectTopLeft = V2 0 0, hRectSize = V2 0 0 })
 
 --------------------------------------------------------------------------------
 

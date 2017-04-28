@@ -435,7 +435,6 @@ watershed img markers =
 grabCut
     :: ( PrimMonad m
        , depth `In` '[ 'D, 'S Word8 ]
-       , IsRect rect Int32
        )
     => Mat shape ('S 3) depth
         -- ^ Input 8-bit 3-channel image.
@@ -449,8 +448,6 @@ grabCut
         --     * GC_PR_BGD defines a possible background pixel.
         --
         --     * GC_PR_FGD defines a possible foreground pixel.
-    -> rect Int32
-        -- ^ ROI containing a segmented object. The pixels outside of the ROI are marked as “obvious background”. The parameter is only used when mode==GC_INIT_WITH_RECT .
     -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
         -- ^ Temporary array for the background model. Do not modify it while you are processing the same image.
     -> Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
@@ -460,11 +457,11 @@ grabCut
     -> GrabCutOperationMode
         -- ^ Operation mode
     -> m ()
-grabCut img mask rect bgdModel fgdModel iterCount mode =
+grabCut img mask bgdModel fgdModel iterCount mode =
     unsafePrimToPrim $
     withPtr img $ \imgPtr ->
     withPtr mask $ \maskPtr ->
-    withPtr (toRect rect) $ \rectPtr ->
+    withPtr rect $ \rectPtr ->
     withPtr bgdModel $ \bgdModelPtr ->
     withPtr fgdModel $ \fgdModelPtr ->
       [C.block|void {
@@ -478,6 +475,7 @@ grabCut img mask rect bgdModel fgdModel iterCount mode =
                    );
       }|]
   where
+    rect = marshalGrabCutOperationModeRect mode
     c'modeFlags = marshalGrabCutOperationMode mode
 
 {- | Returns 0 if the pixels are not in the range, 255 otherwise. -}
