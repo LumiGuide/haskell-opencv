@@ -20,6 +20,8 @@ module OpenCV.Core.ArrayOps
     , matAddWeighted
     , matScaleAdd
     , matMax
+    , CmpType(..)
+    , matScalarCompare
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -331,6 +333,28 @@ matMax src1 src2 = unsafeWrapException $ do
           , *$(Mat * dstPtr)
           );
         |]
+
+matScalarCompare
+    :: Mat shape channels depth -- ^
+    -> Double
+    -> CmpType
+    -> CvExcept (Mat shape channels depth)
+matScalarCompare src x cmpType = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [cvExcept|
+          cv::compare
+          ( *$(Mat * srcPtr)
+          , $(double c'x)
+          , *$(Mat * dstPtr)
+          , $(int32_t c'cmpOp)
+          );
+        |]
+  where
+    c'x = realToFrac x
+    c'cmpOp = marshalCmpType cmpType
 
 --------------------------------------------------------------------------------
 -- Per element bitwise operations

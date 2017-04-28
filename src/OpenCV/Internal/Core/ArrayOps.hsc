@@ -5,7 +5,9 @@
 #endif
 
 module OpenCV.Internal.Core.ArrayOps
-    ( NormType(..)
+    ( CmpType(..)
+    , marshalCmpType
+    , NormType(..)
     , NormAbsRel(..)
     , marshalNormType
     )
@@ -22,6 +24,33 @@ import "base" Data.Int
 #include "namespace.hpp"
 
 --------------------------------------------------------------------------------
+
+-- | Comparison type
+data CmpType
+   = Cmp_Eq
+   | Cmp_Gt
+   | Cmp_Ge
+   | Cmp_Lt
+   | Cmp_Le
+   | Cmp_Ne
+     deriving (Show, Eq)
+
+#num CMP_EQ
+#num CMP_GT
+#num CMP_GE
+#num CMP_LT
+#num CMP_LE
+#num CMP_NE
+
+marshalCmpType :: CmpType -> Int32
+marshalCmpType cmpOp =
+    case cmpOp of
+      Cmp_Eq -> c'CMP_EQ
+      Cmp_Gt -> c'CMP_GT
+      Cmp_Ge -> c'CMP_GE
+      Cmp_Lt -> c'CMP_LT
+      Cmp_Le -> c'CMP_LE
+      Cmp_Ne -> c'CMP_NE
 
 -- | Normalization type
 data NormType
