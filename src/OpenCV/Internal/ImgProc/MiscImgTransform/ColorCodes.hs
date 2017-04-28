@@ -1,6 +1,10 @@
 {-# language CPP #-}
 {-# language MultiParamTypeClasses #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 #if __GLASGOW_HASKELL__ >= 800
 {-# options_ghc -Wno-redundant-constraints #-}
 #endif
@@ -537,7 +541,9 @@ type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDep
   ColorCodeDepth 'BGRA    'BGR        ('S depth)  = 'S depth
   ColorCodeDepth 'RGBA    'BGR        ('S depth)  = 'S depth
   ColorCodeDepth 'RGB     'BGR        ('S depth)  = 'S depth
+  ColorCodeDepth 'BGR     'RGB        ('S depth)  = 'S depth
   ColorCodeDepth 'BGRA    'RGBA       ('S depth)  = 'S depth
+  ColorCodeDepth 'BGRA    'RGB        ('S depth)  = 'S depth
 
   ColorCodeDepth 'BGR     'BGR565     ('S Word8)  = 'S Word8
   ColorCodeDepth 'BGR     'BGR555     ('S Word8)  = 'S Word8
@@ -565,6 +571,7 @@ type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDep
   ColorCodeDepth 'BGR565  'GRAY       ('S Word8)  = 'S Word8
   ColorCodeDepth 'BGR555  'GRAY       ('S Word8)  = 'S Word8
 
+  ColorCodeDepth 'GRAY    'RGB        ('S depth)  = 'S depth
   ColorCodeDepth 'GRAY    'BGR        ('S depth)  = 'S depth
   ColorCodeDepth 'GRAY    'BGRA       ('S depth)  = 'S depth
 

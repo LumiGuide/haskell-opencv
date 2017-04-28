@@ -1,10 +1,16 @@
+{-# language CPP #-}
 {-# language MultiParamTypeClasses #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 module OpenCV.Internal.Core.Types.Mat.Depth
     ( Depth(..)
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
     , DepthT
+    , StaticDepthT
     ) where
 
 import "base" Data.Int
@@ -23,7 +29,7 @@ data Depth =
    | Depth_32F
    | Depth_64F
    | Depth_USRTYPE1
-     deriving (Show, Eq)
+     deriving (Bounded, Enum, Eq, Show)
 
 --------------------------------------------------------------------------------
 
@@ -62,3 +68,7 @@ instance ToDepthDS (proxy ('S Double)) where toDepthDS _proxy = S $ toDepth (Pro
 type family DepthT a :: DS * where
     DepthT Depth     = 'D
     DepthT (proxy d) = 'S d
+
+type family StaticDepthT a :: * where
+    StaticDepthT (proxy d) = d
+    StaticDepthT d         = d

@@ -3,6 +3,10 @@
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.Core.Types.Mat.ToFrom
   ( MatShape
   , MatChannels
@@ -180,12 +184,12 @@ instance (ToDepth (Proxy depth), Storable depth)
         (Proxy :: Proxy 1)
         (Proxy :: Proxy depth)
         (pure 0 :: V4 Double) $ \imgM -> do
-          unsafeWrite imgM [0, 0] i00
-          unsafeWrite imgM [1, 0] i10
-          unsafeWrite imgM [0, 1] i01
-          unsafeWrite imgM [1, 1] i11
-          unsafeWrite imgM [0, 2] i02
-          unsafeWrite imgM [1, 2] i12
+          unsafeWrite imgM [0, 0] 0 i00
+          unsafeWrite imgM [1, 0] 0 i10
+          unsafeWrite imgM [0, 1] 0 i01
+          unsafeWrite imgM [1, 1] 0 i11
+          unsafeWrite imgM [0, 2] 0 i02
+          unsafeWrite imgM [1, 2] 0 i12
 
 instance (ToDepth (Proxy depth), Storable depth)
       => ToMat (M33 depth) where
@@ -198,12 +202,12 @@ instance (ToDepth (Proxy depth), Storable depth)
         (Proxy :: Proxy 1)
         (Proxy :: Proxy depth)
         (pure 0 :: V4 Double) $ \imgM -> do
-          unsafeWrite imgM [0, 0] i00
-          unsafeWrite imgM [1, 0] i10
-          unsafeWrite imgM [2, 0] i20
-          unsafeWrite imgM [0, 1] i01
-          unsafeWrite imgM [1, 1] i11
-          unsafeWrite imgM [2, 1] i21
-          unsafeWrite imgM [0, 2] i02
-          unsafeWrite imgM [1, 2] i12
-          unsafeWrite imgM [2, 2] i22
+          unsafeWrite imgM [0, 0] 0 i00
+          unsafeWrite imgM [1, 0] 0 i10
+          unsafeWrite imgM [2, 0] 0 i20
+          unsafeWrite imgM [0, 1] 0 i01
+          unsafeWrite imgM [1, 1] 0 i11
+          unsafeWrite imgM [2, 1] 0 i21
+          unsafeWrite imgM [0, 2] 0 i02
+          unsafeWrite imgM [1, 2] 0 i12
+          unsafeWrite imgM [2, 2] 0 i22

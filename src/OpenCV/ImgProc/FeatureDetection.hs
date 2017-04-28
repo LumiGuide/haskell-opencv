@@ -306,7 +306,7 @@ houghCircles
      -- ^ Minimum circle radius.
   -> Maybe Int32
      -- ^ Maximum circle radius.
-  -> Mat ('S [w,h]) ('S 1) ('S Word8)
+  -> Mat ('S [h, w]) ('S 1) ('S Word8)
   -> V.Vector Circle
 houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO $
   withPtr src $ \srcPtr ->
@@ -341,6 +341,7 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO 
     (circles :: [V3 Float]) <-
         peekArray numCircles circlesPtr >>=
         mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
+    [CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]
     pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
   where c'dp = realToFrac dp
         c'minDist = realToFrac minDist

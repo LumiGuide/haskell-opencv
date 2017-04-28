@@ -13,6 +13,7 @@ import "directory" System.Directory ( canonicalizePath )
 import qualified "haskell-src-exts" Language.Haskell.Exts.Extension as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Parser as Hse
 import qualified "haskell-src-exts" Language.Haskell.Exts.Syntax as Hse
+import qualified "haskell-src-exts" Language.Haskell.Exts.SrcLoc as Hse
 import qualified "Glob" System.FilePath.Glob as G
 import qualified "opencv" OpenCV as CV
 import qualified "text" Data.Text as T
@@ -143,11 +144,12 @@ typeIsIO (ConT n) | nameBase n == nameBase ''IO = True
 typeIsIO (PromotedT _)   = False
 typeIsIO _               = False
 
-parseDecsHse :: String -> String -> Either String [Hse.Decl]
+parseDecsHse :: String -> String -> Either String [Hse.Decl Hse.SrcSpanInfo]
 parseDecsHse fileName str =
     case Hse.parseModuleWithMode (parseMode fileName) str of
       Hse.ParseFailed _srcLoc err -> Left err
-      Hse.ParseOk (Hse.Module _ _ _ _ _ _ decls) -> Right decls
+      Hse.ParseOk (Hse.Module _ _ _ _  decls) -> Right decls
+      Hse.ParseOk _ -> Left "Invalid module"
 
 parseMode :: String -> Hse.ParseMode
 parseMode fileName =

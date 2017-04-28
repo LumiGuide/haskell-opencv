@@ -1,6 +1,7 @@
 {-# language TemplateHaskell #-}
 {-# language OverloadedStrings #-}
 {-# language FlexibleContexts #-}
+{-# language CPP #-}
 
 module Main where
 
@@ -10,15 +11,19 @@ import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Word
-import "base" Foreign.C.Types
+import "base" Foreign.C.Types ( CFloat )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "bytestring" Data.ByteString as B
-import "linear" Linear.Vector ( (^+^) )
+import qualified "linear" Linear.Metric as Linear ( norm )
+import "linear" Linear.Vector ( (^+^), (^-^) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+#ifdef HAVE_OPENCV_EXTRA
+import "opencv-extra" OpenCV.Extra
+#endif
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import qualified "text" Data.Text as T
 import qualified "vector" Data.Vector as V
@@ -28,11 +33,12 @@ import "this" ExampleExtractor ( render, extractExampleImages )
 
 --------------------------------------------------------------------------------
 
-transparent, white, black, blue, red :: Scalar
+transparent, white, black, blue, green, red :: Scalar
 transparent = toScalar (V4 255 255 255   0 :: V4 Double)
 white       = toScalar (V4 255 255 255 255 :: V4 Double)
 black       = toScalar (V4   0   0   0 255 :: V4 Double)
 blue        = toScalar (V4 255   0   0 255 :: V4 Double)
+green       = toScalar (V4   0 255   0 255 :: V4 Double)
 red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
 type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
@@ -48,6 +54,9 @@ type Lambda           = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 type Circles_1000x625 = Mat (ShapeT [625, 1000]) ('S 3) ('S Word8)
 type Building_868x600 = Mat (ShapeT [600, 868]) ('S 3) ('S Word8)
 type DamageMask       = Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
+type Lenna_512x512    = Mat (ShapeT [512, 512]) ('S 3) ('S Word8)
+type Arnold           = Mat (ShapeT [3504, 2336]) ('S 3) ('S Word8)
+type Arnold_small     = Mat (ShapeT [ 900,  600]) ('S 3) ('S Word8)
 
 birds_768x512 :: Birds_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -102,7 +111,7 @@ frog =
 lambda :: Lambda
 lambda =
     exceptError $ coerceMat $ unsafePerformIO $
-      imdecode ImreadUnchanged <$> B.readFile "data/lambda.png"
+      imdecode ImreadGrayscale <$> B.readFile "data/lambda.png"
 
 circles_1000x625 :: Circles_1000x625
 circles_1000x625 =
@@ -113,6 +122,23 @@ building_868x600 :: Building_868x600
 building_868x600 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/building.jpg"
+
+lenna_512x512 :: Lenna_512x512
+lenna_512x512 =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/Lenna.png"
+
+arnold :: Arnold
+arnold =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/arnold-schwarzenegger.jpg"
+
+arnold_small :: Arnold_small
+arnold_small =
+    exceptError $ coerceMat =<<
+      resize (ResizeAbs $ toSize (V2 600 900 :: V2 Int32))
+             InterArea
+             arnold
 
 --------------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-{ nixpkgs ? import <nixpkgs> {config = import ../nixpkgs-config.nix;}
+{ nixpkgs ? import <nixpkgs> {config = import ../../nixpkgs-config.nix;}
 , compiler ? "default"
 }:
 
@@ -10,7 +10,7 @@ let
                        then pkgs.haskellPackages
                        else pkgs.haskell.packages.${compiler};
 
-  drv = haskellPackages.callPackage (import ./opencv-examples.nix) {};
+  drv = haskellPackages.opencv-extra-examples;
 
 in
 

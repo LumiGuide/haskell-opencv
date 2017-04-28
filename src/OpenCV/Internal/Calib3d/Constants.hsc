@@ -1,3 +1,9 @@
+{-# language CPP #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.Calib3d.Constants where
 
 #include <bindings.dsl.h>

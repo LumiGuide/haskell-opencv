@@ -8,8 +8,8 @@ maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 build-type:    Custom
 cabal-version: >=1.10
 category:      AI, Graphics
-synopsis:      Haskell binding to OpenCV-3.1
-description:   This is a Haskell library providing a binding to OpenCV-3.1.
+synopsis:      Haskell binding to OpenCV-3.x
+description:   This is a Haskell library providing a binding to OpenCV-3.x.
                It binds directly with the C++ API using the @inline-c@ Haskell library.
                .
                The library is far from complete but the framework is there to easily
@@ -23,6 +23,11 @@ extra-doc-files:
     doc/generated/*.png
     doc/generated/examples/*.png
     doc/color_conversions.png
+
+flag internal-documentation
+    description: Enables documentation generation for internal modules.
+    default: False
+    manual: True
 
 library
     hs-source-dirs: src
@@ -49,17 +54,21 @@ library
       , src/OpenCV/ImgProc/MiscImgTransform.cpp
       , src/OpenCV/ImgProc/ObjectDetection.cpp
       , src/OpenCV/ImgProc/StructuralAnalysis.cpp
+      , src/OpenCV/ImgProc/CascadeClassifier.cpp
       , src/OpenCV/Internal/Core/Types.cpp
       , src/OpenCV/Internal/Core/Types/Mat.cpp
       , src/OpenCV/Internal/Core/Types/Mat/ToFrom.cpp
       , src/OpenCV/Internal/Exception.cpp
       , src/OpenCV/Photo.cpp
       , src/OpenCV/Video.cpp
-      , src/OpenCV/Video/MotionAnalysis.cpp
       , src/OpenCV/VideoIO/VideoCapture.cpp
+      , src/OpenCV/VideoIO/VideoWriter.cpp
+      , src/OpenCV/Video/MotionAnalysis.cpp
 
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
+    if flag(internal-documentation)
+        cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
     build-depends:
         aeson             >= 0.9.0.1
@@ -106,13 +115,16 @@ library
         OpenCV.ImgProc.ObjectDetection
         OpenCV.ImgProc.StructuralAnalysis
         OpenCV.ImgProc.Types
+        OpenCV.ImgProc.CascadeClassifier
         OpenCV.JSON
         OpenCV.Photo
         OpenCV.TypeLevel
         OpenCV.Unsafe
         OpenCV.Video
         OpenCV.Video.MotionAnalysis
+        OpenCV.VideoIO.Types
         OpenCV.VideoIO.VideoCapture
+        OpenCV.VideoIO.VideoWriter
 
         OpenCV.Internal
         OpenCV.Internal.Mutable
@@ -126,6 +138,7 @@ library
         OpenCV.Internal.Core.Types.Constants
         OpenCV.Internal.Core.Types.Mat
         OpenCV.Internal.Core.Types.Mat.Depth
+        OpenCV.Internal.Core.Types.Mat.HMat
         OpenCV.Internal.Core.Types.Mat.Marshal
         OpenCV.Internal.Core.Types.Mat.ToFrom
         OpenCV.Internal.Core.Types.Matx
@@ -145,7 +158,8 @@ library
         OpenCV.Internal.ImgProc.MiscImgTransform.ColorCodes
         OpenCV.Internal.ImgProc.Types
         OpenCV.Internal.Photo.Constants
-
+        OpenCV.Internal.VideoIO.Constants
+        OpenCV.Internal.VideoIO.Types
 
     default-extensions:
         BangPatterns
@@ -165,10 +179,12 @@ library
     pkgconfig-depends:  opencv
     extra-libraries:    stdc++
 
-test-suite opencv-doc-images
+test-suite doc-images-opencv
     type: exitcode-stdio-1.0
     hs-source-dirs: doc
     main-is: images.hs
+    other-modules: ExampleExtractor
+                   Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
     ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
     build-depends:
@@ -177,7 +193,7 @@ test-suite opencv-doc-images
       , containers        >= 0.5.6.2
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
-      , haskell-src-exts  >= 1.17.1
+      , haskell-src-exts  >= 1.18.2
       , linear            >= 1.20.4
       , opencv            == 0.0.0
       , primitive         >= 0.6.1

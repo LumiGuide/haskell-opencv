@@ -1,5 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
 
 {- |
 
@@ -49,12 +49,15 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpAffine
     , warpPerspective
     , invertAffineTransform
+    , getPerspectiveTransform
     , getRotationMatrix2D
+    , remap
     ) where
 
 import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import qualified Data.Vector as V
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -64,6 +67,7 @@ import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.ImgProc.Types
@@ -143,7 +147,7 @@ resize factor interpolationMethod src = unsafeWrapException $ do
     handleCvException (pure $ unsafeCoerceMat dst) $
       withPtr src   $ \srcPtr   ->
       withPtr dst   $ \dstPtr   ->
-      withPtr    dsize $ \dsizePtr ->
+      withPtr dsize $ \dsizePtr ->
         [cvExcept|
           cv::resize
           ( *$(Mat * srcPtr)
@@ -270,6 +274,25 @@ invertAffineTransform matIn = unsafeWrapException $ do
            cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
         |]
 
+{- | Calculates a perspective transformation matrix for 2D perspective transform
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getperspectivetransform OpenCV Sphinx doc>
+-}
+getPerspectiveTransform
+    :: (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
+    -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
+    -> Mat (ShapeT [3,3]) ('S 1) ('S Double) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
+getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $
+    withArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
+        withArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
+        fromPtr
+        [CU.block| Mat * {
+            return new cv::Mat
+            ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
+            );
+        }|]
+
 {- | Calculates an affine matrix of 2D rotation
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getrotationmatrix2d OpenCV Sphinx doc>
@@ -297,3 +320,77 @@ getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
   where
     c'angle = realToFrac angle
     c'scale = realToFrac scale
+
+{- | Applies a generic geometrical transformation to an image.
+
+The function remap transforms the source image using the specified map:
+
+@dst(x,y) = src(map(x,y))@
+
+Example:
+
+@
+remapImg
+  :: forall (width    :: Nat)
+            (height   :: Nat)
+            (channels :: Nat)
+            (depth    :: *  )
+   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Birds_512x341)
+  => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
+remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConstant black)
+  where
+    transform = exceptError $
+                matFromFunc (Proxy :: Proxy [height, width])
+                            (Proxy :: Proxy 2)
+                            (Proxy :: Proxy Float)
+                            exampleFunc
+
+    exampleFunc [_y,  x] 0 = wobble x w
+    exampleFunc [ y, _x] 1 = wobble y h
+    exampleFunc _pos _channel = error "impossible"
+
+    wobble :: Int -> Float -> Float
+    wobble v s = let v' = fromIntegral v
+                     n = v' / s
+                 in v' + (s * 0.05 * sin (n * 2 * pi * 5))
+
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    h = fromInteger $ natVal (Proxy :: Proxy height)
+@
+
+<<doc/generated/birds_512x341.png original>>
+<<doc/generated/examples/remapImg.png remapImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap OpenCV documentation>
+-}
+remap
+    :: Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
+       -- ^ Source image.
+    -> Mat ('S [outputHeight, outputWidth]) ('S 2) ('S Float)
+       -- ^ A map of @(x, y)@ points.
+    -> InterpolationMethod
+       -- ^ Interpolation method to use. Note that 'InterArea' is not
+       -- supported by this function.
+    -> BorderMode
+    -> CvExcept (Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth)
+remap src mapping interpolationMethod borderMode = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
+      withPtr mapping $ \mappingPtr ->
+      withPtr borderValue $ \borderValuePtr ->
+        [cvExcept|
+          cv::remap
+            ( *$(Mat * srcPtr)
+            , *$(Mat * dstPtr)
+            , *$(Mat * mappingPtr)
+            , {}
+            , $(int32_t c'interpolation)
+            , $(int32_t c'borderMode)
+            , *$(Scalar * borderValuePtr)
+            );
+        |]
+  where
+    c'interpolation = marshalInterpolationMethod interpolationMethod
+    (c'borderMode, borderValue) = marshalBorderMode borderMode

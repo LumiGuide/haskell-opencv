@@ -1,5 +1,10 @@
-{-# LANGUAGE QuasiQuotes     #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# language CPP #-}
+{-# language QuasiQuotes #-}
+{-# language TemplateHaskell #-}
+
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
 
 -- | Interface between OpenCV and inline-c(pp) (Haskell)
 module OpenCV.Internal.C.Inline ( openCvCtx ) where
@@ -24,9 +29,7 @@ import "this" OpenCV.Internal.C.Types
 openCvCtx :: C.Context
 openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
   where
-    ctx = mempty
-      { C.ctxTypesTable = openCvTypesTable
-      }
+    ctx = mempty { C.ctxTypesTable = openCvTypesTable }
 
 openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
@@ -103,11 +106,12 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "KeyPoint"    , [t| C'KeyPoint    |] )
   , ( C.TypeName "DMatch"      , [t| C'DMatch      |] )
 
---, ( C.TypeName "MSER"        , [t| C'MSER        |] )
-  , ( C.TypeName "Ptr_ORB"     , [t| C'Ptr_ORB     |] )
---, ( C.TypeName "BRISK"       , [t| C'BRISK       |] )
---, ( C.TypeName "KAZE"        , [t| C'KAZE        |] )
---, ( C.TypeName "AKAZE"       , [t| C'AKAZE       |] )
+--, ( C.TypeName "MSER"                  , [t| C'MSER                   |] )
+  , ( C.TypeName "Ptr_ORB"               , [t| C'Ptr_ORB                |] )
+--, ( C.TypeName "BRISK"                 , [t| C'BRISK                  |] )
+--, ( C.TypeName "KAZE"                  , [t| C'KAZE                   |] )
+--, ( C.TypeName "AKAZE"                 , [t| C'AKAZE                  |] )
+  , ( C.TypeName "Ptr_SimpleBlobDetector", [t| C'Ptr_SimpleBlobDetector |] )
 
   , ( C.TypeName "BFMatcher"   , [t| C'BFMatcher   |] )
 
@@ -115,6 +119,9 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "Ptr_BackgroundSubtractorMOG2", [t| C'Ptr_BackgroundSubtractorMOG2 |] )
 
   , ( C.TypeName "VideoCapture", [t| C'VideoCapture |] )
+  , ( C.TypeName "VideoWriter" , [t| C'VideoWriter  |] )
+
+  , ( C.TypeName "CascadeClassifier", [t| C'CascadeClassifier |] )
 
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )

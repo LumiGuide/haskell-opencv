@@ -1,0 +1,10 @@
+resolver: lts-7.2
+packages:
+- '.'
+- '../haskell-opencv'
+- '../haskell-opencv/opencv-extra'
+extra-deps: []
+
+flags: {}
+extra-package-dbs: []
+

@@ -11,6 +11,10 @@
 
 {-# options_ghc -fno-warn-orphans #-}
 
+#ifndef ENABLE_INTERNAL_DOCUMENTATION
+{-# OPTIONS_HADDOCK hide #-}
+#endif
+
 module OpenCV.Internal.Core.Types.Mat
     ( -- * Matrix
       Mat(..)
@@ -43,6 +47,8 @@ module OpenCV.Internal.Core.Types.Mat
     , MatInfo(..)
     , matInfo
 
+    , dimPositions
+
     , Depth(..)
     , marshalDepth
     , unmarshalDepth
@@ -52,6 +58,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ShapeT
     , ChannelsT
     , DepthT
+    , StaticDepthT
 
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)
@@ -481,6 +488,19 @@ matInfo mat = unsafePerformIO $
            , miDepth    = depth
            , miChannels = channels
            }
+
+-- | All possible positions (indexes) for a given shape (list of
+-- sizes per dimension).
+--
+-- @
+-- dimPositions [3, 4]
+-- [ [0, 0], [0, 1], [0, 2], [0, 3]
+-- , [1, 0], [1, 1], [1, 2], [1, 3]
+-- , [2, 0], [2, 1], [2, 2], [2, 3]
+-- ]
+-- @
+dimPositions :: (Num a, Enum a) => [a] -> [[a]]
+dimPositions = traverse (enumFromTo 0 . pred)
 
 --------------------------------------------------------------------------------
 

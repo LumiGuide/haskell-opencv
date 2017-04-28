@@ -1,5 +1,10 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module OpenCV.Core.Types.Mat
     ( -- * Matrix
@@ -21,6 +26,8 @@ module OpenCV.Core.Types.Mat
     , matCopyTo
     , matConvertTo
 
+    , matFromFunc
+
       -- * Mutable Matrix
     , typeCheckMatM
     , relaxMatM
@@ -33,6 +40,10 @@ module OpenCV.Core.Types.Mat
     , withMatM
     , cloneMatM
     , matCopyToM
+
+    , All
+    , IsStatic
+    , foldMat
 
       -- * Meta information
     , MatInfo(..)
@@ -52,15 +63,22 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
+import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
+import "base" Data.List ( foldl' )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
+import "base" Foreign.Marshal.Array ( peekArray )
+import "base" Foreign.Ptr ( Ptr, castPtr, plusPtr )
+import "base" Foreign.Storable ( Storable )
+import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V4 ( V4(..) )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -70,7 +88,10 @@ import "this" OpenCV.Internal.Core.Types.Mat.ToFrom
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
+import "this" OpenCV.Unsafe ( unsafeWrite )
 import "transformers" Control.Monad.Trans.Except
+import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as DV
 
 --------------------------------------------------------------------------------
 
@@ -204,6 +225,67 @@ matConvertTo alpha beta src = unsafeWrapException $ do
     c'alpha = maybe 1 realToFrac alpha
     c'beta  = maybe 0 realToFrac beta
 
+{- | Create a matrix whose elements are defined by a function.
+
+Example:
+
+@
+matFromFuncImg
+  :: forall size. (size ~ 300)
+  => Mat (ShapeT [size, size]) ('S 4) ('S Word8)
+matFromFuncImg = exceptError $
+    matFromFunc
+      (Proxy :: Proxy [size, size])
+      (Proxy :: Proxy 4)
+      (Proxy :: Proxy Word8)
+      example
+  where
+    example [y, x] 0 = 255 - normDist (V2 x y ^-^ bluePt )
+    example [y, x] 1 = 255 - normDist (V2 x y ^-^ greenPt)
+    example [y, x] 2 = 255 - normDist (V2 x y ^-^ redPt  )
+    example [y, x] 3 =       normDist (V2 x y ^-^ alphaPt)
+    example _pos _channel = error "impossible"
+
+    normDist :: V2 Int -> Word8
+    normDist v = floor $ min 255 $ 255 * Linear.norm (fromIntegral \<$> v) / s'
+
+    bluePt  = V2 0 0
+    greenPt = V2 s s
+    redPt   = V2 s 0
+    alphaPt = V2 0 s
+
+    s = fromInteger $ natVal (Proxy :: Proxy size) :: Int
+    s' = fromIntegral s :: Double
+@
+
+<<doc/generated/examples/matFromFuncImg.png matFromFuncImg>>
+-}
+matFromFunc
+    :: forall shape channels depth
+     . ( ToShape    shape
+       , ToChannels channels
+       , ToDepth    depth
+       , Storable   (StaticDepthT depth)
+       )
+    => shape
+    -> channels
+    -> depth
+    -> ([Int] -> Int -> StaticDepthT depth) -- ^
+    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+matFromFunc shape channels depth func =
+    withMatM shape channels depth (0 :: V4 Double) $ \matM ->
+      forM_ positions $ \pos ->
+        forM_ [0 .. fromIntegral channels' - 1] $ \channel ->
+           unsafeWrite matM pos channel $ func pos channel
+  where
+    positions :: [[Int]]
+    positions = dimPositions $ V.toList $ V.map fromIntegral shapeVec
+
+    shapeVec :: V.Vector Int32
+    shapeVec = toShape shape
+
+    channels' :: Int32
+    channels' = toChannels channels
 
 --------------------------------------------------------------------------------
 -- Mutable Matrix
@@ -242,3 +324,37 @@ matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
           --                       )
           --                 );
           -- srcPtr->copyTo(dstRoi);
+
+
+-- |Transforms a given list of matrices of equal shape, channels, and depth,
+-- by folding the given function over all matrix elements at each position.
+foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
+         . ( Storable depth
+           , Storable a
+           , All IsStatic shape
+           )
+        => (a -> DV.Vector depth -> a) -- ^
+        -> a
+        -> [Mat ('S shape) ('S channels) ('S depth)]
+        -> Maybe (DV.Vector a)
+foldMat _ _ []   = Nothing
+foldMat f z mats = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions shape)
+  where
+    go :: [Int32] -> IO a
+    go pos = pixelsAt pos >>= return . foldl' f z
+
+    MatInfo !shape _ !channels = matInfo (head mats)
+
+    stepsAndPtrs :: IO [([Int32], Ptr depth)]
+    stepsAndPtrs = forM mats $ \mat ->
+        withMatData mat $ \step ptr ->
+            return (fromIntegral <$> step, castPtr ptr)
+
+    pixelsAt :: [Int32] -> IO [DV.Vector depth]
+    pixelsAt pos = mapM go' =<< stepsAndPtrs
+      where
+        go' :: ([Int32], Ptr depth) -> IO (DV.Vector depth)
+        go' (step, dataPtr) = do
+            let !offset = fromIntegral . sum $ zipWith (*) step pos
+            vals <- peekArray (fromIntegral channels) (dataPtr `plusPtr` offset)
+            return $ DV.fromList vals

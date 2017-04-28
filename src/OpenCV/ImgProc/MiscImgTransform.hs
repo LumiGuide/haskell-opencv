@@ -27,6 +27,9 @@ module OpenCV.ImgProc.MiscImgTransform
       -- * GrabCut
     , GrabCutOperationMode(..)
     , grabCut
+
+      -- * In range
+    , inRange
     ) where
 
 import "base" Data.Bits
@@ -337,6 +340,44 @@ grayscale image or for removing a noise, that is, filtering out pixels with
 too small or too large values. There are several types of thresholding
 supported by the function.
 
+Example:
+
+@
+grayBirds :: Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
+grayBirds = exceptError $ cvtColor bgr gray birds_512x341
+
+threshBinaryBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+threshBinaryBirds =
+    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+    threshold (ThreshVal_Abs 100) (Thresh_Binary 150) grayBirds
+
+threshBinaryInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+threshBinaryInvBirds =
+    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+    threshold (ThreshVal_Abs 100) (Thresh_BinaryInv 150) grayBirds
+
+threshTruncateBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+threshTruncateBirds =
+    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+    threshold (ThreshVal_Abs 100) Thresh_Truncate grayBirds
+
+threshToZeroBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+threshToZeroBirds =
+    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+    threshold (ThreshVal_Abs 100) Thresh_ToZero grayBirds
+
+threshToZeroInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+threshToZeroInvBirds =
+    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+    threshold (ThreshVal_Abs 100) Thresh_ToZeroInv grayBirds
+@
+
+<<doc/generated/examples/threshBinaryBirds.png threshBinaryBirds>>
+<<doc/generated/examples/threshBinaryInvBirds.png threshBinaryInvBirds>>
+<<doc/generated/examples/threshTruncateBirds.png threshTruncateBirds>>
+<<doc/generated/examples/threshToZeroBirds.png threshToZeroBirds>>
+<<doc/generated/examples/threshToZeroInvBirds.png threshToZeroInvBirds>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc>
 -}
 threshold
@@ -438,3 +479,21 @@ grabCut img mask rect bgdModel fgdModel iterCount mode =
       }|]
   where
     c'modeFlags = marshalGrabCutOperationMode mode
+
+{- | Returns 0 if the pixels are not in the range, 255 otherwise. -}
+inRange ::
+     (ToScalar scalar)
+  => Mat ('S [w, h]) channels depth
+  -> scalar -- ^ Lower bound
+  -> scalar -- ^ Upper bound
+  -> CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
+inRange src lo hi = unsafeWrapException $ do
+  dst <- newEmptyMat
+  withPtr src $ \srcPtr ->
+    handleCvException (return (unsafeCoerceMat dst)) $
+    withPtr (toScalar lo) $ \loPtr ->
+    withPtr (toScalar hi) $ \hiPtr ->
+    withPtr dst $ \dstPtr ->
+      [cvExcept|
+        cv::inRange(*$(Mat * srcPtr), *$(Scalar * loPtr), *$(Scalar * hiPtr), *$(Mat * dstPtr));
+      |]
