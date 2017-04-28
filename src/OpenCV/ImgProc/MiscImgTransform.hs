@@ -431,6 +431,32 @@ watershed img markers =
       }|]
 
 {- | Runs the <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#grabcut GrabCut> algorithm.
+
+Example:
+
+@
+grabCutBird :: Birds_512x341
+grabCutBird = exceptError $ do
+    mask <- withMatM (Proxy :: Proxy [341, 512])
+                     (Proxy :: Proxy 1)
+                     (Proxy :: Proxy Word8)
+                     black $ \mask -> do
+      fgTmp <- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
+      bgTmp <- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
+      grabCut birds_512x341 mask fgTmp bgTmp 5 (GrabCut_InitWithRect rect)
+    mask' <- matScalarCompare mask 3 Cmp_Ge
+    withMatM (Proxy :: Proxy [341, 512])
+             (Proxy :: Proxy 3)
+             (Proxy :: Proxy Word8)
+             transparent $ \imgM -> do
+      matCopyToM imgM (V2 0 0) birds_512x341 (Just mask')
+  where
+    rect :: Rect Int32
+    rect = toRect $ HRect { hRectTopLeft = V2 264 60, hRectSize = V2 248 281 }
+@
+
+<<doc/generated/examples/grabCutBird.png grabCutBird>>
+
 -}
 grabCut
     :: ( PrimMonad m
