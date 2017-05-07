@@ -1,11 +1,15 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Calib3d
     ( FundamentalMatMethod(..)
+    , FindHomographyMethod(..)
+    , FindHomographyParams(..)
     , WhichImage(..)
     -- , calibrateCamera
     , findFundamentalMat
+    , findHomography
     , computeCorrespondEpilines
     ) where
 
@@ -14,6 +18,7 @@ import "base" Data.Word
 import "base" Foreign.C.Types
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "data-default" Data.Default
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Calib3d.Constants
@@ -56,6 +61,18 @@ marshalWhichImage :: WhichImage -> Int32
 marshalWhichImage = \case
     Image1 -> 1
     Image2 -> 2
+
+
+data FindHomographyMethod = FindHomographyMethod0
+                          | FindHomographyMethodRANSAC
+                          | FindHomographyMethodLMEDS
+                          | FindHomographyMethodRHO
+
+marshalFindHomographyMethod :: FindHomographyMethod -> Int32
+marshalFindHomographyMethod FindHomographyMethod0 = 0
+marshalFindHomographyMethod FindHomographyMethodRANSAC = c'RANSAC
+marshalFindHomographyMethod FindHomographyMethodLMEDS  = c'LMEDS
+marshalFindHomographyMethod FindHomographyMethodRHO    = c'RHO
 
 --------------------------------------------------------------------------------
 
@@ -142,6 +159,74 @@ findFundamentalMat pts1 pts2 method = do
     c'numPts1 = fromIntegral $ V.length pts1
     c'numPts2 = fromIntegral $ V.length pts2
     (c'method, c'p1, c'p2) = marshalFundamentalMatMethod method
+
+
+
+data FindHomographyParams = FindHomographyParams
+    { method :: FindHomographyMethod
+    , ransacReprojThreshold :: Double
+    , maxIters :: Int
+    , confidence :: Double
+    }
+
+
+instance Default FindHomographyParams where
+    def = FindHomographyParams
+            { method = FindHomographyMethod0
+            , ransacReprojThreshold = 3
+            , maxIters = 2000
+            , confidence = 0.995
+            }
+
+
+findHomography
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble) -- ^ Points from the first image.
+    -> V.Vector (point2 CDouble) -- ^ Points from the second image.
+    -> FindHomographyParams
+    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
+                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
+                        )
+                )
+findHomography srcPoints dstPoints (FindHomographyParams{..}) = do
+    (fm, pointMask) <- c'findHomography
+    -- If the c++ function can't find a fundamental matrix it will
+    -- return an empty matrix. We check for this case by trying to
+    -- coerce the result to the desired type.
+    catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+           (\case CoerceMatError _msgs -> pure Nothing
+                  otherError           -> throwE otherError
+           )
+  where
+    c'findHomography = unsafeWrapException $ do
+      fm <- newEmptyMat
+      pointMask <- newEmptyMat
+      handleCvException (pure (fm, pointMask)) $
+        withPtr fm $ \fmPtr ->
+        withPtr pointMask $ \pointMaskPtr ->
+        withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
+        withArrayPtr (V.map toPoint dstPoints) $ \dstPtr ->
+          [cvExcept|
+            cv::_InputArray srcPts = cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));
+            cv::_InputArray dstPts = cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));
+            *$(Mat * fmPtr) =
+              cv::findHomography
+                  ( srcPts
+                  , dstPts
+                  , $(int32_t c'method)
+                  , $(double c'ransacReprojThreshold)
+                  , *$(Mat * pointMaskPtr)
+                  , $(int32_t c'maxIters)
+                  , $(double c'confidence)
+                  );
+          |]
+    c'numSrcPts = fromIntegral $ V.length srcPoints
+    c'numDstPts = fromIntegral $ V.length dstPoints
+    c'method = marshalFindHomographyMethod method
+    c'ransacReprojThreshold = realToFrac ransacReprojThreshold
+    c'maxIters = fromIntegral maxIters
+    c'confidence = realToFrac confidence
+
 
 {- | For points in an image of a stereo pair, computes the corresponding epilines in the other image
 
