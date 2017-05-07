@@ -56,14 +56,17 @@ module OpenCV.Core.Types
     , WithPtr
     , FromPtr
     , CSizeOf
+    , Storable
     , PlacementNew
     ) where
 
 import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types
-import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Foreign.Ptr ( castPtr )
+import "base" Foreign.ForeignPtr ( ForeignPtr, newForeignPtr_, castForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Storable ( peek )
+import "base" Foreign.Marshal.Utils ( copyBytes )
+import "base" Foreign.Storable
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -86,6 +89,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Constants
 import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Mutable
+import "this" OpenCV.Internal.C.PlacementNew.TH
 
 --------------------------------------------------------------------------------
 
@@ -212,6 +216,14 @@ instance FromPtr KeyPoint where
 instance CSizeOf C'KeyPoint where
     cSizeOf _proxy = c'sizeof_KeyPoint
 
+
+instance Storable KeyPoint where
+    sizeOf _ = c'sizeof_KeyPoint
+    alignment _ = 8 -- ???
+    peek ptr = (KeyPoint . castForeignPtr) <$> newForeignPtr_ ptr
+    poke ptr kp = withPtr kp $ \kptr -> copyBytes ptr (castPtr kptr) c'sizeof_KeyPoint
+
+
 data KeyPointRec
    = KeyPointRec
      { kptPoint :: !(V2 Float)
@@ -282,6 +294,8 @@ keyPointAsRec kpt = unsafePerformIO $
         <*> (realToFrac <$> peek responsePtr)
         <*> peek octavePtr
         <*> peek classIdPtr
+
+mkPlacementNewInstance ''KeyPoint
 
 --------------------------------------------------------------------------------
 -- DMatch
