@@ -110,7 +110,7 @@ findFundamentalMat
 findFundamentalMat pts1 pts2 method = do
     (fm, pointMask) <- c'findFundamentalMat
     -- If the c++ function can't find a fundamental matrix it will
-    -- retrun an empty matrix. We check for this case by trying to
+    -- return an empty matrix. We check for this case by trying to
     -- coerce the result to the desired type.
     catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
            (\case CoerceMatError _msgs -> pure Nothing
