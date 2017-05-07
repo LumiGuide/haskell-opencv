@@ -516,6 +516,24 @@ blobDetect detector img mbMask = unsafeWrapException $ do
 
 class DescriptorMatcher a where
     upcast :: a -> BaseMatcher
+    add :: a
+        -> V.Vector (Mat 'D 'D 'D) -- ^ Train set of descriptors.
+        -> IO ()
+    add dm trainDescriptors =
+        withPtr (upcast dm)           $ \dmPtr       ->
+        withArrayPtr trainDescriptors $ \trainVecPtr ->
+            [C.block| void {
+                std::vector<Mat> buffer( $(Mat * trainVecPtr)
+                                       , $(Mat * trainVecPtr) + $(int32_t c'trainVecLength) );
+                $(DescriptorMatcher * dmPtr)->add(buffer);
+            }|]
+      where
+        c'trainVecLength = fromIntegral $ V.length trainDescriptors
+    train :: a
+          -> IO ()
+    train dm =
+        withPtr (upcast dm) $ \dmPtr ->
+            [C.block| void { $(DescriptorMatcher * dmPtr)->train(); } |]
     match
         :: a
         -> Mat 'D 'D 'D -- ^ Query set of descriptors.
@@ -534,20 +552,16 @@ class DescriptorMatcher a where
             [C.block| void {
                 cv::Mat * maskPtr = $(Mat * maskPtr);
                 std::vector<cv::DMatch> matches = std::vector<cv::DMatch>();
-
                 $(DescriptorMatcher * dmPtr)->match
                     ( *$(Mat * queryPtr)
                     , *$(Mat * trainPtr)
                     , matches
                     , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(noArray())
                     );
-
                 *$(int32_t * numMatchesPtr) = matches.size();
-
                 cv::DMatch * * * arrayPtrPtr = $(DMatch * * * arrayPtrPtr);
                 cv::DMatch * * arrayPtr = new cv::DMatch * [matches.size()];
                 *arrayPtrPtr = arrayPtr;
-
                 for (std::vector<cv::DMatch>::size_type ix = 0; ix != matches.size(); ix++)
                 {
                     cv::DMatch & org = matches[ix];
@@ -560,15 +574,58 @@ class DescriptorMatcher a where
                     arrayPtr[ix] = newMatch;
                 }
             }|]
-
             (numMatches :: Int) <- fromIntegral <$> peek numMatchesPtr
             arrayPtr <- peek arrayPtrPtr
             matches <- mapM (fromPtr . pure) =<< peekArray numMatches arrayPtr
-
             [CU.block| void {
                 delete [] *$(DMatch * * * arrayPtrPtr);
             }|]
-
+            pure $ V.fromList matches
+    -- | Match in pre-trained matcher
+    --
+    match'
+        :: a
+        -> Mat 'D 'D 'D -- ^ Query set of descriptors.
+        -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8))
+           -- ^ Mask specifying permissible matches between an input query and
+           -- train matrices of descriptors..
+        -> IO (V.Vector DMatch)
+    match' dm queryDescriptors mbMask =
+        withPtr (upcast dm)      $ \dmPtr    ->
+        withPtr queryDescriptors $ \queryPtr ->
+        withPtr mbMask           $ \maskPtr  ->
+        alloca $ \(numMatchesPtr :: Ptr Int32) ->
+        alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'DMatch))) -> mask_ $ do
+            [C.block| void {
+                cv::Mat * maskPtr = $(Mat * maskPtr);
+                std::vector<cv::DMatch> matches = std::vector<cv::DMatch>();
+                $(DescriptorMatcher * dmPtr)->match
+                    ( *$(Mat * queryPtr)
+                    , matches
+                    , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(noArray())
+                    );
+                *$(int32_t * numMatchesPtr) = matches.size();
+                cv::DMatch * * * arrayPtrPtr = $(DMatch * * * arrayPtrPtr);
+                cv::DMatch * * arrayPtr = new cv::DMatch * [matches.size()];
+                *arrayPtrPtr = arrayPtr;
+                for (std::vector<cv::DMatch>::size_type ix = 0; ix != matches.size(); ix++)
+                {
+                    cv::DMatch & org = matches[ix];
+                    cv::DMatch * newMatch =
+                        new cv::DMatch( org.queryIdx
+                                      , org.trainIdx
+                                      , org.imgIdx
+                                      , org.distance
+                                      );
+                    arrayPtr[ix] = newMatch;
+                }
+            }|]
+            (numMatches :: Int) <- fromIntegral <$> peek numMatchesPtr
+            arrayPtr <- peek arrayPtrPtr
+            matches <- mapM (fromPtr . pure) =<< peekArray numMatches arrayPtr
+            [CU.block| void {
+                delete [] *$(DMatch * * * arrayPtrPtr);
+            }|]
             pure $ V.fromList matches
 
 
