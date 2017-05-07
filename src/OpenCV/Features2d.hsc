@@ -26,6 +26,7 @@ module OpenCV.Features2d
 
       -- * DescriptorMatcher
     , DescriptorMatcher(..)
+    , drawMatches
       -- ** BFMatcher
     , BFMatcher
     , newBFMatcher
@@ -49,6 +50,7 @@ import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import "data-default" Data.Default
+import "linear" Linear.V4
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -57,8 +59,9 @@ import "this" OpenCV.Internal
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
+import "this" OpenCV.Internal.Core.Types ( withArrayPtr, newScalar, Scalar, ToScalar )
 import "this" OpenCV.Internal.Core.Types.Mat
-import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException )
+import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException, handleCvException )
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
@@ -839,3 +842,55 @@ newFlannBasedMatcher FlannBasedMatcherParams{..} = fromPtr
 
 instance DescriptorMatcher FlannBasedMatcher where
     upcast (FlannBasedMatcher ptr) = BaseMatcher $ castForeignPtr ptr
+
+
+--------------------------------------------------------------------------------
+
+data DrawMatchesParams = DrawMatchesParams
+    { matchColor :: Scalar
+    , singlePointColor :: Scalar
+    -- , matchesMask -- TODO
+    , flags :: Int32
+    }
+
+
+instance Default DrawMatchesParams where
+    def = DrawMatchesParams
+        { matchColor = toScalar $ V4 (255::Double) 255 255 125
+        , singlePointColor = toScalar $ V4 (255::Double) 255 255 125
+        , flags = 0
+        }
+
+drawMatches :: Mat ('S [height, width]) channels depth
+            -> V.Vector KeyPoint
+            -> Mat ('S [height, width]) channels depth
+            -> V.Vector KeyPoint
+            -> V.Vector DMatch
+            -> DrawMatchesParams
+            -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+drawMatches img1 keypoints1 img2 keypoints2 matches1to2 (DrawMatchesParams{..}) = unsafeWrapException $ do
+    outImg <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat outImg) $
+        withPtr img1             $ \img1Ptr ->
+        withArrayPtr keypoints1  $ \kps1Ptr ->
+        withPtr img2             $ \img2Ptr ->
+        withArrayPtr keypoints2  $ \kps2Ptr ->
+        withArrayPtr matches1to2 $ \mt12Ptr ->
+        withPtr outImg           $ \outImgPtr ->
+            [cvExcept|
+                std::vector<KeyPoint> kps1($(KeyPoint * kps1Ptr), $(KeyPoint * kps1Ptr) + $(int32_t c'kps1Length));
+                std::vector<KeyPoint> kps2($(KeyPoint * kps2Ptr), $(KeyPoint * kps2Ptr) + $(int32_t c'kps2Length));
+                std::vector<DMatch>   mt12($(DMatch * mt12Ptr),   $(DMatch * mt12Ptr) + $(int32_t c'matches1to2Length));
+                drawMatches(
+                    *$(Mat* img1Ptr),
+                    kps1,
+                    *$(Mat* img2Ptr),
+                    kps2,
+                    mt12,
+                    *$(Mat* outImgPtr));
+            |]
+  where
+    c'kps1Length = fromIntegral $ V.length keypoints1
+    c'kps2Length = fromIntegral $ V.length keypoints2
+    c'matches1to2Length = fromIntegral $ V.length matches1to2
+
