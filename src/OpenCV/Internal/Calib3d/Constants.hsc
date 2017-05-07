@@ -16,3 +16,8 @@ module OpenCV.Internal.Calib3d.Constants where
 #num CV_FM_8POINT
 #num CV_FM_RANSAC
 #num CV_FM_LMEDS
+
+#num LMEDS
+#num RANSAC
+#num RHO
+
