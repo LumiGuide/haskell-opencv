@@ -42,6 +42,8 @@ module OpenCV.Core.ArrayOps
     , matSum
     , matSumM
     , meanStdDev
+    , matFlip, FlipDirection(..)
+    , matTranspose
     ) where
 
 import "base" Data.Proxy ( Proxy(..) )
@@ -849,3 +851,74 @@ meanStdDev src mask = unsafeWrapException $ do
           , maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(cv::noArray())
           );
         |]
+
+{- | Flips a 2D matrix around vertical, horizontal, or both axes.
+
+The example scenarios of using the function are the following: Vertical flipping
+of the image ('FlipVertically') to switch between top-left and bottom-left image
+origin. This is a typical operation in video processing on Microsoft Windows*
+OS. Horizontal flipping of the image with the subsequent horizontal shift and
+absolute difference calculation to check for a vertical-axis symmetry
+('FlipHorizontally'). Simultaneous horizontal and vertical flipping of the image
+with the subsequent shift and absolute difference calculation to check for a
+central symmetry ('FlipBoth'). Reversing the order of point arrays
+('FlipHorizontally' or 'FlipVertically').
+
+Example:
+
+@
+matFlipImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+matFlipImg = matFlip sailboat_512x341 FlipBoth
+@
+
+<<doc/generated/examples/matFlipImg.png matFlipImg>>
+-}
+matFlip
+    :: Mat ('S '[height, width]) channels depth
+    -> FlipDirection -- ^ How to flip.
+    -> Mat ('S '[height, width]) channels depth
+matFlip src flipDir = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          cv::flip(*$(Mat * srcPtr), *$(Mat * dstPtr), $(int32_t flipCode));
+        }|]
+    pure $ unsafeCoerceMat dst
+  where
+    flipCode :: Int32
+    flipCode = marshallFlipDirection flipDir
+
+data FlipDirection = FlipVertically   -- ^ Flip around the x-axis.
+                   | FlipHorizontally -- ^ Flip around the y-axis.
+                   | FlipBoth         -- ^ Flip around both x and y-axis.
+                     deriving (Show, Eq)
+
+marshallFlipDirection :: FlipDirection -> Int32
+marshallFlipDirection = \case
+    FlipVertically   ->  0
+    FlipHorizontally ->  1
+    FlipBoth         -> -1
+
+{- | Transposes a matrix.
+
+Example:
+
+@
+matTransposeImg :: Mat (ShapeT [512, 341]) ('S 3) ('S Word8)
+matTransposeImg = matTranspose sailboat_512x341
+@
+
+<<doc/generated/examples/matTransposeImg.png matTransposeImg>>
+-}
+matTranspose
+    :: Mat ('S '[height, width]) channels depth -- ^
+    -> Mat ('S '[width, height]) channels depth
+matTranspose src = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr dst $ \dstPtr ->
+      withPtr src $ \srcPtr ->
+        [C.block| void {
+          cv::transpose(*$(Mat * srcPtr), *$(Mat * dstPtr));
+        }|]
+    pure $ unsafeCoerceMat dst
