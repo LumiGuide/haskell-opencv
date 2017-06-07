@@ -8,6 +8,7 @@ module OpenCV.Internal.ImgProc.MiscImgTransform where
 
 import "base" Data.Bits
 import "base" Data.Int
+import "base" Data.Word
 import "base" Foreign.C.Types
 import "linear" Linear.V2 ( V2(..) )
 import "this" OpenCV.Core.Types.Rect
@@ -59,8 +60,35 @@ marshalThreshValue = \case
     ThreshVal_Otsu     -> (c'THRESH_OTSU    , 0)
     ThreshVal_Triangle -> (c'THRESH_TRIANGLE, 0)
 
+--------------------------------------------------------------------------------
+
 #num FLOODFILL_FIXED_RANGE
 #num FLOODFILL_MASK_ONLY
+
+data FloodFillOperationFlags
+   = FloodFillOperationFlags
+   { floodFillConnectivity :: Word8
+      -- ^ Connectivity value. The default value of 4 means that only the four nearest neighbor pixels (those that share
+      -- an edge) are considered. A connectivity value of 8 means that the eight nearest neighbor pixels (those that share
+      -- a corner) will be considered.
+   , floodFillMaskFillColor :: Word8
+      -- ^ Value between 1 and 255 with which to fill the mask (the default value is 1).
+   , floodFillFixedRange :: Bool
+      -- ^ If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference
+      -- between neighbor pixels is considered (that is, the range is floating).
+   , floodFillMaskOnly :: Bool
+      -- ^ If set, the function does not change the image ( newVal is ignored), and only fills the mask with the
+      -- value specified in bits 8-16 of flags as described above. This option only make sense in function variants
+      -- that have the mask parameter.
+   }
+
+marshalFloodFillOperationFlags :: FloodFillOperationFlags -> Int32
+marshalFloodFillOperationFlags opFlags =
+    let connectivityBits = fromIntegral (floodFillConnectivity opFlags)
+        maskFillColorBits = fromIntegral (floodFillMaskFillColor opFlags) `shiftL` 8
+        fixedRangeBits = if floodFillFixedRange opFlags then c'FLOODFILL_FIXED_RANGE else 0
+        fillMaskOnlyBits = if floodFillMaskOnly opFlags then c'FLOODFILL_MASK_ONLY else 0
+    in connectivityBits .|. maskFillColorBits .|. fixedRangeBits .|. fillMaskOnlyBits
 
 --------------------------------------------------------------------------------
 

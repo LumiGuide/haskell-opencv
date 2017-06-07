@@ -262,7 +262,7 @@ floodFill
         -- ^ Maximal lower brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
     -> Maybe color
         -- ^ Maximal upper brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
-    -> FloodFillOperationFlags
+    -> OpenCV.Internal.ImgProc.MiscImgTransform.FloodFillOperationFlags
     -> m Rect2i
 floodFill img mbMask seedPoint color mLoDiff mUpDiff opFlags =
     unsafePrimToPrim $
@@ -296,24 +296,7 @@ floodFill img mbMask seedPoint color mLoDiff mUpDiff opFlags =
     loDiff = maybe zeroScalar toScalar mLoDiff
     upDiff = maybe zeroScalar toScalar mUpDiff
 
-data FloodFillOperationFlags
-   = FloodFillOperationFlags
-   { floodFillConnectivity :: Word8
-      -- ^ Connectivity value. The default value of 4 means that only the four nearest neighbor pixels (those that share
-      -- an edge) are considered. A connectivity value of 8 means that the eight nearest neighbor pixels (those that share
-      -- a corner) will be considered.
-   , floodFillMaskFillColor :: Word8
-      -- ^ Value between 1 and 255 with which to fill the mask (the default value is 1).
-   , floodFillFixedRange :: Bool
-      -- ^ If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference
-      -- between neighbor pixels is considered (that is, the range is floating).
-   , floodFillMaskOnly :: Bool
-      -- ^ If set, the function does not change the image ( newVal is ignored), and only fills the mask with the
-      -- value specified in bits 8-16 of flags as described above. This option only make sense in function variants
-      -- that have the mask parameter.
-   }
-
-defaultFloodFillOperationFlags :: FloodFillOperationFlags
+defaultFloodFillOperationFlags :: OpenCV.Internal.ImgProc.MiscImgTransform.FloodFillOperationFlags
 defaultFloodFillOperationFlags =
     FloodFillOperationFlags
     { floodFillConnectivity = 4
@@ -321,14 +304,6 @@ defaultFloodFillOperationFlags =
     , floodFillFixedRange = False
     , floodFillMaskOnly = False
     }
-
-marshalFloodFillOperationFlags :: FloodFillOperationFlags -> Int32
-marshalFloodFillOperationFlags opFlags =
-    let connectivityBits = fromIntegral (floodFillConnectivity opFlags)
-        maskFillColorBits = fromIntegral (floodFillMaskFillColor opFlags) `shiftL` 8
-        fixedRangeBits = if floodFillFixedRange opFlags then c'FLOODFILL_FIXED_RANGE else 0
-        fillMaskOnlyBits = if floodFillMaskOnly opFlags then c'FLOODFILL_MASK_ONLY else 0
-    in connectivityBits .|. maskFillColorBits .|. fixedRangeBits .|. fillMaskOnlyBits
 
 -- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
 
