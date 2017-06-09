@@ -407,7 +407,8 @@ pixels in the source image, are filled with zeros (black color).
 
 The camera matrix and the distortion parameters can be determined using
 @calibrateCamera@ . If the resolution of images is different from the resolution
-used at the calibration stage, f_x, f_y, c_x and c_y need to be scaled accordingly, while the distortion coefficients remain the same.
+used at the calibration stage, f_x, f_y, c_x and c_y need to be scaled accordingly,
+while the distortion coefficients remain the same.
 
 Example:
 
@@ -441,24 +442,32 @@ undistortImg = undistort birds_512x341 intrinsics coefficients
 
 -}
 undistort
-  :: (ToMat m33d, ToMat m51d)
+  :: ( ToMat m33d, MatShape m33d ~ 'S '[ 'S 3, 'S 3 ]
+     , ToMat distCoeffs, MatShape distCoeffs `In` '[ 'S '[ 'S  4, 'S 1 ]
+                                                   , 'S '[ 'S  5, 'S 1 ]
+                                                   , 'S '[ 'S  8, 'S 1 ]
+                                                   , 'S '[ 'S 12, 'S 1 ]
+                                                   , 'S '[ 'S 14, 'S 1 ]
+                                                   ]
+     )
   => Mat ('S '[ h, w]) c d
     -- ^ The source image to undistort.
   -> m33d
   -- ^ The 3x3 matrix of intrinsic parameters.
-  -> m51d
-  -- ^ The 5 distortion coefficients.
+  -> distCoeffs
+  -- ^ The distortion coefficients
+  --   (k1,k2,p1,p2[,k3[,k4,k5,k6[,s1,s2,s3,s4[,τx,τy]]]]) of 4, 5, 8, 12 or 14 elements.
   -> Mat ('S '[ h, w]) c d
-undistort img camera dist = unsafePerformIO $
-  do dst <- newEmptyMat
-     withPtr img $ \imgPtr ->
-       withPtr dst $ \dstPtr ->
-       withPtr (toMat camera) $ \cameraPtr ->
-       withPtr (toMat dist) $ \distPtr ->
-         [C.block| void {
-           undistort(*$(Mat * imgPtr),
-                     *$(Mat * dstPtr),
-                     *$(Mat * cameraPtr),
-                     *$(Mat * distPtr));
-         }|]
-     return (unsafeCoerceMat dst)
+undistort img camera distCoeffs = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr img $ \imgPtr ->
+      withPtr dst $ \dstPtr ->
+      withPtr (toMat camera) $ \cameraPtr ->
+      withPtr (toMat distCoeffs) $ \distCoeffsPtr ->
+        [C.block| void {
+          undistort(*$(Mat * imgPtr),
+                    *$(Mat * dstPtr),
+                    *$(Mat * cameraPtr),
+                    *$(Mat * distCoeffsPtr));
+        }|]
+    return (unsafeCoerceMat dst)
