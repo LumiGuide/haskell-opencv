@@ -507,79 +507,87 @@ span.spaces    { background: white }
 <span class="lineno">  491 </span>
 <span class="lineno">  492 </span>-- | All possible positions (indexes) for a given shape (list of
 <span class="lineno">  493 </span>-- sizes per dimension).
-<span class="lineno">  494 </span>dimPositions :: (Num a, Enum a) =&gt; [a] -&gt; [[a]]
-<span class="lineno">  495 </span><span class="decl"><span class="istickedoff">dimPositions shape = sequence $ map (enumFromTo 0) $ map pred shape</span></span>
-<span class="lineno">  496 </span>
-<span class="lineno">  497 </span>--------------------------------------------------------------------------------
-<span class="lineno">  498 </span>
-<span class="lineno">  499 </span>type family ShapeT (a :: ka) :: DS [DS Nat] where
-<span class="lineno">  500 </span>    ShapeT [Int32]          = 'D
-<span class="lineno">  501 </span>    ShapeT (V.Vector Int32) = 'D
-<span class="lineno">  502 </span>    ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
-<span class="lineno">  503 </span>    ShapeT (xs :: [Nat])    = 'S (DSNats xs)
-<span class="lineno">  504 </span>    ShapeT (Proxy a)        = ShapeT a
-<span class="lineno">  505 </span>
-<span class="lineno">  506 </span>type ChannelsT a = DSNat a
-<span class="lineno">  507 </span>
-<span class="lineno">  508 </span>--------------------------------------------------------------------------------
-<span class="lineno">  509 </span>
-<span class="lineno">  510 </span>class ToShape a where
-<span class="lineno">  511 </span>    toShape :: a -&gt; V.Vector Int32
-<span class="lineno">  512 </span>
-<span class="lineno">  513 </span>-- | identity
-<span class="lineno">  514 </span>instance ToShape (V.Vector Int32) where
-<span class="lineno">  515 </span>    <span class="decl"><span class="istickedoff">toShape = id</span></span>
-<span class="lineno">  516 </span>
-<span class="lineno">  517 </span>-- | direct conversion to 'V.Vector'
-<span class="lineno">  518 </span>instance ToShape [Int32] where
-<span class="lineno">  519 </span>    <span class="decl"><span class="nottickedoff">toShape = V.fromList</span></span>
+<span class="lineno">  494 </span>--
+<span class="lineno">  495 </span>-- @
+<span class="lineno">  496 </span>-- dimPositions [3, 4]
+<span class="lineno">  497 </span>-- [ [0, 0], [0, 1], [0, 2], [0, 3]
+<span class="lineno">  498 </span>-- , [1, 0], [1, 1], [1, 2], [1, 3]
+<span class="lineno">  499 </span>-- , [2, 0], [2, 1], [2, 2], [2, 3]
+<span class="lineno">  500 </span>-- ]
+<span class="lineno">  501 </span>-- @
+<span class="lineno">  502 </span>dimPositions :: (Num a, Enum a) =&gt; [a] -&gt; [[a]]
+<span class="lineno">  503 </span><span class="decl"><span class="istickedoff">dimPositions = traverse (enumFromTo 0 . pred)</span></span>
+<span class="lineno">  504 </span>
+<span class="lineno">  505 </span>--------------------------------------------------------------------------------
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>type family ShapeT (a :: ka) :: DS [DS Nat] where
+<span class="lineno">  508 </span>    ShapeT [Int32]          = 'D
+<span class="lineno">  509 </span>    ShapeT (V.Vector Int32) = 'D
+<span class="lineno">  510 </span>    ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
+<span class="lineno">  511 </span>    ShapeT (xs :: [Nat])    = 'S (DSNats xs)
+<span class="lineno">  512 </span>    ShapeT (Proxy a)        = ShapeT a
+<span class="lineno">  513 </span>
+<span class="lineno">  514 </span>type ChannelsT a = DSNat a
+<span class="lineno">  515 </span>
+<span class="lineno">  516 </span>--------------------------------------------------------------------------------
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>class ToShape a where
+<span class="lineno">  519 </span>    toShape :: a -&gt; V.Vector Int32
 <span class="lineno">  520 </span>
-<span class="lineno">  521 </span>-- | empty 'V.Vector'
-<span class="lineno">  522 </span>instance ToShape (Proxy '[]) where
-<span class="lineno">  523 </span>    <span class="decl"><span class="istickedoff">toShape _proxy = V.empty</span></span>
+<span class="lineno">  521 </span>-- | identity
+<span class="lineno">  522 </span>instance ToShape (V.Vector Int32) where
+<span class="lineno">  523 </span>    <span class="decl"><span class="istickedoff">toShape = id</span></span>
 <span class="lineno">  524 </span>
-<span class="lineno">  525 </span>-- | fold over the type level list
-<span class="lineno">  526 </span>instance (ToInt32 (Proxy a), ToShape (Proxy as))
-<span class="lineno">  527 </span>      =&gt; ToShape (Proxy (a ': as)) where
-<span class="lineno">  528 </span>    <span class="decl"><span class="istickedoff">toShape _proxy =</span>
-<span class="lineno">  529 </span><span class="spaces">        </span><span class="istickedoff">V.cons</span>
-<span class="lineno">  530 </span><span class="spaces">          </span><span class="istickedoff">(toInt32 <span class="nottickedoff">(Proxy :: Proxy a)</span>)</span>
-<span class="lineno">  531 </span><span class="spaces">          </span><span class="istickedoff">(toShape <span class="nottickedoff">(Proxy :: Proxy as)</span>)</span></span>
+<span class="lineno">  525 </span>-- | direct conversion to 'V.Vector'
+<span class="lineno">  526 </span>instance ToShape [Int32] where
+<span class="lineno">  527 </span>    <span class="decl"><span class="nottickedoff">toShape = V.fromList</span></span>
+<span class="lineno">  528 </span>
+<span class="lineno">  529 </span>-- | empty 'V.Vector'
+<span class="lineno">  530 </span>instance ToShape (Proxy '[]) where
+<span class="lineno">  531 </span>    <span class="decl"><span class="istickedoff">toShape _proxy = V.empty</span></span>
 <span class="lineno">  532 </span>
-<span class="lineno">  533 </span>-- | empty 'V.Vector'
-<span class="lineno">  534 </span>instance ToShape Z where
-<span class="lineno">  535 </span>    <span class="decl"><span class="istickedoff">toShape Z = V.empty</span></span>
-<span class="lineno">  536 </span>
-<span class="lineno">  537 </span>-- | fold over ':::'
-<span class="lineno">  538 </span>instance (ToInt32 a, ToShape as) =&gt; ToShape (a ::: as) where
-<span class="lineno">  539 </span>    <span class="decl"><span class="istickedoff">toShape (a ::: as) = V.cons (toInt32 a) (toShape as)</span></span>
+<span class="lineno">  533 </span>-- | fold over the type level list
+<span class="lineno">  534 </span>instance (ToInt32 (Proxy a), ToShape (Proxy as))
+<span class="lineno">  535 </span>      =&gt; ToShape (Proxy (a ': as)) where
+<span class="lineno">  536 </span>    <span class="decl"><span class="istickedoff">toShape _proxy =</span>
+<span class="lineno">  537 </span><span class="spaces">        </span><span class="istickedoff">V.cons</span>
+<span class="lineno">  538 </span><span class="spaces">          </span><span class="istickedoff">(toInt32 <span class="nottickedoff">(Proxy :: Proxy a)</span>)</span>
+<span class="lineno">  539 </span><span class="spaces">          </span><span class="istickedoff">(toShape <span class="nottickedoff">(Proxy :: Proxy as)</span>)</span></span>
 <span class="lineno">  540 </span>
-<span class="lineno">  541 </span>--------------------------------------------------------------------------------
-<span class="lineno">  542 </span>
-<span class="lineno">  543 </span>class ToShapeDS a where
-<span class="lineno">  544 </span>    toShapeDS :: a -&gt; DS [DS Int32]
-<span class="lineno">  545 </span>
-<span class="lineno">  546 </span>instance ToShapeDS (proxy 'D) where
-<span class="lineno">  547 </span>    <span class="decl"><span class="nottickedoff">toShapeDS _proxy = D</span></span>
+<span class="lineno">  541 </span>-- | empty 'V.Vector'
+<span class="lineno">  542 </span>instance ToShape Z where
+<span class="lineno">  543 </span>    <span class="decl"><span class="istickedoff">toShape Z = V.empty</span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>-- | fold over ':::'
+<span class="lineno">  546 </span>instance (ToInt32 a, ToShape as) =&gt; ToShape (a ::: as) where
+<span class="lineno">  547 </span>    <span class="decl"><span class="istickedoff">toShape (a ::: as) = V.cons (toInt32 a) (toShape as)</span></span>
 <span class="lineno">  548 </span>
-<span class="lineno">  549 </span>instance (ToNatListDS (Proxy as)) =&gt; ToShapeDS (Proxy ('S as)) where
-<span class="lineno">  550 </span>    <span class="decl"><span class="istickedoff">toShapeDS _proxy = S $ toNatListDS <span class="nottickedoff">(Proxy :: Proxy as)</span></span></span>
-<span class="lineno">  551 </span>
-<span class="lineno">  552 </span>--------------------------------------------------------------------------------
+<span class="lineno">  549 </span>--------------------------------------------------------------------------------
+<span class="lineno">  550 </span>
+<span class="lineno">  551 </span>class ToShapeDS a where
+<span class="lineno">  552 </span>    toShapeDS :: a -&gt; DS [DS Int32]
 <span class="lineno">  553 </span>
-<span class="lineno">  554 </span>type ToChannels a = ToInt32 a
-<span class="lineno">  555 </span>
-<span class="lineno">  556 </span>toChannels :: (ToInt32 a) =&gt; a -&gt; Int32
-<span class="lineno">  557 </span><span class="decl"><span class="istickedoff">toChannels = toInt32</span></span>
-<span class="lineno">  558 </span>
-<span class="lineno">  559 </span>type ToChannelsDS a = ToNatDS a
-<span class="lineno">  560 </span>
-<span class="lineno">  561 </span>toChannelsDS :: (ToChannelsDS a) =&gt; a -&gt; DS Int32
-<span class="lineno">  562 </span><span class="decl"><span class="istickedoff">toChannelsDS = toNatDS</span></span>
+<span class="lineno">  554 </span>instance ToShapeDS (proxy 'D) where
+<span class="lineno">  555 </span>    <span class="decl"><span class="nottickedoff">toShapeDS _proxy = D</span></span>
+<span class="lineno">  556 </span>
+<span class="lineno">  557 </span>instance (ToNatListDS (Proxy as)) =&gt; ToShapeDS (Proxy ('S as)) where
+<span class="lineno">  558 </span>    <span class="decl"><span class="istickedoff">toShapeDS _proxy = S $ toNatListDS <span class="nottickedoff">(Proxy :: Proxy as)</span></span></span>
+<span class="lineno">  559 </span>
+<span class="lineno">  560 </span>--------------------------------------------------------------------------------
+<span class="lineno">  561 </span>
+<span class="lineno">  562 </span>type ToChannels a = ToInt32 a
 <span class="lineno">  563 </span>
-<span class="lineno">  564 </span>--------------------------------------------------------------------------------
-<span class="lineno">  565 </span>
-<span class="lineno">  566 </span><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">mkPlacementNewInstance ''Mat</span></span></span></span></span>
+<span class="lineno">  564 </span>toChannels :: (ToInt32 a) =&gt; a -&gt; Int32
+<span class="lineno">  565 </span><span class="decl"><span class="istickedoff">toChannels = toInt32</span></span>
+<span class="lineno">  566 </span>
+<span class="lineno">  567 </span>type ToChannelsDS a = ToNatDS a
+<span class="lineno">  568 </span>
+<span class="lineno">  569 </span>toChannelsDS :: (ToChannelsDS a) =&gt; a -&gt; DS Int32
+<span class="lineno">  570 </span><span class="decl"><span class="istickedoff">toChannelsDS = toNatDS</span></span>
+<span class="lineno">  571 </span>
+<span class="lineno">  572 </span>--------------------------------------------------------------------------------
+<span class="lineno">  573 </span>
+<span class="lineno">  574 </span><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">mkPlacementNewInstance ''Mat</span></span></span></span></span>
 
 </pre>
 </body>

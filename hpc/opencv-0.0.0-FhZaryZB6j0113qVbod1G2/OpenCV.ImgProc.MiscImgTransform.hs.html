@@ -1,0 +1,543 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    6 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>module OpenCV.ImgProc.MiscImgTransform
+<span class="lineno">   10 </span>    ( -- * Color conversion
+<span class="lineno">   11 </span>      cvtColor
+<span class="lineno">   12 </span>    , module OpenCV.ImgProc.MiscImgTransform.ColorCodes
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>      -- * Flood filling
+<span class="lineno">   15 </span>    , floodFill
+<span class="lineno">   16 </span>    , FloodFillOperationFlags(..)
+<span class="lineno">   17 </span>    , defaultFloodFillOperationFlags
+<span class="lineno">   18 </span>
+<span class="lineno">   19 </span>      -- * Thresholding
+<span class="lineno">   20 </span>    , ThreshType(..)
+<span class="lineno">   21 </span>    , ThreshValue(..)
+<span class="lineno">   22 </span>    , threshold
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>      -- * Watershed
+<span class="lineno">   25 </span>    , watershed
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>      -- * GrabCut
+<span class="lineno">   28 </span>    , GrabCutOperationMode(..)
+<span class="lineno">   29 </span>    , grabCut
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>      -- * In range
+<span class="lineno">   32 </span>    , inRange
+<span class="lineno">   33 </span>    ) where
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>import &quot;base&quot; Data.Bits
+<span class="lineno">   36 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   37 </span>import &quot;base&quot; Data.Proxy ( Proxy(..) )
+<span class="lineno">   38 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   39 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca )
+<span class="lineno">   40 </span>import &quot;base&quot; Foreign.Storable ( peek )
+<span class="lineno">   41 </span>import &quot;base&quot; GHC.TypeLits
+<span class="lineno">   42 </span>import &quot;primitive&quot; Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+<span class="lineno">   43 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   44 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   45 </span>import &quot;linear&quot; Linear.V4 ( V4 )
+<span class="lineno">   46 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   47 </span>import &quot;this&quot; OpenCV.ImgProc.MiscImgTransform.ColorCodes
+<span class="lineno">   48 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   49 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   50 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   51 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   52 </span>import &quot;this&quot; OpenCV.Internal.ImgProc.MiscImgTransform
+<span class="lineno">   53 </span>import &quot;this&quot; OpenCV.Internal.ImgProc.MiscImgTransform.TypeLevel
+<span class="lineno">   54 </span>import &quot;this&quot; OpenCV.Internal.ImgProc.MiscImgTransform.ColorCodes ( colorConversionCode )
+<span class="lineno">   55 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>--------------------------------------------------------------------------------
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>C.context openCvCtx
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   62 </span>C.include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   63 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>--------------------------------------------------------------------------------
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>-- ignore next Haddock code block, because of the hash sign in the link at the end of the comment.
+<span class="lineno">   68 </span>{- | Converts an image from one color space to another
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>The function converts an input image from one color space to
+<span class="lineno">   71 </span>another. In case of a transformation to-from RGB color space, the
+<span class="lineno">   72 </span>order of the channels should be specified explicitly (RGB or
+<span class="lineno">   73 </span>BGR). Note that the default color format in OpenCV is often
+<span class="lineno">   74 </span>referred to as RGB but it is actually BGR (the bytes are
+<span class="lineno">   75 </span>reversed). So the first byte in a standard (24-bit) color image
+<span class="lineno">   76 </span>will be an 8-bit Blue component, the second byte will be Green, and
+<span class="lineno">   77 </span>the third byte will be Red. The fourth, fifth, and sixth bytes
+<span class="lineno">   78 </span>would then be the second pixel (Blue, then Green, then Red), and so
+<span class="lineno">   79 </span>on.
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>The conventional ranges for R, G, and B channel values are:
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>  * 0 to 255 for 'Word8' images
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>  * 0 to 65535 for 'Word16' images
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>  * 0 to 1 for 'Float' images
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>In case of linear transformations, the range does not matter. But
+<span class="lineno">   90 </span>in case of a non-linear transformation, an input RGB image should
+<span class="lineno">   91 </span>be normalized to the proper value range to get the correct results,
+<span class="lineno">   92 </span>for example, for RGB to L*u*v* transformation. For example, if you
+<span class="lineno">   93 </span>have a 32-bit floating-point image directly converted from an 8-bit
+<span class="lineno">   94 </span>image without any scaling, then it will have the 0..255 value range
+<span class="lineno">   95 </span>instead of 0..1 assumed by the function. So, before calling
+<span class="lineno">   96 </span>'cvtColor', you need first to scale the image down:
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>&gt;  cvtColor (img * 1/255) 'ColorConvBGR2Luv'
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>If you use 'cvtColor' with 8-bit images, the conversion will have
+<span class="lineno">  101 </span>some information lost. For many applications, this will not be
+<span class="lineno">  102 </span>noticeable but it is recommended to use 32-bit images in
+<span class="lineno">  103 </span>applications that need the full range of colors or that convert an
+<span class="lineno">  104 </span>image before an operation and then convert back.
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>If conversion adds the alpha channel, its value will set to the
+<span class="lineno">  107 </span>maximum of corresponding channel range: 255 for 'Word8', 65535 for
+<span class="lineno">  108 </span>'Word16', 1 for 'Float'.
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>Example:
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>@
+<span class="lineno">  113 </span>cvtColorImg
+<span class="lineno">  114 </span>    :: forall (width    :: Nat)
+<span class="lineno">  115 </span>              (width2   :: Nat)
+<span class="lineno">  116 </span>              (height   :: Nat)
+<span class="lineno">  117 </span>              (channels :: Nat)
+<span class="lineno">  118 </span>              (depth    :: *)
+<span class="lineno">  119 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+<span class="lineno">  120 </span>       , width2 ~ (width + width)
+<span class="lineno">  121 </span>       )
+<span class="lineno">  122 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  123 </span>cvtColorImg = exceptError $
+<span class="lineno">  124 </span>    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
+<span class="lineno">  125 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  126 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  127 </span>             white $ \imgM -&gt; do
+<span class="lineno">  128 </span>      birds_gray &lt;- pureExcept $   cvtColor gray bgr
+<span class="lineno">  129 </span>                               =&lt;&lt; cvtColor bgr gray birds_512x341
+<span class="lineno">  130 </span>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+<span class="lineno">  131 </span>      matCopyToM imgM (V2 w 0) birds_gray    Nothing
+<span class="lineno">  132 </span>      lift $ arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
+<span class="lineno">  133 </span>  where
+<span class="lineno">  134 </span>    h, w :: Int32
+<span class="lineno">  135 </span>    h = fromInteger $ natVal (Proxy :: Proxy height)
+<span class="lineno">  136 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>    startX, pointX :: Int32
+<span class="lineno">  139 </span>    startX = round $ fromIntegral w * (0.95 :: Double)
+<span class="lineno">  140 </span>    pointX = round $ fromIntegral w * (1.05 :: Double)
+<span class="lineno">  141 </span>    midY = h \`div\` 2
+<span class="lineno">  142 </span>@
+<span class="lineno">  143 </span>
+<span class="lineno">  144 </span>&lt;&lt;doc/generated/examples/cvtColorImg.png cvtColorImg&gt;&gt;
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>&lt;http://goo.gl/3rfrhu OpenCV Sphinx Doc&gt;
+<span class="lineno">  147 </span>-}
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>-- the link avove is minified because it includes a hash, which the CPP tries to parse and fails
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>-- TODO (RvD): Allow value level color codes
+<span class="lineno">  152 </span>-- Allow statically unknown color codes: fromColor :: DS ColorCode
+<span class="lineno">  153 </span>cvtColor :: forall (fromColor   :: ColorCode)
+<span class="lineno">  154 </span>                   (toColor     :: ColorCode)
+<span class="lineno">  155 </span>                   (shape       :: DS [DS Nat])
+<span class="lineno">  156 </span>                   (srcChannels :: DS Nat)
+<span class="lineno">  157 </span>                   (dstChannels :: DS Nat)
+<span class="lineno">  158 </span>                   (srcDepth    :: DS *)
+<span class="lineno">  159 </span>                   (dstDepth    :: DS *)
+<span class="lineno">  160 </span>          . ( ColorConversion fromColor toColor
+<span class="lineno">  161 </span>            , ColorCodeMatchesChannels fromColor srcChannels
+<span class="lineno">  162 </span>            , dstChannels ~ 'S (ColorCodeChannels toColor)
+<span class="lineno">  163 </span>            , srcDepth `In` ['D, 'S Word8, 'S Word16, 'S Float]
+<span class="lineno">  164 </span>            , dstDepth ~ ColorCodeDepth fromColor toColor srcDepth
+<span class="lineno">  165 </span>            )
+<span class="lineno">  166 </span>         =&gt; Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
+<span class="lineno">  167 </span>         -&gt; Proxy toColor   -- ^ Convert to 'ColorCode'.
+<span class="lineno">  168 </span>         -&gt; Mat shape srcChannels srcDepth -- ^ Source image
+<span class="lineno">  169 </span>         -&gt; CvExcept (Mat shape dstChannels dstDepth)
+<span class="lineno">  170 </span><span class="decl"><span class="istickedoff">cvtColor fromColor toColor src = unsafeWrapException $ do</span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  173 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  174 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  175 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  176 </span><span class="spaces">          </span><span class="istickedoff">cv::cvtColor( *$(Mat * srcPtr)</span>
+<span class="lineno">  177 </span><span class="spaces">                      </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  178 </span><span class="spaces">                      </span><span class="istickedoff">, $(int32_t c'code)</span>
+<span class="lineno">  179 </span><span class="spaces">                      </span><span class="istickedoff">, 0</span>
+<span class="lineno">  180 </span><span class="spaces">                      </span><span class="istickedoff">);</span>
+<span class="lineno">  181 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  182 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  183 </span><span class="spaces">    </span><span class="istickedoff">c'code = colorConversionCode <span class="nottickedoff">fromColor</span> <span class="nottickedoff">toColor</span></span></span>
+<span class="lineno">  184 </span>
+<span class="lineno">  185 </span>{- | The function 'floodFill' fills a connected component starting from the seed point with the specified color.
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>The connectivity is determined by the color/brightness closeness of the neighbor pixels. See the OpenCV
+<span class="lineno">  188 </span>documentation for details on the algorithm.
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>Example:
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>@
+<span class="lineno">  193 </span>floodFillImg
+<span class="lineno">  194 </span>    :: forall (width    :: Nat)
+<span class="lineno">  195 </span>              (width2   :: Nat)
+<span class="lineno">  196 </span>              (height   :: Nat)
+<span class="lineno">  197 </span>              (channels :: Nat)
+<span class="lineno">  198 </span>              (depth    :: *)
+<span class="lineno">  199 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Sailboat_768x512
+<span class="lineno">  200 </span>       , width2 ~ (width + width)
+<span class="lineno">  201 </span>       )
+<span class="lineno">  202 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  203 </span>floodFillImg = exceptError $
+<span class="lineno">  204 </span>    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
+<span class="lineno">  205 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  206 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  207 </span>             white $ \imgM -&gt; do
+<span class="lineno">  208 </span>      sailboatEvening_768x512 &lt;- thaw sailboat_768x512
+<span class="lineno">  209 </span>      mask &lt;- mkMatM (Proxy :: Proxy [height + 2, width + 2])
+<span class="lineno">  210 </span>                     (Proxy :: Proxy 1)
+<span class="lineno">  211 </span>                     (Proxy :: Proxy Word8)
+<span class="lineno">  212 </span>                     black
+<span class="lineno">  213 </span>      circle mask (V2 450 120 :: V2 Int32) 45 white (-1) LineType_AA 0
+<span class="lineno">  214 </span>      rect &lt;- floodFill sailboatEvening_768x512 (Just mask) seedPoint eveningRed (Just tolerance) (Just tolerance) defaultFloodFillOperationFlags
+<span class="lineno">  215 </span>      rectangle sailboatEvening_768x512 rect blue 2 LineType_8 0
+<span class="lineno">  216 </span>      frozenSailboatEvening_768x512 &lt;- freeze sailboatEvening_768x512
+<span class="lineno">  217 </span>      matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
+<span class="lineno">  218 </span>      matCopyToM imgM (V2 w 0) frozenSailboatEvening_768x512 Nothing
+<span class="lineno">  219 </span>      lift $ arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
+<span class="lineno">  220 </span>  where
+<span class="lineno">  221 </span>    h, w :: Int32
+<span class="lineno">  222 </span>    h = fromInteger $ natVal (Proxy :: Proxy height)
+<span class="lineno">  223 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  224 </span>
+<span class="lineno">  225 </span>    startX, pointX :: Int32
+<span class="lineno">  226 </span>    startX = round $ fromIntegral w * (0.95 :: Double)
+<span class="lineno">  227 </span>    pointX = round $ fromIntegral w * (1.05 :: Double)
+<span class="lineno">  228 </span>
+<span class="lineno">  229 </span>    midY = h \`div\` 2
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>    seedPoint :: V2 Int32
+<span class="lineno">  232 </span>    seedPoint = V2 100 50
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>    eveningRed :: V4 Double
+<span class="lineno">  235 </span>    eveningRed = V4 0 100 200 255
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>    tolerance :: V4 Double
+<span class="lineno">  238 </span>    tolerance = pure 7
+<span class="lineno">  239 </span>@
+<span class="lineno">  240 </span>
+<span class="lineno">  241 </span>&lt;&lt;doc/generated/examples/floodFillImg.png floodFillImg&gt;&gt;
+<span class="lineno">  242 </span>
+<span class="lineno">  243 </span>&lt;http://goo.gl/9XIIne OpenCV Sphinx Doc&gt;
+<span class="lineno">  244 </span>-}
+<span class="lineno">  245 </span>floodFill
+<span class="lineno">  246 </span>    :: ( PrimMonad m
+<span class="lineno">  247 </span>       , channels `In` '[ 'S 1, 'S 3 ]
+<span class="lineno">  248 </span>       , depth `In` '[ 'D, 'S Word8, 'S Float, 'S Double ]
+<span class="lineno">  249 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  250 </span>       , ToScalar color
+<span class="lineno">  251 </span>       )
+<span class="lineno">  252 </span>    =&gt; Mut (Mat shape channels depth) (PrimState m)
+<span class="lineno">  253 </span>        -- ^ Input/output 1- or 3-channel, 8-bit, or floating-point image. It is modified by the function unless the FLOODFILL_MASK_ONLY flag is set.
+<span class="lineno">  254 </span>    -&gt; Maybe (Mut (Mat (WidthAndHeightPlusTwo shape) ('S 1) ('S Word8)) (PrimState m))
+<span class="lineno">  255 </span>        -- ^ Operation mask that should be a single-channel 8-bit image, 2 pixels wider and 2 pixels taller than image. Since this is both an input and output parameter, you must take responsibility of initializing it. Flood-filling cannot go across non-zero pixels in the input mask. For example, an edge detector output can be used as a mask to stop filling at edges. On output, pixels in the mask corresponding to filled pixels in the image are set to 1 or to the a value specified in flags as described below. It is therefore possible to use the same mask in multiple calls to the function to make sure the filled areas do not overlap.
+<span class="lineno">  256 </span>        -- Note: Since the mask is larger than the filled image, a pixel  (x, y) in image corresponds to the pixel  (x+1, y+1) in the mask.
+<span class="lineno">  257 </span>    -&gt; point2 Int32
+<span class="lineno">  258 </span>        -- ^ Starting point.
+<span class="lineno">  259 </span>    -&gt; color
+<span class="lineno">  260 </span>        -- ^ New value of the repainted domain pixels.
+<span class="lineno">  261 </span>    -&gt; Maybe color
+<span class="lineno">  262 </span>        -- ^ Maximal lower brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
+<span class="lineno">  263 </span>    -&gt; Maybe color
+<span class="lineno">  264 </span>        -- ^ Maximal upper brightness/color difference between the currently observed pixel and one of its neighbors belonging to the component, or a seed pixel being added to the component. Zero by default.
+<span class="lineno">  265 </span>    -&gt; FloodFillOperationFlags
+<span class="lineno">  266 </span>    -&gt; m Rect2i
+<span class="lineno">  267 </span><span class="decl"><span class="istickedoff">floodFill img mbMask seedPoint color mLoDiff mUpDiff opFlags =</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">withPtr mbMask $ \maskPtr -&gt;</span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint seedPoint) $ \seedPointPtr -&gt;</span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  273 </span><span class="spaces">    </span><span class="istickedoff">withPtr loDiff $ \loDiffPtr -&gt;</span>
+<span class="lineno">  274 </span><span class="spaces">    </span><span class="istickedoff">withPtr upDiff $ \upDiffPtr -&gt;</span>
+<span class="lineno">  275 </span><span class="spaces">    </span><span class="istickedoff">withPtr rect $ \rectPtr -&gt; do</span>
+<span class="lineno">  276 </span><span class="spaces">      </span><span class="istickedoff">[C.block|void {</span>
+<span class="lineno">  277 </span><span class="spaces">        </span><span class="istickedoff">cv::Mat * maskPtr = $(Mat * maskPtr);</span>
+<span class="lineno">  278 </span><span class="spaces">        </span><span class="istickedoff">cv::floodFill( *$(Mat * matPtr)</span>
+<span class="lineno">  279 </span><span class="spaces">                     </span><span class="istickedoff">, maskPtr ? cv::_InputOutputArray(*maskPtr) : cv::_InputOutputArray(noArray())</span>
+<span class="lineno">  280 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Point2i * seedPointPtr)</span>
+<span class="lineno">  281 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  282 </span><span class="spaces">                     </span><span class="istickedoff">, $(Rect2i * rectPtr)</span>
+<span class="lineno">  283 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Scalar * loDiffPtr)</span>
+<span class="lineno">  284 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Scalar * upDiffPtr)</span>
+<span class="lineno">  285 </span><span class="spaces">                     </span><span class="istickedoff">, $(int32_t c'opFlags)</span>
+<span class="lineno">  286 </span><span class="spaces">                     </span><span class="istickedoff">);</span>
+<span class="lineno">  287 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  288 </span><span class="spaces">      </span><span class="istickedoff">pure rect</span>
+<span class="lineno">  289 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  290 </span><span class="spaces">    </span><span class="istickedoff">rect :: Rect2i</span>
+<span class="lineno">  291 </span><span class="spaces">    </span><span class="istickedoff">rect = toRect HRect{ hRectTopLeft = pure 0</span>
+<span class="lineno">  292 </span><span class="spaces">                       </span><span class="istickedoff">, hRectSize    = pure 0</span>
+<span class="lineno">  293 </span><span class="spaces">                       </span><span class="istickedoff">}</span>
+<span class="lineno">  294 </span><span class="spaces">    </span><span class="istickedoff">c'opFlags = marshalFloodFillOperationFlags opFlags</span>
+<span class="lineno">  295 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">zeroScalar = toScalar (pure 0 :: V4 Double)</span></span>
+<span class="lineno">  296 </span><span class="spaces">    </span><span class="istickedoff">loDiff = maybe <span class="nottickedoff">zeroScalar</span> toScalar mLoDiff</span>
+<span class="lineno">  297 </span><span class="spaces">    </span><span class="istickedoff">upDiff = maybe <span class="nottickedoff">zeroScalar</span> toScalar mUpDiff</span></span>
+<span class="lineno">  298 </span>
+<span class="lineno">  299 </span>data FloodFillOperationFlags
+<span class="lineno">  300 </span>   = FloodFillOperationFlags
+<span class="lineno">  301 </span>   { <span class="istickedoff"><span class="decl"><span class="istickedoff">floodFillConnectivity</span></span></span> :: Word8
+<span class="lineno">  302 </span>      -- ^ Connectivity value. The default value of 4 means that only the four nearest neighbor pixels (those that share
+<span class="lineno">  303 </span>      -- an edge) are considered. A connectivity value of 8 means that the eight nearest neighbor pixels (those that share
+<span class="lineno">  304 </span>      -- a corner) will be considered.
+<span class="lineno">  305 </span>   , <span class="istickedoff"><span class="decl"><span class="istickedoff">floodFillMaskFillColor</span></span></span> :: Word8
+<span class="lineno">  306 </span>      -- ^ Value between 1 and 255 with which to fill the mask (the default value is 1).
+<span class="lineno">  307 </span>   , <span class="istickedoff"><span class="decl"><span class="istickedoff">floodFillFixedRange</span></span></span> :: Bool
+<span class="lineno">  308 </span>      -- ^ If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference
+<span class="lineno">  309 </span>      -- between neighbor pixels is considered (that is, the range is floating).
+<span class="lineno">  310 </span>   , <span class="istickedoff"><span class="decl"><span class="istickedoff">floodFillMaskOnly</span></span></span> :: Bool
+<span class="lineno">  311 </span>      -- ^ If set, the function does not change the image ( newVal is ignored), and only fills the mask with the
+<span class="lineno">  312 </span>      -- value specified in bits 8-16 of flags as described above. This option only make sense in function variants
+<span class="lineno">  313 </span>      -- that have the mask parameter.
+<span class="lineno">  314 </span>   }
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>defaultFloodFillOperationFlags :: FloodFillOperationFlags
+<span class="lineno">  317 </span><span class="decl"><span class="istickedoff">defaultFloodFillOperationFlags =</span>
+<span class="lineno">  318 </span><span class="spaces">    </span><span class="istickedoff">FloodFillOperationFlags</span>
+<span class="lineno">  319 </span><span class="spaces">    </span><span class="istickedoff">{ floodFillConnectivity = 4</span>
+<span class="lineno">  320 </span><span class="spaces">    </span><span class="istickedoff">, floodFillMaskFillColor = 1</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="istickedoff">, floodFillFixedRange = False</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">, floodFillMaskOnly = False</span>
+<span class="lineno">  323 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  324 </span>
+<span class="lineno">  325 </span>marshalFloodFillOperationFlags :: FloodFillOperationFlags -&gt; Int32
+<span class="lineno">  326 </span><span class="decl"><span class="istickedoff">marshalFloodFillOperationFlags opFlags =</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="istickedoff">let connectivityBits = fromIntegral (floodFillConnectivity opFlags)</span>
+<span class="lineno">  328 </span><span class="spaces">        </span><span class="istickedoff">maskFillColorBits = fromIntegral (floodFillMaskFillColor opFlags) `shiftL` 8</span>
+<span class="lineno">  329 </span><span class="spaces">        </span><span class="istickedoff">fixedRangeBits = if <span class="tickonlyfalse">floodFillFixedRange opFlags</span> then <span class="nottickedoff">c'FLOODFILL_FIXED_RANGE</span> else 0</span>
+<span class="lineno">  330 </span><span class="spaces">        </span><span class="istickedoff">fillMaskOnlyBits = if <span class="tickonlyfalse">floodFillMaskOnly opFlags</span> then <span class="nottickedoff">c'FLOODFILL_MASK_ONLY</span> else 0</span>
+<span class="lineno">  331 </span><span class="spaces">    </span><span class="istickedoff">in connectivityBits .|. maskFillColorBits .|. fixedRangeBits .|. fillMaskOnlyBits</span></span>
+<span class="lineno">  332 </span>
+<span class="lineno">  333 </span>-- TODO (RvD): Otsu and triangle are only implemented for 8 bit images.
+<span class="lineno">  334 </span>
+<span class="lineno">  335 </span>{- | Applies a fixed-level threshold to each array element
+<span class="lineno">  336 </span>
+<span class="lineno">  337 </span>The function applies fixed-level thresholding to a single-channel array. The
+<span class="lineno">  338 </span>function is typically used to get a bi-level (binary) image out of a
+<span class="lineno">  339 </span>grayscale image or for removing a noise, that is, filtering out pixels with
+<span class="lineno">  340 </span>too small or too large values. There are several types of thresholding
+<span class="lineno">  341 </span>supported by the function.
+<span class="lineno">  342 </span>
+<span class="lineno">  343 </span>Example:
+<span class="lineno">  344 </span>
+<span class="lineno">  345 </span>@
+<span class="lineno">  346 </span>grayBirds :: Mat (ShapeT [341, 512]) ('S 1) ('S Word8)
+<span class="lineno">  347 </span>grayBirds = exceptError $ cvtColor bgr gray birds_512x341
+<span class="lineno">  348 </span>
+<span class="lineno">  349 </span>threshBinaryBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  350 </span>threshBinaryBirds =
+<span class="lineno">  351 </span>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<span class="lineno">  352 </span>    threshold (ThreshVal_Abs 100) (Thresh_Binary 150) grayBirds
+<span class="lineno">  353 </span>
+<span class="lineno">  354 </span>threshBinaryInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  355 </span>threshBinaryInvBirds =
+<span class="lineno">  356 </span>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<span class="lineno">  357 </span>    threshold (ThreshVal_Abs 100) (Thresh_BinaryInv 150) grayBirds
+<span class="lineno">  358 </span>
+<span class="lineno">  359 </span>threshTruncateBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  360 </span>threshTruncateBirds =
+<span class="lineno">  361 </span>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<span class="lineno">  362 </span>    threshold (ThreshVal_Abs 100) Thresh_Truncate grayBirds
+<span class="lineno">  363 </span>
+<span class="lineno">  364 </span>threshToZeroBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  365 </span>threshToZeroBirds =
+<span class="lineno">  366 </span>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<span class="lineno">  367 </span>    threshold (ThreshVal_Abs 100) Thresh_ToZero grayBirds
+<span class="lineno">  368 </span>
+<span class="lineno">  369 </span>threshToZeroInvBirds :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  370 </span>threshToZeroInvBirds =
+<span class="lineno">  371 </span>    exceptError $ cvtColor gray bgr $ fst $ exceptError $
+<span class="lineno">  372 </span>    threshold (ThreshVal_Abs 100) Thresh_ToZeroInv grayBirds
+<span class="lineno">  373 </span>@
+<span class="lineno">  374 </span>
+<span class="lineno">  375 </span>&lt;&lt;doc/generated/examples/threshBinaryBirds.png threshBinaryBirds&gt;&gt;
+<span class="lineno">  376 </span>&lt;&lt;doc/generated/examples/threshBinaryInvBirds.png threshBinaryInvBirds&gt;&gt;
+<span class="lineno">  377 </span>&lt;&lt;doc/generated/examples/threshTruncateBirds.png threshTruncateBirds&gt;&gt;
+<span class="lineno">  378 </span>&lt;&lt;doc/generated/examples/threshToZeroBirds.png threshToZeroBirds&gt;&gt;
+<span class="lineno">  379 </span>&lt;&lt;doc/generated/examples/threshToZeroInvBirds.png threshToZeroInvBirds&gt;&gt;
+<span class="lineno">  380 </span>
+<span class="lineno">  381 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc&gt;
+<span class="lineno">  382 </span>-}
+<span class="lineno">  383 </span>threshold
+<span class="lineno">  384 </span>    :: (depth `In` [Word8, Float])
+<span class="lineno">  385 </span>    =&gt; ThreshValue -- ^
+<span class="lineno">  386 </span>    -&gt; ThreshType
+<span class="lineno">  387 </span>    -&gt; (Mat shape ('S 1) ('S depth))
+<span class="lineno">  388 </span>    -&gt; CvExcept (Mat shape ('S 1) ('S depth), Double)
+<span class="lineno">  389 </span><span class="decl"><span class="istickedoff">threshold threshVal threshType src = unsafeWrapException $ do</span>
+<span class="lineno">  390 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  391 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \calcThreshPtr -&gt;</span>
+<span class="lineno">  392 </span><span class="spaces">      </span><span class="istickedoff">handleCvException ((unsafeCoerceMat dst, ) . <span class="nottickedoff">realToFrac</span> &lt;$&gt; peek calcThreshPtr) $</span>
+<span class="lineno">  393 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  394 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  395 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  396 </span><span class="spaces">          </span><span class="istickedoff">*$(double * calcThreshPtr) =</span>
+<span class="lineno">  397 </span><span class="spaces">            </span><span class="istickedoff">cv::threshold( *$(Mat * srcPtr)</span>
+<span class="lineno">  398 </span><span class="spaces">                         </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  399 </span><span class="spaces">                         </span><span class="istickedoff">, $(double c'threshVal)</span>
+<span class="lineno">  400 </span><span class="spaces">                         </span><span class="istickedoff">, $(double c'maxVal)</span>
+<span class="lineno">  401 </span><span class="spaces">                         </span><span class="istickedoff">, $(int32_t c'type)</span>
+<span class="lineno">  402 </span><span class="spaces">                         </span><span class="istickedoff">);</span>
+<span class="lineno">  403 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  404 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  405 </span><span class="spaces">    </span><span class="istickedoff">c'type = c'threshType .|. c'threshValMode</span>
+<span class="lineno">  406 </span><span class="spaces">    </span><span class="istickedoff">(c'threshType, c'maxVal) = marshalThreshType threshType</span>
+<span class="lineno">  407 </span><span class="spaces">    </span><span class="istickedoff">(c'threshValMode, c'threshVal) = marshalThreshValue threshVal</span></span>
+<span class="lineno">  408 </span>
+<span class="lineno">  409 </span>
+<span class="lineno">  410 </span>{- | Performs a marker-based image segmentation using the watershed algorithm.
+<span class="lineno">  411 </span>
+<span class="lineno">  412 </span>The function implements one of the variants of watershed, non-parametric marker-based segmentation algorithm, described in [Meyer, F. Color Image Segmentation, ICIP92, 1992].
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>Before passing the image to the function, you have to roughly outline the desired regions in the image markers with positive (&gt;0) indices. So, every region is represented as one or more connected components with the pixel values 1, 2, 3, and so on. Such markers can be retrieved from a binary mask using 'findContours' and 'drawContours'. The markers are “seeds” of the future image regions. All the other pixels in markers , whose relation to the outlined regions is not known and should be defined by the algorithm, should be set to 0’s. In the function output, each pixel in markers is set to a value of the “seed” components or to -1 at boundaries between the regions.
+<span class="lineno">  415 </span>
+<span class="lineno">  416 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed OpenCV Sphinx doc&gt;
+<span class="lineno">  417 </span>-}
+<span class="lineno">  418 </span>watershed
+<span class="lineno">  419 </span>  :: (PrimMonad m)
+<span class="lineno">  420 </span>  =&gt; Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input 8-bit 3-channel image
+<span class="lineno">  421 </span>  -&gt; Mut (Mat ('S [h, w]) ('S 1) ('S Int32)) (PrimState m) -- ^ Input/output 32-bit single-channel image (map) of markers
+<span class="lineno">  422 </span>  -&gt; CvExceptT m ()
+<span class="lineno">  423 </span><span class="decl"><span class="nottickedoff">watershed img markers =</span>
+<span class="lineno">  424 </span><span class="spaces">    </span><span class="nottickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  425 </span><span class="spaces">    </span><span class="nottickedoff">withPtr img $ \imgPtr -&gt;</span>
+<span class="lineno">  426 </span><span class="spaces">    </span><span class="nottickedoff">withPtr markers $ \markersPtr -&gt;</span>
+<span class="lineno">  427 </span><span class="spaces">      </span><span class="nottickedoff">[C.exp|void {</span>
+<span class="lineno">  428 </span><span class="spaces">        </span><span class="nottickedoff">cv::watershed( *$(Mat * imgPtr)</span>
+<span class="lineno">  429 </span><span class="spaces">                     </span><span class="nottickedoff">, *$(Mat * markersPtr)</span>
+<span class="lineno">  430 </span><span class="spaces">                     </span><span class="nottickedoff">)</span>
+<span class="lineno">  431 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span></span>
+<span class="lineno">  432 </span>
+<span class="lineno">  433 </span>{- | Runs the &lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#grabcut GrabCut&gt; algorithm.
+<span class="lineno">  434 </span>
+<span class="lineno">  435 </span>Example:
+<span class="lineno">  436 </span>
+<span class="lineno">  437 </span>@
+<span class="lineno">  438 </span>grabCutBird :: Birds_512x341
+<span class="lineno">  439 </span>grabCutBird = exceptError $ do
+<span class="lineno">  440 </span>    mask &lt;- withMatM (Proxy :: Proxy [341, 512])
+<span class="lineno">  441 </span>                     (Proxy :: Proxy 1)
+<span class="lineno">  442 </span>                     (Proxy :: Proxy Word8)
+<span class="lineno">  443 </span>                     black $ \mask -&gt; do
+<span class="lineno">  444 </span>      fgTmp &lt;- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
+<span class="lineno">  445 </span>      bgTmp &lt;- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
+<span class="lineno">  446 </span>      grabCut birds_512x341 mask fgTmp bgTmp 5 (GrabCut_InitWithRect rect)
+<span class="lineno">  447 </span>    mask' &lt;- matScalarCompare mask 3 Cmp_Ge
+<span class="lineno">  448 </span>    withMatM (Proxy :: Proxy [341, 512])
+<span class="lineno">  449 </span>             (Proxy :: Proxy 3)
+<span class="lineno">  450 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  451 </span>             transparent $ \imgM -&gt; do
+<span class="lineno">  452 </span>      matCopyToM imgM (V2 0 0) birds_512x341 (Just mask')
+<span class="lineno">  453 </span>  where
+<span class="lineno">  454 </span>    rect :: Rect Int32
+<span class="lineno">  455 </span>    rect = toRect $ HRect { hRectTopLeft = V2 264 60, hRectSize = V2 248 281 }
+<span class="lineno">  456 </span>@
+<span class="lineno">  457 </span>
+<span class="lineno">  458 </span>&lt;&lt;doc/generated/examples/grabCutBird.png grabCutBird&gt;&gt;
+<span class="lineno">  459 </span>
+<span class="lineno">  460 </span>-}
+<span class="lineno">  461 </span>grabCut
+<span class="lineno">  462 </span>    :: ( PrimMonad m
+<span class="lineno">  463 </span>       , depth `In` '[ 'D, 'S Word8 ]
+<span class="lineno">  464 </span>       )
+<span class="lineno">  465 </span>    =&gt; Mat shape ('S 3) depth
+<span class="lineno">  466 </span>        -- ^ Input 8-bit 3-channel image.
+<span class="lineno">  467 </span>    -&gt; Mut (Mat shape ('S 1) ('S Word8)) (PrimState m)
+<span class="lineno">  468 </span>        -- ^ Input/output 8-bit single-channel mask. The mask is initialized by the function when mode is set to GC_INIT_WITH_RECT. Its elements may have one of following values:
+<span class="lineno">  469 </span>        --
+<span class="lineno">  470 </span>        --     * GC_BGD defines an obvious background pixels.
+<span class="lineno">  471 </span>        --
+<span class="lineno">  472 </span>        --     * GC_FGD defines an obvious foreground (object) pixel.
+<span class="lineno">  473 </span>        --
+<span class="lineno">  474 </span>        --     * GC_PR_BGD defines a possible background pixel.
+<span class="lineno">  475 </span>        --
+<span class="lineno">  476 </span>        --     * GC_PR_FGD defines a possible foreground pixel.
+<span class="lineno">  477 </span>    -&gt; Mut (Mat ('S ['S 1, 'S 65]) ('S 1) ('S Double)) (PrimState m)
+<span class="lineno">  478 </span>        -- ^ Temporary array for the background model. Do not modify it while you are processing the same image.
+<span class="lineno">  479 </span>    -&gt; Mut (Mat ('S ['S 1, 'S 65]) ('S 1) ('S Double)) (PrimState m)
+<span class="lineno">  480 </span>        -- ^ Temporary arrays for the foreground model. Do not modify it while you are processing the same image.
+<span class="lineno">  481 </span>    -&gt; Int32
+<span class="lineno">  482 </span>        -- ^ Number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with mode==GC_INIT_WITH_MASK or mode==GC_EVAL.
+<span class="lineno">  483 </span>    -&gt; GrabCutOperationMode
+<span class="lineno">  484 </span>        -- ^ Operation mode
+<span class="lineno">  485 </span>    -&gt; CvExceptT m ()
+<span class="lineno">  486 </span><span class="decl"><span class="istickedoff">grabCut img mask bgdModel fgdModel iterCount mode =</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  488 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \imgPtr -&gt;</span>
+<span class="lineno">  489 </span><span class="spaces">    </span><span class="istickedoff">withPtr mask $ \maskPtr -&gt;</span>
+<span class="lineno">  490 </span><span class="spaces">    </span><span class="istickedoff">withPtr rect $ \rectPtr -&gt;</span>
+<span class="lineno">  491 </span><span class="spaces">    </span><span class="istickedoff">withPtr bgdModel $ \bgdModelPtr -&gt;</span>
+<span class="lineno">  492 </span><span class="spaces">    </span><span class="istickedoff">withPtr fgdModel $ \fgdModelPtr -&gt;</span>
+<span class="lineno">  493 </span><span class="spaces">      </span><span class="istickedoff">[C.block|void {</span>
+<span class="lineno">  494 </span><span class="spaces">        </span><span class="istickedoff">cv::grabCut( *$(Mat * imgPtr)</span>
+<span class="lineno">  495 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * maskPtr)</span>
+<span class="lineno">  496 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Rect2i * rectPtr)</span>
+<span class="lineno">  497 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * bgdModelPtr)</span>
+<span class="lineno">  498 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * fgdModelPtr)</span>
+<span class="lineno">  499 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t iterCount)</span>
+<span class="lineno">  500 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t c'modeFlags)</span>
+<span class="lineno">  501 </span><span class="spaces">                   </span><span class="istickedoff">);</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  503 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  504 </span><span class="spaces">    </span><span class="istickedoff">rect = marshalGrabCutOperationModeRect mode</span>
+<span class="lineno">  505 </span><span class="spaces">    </span><span class="istickedoff">c'modeFlags = marshalGrabCutOperationMode mode</span></span>
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>{- | Returns 0 if the pixels are not in the range, 255 otherwise. -}
+<span class="lineno">  508 </span>inRange ::
+<span class="lineno">  509 </span>     (ToScalar scalar)
+<span class="lineno">  510 </span>  =&gt; Mat ('S [w, h]) channels depth
+<span class="lineno">  511 </span>  -&gt; scalar -- ^ Lower bound
+<span class="lineno">  512 </span>  -&gt; scalar -- ^ Upper bound
+<span class="lineno">  513 </span>  -&gt; CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
+<span class="lineno">  514 </span><span class="decl"><span class="nottickedoff">inRange src lo hi = unsafeWrapException $ do</span>
+<span class="lineno">  515 </span><span class="spaces">  </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  516 </span><span class="spaces">  </span><span class="nottickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  517 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (return (unsafeCoerceMat dst)) $</span>
+<span class="lineno">  518 </span><span class="spaces">    </span><span class="nottickedoff">withPtr (toScalar lo) $ \loPtr -&gt;</span>
+<span class="lineno">  519 </span><span class="spaces">    </span><span class="nottickedoff">withPtr (toScalar hi) $ \hiPtr -&gt;</span>
+<span class="lineno">  520 </span><span class="spaces">    </span><span class="nottickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  521 </span><span class="spaces">      </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  522 </span><span class="spaces">        </span><span class="nottickedoff">cv::inRange(*$(Mat * srcPtr), *$(Scalar * loPtr), *$(Scalar * hiPtr), *$(Mat * dstPtr));</span>
+<span class="lineno">  523 </span><span class="spaces">      </span><span class="nottickedoff">|]</span></span>
+
+</pre>
+</body>
+</html>

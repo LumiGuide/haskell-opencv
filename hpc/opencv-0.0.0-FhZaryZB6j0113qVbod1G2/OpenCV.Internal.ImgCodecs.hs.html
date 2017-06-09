@@ -60,8 +60,8 @@ span.spaces    { background: white }
 <span class="lineno">   44 </span>     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
 <span class="lineno">   45 </span>
 <span class="lineno">   46 </span><span class="decl"><span class="istickedoff">#num IMREAD_UNCHANGED </span>
-<span class="lineno">   47 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_GRAYSCALE</span>
-<span class="lineno">   48 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_COLOR</span>
+<span class="lineno">   47 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num IMREAD_GRAYSCALE</span>
+<span class="lineno">   48 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_COLOR</span>
 <span class="lineno">   49 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_ANYDEPTH</span>
 <span class="lineno">   50 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_ANYCOLOR</span>
 <span class="lineno">   51 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_LOAD_GDAL</span>
@@ -69,7 +69,7 @@ span.spaces    { background: white }
 <span class="lineno">   53 </span>marshalImreadMode :: ImreadMode -&gt; Int32
 <span class="lineno">   54 </span><span class="decl"><span class="istickedoff">marshalImreadMode = \case</span>
 <span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">ImreadUnchanged -&gt; c'IMREAD_UNCHANGED</span>
-<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">ImreadGrayscale -&gt; <span class="nottickedoff">c'IMREAD_GRAYSCALE</span></span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">ImreadGrayscale -&gt; c'IMREAD_GRAYSCALE</span>
 <span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">ImreadColor     -&gt; <span class="nottickedoff">c'IMREAD_COLOR</span></span>
 <span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">ImreadAnyDepth  -&gt; <span class="nottickedoff">c'IMREAD_ANYDEPTH</span></span>
 <span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">ImreadAnyColor  -&gt; <span class="nottickedoff">c'IMREAD_ANYCOLOR</span></span>

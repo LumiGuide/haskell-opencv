@@ -1,0 +1,238 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="lineno">    1 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    2 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    3 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    4 </span>module OpenCV.ImgProc.CascadeClassifier
+<span class="lineno">    5 </span>  ( CascadeClassifier
+<span class="lineno">    6 </span>  , newCascadeClassifier
+<span class="lineno">    7 </span>  , cascadeClassifierDetectMultiScale
+<span class="lineno">    8 </span>  , cascadeClassifierDetectMultiScaleNC
+<span class="lineno">    9 </span>  ) where
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   12 </span>import &quot;base&quot; Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
+<span class="lineno">   13 </span>import &quot;base&quot; Foreign.C.String (withCString)
+<span class="lineno">   14 </span>import &quot;base&quot; System.IO.Unsafe (unsafePerformIO)
+<span class="lineno">   15 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   16 </span>import &quot;base&quot; Foreign.Marshal.Alloc (alloca)
+<span class="lineno">   17 </span>import &quot;base&quot; Foreign.Ptr (Ptr)
+<span class="lineno">   18 </span>import &quot;base&quot; Control.Exception (mask_)
+<span class="lineno">   19 </span>import &quot;base&quot; Foreign.Storable (peek)
+<span class="lineno">   20 </span>import &quot;base&quot; Foreign.Marshal.Array (peekArray)
+<span class="lineno">   21 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   22 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   23 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   24 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   25 </span>import &quot;linear&quot; Linear (V2(..))
+<span class="lineno">   26 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   27 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   28 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   29 </span>import &quot;this&quot; OpenCV.Internal
+<span class="lineno">   30 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>C.context openCvCtx
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   35 </span>C.include &quot;opencv2/objdetect.hpp&quot;
+<span class="lineno">   36 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>newtype CascadeClassifier = CascadeClassifier {<span class="istickedoff"><span class="decl"><span class="istickedoff">unCascadeClassifier</span></span></span> :: ForeignPtr (C CascadeClassifier)}
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>type instance C CascadeClassifier = C'CascadeClassifier
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>instance WithPtr CascadeClassifier where
+<span class="lineno">   43 </span>    <span class="decl"><span class="istickedoff">withPtr = withForeignPtr . unCascadeClassifier</span></span>
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>instance FromPtr CascadeClassifier where
+<span class="lineno">   46 </span>    <span class="decl"><span class="istickedoff">fromPtr = objFromPtr CascadeClassifier $ \ptr -&gt;</span>
+<span class="lineno">   47 </span><span class="spaces">                </span><span class="istickedoff">[CU.exp| void { delete $(CascadeClassifier * ptr) }|]</span></span>
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>-- | Create a new cascade classifier. Returns 'Nothing' if the classifier
+<span class="lineno">   50 </span>-- is empty after initialization. This usually means that the file could
+<span class="lineno">   51 </span>-- not be loaded (e.g. it doesn't exist, is corrupt, etc.)
+<span class="lineno">   52 </span>newCascadeClassifier :: FilePath -&gt; IO (Maybe CascadeClassifier)
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">newCascadeClassifier fp = do</span>
+<span class="lineno">   54 </span><span class="spaces">  </span><span class="istickedoff">cc &lt;- withCString fp $ \c'fp -&gt; fromPtr</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">[CU.exp| CascadeClassifier * { new CascadeClassifier(cv::String($(const char * c'fp))) } |]</span>
+<span class="lineno">   56 </span><span class="spaces">  </span><span class="istickedoff">-- TODO: empty() seems to return bogus numbers when the classifier is not</span>
+<span class="lineno">   57 </span><span class="spaces">  </span><span class="istickedoff">-- empty, and I'm not sure why. This is also why I'm not using toBool.</span>
+<span class="lineno">   58 </span><span class="spaces">  </span><span class="istickedoff">empty &lt;- fmap (== 1) (withPtr cc (\ccPtr -&gt; [CU.exp| bool { $(CascadeClassifier * ccPtr)-&gt;empty() } |]))</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">return $ if empty</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">then Nothing</span>
+<span class="lineno">   61 </span><span class="spaces">    </span><span class="istickedoff">else Just cc</span></span>
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>{- |
+<span class="lineno">   64 </span>Example:
+<span class="lineno">   65 </span>
+<span class="lineno">   66 </span>@
+<span class="lineno">   67 </span>cascadeClassifierArnold
+<span class="lineno">   68 </span>  :: forall (width    :: Nat)
+<span class="lineno">   69 </span>            (height   :: Nat)
+<span class="lineno">   70 </span>            (channels :: Nat)
+<span class="lineno">   71 </span>            (depth    :: *  )
+<span class="lineno">   72 </span>   . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Arnold_small)
+<span class="lineno">   73 </span>  =&gt; IO (Mat (ShapeT [height, width]) ('S channels) ('S depth))
+<span class="lineno">   74 </span>cascadeClassifierArnold = do
+<span class="lineno">   75 </span>    -- Create two classifiers from data files.
+<span class="lineno">   76 </span>    Just ccFrontal &lt;- newCascadeClassifier &quot;data/haarcascade_frontalface_default.xml&quot;
+<span class="lineno">   77 </span>    Just ccEyes    &lt;- newCascadeClassifier &quot;data/haarcascade_eye.xml&quot;
+<span class="lineno">   78 </span>    -- Detect some features.
+<span class="lineno">   79 </span>    let eyes  = ccDetectMultiscale ccEyes    arnoldGray
+<span class="lineno">   80 </span>        faces = ccDetectMultiscale ccFrontal arnoldGray
+<span class="lineno">   81 </span>    -- Draw the result.
+<span class="lineno">   82 </span>    pure $ exceptError $
+<span class="lineno">   83 </span>      withMatM (Proxy :: Proxy [height, width])
+<span class="lineno">   84 </span>               (Proxy :: Proxy channels)
+<span class="lineno">   85 </span>               (Proxy :: Proxy depth)
+<span class="lineno">   86 </span>               white $ \imgM -&gt; do
+<span class="lineno">   87 </span>        void $ matCopyToM imgM (V2 0 0) arnold_small Nothing
+<span class="lineno">   88 </span>        forM_ eyes  $ \eyeRect  -&gt; lift $ rectangle imgM eyeRect  blue  2 LineType_8 0
+<span class="lineno">   89 </span>        forM_ faces $ \faceRect -&gt; lift $ rectangle imgM faceRect green 2 LineType_8 0
+<span class="lineno">   90 </span>  where
+<span class="lineno">   91 </span>    arnoldGray = exceptError $ cvtColor bgr gray arnold_small
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>    ccDetectMultiscale cc = cascadeClassifierDetectMultiScale cc Nothing Nothing minSize maxSize
+<span class="lineno">   94 </span>
+<span class="lineno">   95 </span>    minSize = Nothing :: Maybe (V2 Int32)
+<span class="lineno">   96 </span>    maxSize = Nothing :: Maybe (V2 Int32)
+<span class="lineno">   97 </span>@
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>&lt;&lt;doc/generated/examples/cascadeClassifierArnold.png cascadeClassifierArnold&gt;&gt;
+<span class="lineno">  100 </span>-}
+<span class="lineno">  101 </span>cascadeClassifierDetectMultiScale
+<span class="lineno">  102 </span>  :: (IsSize size Int32)
+<span class="lineno">  103 </span>  =&gt; CascadeClassifier
+<span class="lineno">  104 </span>  -&gt; Maybe Double -- ^ Scale factor, default is 1.1
+<span class="lineno">  105 </span>  -&gt; Maybe Int32 -- ^ Min neighbours, default 3
+<span class="lineno">  106 </span>  -&gt; Maybe (size Int32) -- ^ Minimum size. Default: no minimum.
+<span class="lineno">  107 </span>  -&gt; Maybe (size Int32) -- ^ Maximum size. Default: no maximum.
+<span class="lineno">  108 </span>  -&gt; Mat ('S [w, h]) ('S 1) ('S Word8)
+<span class="lineno">  109 </span>  -&gt; V.Vector (Rect Int32)
+<span class="lineno">  110 </span><span class="decl"><span class="istickedoff">cascadeClassifierDetectMultiScale cc scaleFactor minNeighbours minSize maxSize src = unsafePerformIO $</span>
+<span class="lineno">  111 </span><span class="spaces">    </span><span class="istickedoff">withPtr cc $ \ccPtr -&gt;</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  113 </span><span class="spaces">    </span><span class="istickedoff">withPtr c'minSize $ \minSizePtr -&gt;</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">withPtr c'maxSize $ \maxSizePtr -&gt;</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(numRectsPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(rectsPtrPtr :: Ptr (Ptr (Ptr (C'Rect Int32)))) -&gt; mask_ $ do</span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="istickedoff">[CU.block| void {</span>
+<span class="lineno">  118 </span><span class="spaces">        </span><span class="istickedoff">std::vector&lt;cv::Rect&gt; rects;</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="istickedoff">$(CascadeClassifier * ccPtr)-&gt;detectMultiScale(</span>
+<span class="lineno">  120 </span><span class="spaces">          </span><span class="istickedoff">*$(Mat * srcPtr),</span>
+<span class="lineno">  121 </span><span class="spaces">          </span><span class="istickedoff">rects,</span>
+<span class="lineno">  122 </span><span class="spaces">          </span><span class="istickedoff">$(double c'scaleFactor),</span>
+<span class="lineno">  123 </span><span class="spaces">          </span><span class="istickedoff">$(int32_t c'minNeighbours),</span>
+<span class="lineno">  124 </span><span class="spaces">          </span><span class="istickedoff">0,</span>
+<span class="lineno">  125 </span><span class="spaces">          </span><span class="istickedoff">*$(Size2i * minSizePtr),</span>
+<span class="lineno">  126 </span><span class="spaces">          </span><span class="istickedoff">*$(Size2i * maxSizePtr));</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="istickedoff">*$(int32_t * numRectsPtr) = rects.size();</span>
+<span class="lineno">  128 </span><span class="spaces">        </span><span class="istickedoff">cv::Rect * * rectsPtr = new cv::Rect * [rects.size()];</span>
+<span class="lineno">  129 </span><span class="spaces">        </span><span class="istickedoff">*$(Rect2i * * * rectsPtrPtr) = rectsPtr;</span>
+<span class="lineno">  130 </span><span class="spaces">        </span><span class="istickedoff">for (std::vector&lt;cv::Rect&gt;::size_type i = 0; i != rects.size(); i++) {</span>
+<span class="lineno">  131 </span><span class="spaces">          </span><span class="istickedoff">rectsPtr[i] = new cv::Rect(rects[i]);</span>
+<span class="lineno">  132 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  133 </span><span class="spaces">      </span><span class="istickedoff">} |]</span>
+<span class="lineno">  134 </span><span class="spaces">      </span><span class="istickedoff">numRects &lt;- fromIntegral &lt;$&gt; peek numRectsPtr</span>
+<span class="lineno">  135 </span><span class="spaces">      </span><span class="istickedoff">rectsPtr &lt;- peek rectsPtrPtr</span>
+<span class="lineno">  136 </span><span class="spaces">      </span><span class="istickedoff">rects :: [Rect Int32] &lt;- peekArray numRects rectsPtr &gt;&gt;= mapM (fromPtr . return)</span>
+<span class="lineno">  137 </span><span class="spaces">      </span><span class="istickedoff">[CU.block| void { delete [] *$(Rect2i * * * rectsPtrPtr); }|]</span>
+<span class="lineno">  138 </span><span class="spaces">      </span><span class="istickedoff">return (V.fromList rects)</span>
+<span class="lineno">  139 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">c'scaleFactor = maybe 1.1 <span class="nottickedoff">realToFrac</span> scaleFactor</span>
+<span class="lineno">  141 </span><span class="spaces">    </span><span class="istickedoff">c'minNeighbours = maybe 3 <span class="nottickedoff">fromIntegral</span> minNeighbours</span>
+<span class="lineno">  142 </span><span class="spaces">    </span><span class="istickedoff">c'minSize = maybe (toSize (V2 0 0)) <span class="nottickedoff">toSize</span> minSize</span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="istickedoff">c'maxSize = maybe (toSize (V2 0 0)) <span class="nottickedoff">toSize</span> maxSize</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>{- | Special version which returns bounding rectangle, rejectLevels, and levelWeights
+<span class="lineno">  146 </span>
+<span class="lineno">  147 </span>-}
+<span class="lineno">  148 </span>cascadeClassifierDetectMultiScaleNC
+<span class="lineno">  149 </span>  :: (IsSize size Int32)
+<span class="lineno">  150 </span>  =&gt; CascadeClassifier
+<span class="lineno">  151 </span>  -&gt; Maybe Double -- ^ Scale factor, default is 1.1
+<span class="lineno">  152 </span>  -&gt; Maybe Int32 -- ^ Min neighbours, default 3
+<span class="lineno">  153 </span>  -&gt; Maybe (size Int32) -- ^ Minimum size. Default: no minimum.
+<span class="lineno">  154 </span>  -&gt; Maybe (size Int32) -- ^ Maximum size. Default: no maximum.
+<span class="lineno">  155 </span>  -&gt; Mat ('S [w, h]) ('S 1) ('S Word8)
+<span class="lineno">  156 </span>  -&gt; V.Vector (Rect Int32, Int32, Double)
+<span class="lineno">  157 </span><span class="decl"><span class="nottickedoff">cascadeClassifierDetectMultiScaleNC cc scaleFactor minNeighbours minSize maxSize src = unsafePerformIO $</span>
+<span class="lineno">  158 </span><span class="spaces">    </span><span class="nottickedoff">withPtr cc $ \ccPtr -&gt;</span>
+<span class="lineno">  159 </span><span class="spaces">    </span><span class="nottickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  160 </span><span class="spaces">    </span><span class="nottickedoff">withPtr c'minSize $ \minSizePtr -&gt;</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="nottickedoff">withPtr c'maxSize $ \maxSizePtr -&gt;</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="nottickedoff">alloca $ \(numRectsPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  163 </span><span class="spaces">    </span><span class="nottickedoff">alloca $ \(rectsPtrPtr :: Ptr (Ptr (Ptr (C'Rect Int32)))) -&gt;</span>
+<span class="lineno">  164 </span><span class="spaces">    </span><span class="nottickedoff">alloca $ \(rejectLevelsPtrPtr :: Ptr (Ptr Int32)) -&gt;</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="nottickedoff">alloca $ \(levelWeightsPtrPtr :: Ptr (Ptr C.CDouble)) -&gt; mask_ $ do</span>
+<span class="lineno">  166 </span><span class="spaces">      </span><span class="nottickedoff">[CU.block| void {</span>
+<span class="lineno">  167 </span><span class="spaces">        </span><span class="nottickedoff">std::vector&lt;cv::Rect&gt; rects;</span>
+<span class="lineno">  168 </span><span class="spaces">        </span><span class="nottickedoff">std::vector&lt;int&gt; rejectLevels;</span>
+<span class="lineno">  169 </span><span class="spaces">        </span><span class="nottickedoff">std::vector&lt;double&gt; levelWeights;</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="nottickedoff">$(CascadeClassifier * ccPtr)-&gt;detectMultiScale(</span>
+<span class="lineno">  171 </span><span class="spaces">          </span><span class="nottickedoff">*$(Mat * srcPtr),</span>
+<span class="lineno">  172 </span><span class="spaces">          </span><span class="nottickedoff">rects,</span>
+<span class="lineno">  173 </span><span class="spaces">          </span><span class="nottickedoff">rejectLevels,</span>
+<span class="lineno">  174 </span><span class="spaces">          </span><span class="nottickedoff">levelWeights,</span>
+<span class="lineno">  175 </span><span class="spaces">          </span><span class="nottickedoff">$(double c'scaleFactor),</span>
+<span class="lineno">  176 </span><span class="spaces">          </span><span class="nottickedoff">$(int32_t c'minNeighbours),</span>
+<span class="lineno">  177 </span><span class="spaces">          </span><span class="nottickedoff">0,</span>
+<span class="lineno">  178 </span><span class="spaces">          </span><span class="nottickedoff">*$(Size2i * minSizePtr),</span>
+<span class="lineno">  179 </span><span class="spaces">          </span><span class="nottickedoff">*$(Size2i * maxSizePtr),</span>
+<span class="lineno">  180 </span><span class="spaces">          </span><span class="nottickedoff">true);</span>
+<span class="lineno">  181 </span><span class="spaces">        </span><span class="nottickedoff">*$(int32_t * numRectsPtr) = rects.size();</span>
+<span class="lineno">  182 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  183 </span><span class="spaces">        </span><span class="nottickedoff">cv::Rect * * rectsPtr = new cv::Rect * [rects.size()];</span>
+<span class="lineno">  184 </span><span class="spaces">        </span><span class="nottickedoff">*$(Rect2i * * * rectsPtrPtr) = rectsPtr;</span>
+<span class="lineno">  185 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  186 </span><span class="spaces">        </span><span class="nottickedoff">int32_t * rejectLevelsPtr = new int32_t [rejectLevels.size()];</span>
+<span class="lineno">  187 </span><span class="spaces">        </span><span class="nottickedoff">*$(int32_t * * rejectLevelsPtrPtr) = rejectLevelsPtr;</span>
+<span class="lineno">  188 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  189 </span><span class="spaces">        </span><span class="nottickedoff">double * levelWeightsPtr = new double [levelWeights.size()];</span>
+<span class="lineno">  190 </span><span class="spaces">        </span><span class="nottickedoff">*$(double * * levelWeightsPtrPtr) = levelWeightsPtr;</span>
+<span class="lineno">  191 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  192 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  193 </span><span class="spaces">        </span><span class="nottickedoff">for (std::vector&lt;cv::Rect&gt;::size_type i = 0; i != rects.size(); i++) {</span>
+<span class="lineno">  194 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  195 </span><span class="spaces">          </span><span class="nottickedoff">rectsPtr[i] = new cv::Rect(rects[i]);</span>
+<span class="lineno">  196 </span><span class="spaces">          </span><span class="nottickedoff">rejectLevelsPtr[i] = rejectLevels[i];</span>
+<span class="lineno">  197 </span><span class="spaces">          </span><span class="nottickedoff">levelWeightsPtr[i] = levelWeights[i];</span>
+<span class="lineno">  198 </span><span class="spaces">        </span><span class="nottickedoff">}</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="nottickedoff">} |]</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="nottickedoff">numRects &lt;- fromIntegral &lt;$&gt; peek numRectsPtr</span>
+<span class="lineno">  201 </span><span class="spaces">      </span><span class="nottickedoff">rectsPtr &lt;- peek rectsPtrPtr</span>
+<span class="lineno">  202 </span><span class="spaces">      </span><span class="nottickedoff">rejectLevelsPtr &lt;- peek rejectLevelsPtrPtr</span>
+<span class="lineno">  203 </span><span class="spaces">      </span><span class="nottickedoff">levelWeightsPtr &lt;- peek levelWeightsPtrPtr</span>
+<span class="lineno">  204 </span><span class="spaces">      </span><span class="nottickedoff">rects :: [Rect Int32] &lt;- peekArray numRects rectsPtr &gt;&gt;= mapM (fromPtr . return)</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="nottickedoff">rejectLevels :: [Int32] &lt;- peekArray numRects rejectLevelsPtr -- &gt;&gt;= mapM (fromPtr . return)</span>
+<span class="lineno">  206 </span><span class="spaces">      </span><span class="nottickedoff">levelWeights :: [Double] &lt;- map realToFrac &lt;$&gt; peekArray numRects levelWeightsPtr</span>
+<span class="lineno">  207 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="nottickedoff">[CU.block| void {</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="nottickedoff">delete [] *$(Rect2i * * * rectsPtrPtr);</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="nottickedoff">delete [] *$(int32_t  * * rejectLevelsPtrPtr);</span>
+<span class="lineno">  211 </span><span class="spaces">      </span><span class="nottickedoff">delete [] *$(double * * levelWeightsPtrPtr);</span>
+<span class="lineno">  212 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  213 </span><span class="spaces">      </span><span class="nottickedoff">return (V.fromList $ zip3 rects rejectLevels levelWeights)</span>
+<span class="lineno">  214 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="nottickedoff">c'scaleFactor = maybe 1.1 realToFrac scaleFactor</span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="nottickedoff">c'minNeighbours = maybe 3 fromIntegral minNeighbours</span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="nottickedoff">c'minSize = maybe (toSize (V2 0 0)) toSize minSize</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="nottickedoff">c'maxSize = maybe (toSize (V2 0 0)) toSize maxSize</span></span>
+
+</pre>
+</body>
+</html>
