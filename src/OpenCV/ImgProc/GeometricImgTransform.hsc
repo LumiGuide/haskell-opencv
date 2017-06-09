@@ -52,6 +52,7 @@ module OpenCV.ImgProc.GeometricImgTransform
     , getPerspectiveTransform
     , getRotationMatrix2D
     , remap
+    , undistort
     ) where
 
 import "base" Data.Int ( Int32 )
@@ -394,3 +395,70 @@ remap src mapping interpolationMethod borderMode = unsafeWrapException $ do
   where
     c'interpolation = marshalInterpolationMethod interpolationMethod
     (c'borderMode, borderValue) = marshalBorderMode borderMode
+
+
+{-|
+
+The function transforms an image to compensate radial and tangential lens
+distortion.
+
+Those pixels in the destination image, for which there is no correspondent
+pixels in the source image, are filled with zeros (black color).
+
+The camera matrix and the distortion parameters can be determined using
+@calibrateCamera@ . If the resolution of images is different from the resolution
+used at the calibration stage, f_x, f_y, c_x and c_y need to be scaled accordingly, while the distortion coefficients remain the same.
+
+Example:
+
+@
+undistortImg
+  :: forall (width    :: Nat)
+            (height   :: Nat)
+            (channels :: Nat)
+            (depth    :: *  )
+   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Birds_512x341)
+  => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
+undistortImg = undistort birds_512x341 intrinsics coefficients
+  where intrinsics :: M33 Float
+        intrinsics =
+          V3 (V3 15840.8      0      2049)
+             (V3     0    15830.3    1097)
+             (V3     0        0         1)
+
+        coefficients :: Matx51d
+        coefficients = unsafePerformIO $
+          newMatx51d
+            (-2.239145913492247)
+             13.674526561736648
+              3.650187848850095e-2
+            (-2.0042015752853796e-2)
+            (-0.44790921357620456)
+@
+
+<<doc/generated/birds_512x341.png original>>
+<<doc/generated/examples/undistortImg.png undistortImg>>
+
+-}
+undistort
+  :: (ToMat m33d, ToMat m51d)
+  => Mat ('S '[ h, w]) c d
+    -- ^ The source image to undistort.
+  -> m33d
+  -- ^ The 3x3 matrix of intrinsic parameters.
+  -> m51d
+  -- ^ The 5 distortion coefficients.
+  -> Mat ('S '[ h, w]) c d
+undistort img camera dist = unsafePerformIO $
+  do dst <- newEmptyMat
+     withPtr img $ \imgPtr ->
+       withPtr dst $ \dstPtr ->
+       withPtr (toMat camera) $ \cameraPtr ->
+       withPtr (toMat dist) $ \distPtr ->
+         [C.block| void {
+           undistort(*$(Mat * imgPtr),
+                     *$(Mat * dstPtr),
+                     *$(Mat * cameraPtr),
+                     *$(Mat * distPtr));
+         }|]
+     return (unsafeCoerceMat dst)
