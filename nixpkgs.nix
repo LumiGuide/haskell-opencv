@@ -2,6 +2,6 @@ let pkgs = import <nixpkgs> {};
 in pkgs.fetchFromGitHub {
  owner   = "NixOS";
  repo    = "nixpkgs";
- rev     = "0e00bc51eaa3f86c7b435f6f04219dafe51ac52f";
- sha256  = "0ncfr44xrc6r9ylbrh1y7w8qshvnjjlk521pa6wyhnz53dwczkb0";
+ rev     = "0011f9065a1ad1da4db67bec8d535d91b0a78fba";
+ sha256  = "0m662mibyxqmp83zdhsi084p2h90268h3i8bfk3b2q8pbjz89yx2";
 }
