@@ -10,6 +10,7 @@
 , bindings-DSL
 , bytestring
 , containers
+, data-default
 , inline-c
 , inline-c-cpp
 , opencv
@@ -61,6 +62,7 @@ mkDerivation {
   testHaskellDepends = [
     base
     containers
+    data-default
     directory
     Glob
     haskell-src-exts

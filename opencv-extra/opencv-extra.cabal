@@ -89,6 +89,7 @@ test-suite doc-images-opencv-extra
         base
       , bytestring
       , containers
+      , data-default
       , directory
       , Glob
       , haskell-src-exts
