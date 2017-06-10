@@ -842,6 +842,20 @@ drawContours contours color drawMode img = unsafePrimToPrim $
 {-| Draws a marker on a predefined position in an image.
 
 The marker will be drawn as as a 20-pixel cross.
+
+Example:
+
+@
+markerImg :: Mat (ShapeT [100, 100]) ('S 4) ('S Word8)
+markerImg = exceptError $
+    withMatM (Proxy :: Proxy [100, 100])
+             (Proxy :: Proxy 4)
+             (Proxy :: Proxy Word8)
+             transparent $ \\imgM -> do
+      lift $ marker imgM (50 :: V2 Int32) blue
+@
+
+<<doc/generated/examples/markerImg.png markerImg>>
 -}
 marker
   :: (PrimMonad m, IsPoint2 point2 Int32, ToScalar color)
