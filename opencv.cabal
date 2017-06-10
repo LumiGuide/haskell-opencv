@@ -22,6 +22,7 @@ extra-source-files:
 extra-doc-files:
     doc/generated/*.png
     doc/generated/examples/*.png
+    doc/generated/examples/*.gif
     doc/color_conversions.png
 
 flag internal-documentation
@@ -81,6 +82,7 @@ library
       , deepseq           >= 1.4.1.1
       , inline-c          >= 0.5.5.5
       , inline-c-cpp      >= 0.1
+      , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , primitive         >= 0.6.1
       , repa              >= 3.4.0.2
@@ -88,7 +90,6 @@ library
       , text              >= 1.2.2.1
       , transformers      >= 0.4.2
       , vector            >= 0.11
-      , JuicyPixels       >= 3.2
 
     exposed-modules:
         OpenCV
@@ -198,6 +199,7 @@ test-suite doc-images-opencv
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
       , haskell-src-exts  >= 1.18.2
+      , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , opencv            == 0.0.0
       , primitive         >= 0.6.1

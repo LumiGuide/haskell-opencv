@@ -10,6 +10,7 @@ import "base" Data.Foldable ( forM_ )
 import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
+import "base" Data.Traversable
 import "base" Data.Word
 import "base" Foreign.C.Types ( CFloat )
 import "base" GHC.TypeLits
@@ -34,7 +35,7 @@ import qualified "text" Data.Text as T
 import qualified "vector" Data.Vector as V
 import "transformers" Control.Monad.Trans.Class ( lift )
 
-import "this" ExampleExtractor ( render, extractExampleImages )
+import "this" ExampleExtractor
 
 --------------------------------------------------------------------------------
 
@@ -147,6 +148,39 @@ arnold_small =
 
 --------------------------------------------------------------------------------
 
+type CarOverhead = Animation (ShapeT [240, 320]) ('S 3) ('S Word8)
+
+carOverhead :: CarOverhead
+carOverhead = unsafePerformIO $ loadAnimation 4 "data/car-overhead-3.mp4"
+
+--------------------------------------------------------------------------------
+
+loadAnimation
+    :: (ToNatDS (Proxy h), ToNatDS (Proxy w))
+    => Int
+    -> FilePath
+    -> IO (Animation ('S [h, w]) ('S 3) ('S Word8))
+loadAnimation delay fp = do
+    cap <- newVideoCapture
+    exceptErrorIO $ videoCaptureOpen cap (VideoFileSource fp Nothing)
+    frames <- grabFrames cap []
+    exceptErrorIO $ videoCaptureRelease cap
+    pure $ map (delay, ) frames
+  where
+    grabFrames cap frames = do
+        ok <- videoCaptureGrab cap
+        if ok
+        then do
+          mbFrameRaw <- videoCaptureRetrieve cap
+          case mbFrameRaw of
+            Nothing -> pure $ reverse frames
+            Just frameRaw -> do
+              frame <- exceptErrorIO $ pureExcept $ coerceMat frameRaw
+              grabFrames cap (frame : frames)
+        else pure $ reverse frames
+
+--------------------------------------------------------------------------------
+
 -- We use some padding around the small image in which we draw the
 -- lines. This is because antialiasing doesn't seem to work near the
 -- edges of an image.
@@ -223,14 +257,14 @@ extractExampleImages "src"
 main :: IO ()
 main = do
     renderExampleImages
-    render "birds_512x341.png"    birds_512x341
-    render "flower_512x341.png"   flower_512x341
-    render "sailboat_512x341.png" sailboat_512x341
-    render "bikes_512x341.png"    bikes_512x341
+    renderImage "birds_512x341.png"    birds_512x341
+    renderImage "flower_512x341.png"   flower_512x341
+    renderImage "sailboat_512x341.png" sailboat_512x341
+    renderImage "bikes_512x341.png"    bikes_512x341
     forM_ [minBound .. maxBound] $ \lineType ->
-      render (show lineType <> ".png") (lineTypeImg lineType)
+      renderImage (show lineType <> ".png") (lineTypeImg lineType)
     forM_ [minBound .. maxBound] $ \fontFace -> do
-      render (show fontFace <> ".png")         (fontImg $ Font fontFace NotSlanted 1)
-      render (show fontFace <> "_slanted.png") (fontImg $ Font fontFace Slanted    1)
+      renderImage (show fontFace <> ".png")         (fontImg $ Font fontFace NotSlanted 1)
+      renderImage (show fontFace <> "_slanted.png") (fontImg $ Font fontFace Slanted    1)
 
 --------------------------------------------------------------------------------

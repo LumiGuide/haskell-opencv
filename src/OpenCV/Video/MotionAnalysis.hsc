@@ -72,6 +72,29 @@ class BackgroundSubtractor a where
         -> m (Mat ('S [h, w]) channels depth)
            -- ^ The output background image.
 
+{- |
+
+Example:
+
+@
+carAnim :: Animation (ShapeT [240, 320]) ('S 3) ('S Word8)
+carAnim = carOverhead
+
+mog2Anim :: IO (Animation (ShapeT [240, 320]) ('S 3) ('S Word8))
+mog2Anim = do
+    mog2 <- newBackgroundSubtractorMOG2 Nothing Nothing Nothing
+    forM carOverhead $ \(delay, img) -> do
+      fg <- bgSubApply mog2 0.1 img
+      fgBgr <- exceptErrorIO $ pureExcept $ cvtColor gray bgr fg
+      pure (delay, fgBgr)
+@
+
+Original:
+<<doc/generated/examples/car.gif carAnim>>
+
+Foreground:
+<<doc/generated/examples/mog2.gif mog2Anim>>
+-}
 
 --------------------------------------------------------------------------------
 -- Background subtractors

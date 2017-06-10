@@ -84,6 +84,7 @@ mkDerivation ({
     directory
     Glob
     haskell-src-exts
+    JuicyPixels
     QuickCheck
     tasty
     tasty-hunit
