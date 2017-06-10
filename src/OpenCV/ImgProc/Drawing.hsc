@@ -18,6 +18,7 @@ module OpenCV.ImgProc.Drawing
     , putText
     , rectangle
     , drawContours
+    , marker
     ) where
 
 import "base" Data.Int
@@ -837,3 +838,27 @@ drawContours contours color drawMode img = unsafePrimToPrim $
   where
     numContours = fromIntegral (V.length contours)
     (c'lineType, c'thickness) = marshalContourDrawMode drawMode
+
+{-| Draws a marker on a predefined position in an image.
+
+The marker will be drawn as as a 20-pixel cross.
+-}
+marker
+  :: (PrimMonad m, IsPoint2 point2 Int32, ToScalar color)
+  => Mut (Mat ('S '[ height, width]) channels depth) (PrimState m)
+    -- ^ The image to draw the marker on.
+  -> point2 Int32
+    -- ^ The point where the crosshair is positioned.
+  -> color
+    -- ^ Line color.
+  -> m ()
+marker img center color =
+  unsafePrimToPrim $
+  withPtr img $ \matPtr ->
+  withPtr (toPoint center) $ \centerPtr ->
+  withPtr (toScalar color) $ \colorPtr  ->
+    [C.exp|void {
+      cv::drawMarker( *$(Mat * matPtr)
+                    , *$(Point2i * centerPtr)
+                    , *$(Scalar * colorPtr))
+    }|]
