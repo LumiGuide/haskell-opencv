@@ -30,3 +30,11 @@ data C'Ptr_MultiTrackerAlt
 
 data C'TrackerFeatureSet
 data C'Ptr_TrackerSamplerAlgorithm
+
+
+data C'Ptr'Dictionary
+data C'Ptr'CharucoBoard
+
+data C'Vector'Int
+
+data C'Vector'Vector'Point2f
