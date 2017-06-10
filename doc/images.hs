@@ -14,6 +14,7 @@ import "base" Data.Word
 import "base" Foreign.C.Types ( CFloat )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import "data-default" Data.Default
 import qualified "bytestring" Data.ByteString as B
 import qualified "linear" Linear.Metric as Linear ( norm )
 import "linear" Linear ( M33 )

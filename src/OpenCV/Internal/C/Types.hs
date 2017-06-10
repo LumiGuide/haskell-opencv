@@ -115,8 +115,12 @@ data C'Ptr_ORB
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::SimpleBlobDetector>@ object
 data C'Ptr_SimpleBlobDetector
 
+-- | Haskell representation of an OpenCV @cv::DescriptorMatcher@ object
+data C'DescriptorMatcher
 -- | Haskell representation of an OpenCV @cv::BFMatcher@ object
 data C'BFMatcher
+-- | Haskell representation of an OpenCV @cv::FlannBasedMatcher@ object
+data C'FlannBasedMatcher
 
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorMOG2>@ object
 data C'Ptr_BackgroundSubtractorKNN
