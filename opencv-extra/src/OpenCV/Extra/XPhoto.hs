@@ -46,7 +46,7 @@ dctDenoisingImg = exceptError $ do
       (Proxy :: Proxy [h, w2])
       (Proxy :: Proxy c)
       (Proxy :: Proxy d)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
         matCopyToM imgM (V2 w 0) denoised Nothing
   where

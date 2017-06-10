@@ -211,7 +211,7 @@ medianBlurImg = exceptError $
     withMatM (Proxy :: Proxy [height, width2])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       birdsBlurred <- pureExcept $ medianBlur birds_512x341 13
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
@@ -264,7 +264,7 @@ boxBlurImg = exceptError $
     withMatM (Proxy :: Proxy [height, width2])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       birdsBlurred <- pureExcept $ blur (V2 13 13 :: V2 Int32) birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
@@ -351,7 +351,7 @@ erodeImg = exceptError $
     withMatM (Proxy :: Proxy [height, width2])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       erodedLambda <-
         pureExcept $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
       matCopyToM imgM (V2 0 0) lambda Nothing
@@ -425,7 +425,7 @@ filter2DImg = exceptError $
     withMatM (Proxy :: Proxy [height, width2])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       filteredBird <-
         pureExcept $ filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
@@ -437,7 +437,7 @@ filter2DImg = exceptError $
       withMatM (Proxy :: Proxy [3, 3])
                (Proxy :: Proxy 1)
                (Proxy :: Proxy Double)
-               black $ \imgM -> do
+               black $ \\imgM -> do
         lift $ line imgM (V2 0 0 :: V2 Int32) (V2 0 0 :: V2 Int32) (V4 (-2) (-2) (-2) 1 :: V4 Double) 0 LineType_8 0
         lift $ line imgM (V2 1 0 :: V2 Int32) (V2 0 1 :: V2 Int32) (V4 (-1) (-1) (-1) 1 :: V4 Double) 0 LineType_8 0
         lift $ line imgM (V2 1 1 :: V2 Int32) (V2 1 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
@@ -509,7 +509,7 @@ dilateImg = exceptError $
     withMatM (Proxy :: Proxy [height, width2])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       dilatedLambda <-
         pureExcept $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
       matCopyToM imgM (V2 0 0) lambda Nothing

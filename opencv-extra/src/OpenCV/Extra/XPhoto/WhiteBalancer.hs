@@ -229,7 +229,7 @@ grayworldWBImg = do
           (Proxy :: Proxy [h2, w2])
           (Proxy :: Proxy c)
           (Proxy :: Proxy d)
-          black $ \imgM -> do
+          black $ \\imgM -> do
             matCopyToM imgM (V2 0 0) sailboat_768x512 Nothing
             matCopyToM imgM (V2 w 0) balancedGrayworldWB Nothing
             matCopyToM imgM (V2 0 h) balancedLearningBasedWB Nothing

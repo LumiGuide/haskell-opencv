@@ -135,9 +135,9 @@ surfDetectAndComputeImg = exceptError $ do
     withMatM (Proxy :: Proxy [height, width])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       void $ matCopyToM imgM (V2 0 0) frog Nothing
-      forM_ kpts $ \kpt -> do
+      forM_ kpts $ \\kpt -> do
         let kptRec = keyPointAsRec kpt
         circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
   where

@@ -147,7 +147,7 @@ matSubRectImg = exceptError $
     withMatM (h ::: 2 * w ::: Z)
              (Proxy :: Proxy 3)
              (Proxy :: Proxy Word8)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) subImg        Nothing
       lift $ rectangle imgM subRect blue 1 LineType_4 0

@@ -124,7 +124,7 @@ cvtColorImg = exceptError $
     withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       birds_gray <- pureExcept $   cvtColor gray bgr
                                =<< cvtColor bgr gray birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
@@ -204,7 +204,7 @@ floodFillImg = exceptError $
     withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       sailboatEvening_768x512 <- thaw sailboat_768x512
       mask <- mkMatM (Proxy :: Proxy [height + 2, width + 2])
                      (Proxy :: Proxy 1)
@@ -440,7 +440,7 @@ grabCutBird = exceptError $ do
     mask <- withMatM (Proxy :: Proxy [341, 512])
                      (Proxy :: Proxy 1)
                      (Proxy :: Proxy Word8)
-                     black $ \mask -> do
+                     black $ \\mask -> do
       fgTmp <- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
       bgTmp <- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
       grabCut birds_512x341 mask fgTmp bgTmp 5 (GrabCut_InitWithRect rect)
@@ -448,7 +448,7 @@ grabCutBird = exceptError $ do
     withMatM (Proxy :: Proxy [341, 512])
              (Proxy :: Proxy 3)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       matCopyToM imgM (V2 0 0) birds_512x341 (Just mask')
   where
     rect :: Rect Int32

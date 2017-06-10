@@ -121,7 +121,7 @@ resizeInterAreaImg = exceptError $
     withMatM (h ::: w + (w \`div` 2) ::: Z)
              (Proxy :: Proxy 3)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       birds_resized <-
         pureExcept $ resize (ResizeRel $ pure 0.5) InterArea birds_768x512
       matCopyToM imgM (V2 0 0) birds_768x512 Nothing

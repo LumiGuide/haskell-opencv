@@ -241,9 +241,9 @@ orbDetectAndComputeImg = exceptError $ do
     withMatM (Proxy :: Proxy [height, width])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       void $ matCopyToM imgM (V2 0 0) frog Nothing
-      forM_ kpts $ \kpt -> do
+      forM_ kpts $ \\kpt -> do
         let kptRec = keyPointAsRec kpt
         circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
   where
@@ -673,12 +673,12 @@ bfMatcherImg = do
       withMatM (Proxy :: Proxy [height, width2])
                (Proxy :: Proxy channels)
                (Proxy :: Proxy depth)
-               white $ \imgM -> do
+               white $ \\imgM -> do
         matCopyToM imgM (V2 0     0) frog        Nothing
         matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
         -- Draw the matches as lines from the query image to the train image.
-        forM_ matches $ \dmatch -> do
+        forM_ matches $ \\dmatch -> do
           let matchRec = dmatchAsRec dmatch
               queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
               trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
@@ -760,10 +760,10 @@ instance DescriptorMatcher BFMatcher where
 
 {- | Flann-based descriptor matcher.
 
-This matcher trains flann::Index_ on a train descriptor collection and calls it
+This matcher trains @flann::Index_@ on a train descriptor collection and calls it
 nearest search methods to find the best matches. So, this matcher may be faster
 when matching a large train collection than the brute force matcher.
-FlannBasedMatcher does not support masking permissible matches of descriptor
+@FlannBasedMatcher@ does not support masking permissible matches of descriptor
 sets because flann::Index does not support this.
 
 Example:
@@ -792,12 +792,12 @@ fbMatcherImg = do
       withMatM (Proxy :: Proxy [height, width2])
                (Proxy :: Proxy channels)
                (Proxy :: Proxy depth)
-               white $ \imgM -> do
+               white $ \\imgM -> do
         matCopyToM imgM (V2 0     0) frog        Nothing
         matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
         -- Draw the matches as lines from the query image to the train image.
-        forM_ matches $ \dmatch -> do
+        forM_ matches $ \\dmatch -> do
           let matchRec = dmatchAsRec dmatch
               queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
               trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)

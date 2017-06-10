@@ -210,7 +210,8 @@ findHaskellPaths srcDir = do
 
 haddockToHaskell :: T.Text -> T.Text
 haddockToHaskell =
-    T.replace "\\`" "`"
+    T.replace "\\\\" "\\"
+  . T.replace "\\`" "`"
   . T.replace "\\<" "<"
   . T.replace "\\/" "/"
 

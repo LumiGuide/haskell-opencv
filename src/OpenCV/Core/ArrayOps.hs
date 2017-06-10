@@ -377,7 +377,7 @@ vennCircleAImg = exceptError $
       (Proxy :: Proxy VennShape)
       (Proxy :: Proxy 1)
       (Proxy :: Proxy Word8)
-      black $ \imgM -> lift $ vennCircleA imgM white (-1)
+      black $ \\imgM -> lift $ vennCircleA imgM white (-1)
 
 vennCircleBImg :: Mat (ShapeT VennShape) ('S 1) ('S Word8)
 vennCircleBImg = exceptError $
@@ -385,7 +385,7 @@ vennCircleBImg = exceptError $
       (Proxy :: Proxy VennShape)
       (Proxy :: Proxy 1)
       (Proxy :: Proxy Word8)
-      black $ \imgM -> lift $ vennCircleB imgM white (-1)
+      black $ \\imgM -> lift $ vennCircleB imgM white (-1)
 @
 
 <<doc/generated/examples/vennCircleAImg.png vennCircleAImg>>
@@ -593,7 +593,7 @@ matSplitImg = exceptError $ do
     withMatM (Proxy :: Proxy [height, width3])
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
-             white $ \imgM -> do
+             white $ \\imgM -> do
       matCopyToM imgM (V2 (w*0) 0) (unsafeCoerceMat blueImg)  Nothing
       matCopyToM imgM (V2 (w*1) 0) (unsafeCoerceMat greenImg) Nothing
       matCopyToM imgM (V2 (w*2) 0) (unsafeCoerceMat redImg)   Nothing
@@ -779,7 +779,7 @@ matSumImg = exceptError $
       (Proxy :: Proxy [201, 201])
       (Proxy :: Proxy 3)
       (Proxy :: Proxy Word8)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         -- Draw a filled circle. Each pixel has a value of (255,255,255)
         lift $ circle imgM (pure radius :: V2 Int32) radius white (-1) LineType_8 0
         -- Calculate the sum of all pixels.

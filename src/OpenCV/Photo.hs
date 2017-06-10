@@ -72,7 +72,7 @@ inpaintImg = exceptError $ do
       (Proxy :: Proxy [h2, w2])
       (Proxy :: Proxy c)
       (Proxy :: Proxy d)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         matCopyToM imgM (V2 0 0) damaged Nothing
         matCopyToM imgM (V2 w 0) maskBgr Nothing
         matCopyToM imgM (V2 0 h) repairedNS Nothing
@@ -131,7 +131,7 @@ fastNlMeansDenoisingColoredImg = exceptError $ do
       (Proxy :: Proxy [h, w2])
       (Proxy :: Proxy c)
       (Proxy :: Proxy d)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
         matCopyToM imgM (V2 w 0) denoised Nothing
   where
@@ -201,7 +201,7 @@ fastNlMeansDenoisingColoredMultiImg = exceptError $ do
       (Proxy :: Proxy [h, w2])
       (Proxy :: Proxy c)
       (Proxy :: Proxy d)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
         matCopyToM imgM (V2 w 0) denoised Nothing
   where
@@ -278,7 +278,7 @@ denoise_TVL1Img = exceptError $ do
       (Proxy :: Proxy [h, w2])
       (Proxy :: Proxy c)
       (Proxy :: Proxy d)
-      black $ \imgM -> do
+      black $ \\imgM -> do
         matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
         matCopyToM imgM (V2 w 0) denoised Nothing
   where

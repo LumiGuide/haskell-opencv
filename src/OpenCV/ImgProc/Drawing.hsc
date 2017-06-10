@@ -184,7 +184,7 @@ arrowedLineImg = exceptError $
       (Proxy :: Proxy [200, 300])
       (Proxy :: Proxy 4)
       (Proxy :: Proxy Word8)
-      transparent $ \imgM -> do
+      transparent $ \\imgM -> do
         arrowedLine imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0 0.15
         arrowedLine imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0 0.4
 @
@@ -241,7 +241,7 @@ circleImg = exceptError $
       (Proxy :: Proxy [200, 400])
       (Proxy :: Proxy 4)
       (Proxy :: Proxy Word8)
-      transparent $ \imgM -> do
+      transparent $ \\imgM -> do
         lift $ circle imgM (V2 100 100 :: V2 Int32) 90 blue  5  LineType_AA 0
         lift $ circle imgM (V2 300 100 :: V2 Int32) 45 red (-1) LineType_AA 0
 @
@@ -292,7 +292,7 @@ ellipseImg = exceptError $
       (Proxy :: Proxy [200, 400])
       (Proxy :: Proxy 4)
       (Proxy :: Proxy Word8)
-      transparent $ \imgM -> do
+      transparent $ \\imgM -> do
         lift $ ellipse imgM (V2 100 100 :: V2 Int32) (V2 90 60 :: V2 Int32)  30  0 360 blue  5  LineType_AA 0
         lift $ ellipse imgM (V2 300 100 :: V2 Int32) (V2 80 40 :: V2 Int32) 160 40 290 red (-1) LineType_AA 0
 @
@@ -366,7 +366,7 @@ fillConvexPolyImg = exceptError $
     withMatM (Proxy :: Proxy [h, w])
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       lift $ fillConvexPoly imgM pentagon blue LineType_AA 0
   where
     pentagon :: V.Vector (V2 Int32)
@@ -450,7 +450,7 @@ fillPolyImg = exceptError $
     withMatM (Proxy :: Proxy [h, w])
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       lift $ fillPoly imgM (rookPts w h) blue LineType_AA 0
   where
     h = fromInteger $ natVal (Proxy :: Proxy h)
@@ -508,7 +508,7 @@ polylinesImg = exceptError $
     withMatM (Proxy :: Proxy [h, w])
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       lift $ polylines imgM (rookPts w h) True blue 2 LineType_AA 0
   where
     h = fromInteger $ natVal (Proxy :: Proxy h)
@@ -572,7 +572,7 @@ lineImg = exceptError $
     withMatM (Proxy :: Proxy [200, 300])
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       lift $ line imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0
       lift $ line imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0
 @
@@ -658,8 +658,8 @@ putTextImg = exceptError $
     withMatM (height ::: (Proxy :: Proxy 400) ::: Z)
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
-      forM_ (zip [0..] [minBound .. maxBound]) $ \(n, fontFace) ->
+             transparent $ \\imgM -> do
+      forM_ (zip [0..] [minBound .. maxBound]) $ \\(n, fontFace) ->
         lift $ putText imgM
                        (T.pack $ show fontFace)
                        (V2 10 (35 + n * 30) :: V2 Int32)
@@ -724,7 +724,7 @@ rectangleImg = exceptError $
     withMatM (Proxy :: Proxy [200, 400])
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
-             transparent $ \imgM -> do
+             transparent $ \\imgM -> do
       lift $ rectangle imgM (toRect $ HRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
       lift $ rectangle imgM (toRect $ HRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
 @
@@ -783,7 +783,7 @@ flowerContours = exceptError $
   withMatM (Proxy :: Proxy [512,768])
            (Proxy :: Proxy 3)
            (Proxy :: Proxy Word8)
-           black $ \imgM -> do
+           black $ \\imgM -> do
     edges <- thaw $ exceptError $
              cvtColor bgr gray flower_768x512 >>=
              canny 30 20 Nothing CannyNormL1
