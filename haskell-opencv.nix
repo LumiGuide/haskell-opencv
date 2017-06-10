@@ -11,6 +11,7 @@
 , bindings-DSL
 , bytestring
 , containers
+, data-default
 , deepseq
 , inline-c
 , inline-c-cpp
@@ -62,6 +63,7 @@ mkDerivation ({
     bindings-DSL
     bytestring
     containers
+    data-default
     deepseq
     inline-c
     inline-c-cpp
