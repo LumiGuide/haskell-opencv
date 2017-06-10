@@ -59,7 +59,7 @@ import "this" OpenCV.Internal
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
-import "this" OpenCV.Internal.Core.Types ( withArrayPtr, newScalar, Scalar, ToScalar )
+import "this" OpenCV.Internal.Core.Types ( withArrayPtr, Scalar )
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException, handleCvException )
 import "this" OpenCV.TypeLevel
@@ -950,4 +950,3 @@ drawMatches img1 keypoints1 img2 keypoints2 matches1to2 (DrawMatchesParams{..}) 
     c'kps1Length = fromIntegral $ V.length keypoints1
     c'kps2Length = fromIntegral $ V.length keypoints2
     c'matches1to2Length = fromIntegral $ V.length matches1to2
-

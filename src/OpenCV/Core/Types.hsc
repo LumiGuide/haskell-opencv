@@ -81,6 +81,7 @@ import "this" OpenCV.Exception
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
+import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Constants
 import "this" OpenCV.Internal.Core.Types
@@ -199,6 +200,8 @@ newtype KeyPoint = KeyPoint {unKeyPoint :: ForeignPtr C'KeyPoint}
 
 type instance C KeyPoint = C'KeyPoint
 
+mkPlacementNewInstance ''KeyPoint
+
 instance WithPtr KeyPoint where
     withPtr = withForeignPtr . unKeyPoint
 
@@ -292,6 +295,8 @@ descriptor index, train image index, and distance between descriptors
 newtype DMatch = DMatch {unDMatch :: ForeignPtr C'DMatch}
 
 type instance C DMatch = C'DMatch
+
+mkPlacementNewInstance ''DMatch
 
 instance WithPtr DMatch where
     withPtr = withForeignPtr . unDMatch
