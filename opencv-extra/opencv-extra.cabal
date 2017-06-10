@@ -23,6 +23,7 @@ library
     hs-source-dirs: src
     include-dirs: include
     c-sources:
+        src/OpenCV/Extra/ArUco.cpp
         src/OpenCV/Extra/Bgsegm.cpp
         src/OpenCV/Extra/Tracking.cpp
         src/OpenCV/Extra/XPhoto.cpp
@@ -41,6 +42,7 @@ library
       , containers        >= 0.5.6.2
       , inline-c          >= 0.5.5.5
       , inline-c-cpp      >= 0.1
+      , linear            >= 1.20.4
       , opencv            == 0.0.0
       , primitive         >= 0.6.1
       , template-haskell  >= 2.10
@@ -49,6 +51,7 @@ library
 
     exposed-modules:
         OpenCV.Extra
+        OpenCV.Extra.ArUco
         OpenCV.Extra.Bgsegm
         OpenCV.Extra.XFeatures2d
         OpenCV.Extra.Tracking

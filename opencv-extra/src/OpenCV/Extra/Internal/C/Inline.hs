@@ -42,4 +42,8 @@ openCvExtraTypesTable = M.fromList
   , ( C.TypeName "Ptr_GrayworldWB"            , [t| C'Ptr_GrayworldWB             |] )
   , ( C.TypeName "Ptr_LearningBasedWB"        , [t| C'Ptr_LearningBasedWB         |] )
   , ( C.TypeName "Ptr_SimpleWB"               , [t| C'Ptr_SimpleWB                |] )
+  , ( C.TypeName "Ptr_CharucoBoard"           , [t| C'Ptr'CharucoBoard            |] )
+  , ( C.TypeName "Ptr_Dictionary"             , [t| C'Ptr'Dictionary              |] )
+  , ( C.TypeName "VectorVectorPoint2f"        , [t| C'Vector'Vector'Point2f       |] )
+  , ( C.TypeName "VectorInt"                  , [t| C'Vector'Int                  |] )
   ]
