@@ -31,9 +31,11 @@ module OpenCV.Extra.ArUco
   , drawEstimatedPose
   ) where
 
+import "opencv" OpenCV.Internal.Exception
 import "base" Control.Monad (guard)
 import "primitive" Control.Monad.Primitive
 import "base" Data.Monoid ((<>))
+import qualified "vector" Data.Vector.Storable as SV
 import "base" Foreign.C
 import "base" Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
 import "base" Foreign.Marshal.Alloc
@@ -45,13 +47,13 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear
 import "opencv" OpenCV
 import "opencv" OpenCV.Core.Types.Vec (Vec3d)
+import "opencv" OpenCV.Exception
 import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
 import "this" OpenCV.Extra.Internal.C.Types
 import "opencv" OpenCV.Internal
 import "opencv" OpenCV.Internal.C.Types
 import "opencv" OpenCV.Internal.Core.Types.Mat
 import "base" System.IO.Unsafe
-import qualified "vector" Data.Vector.Storable as SV
 
 --------------------------------------------------------------------------------
 C.context openCvExtraCtx
@@ -274,19 +276,21 @@ calibrateCameraFromFrames
     -> Int
     -> Int
     -> [(ArUcoMarkers, ChArUcoMarkers)]
-    -> (Matx33d, Matx51d)
+    -> CvExcept (Matx33d, Matx51d)
 calibrateCameraFromFrames board width height frames =
-  unsafePerformIO $ do
+  unsafeWrapException $ do
     cameraMatrix <- newMatx33d 0 0 0 0 0 0 0 0 0
     distCoeffs <- newMatx51d 0 0 0 0 0
-    withPtr cameraMatrix $ \cameraMatrixPtr ->
+    handleCvException (pure (cameraMatrix, distCoeffs)) $
+      withPtr cameraMatrix $ \cameraMatrixPtr ->
       withPtr distCoeffs $ \distCoeffsPtr ->
       withPtr board $ \c'board ->
       withPtrs (map (arucoIds . fst) frames) $ \c'allIds ->
       withPtrs (map (arucoCorners . fst) frames) $ \c'allCorners ->
       withPtrs (fmap (charucoCorners . snd) frames) $ \c'allCharucoCorners ->
       withPtrs (fmap (charucoIds . snd) frames) $ \c'allCharucoIds -> do
-        [C.block| void {
+
+        [cvExcept|
           vector< vector<Point2f> > allCorners;
           for(auto i = 0; i < $vec-len:c'allCorners; i++) {
             auto & corners =
@@ -341,11 +345,7 @@ calibrateCameraFromFrames board width height frames =
                                 noArray(),
                                 noArray(),
                                 perViewErrors);
-
-          cout << "Reprojection errors (per frame): " << endl;
-          cout << perViewErrors << endl;
-        }|]
-        return (cameraMatrix, distCoeffs)
+        |]
   where
     c'width = fromIntegral width
     c'height = fromIntegral height
