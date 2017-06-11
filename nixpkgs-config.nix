@@ -13,13 +13,13 @@
     in {
       haskellPackages = pkgs.haskellPackages.override haskellOverrides;
 
-      opencv3 = pkgs.opencv3.override {
-        enableIpp       = !osx;
-        enableContrib   = !osx;
-        enableGtk2      = true;
-        enableFfmpeg    = !osx;
-        enableGStreamer = true;
-        enableEigen     = true;
+	  opencv3 = pkgs.callPackage ./opencv-HEAD.nix {
+         enableIpp       = !osx;
+         enableContrib   = true;
+         enableGtk2      = true;
+         enableFfmpeg    = !osx;
+         enableGStreamer = true;
+		 inherit (pkgs.darwin.apple_sdk.frameworks) AVFoundation Cocoa QTKit;
       };
-    };
+	};
 }
