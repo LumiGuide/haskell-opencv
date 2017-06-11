@@ -17,6 +17,7 @@ module OpenCV.Extra.ArUco
     -- * ChArUco markers
   , ChArUcoBoard
   , createChArUcoBoard
+  , drawChArUcoBoard
 
     -- ** Detecting markers
   , interpolateChArUcoMarkers
@@ -48,6 +49,7 @@ import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
 import "this" OpenCV.Extra.Internal.C.Types
 import "opencv" OpenCV.Internal
 import "opencv" OpenCV.Internal.C.Types
+import "opencv" OpenCV.Internal.Core.Types.Mat
 import "base" System.IO.Unsafe
 import qualified "vector" Data.Vector.Storable as SV
 
@@ -484,6 +486,23 @@ getPredefinedDictionary name =
     c'name =
         case name of
             DICT_7X7_1000 -> [C.pure| int { DICT_7X7_1000 } |]
+
+
+{-| Draw a ChArUco board, ready to be printed and used for calibration/marke
+detection.
+-}
+drawChArUcoBoard :: ChArUcoBoard -> Mat ('S '[h, w]) ('S 1) depth
+drawChArUcoBoard charucoBoard = unsafePerformIO $ do
+    dst <- newEmptyMat
+    withPtr charucoBoard $ \c'board ->
+      withPtr dst $ \dstPtr ->
+        [C.block| void {
+          Mat & board = * $(Mat * dstPtr);
+          Ptr<CharucoBoard> & charucoBoard = *$(Ptr_CharucoBoard * c'board);
+          charucoBoard->draw(cv::Size(500, 500), board);
+        }|]
+    pure (unsafeCoerceMat dst)
+
 
 --------------------------------------------------------------------------------
 withPtrs
