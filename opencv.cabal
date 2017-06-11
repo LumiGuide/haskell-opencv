@@ -162,7 +162,7 @@ library
         OpenCV.Internal.Photo.Constants
         OpenCV.Internal.VideoIO.Constants
         OpenCV.Internal.VideoIO.Types
-        OpenCV.Contrib.Juicy
+        OpenCV.Juicy
 
     default-extensions:
         BangPatterns

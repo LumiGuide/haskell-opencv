@@ -32,7 +32,7 @@ coverage:
 .PHONY: doc
 doc: doc/color_conversions.png
 	cabal configure --enable-tests && \
-	cabal build && \
+	cabal build --ghc-option=-O0 && \
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	cabal haddock --hyperlink-source
 

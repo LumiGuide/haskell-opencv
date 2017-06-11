@@ -10,7 +10,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | A thin JuicyPixels layer.
-module OpenCV.Contrib.Juicy
+module OpenCV.Juicy
   ( -- * Types
     Mat2D
   , Filter
@@ -130,7 +130,22 @@ type instance PixelChannels PixelCMYK16 = 4
 -- | An OpenCV bidimensional matrix
 type Mat2D h w channels depth = Mat ('S '[h,w]) channels depth
 
--- | Compute an OpenCV 2D-matrix from a JuicyPixels image
+{- | Compute an OpenCV 2D-matrix from a JuicyPixels image.
+
+Example:
+
+@
+fromJuicyPixelsImg :: IO (Mat ('S '[ 'D, 'D]) ('S 3) ('S Word8))
+fromJuicyPixelsImg = do
+    r <- Codec.Picture.readImage "data/Lenna.png"
+    case r of
+      Left err -> error err
+      Right (Codec.Picture.ImageRGB8 img) -> pure $ OpenCV.Juicy.fromImage img
+      Right _ -> error "Unhandled JuicyPixels format!"
+@
+
+<<doc/generated/examples/fromJuicyPixelsImg.png fromJuicyPixelsImg>>
+-}
 fromImage
     :: forall a c d
      . ( ToDepth (Proxy d)
