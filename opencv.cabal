@@ -6,7 +6,7 @@ license-file:  LICENSE
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Custom
-cabal-version: >=1.10
+cabal-version: >=1.23
 category:      AI, Graphics
 synopsis:      Haskell binding to OpenCV-3.x
 description:   This is a Haskell library providing a binding to OpenCV-3.x.
@@ -29,6 +29,9 @@ flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
     manual: True
+
+custom-setup
+    setup-depends: base, Cabal
 
 library
     hs-source-dirs: src
