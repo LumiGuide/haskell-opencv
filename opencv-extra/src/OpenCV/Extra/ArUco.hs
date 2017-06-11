@@ -262,7 +262,7 @@ drawEstimatedPose cameraMatrix distCoeffs (rvec, tvec) image =
                  *$(Matx51d * c'distCoeffs),
                  *$(Vec3d * rvecPtr),
                  *$(Vec3d * tvecPtr),
-                 0.1);
+                 1);
       }|]
 
 
