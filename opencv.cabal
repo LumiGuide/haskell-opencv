@@ -36,6 +36,15 @@ custom-setup
 library
     hs-source-dirs: src
     include-dirs: include
+    install-includes:
+      haskell_opencv_matx_typedefs.hpp
+      hsc_macros.hpp
+      namespace.hpp
+      orb.hpp
+      simple_blob_detector.hpp
+      termcriteria.hpp
+      video_motion_analysis.hpp
+
     c-sources:
         src/OpenCV/Calib3d.cpp
       , src/OpenCV/Core/ArrayOps.cpp
@@ -204,7 +213,7 @@ test-suite doc-images-opencv
       , haskell-src-exts  >= 1.18.2
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
-      , opencv            == 0.0.0
+      , opencv
       , primitive         >= 0.6.1
       , template-haskell  >= 2.10
       , text              >= 1.2.2.1
@@ -234,7 +243,7 @@ test-suite test-opencv
       , bytestring        >= 0.10.6
       , lens              >= 4.13
       , linear            >= 1.20.4
-      , opencv            == 0.0.0
+      , opencv
       , QuickCheck        >= 2.8.2
       , repa              >= 3.4.0.2
       , tasty             >= 0.11.0.2
@@ -261,7 +270,7 @@ benchmark bench-opencv
         base              >= 4.8 && < 5
       , bytestring        >= 0.10.6
       , criterion         >= 1.1.1
-      , opencv            == 0.0.0
+      , opencv
       , repa              >= 3.4.0.2
 
     default-extensions:
