@@ -8,6 +8,7 @@
 
 module OpenCV.Photo
   ( InpaintingMethod(..)
+  , decolor
   , inpaint
   , denoise_TVL1
   , fastNlMeansDenoisingColored
@@ -313,3 +314,56 @@ denoise_TVL1 lambda niters srcVec = unsafeWrapException $ do
   where
     c'lambda = realToFrac lambda
     c'srcVecLength = fromIntegral $ V.length srcVec
+
+
+{- | Perform decolor
+
+Decolor a color image to a grayscale (1 channel) and a color boosted image (3 channel)
+
+Example:
+
+@
+decolorImg
+    :: forall h h2 w w2 c d
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Bikes_512x341
+       , h2 ~ ((*) h 2)
+       , w2 ~ ((*) w 2)
+       )
+    => Mat ('S ['S h2, 'S w2]) ('S c) ('S d)
+decolorImg = exceptError $ do
+    (bikesGray, boost) <- decolor bikes_512x341
+    colorGray <- cvtColor gray bgr bikesGray
+    withMatM
+      (Proxy :: Proxy [h2, w2])
+      (Proxy :: Proxy c)
+      (Proxy :: Proxy d)
+      white $ \\imgM -> do
+        matCopyToM imgM (V2 0 0) bikes_512x341 Nothing
+        matCopyToM imgM (V2 0 h) colorGray Nothing
+        matCopyToM imgM (V2 w h) boost  Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy w)
+    h = fromInteger $ natVal (Proxy :: Proxy h)
+@
+
+<<doc/generated/examples/decolorImg.png decolorImg>>
+-}
+
+decolor
+   :: Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
+   -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8), Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output images.
+
+decolor src = unsafeWrapException $ do
+    gray <- newEmptyMat
+    boost <- newEmptyMat
+
+    handleCvException (pure (unsafeCoerceMat gray, unsafeCoerceMat boost)) $
+      withPtr src         $ \srcPtr         ->
+      withPtr gray        $ \grayPtr        ->
+      withPtr boost       $ \boostPtr       ->
+      [cvExcept|
+        cv::decolor( *$(Mat * srcPtr)
+                   , *$(Mat * grayPtr)
+                   , *$(Mat * boostPtr)
+                   );
+      |]
