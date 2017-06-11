@@ -22,6 +22,7 @@
 , directory
 , Glob
 , haskell-src-exts
+, JuicyPixels
 }:
 mkDerivation {
   pname = "opencv-extra";
@@ -66,6 +67,7 @@ mkDerivation {
     directory
     Glob
     haskell-src-exts
+    JuicyPixels
   ];
 
   libraryPkgconfigDepends = [ opencv3 ];

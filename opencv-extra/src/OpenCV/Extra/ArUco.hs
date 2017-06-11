@@ -35,6 +35,7 @@ import "opencv" OpenCV.Internal.Exception
 import "base" Control.Monad (guard)
 import "primitive" Control.Monad.Primitive
 import "base" Data.Monoid ((<>))
+import "base" Data.Word ( Word8 )
 import qualified "vector" Data.Vector.Storable as SV
 import "base" Foreign.C
 import "base" Foreign.ForeignPtr (ForeignPtr, withForeignPtr)
@@ -47,7 +48,6 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear
 import "opencv" OpenCV
 import "opencv" OpenCV.Core.Types.Vec (Vec3d)
-import "opencv" OpenCV.Exception
 import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
 import "this" OpenCV.Extra.Internal.C.Types
 import "opencv" OpenCV.Internal
@@ -490,19 +490,45 @@ getPredefinedDictionary name =
 
 {-| Draw a ChArUco board, ready to be printed and used for calibration/marke
 detection.
+
+Example:
+
+@
+drawChArUcoBoardImg
+    :: forall (w :: Nat) (h :: Nat)
+     . (w ~ 500, h ~ 500)
+    => Mat ('S '[ 'S h, 'S w]) ('S 1) ('S Word8)
+drawChArUcoBoardImg =
+    drawChArUcoBoard charucoBoard (Proxy :: Proxy w) (Proxy :: Proxy h)
+  where
+    charucoBoard :: ChArUcoBoard
+    charucoBoard = createChArUcoBoard 10 10 20 5 dictionary
+
+    dictionary :: Dictionary
+    dictionary = getPredefinedDictionary DICT_7X7_1000
+@
+
+<<doc/generated/examples/drawChArUcoBoardImg.png drawChArUcoBoardImg>>
 -}
-drawChArUcoBoard :: ChArUcoBoard -> Mat ('S '[h, w]) ('S 1) depth
-drawChArUcoBoard charucoBoard = unsafePerformIO $ do
+drawChArUcoBoard
+    :: (ToInt32 w, ToInt32 h)
+    => ChArUcoBoard
+    -> w -- ^ width
+    -> h -- ^ height
+    -> Mat ('S '[DSNat h, DSNat w]) ('S 1) ('S Word8)
+drawChArUcoBoard charucoBoard width height = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr charucoBoard $ \c'board ->
       withPtr dst $ \dstPtr ->
         [C.block| void {
           Mat & board = * $(Mat * dstPtr);
           Ptr<CharucoBoard> & charucoBoard = *$(Ptr_CharucoBoard * c'board);
-          charucoBoard->draw(cv::Size(500, 500), board);
+          charucoBoard->draw(cv::Size($(int32_t w), $(int32_t h)), board);
         }|]
     pure (unsafeCoerceMat dst)
-
+  where
+    w = toInt32 width
+    h = toInt32 height
 
 --------------------------------------------------------------------------------
 withPtrs
