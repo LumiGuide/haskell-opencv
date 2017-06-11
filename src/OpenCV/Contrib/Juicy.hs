@@ -1,47 +1,54 @@
-{-# language DataKinds, Rank2Types, TypeFamilies, ScopedTypeVariables, FlexibleContexts, ViewPatterns, ExistentialQuantification #-}
+{-# language DataKinds #-}
+{-# language Rank2Types #-}
+{-# language TypeFamilies #-}
+{-# language ScopedTypeVariables #-}
+{-# language FlexibleContexts #-}
+{-# language ViewPatterns #-}
+{-# language ExistentialQuantification #-}
+
+-- TODO (basvandijk): upstream the Storable instances to JuicyPixels!
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- | A thin JuicyPixels layer.
-module OpenCV.Contrib.Juicy (
-    -- * Types
-    Mat2D,
-    Filter ,
-    PixelChannels,
-    PixelDepth,
+module OpenCV.Contrib.Juicy
+  ( -- * Types
+    Mat2D
+  , Filter
+  , PixelChannels
+  , PixelDepth
+
     -- * Low level API
-    fromImage,
-    toImage,
+  , fromImage
+  , toImage
+
     -- * High level API
-    isoJuicy
-    )
-    where
+  , isoJuicy
+  ) where
 
-import GHC.TypeLits (Nat,KnownNat)
-import Data.Proxy (Proxy (Proxy))
-
-import Foreign.Storable (Storable (..))
-import Foreign.Ptr (Ptr, plusPtr)
-import System.IO.Unsafe (unsafePerformIO)
-
-import Data.Word (Word8,Word16)
-import Data.Int (Int32)
-
-import Control.Monad (forM_)
-import Control.Monad.Primitive (PrimMonad)
-
-import Linear.V4 (V4)
-
-import OpenCV
-import OpenCV.Unsafe (unsafeRead, unsafeWrite)
-import Control.Monad.Trans.Except
-import Codec.Picture.Types
+import "base" GHC.TypeLits (Nat,KnownNat)
+import "base" Data.Proxy (Proxy (Proxy))
+import "base" Foreign.Storable (Storable (..))
+import "base" Foreign.Ptr (Ptr, plusPtr)
+import "base" System.IO.Unsafe (unsafePerformIO)
+import "base" Data.Word (Word8,Word16)
+import "base" Data.Int (Int32)
+import "base" Control.Monad (forM_)
+import "primitive" Control.Monad.Primitive (PrimMonad)
+import "linear" Linear.V4 (V4)
+import "this" OpenCV
+import "this" OpenCV.Unsafe (unsafeRead, unsafeWrite)
+import "JuicyPixels" Codec.Picture.Types
 
 -- list of pointers at a given byte distance from a base one
 plusPtrS :: Ptr a -> Int -> [Ptr b]
 plusPtrS p n = map (plusPtr p) [0..n-1]
 
 -- multiple peek
+peekS :: Storable b => Ptr a -> Int -> IO [b]
 peekS p n = mapM peek (plusPtrS p n)
 
 -- multiple poke
+pokeS :: Storable a => Ptr a1 -> Int -> [a] -> IO ()
 pokeS p n xs = sequence_ (zipWith poke (plusPtrS p n) xs)
 
 instance Storable PixelRGB8 where
@@ -92,32 +99,32 @@ type family PixelDepth a
 -- | map Pixel types to a number of channels
 type family PixelChannels a :: Nat
 
-type instance PixelDepth Pixel8 = Word8
-type instance PixelDepth Pixel16 = Word16
-type instance PixelDepth PixelF = Float
-type instance PixelDepth PixelYA8 = Word8
-type instance PixelDepth PixelYA16 = Word16
-type instance PixelDepth PixelRGB8 = Word8
-type instance PixelDepth PixelRGB16 = Word16
-type instance PixelDepth PixelRGBF = Float
-type instance PixelDepth PixelRGBA8 = Word8
+type instance PixelDepth Pixel8      = Word8
+type instance PixelDepth Pixel16     = Word16
+type instance PixelDepth PixelF      = Float
+type instance PixelDepth PixelYA8    = Word8
+type instance PixelDepth PixelYA16   = Word16
+type instance PixelDepth PixelRGB8   = Word8
+type instance PixelDepth PixelRGB16  = Word16
+type instance PixelDepth PixelRGBF   = Float
+type instance PixelDepth PixelRGBA8  = Word8
 type instance PixelDepth PixelRGBA16 = Word16
 type instance PixelDepth PixelYCbCr8 = Word8
-type instance PixelDepth PixelCMYK8 = Word8
+type instance PixelDepth PixelCMYK8  = Word8
 type instance PixelDepth PixelCMYK16 = Word16
 
-type instance PixelChannels Pixel8 = 1
-type instance PixelChannels Pixel16 = 1
-type instance PixelChannels PixelF = 1
-type instance PixelChannels PixelYA8 = 2
-type instance PixelChannels PixelYA16 = 2
-type instance PixelChannels PixelRGB8 = 3
-type instance PixelChannels PixelRGB16 = 3
-type instance PixelChannels PixelRGBF = 3
-type instance PixelChannels PixelRGBA8 = 4
+type instance PixelChannels Pixel8      = 1
+type instance PixelChannels Pixel16     = 1
+type instance PixelChannels PixelF      = 1
+type instance PixelChannels PixelYA8    = 2
+type instance PixelChannels PixelYA16   = 2
+type instance PixelChannels PixelRGB8   = 3
+type instance PixelChannels PixelRGB16  = 3
+type instance PixelChannels PixelRGBF   = 3
+type instance PixelChannels PixelRGBA8  = 4
 type instance PixelChannels PixelRGBA16 = 4
 type instance PixelChannels PixelYCbCr8 = 3
-type instance PixelChannels PixelCMYK8 = 4
+type instance PixelChannels PixelCMYK8  = 4
 type instance PixelChannels PixelCMYK16 = 4
 
 -- | An OpenCV bidimensional matrix
@@ -125,53 +132,54 @@ type Mat2D h w channels depth = Mat ('S '[h,w]) channels depth
 
 -- | Compute an OpenCV 2D-matrix from a JuicyPixels image
 fromImage
-    :: forall a c d .
-        ( ToDepth (Proxy d)
-        , KnownNat c
-        , Pixel a
-        , Storable a
-        , c ~ PixelChannels a
-        , d ~ PixelDepth a
-        )
+    :: forall a c d
+     . ( ToDepth (Proxy d)
+       , KnownNat c
+       , Pixel a
+       , Storable a
+       , c ~ PixelChannels a
+       , d ~ PixelDepth a
+       )
     => Image a -- ^ JuicyPixels image
     -> Mat2D 'D 'D ('S c) ('S d)
-fromImage i@(Image h w v) = exceptError $ withMatM
+fromImage i@(Image w h _data) = exceptError $ withMatM
     (fi h ::: fi w ::: Z)
     (Proxy :: Proxy c)
     (Proxy :: Proxy d)
     (pure 0 :: V4 Double) $ \m ->
-        forM_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(x,y) ->
-            unsafeWrite m [y,x] 0 (pixelAt i x y)
+      forM_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(x,y) ->
+        unsafeWrite m [y,x] 0 (pixelAt i x y)
   where
     fi :: Int -> Int32
     fi = fromIntegral
 
 -- | Compute a JuicyPixels image from an OpenCV 2D-matrix
-toImage :: forall a c d .
-        ( KnownNat c
-        , Pixel a
-        , Storable a
-        , c ~ PixelChannels a
-        , d ~ PixelDepth a
-        )
-    => Mat2D 'D 'D ('S c) ('S d)  -- ^ OpenCV 2D-matrix
+toImage
+    :: forall a c d h w.
+       ( KnownNat c
+       , Pixel a
+       , Storable a
+       , c ~ PixelChannels a
+       , d ~ PixelDepth a
+       )
+    => Mat2D h w ('S c) ('S d)  -- ^ OpenCV 2D-matrix
     -> Image a
-toImage m  = let
+toImage m  = unsafePerformIO $ do
+    mat <- unsafeThaw m
+    withImage w h $ \x y -> unsafeRead mat [y, x] 0
+  where
     MatInfo [fromIntegral -> h, fromIntegral -> w] _ _  = matInfo m
-    in unsafePerformIO $ do
-        mat <- unsafeThaw m
-        withImage h w $ \x y -> unsafeRead mat [y,x] 0
 
 -- | An OpenCV 2D-filter preserving the matrix type
 type Filter m h w c d = Mat2D h w c d -> CvExceptT m (Mat2D h w c d)
 
 -- | Apply an OpenCV 2D-filter to a JuicyPixels dynamic matrix,
 -- preserving the Juicy pixel encoding
-isoJuicy :: forall m. (PrimMonad m)
-    => (forall c d. Filter m 'D 'D c d) -- ^ OpenCV 2D-filter
+isoJuicy
+    :: forall m. (PrimMonad m)
+    => (forall c d h w. Filter m h w c d) -- ^ OpenCV 2D-filter
     -> DynamicImage -- ^ JuicyPixels dynamic image
     -> CvExceptT m DynamicImage
-
 isoJuicy f (ImageRGB8 i)    =  ImageRGB8    <$> isoApply f i
 isoJuicy f (ImageRGB16 i)   =  ImageRGB16   <$> isoApply f i
 isoJuicy f (ImageRGBF i)    =  ImageRGBF    <$> isoApply f i
@@ -181,7 +189,6 @@ isoJuicy f (ImageRGBA8 i)   =  ImageRGBA8   <$> isoApply f i
 isoJuicy f (ImageRGBA16 i)  =  ImageRGBA16  <$> isoApply f i
 isoJuicy _ _                =  error
     "Unhandled conversion from DynamicImage to Mat"
-
 
 isoApply
     :: forall f inPixel outPixel

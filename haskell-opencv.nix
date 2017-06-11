@@ -15,6 +15,7 @@
 , deepseq
 , inline-c
 , inline-c-cpp
+, JuicyPixels
 , linear
 , primitive
 , repa
@@ -67,6 +68,7 @@ mkDerivation ({
     deepseq
     inline-c
     inline-c-cpp
+    JuicyPixels
     linear
     primitive
     repa
