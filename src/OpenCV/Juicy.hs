@@ -135,8 +135,8 @@ type Mat2D h w channels depth = Mat ('S '[h,w]) channels depth
 Example:
 
 @
-fromJuicyPixelsImg :: IO (Mat ('S '[ 'D, 'D]) ('S 3) ('S Word8))
-fromJuicyPixelsImg = do
+fromImageImg :: IO (Mat ('S '[ 'D, 'D]) ('S 3) ('S Word8))
+fromImageImg = do
     r <- Codec.Picture.readImage "data/Lenna.png"
     case r of
       Left err -> error err
@@ -144,7 +144,7 @@ fromJuicyPixelsImg = do
       Right _ -> error "Unhandled JuicyPixels format!"
 @
 
-<<doc/generated/examples/fromJuicyPixelsImg.png fromJuicyPixelsImg>>
+<<doc/generated/examples/fromImageImg.png fromImageImg>>
 -}
 fromImage
     :: forall a c d
@@ -168,7 +168,25 @@ fromImage i@(Image w h _data) = exceptError $ withMatM
     fi :: Int -> Int32
     fi = fromIntegral
 
--- | Compute a JuicyPixels image from an OpenCV 2D-matrix
+{- | Compute a JuicyPixels image from an OpenCV 2D-matrix
+
+FIXME: There's a bug in the colour conversions in the example:
+
+Example:
+
+@
+toImageImg :: IO (Mat ('S '[ 'D, 'D]) ('S 3) ('S Word8))
+toImageImg = exceptError . cvtColor rgb bgr . from . to . exceptError . cvtColor bgr rgb \<$> fromImageImg
+  where
+    to :: OpenCV.Juicy.Mat2D 'D 'D ('S 3) ('S Word8) -> Codec.Picture.Image Codec.Picture.PixelRGB8
+    to = OpenCV.Juicy.toImage
+
+    from :: Codec.Picture.Image Codec.Picture.PixelRGB8 -> OpenCV.Juicy.Mat2D 'D 'D ('S 3) ('S Word8)
+    from = OpenCV.Juicy.fromImage
+@
+
+<<doc/generated/examples/toImageImg.png toImageImg>>
+-}
 toImage
     :: forall a c d h w.
        ( KnownNat c
