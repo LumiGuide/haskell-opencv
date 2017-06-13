@@ -1,5 +1,8 @@
-[![Hackage](https://img.shields.io/hackage/v/opencv.svg)](https://hackage.haskell.org/package/opencv)
 [![Build Status](https://travis-ci.org/LumiGuide/haskell-opencv.svg)](https://travis-ci.org/LumiGuide/haskell-opencv)
+
+[opencv ![Hackage](https://img.shields.io/hackage/v/opencv.svg)](https://hackage.haskell.org/package/opencv)
+
+[opencv-extra ![Hackage](https://img.shields.io/hackage/v/opencv-extra.svg)](https://hackage.haskell.org/package/opencv-extra)
 
 Haskell OpenCV-3.x binding
 ==========================
