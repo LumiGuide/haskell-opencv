@@ -1,8 +1,8 @@
 resolver: lts-8.17
 packages:
-- '.'
+- opencv/
+- opencv-examples/
 - opencv-extra/
-- examples/
-- opencv-extra/examples/
+- opencv-extra-examples/
 flags: {}
 allow-newer: true

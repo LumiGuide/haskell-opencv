@@ -1,0 +1,105 @@
+name:          opencv-examples
+version:       0.0.0.0
+homepage:      lumiguide.eu
+bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
+license:       BSD3
+license-file:  LICENSE
+author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
+maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
+build-type:    Simple
+cabal-version: >=1.10
+
+extra-source-files:
+    data/*.png
+    data/*.jpg
+    data/*.xml
+
+library
+    hs-source-dirs: lib
+    exposed-modules:
+      OpenCV.Example
+    build-depends:
+        base             >= 4.8 && < 4.10
+      , opencv
+      , temporary        >= 1.2
+      , bytestring       >= 0.10.6
+      , filepath         >= 1.4
+      , file-embed       >= 0.0
+      , template-haskell >= 2.10
+
+    default-language: Haskell2010
+
+executable highgui
+    main-is: highgui.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base       >= 4.8 && < 4.10
+      , bytestring >= 0.10.6
+      , opencv
+
+    default-language: Haskell2010
+
+executable videoio
+    main-is: videoio.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base >= 4.8 && < 4.10
+      , opencv
+
+    default-language: Haskell2010
+
+executable videoio-noise-multi
+    main-is: videoio-noise-multi.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base   >= 4.8 && < 4.10
+      , opencv
+      , opencv-examples
+      , vector >= 0.11
+
+    default-language: Haskell2010
+
+executable videoio-decolor
+    main-is: videoio-decolor.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base >= 4.8 && < 4.10
+      , opencv
+      , opencv-examples
+
+    default-language: Haskell2010
+
+executable videoio-background-sub
+    main-is: videoio-background-sub.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base >= 4.8 && < 4.10
+      , opencv
+      , opencv-examples
+
+    default-language: Haskell2010
+
+executable face-detect
+    main-is: face-detect.hs
+    hs-source-dirs: src
+    ghc-options: -Wall -O2
+
+    build-depends:
+        base         >= 4.8 && < 4.10
+      , opencv
+      , opencv-examples
+      , linear       >= 1.20.4
+      , vector       >= 0.11
+      , transformers >= 0.4.2
+
+    default-language: Haskell2010

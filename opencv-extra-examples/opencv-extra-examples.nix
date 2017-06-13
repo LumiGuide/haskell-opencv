@@ -22,10 +22,12 @@ mkDerivation {
         "^opencv-extra-examples.cabal$"
       ];
       data = ../../data;
+      LICENSE = ../LICENSE;
     } ''
       mkdir -p $out
       cp -r $files/* $out #*/
       cp -r $data    $out/data
+      cp $LICENSE    $out/LICENSE
     '';
   isLibrary = false;
   isExecutable = true;

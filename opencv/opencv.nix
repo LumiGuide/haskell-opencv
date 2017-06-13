@@ -1,4 +1,5 @@
 { mkDerivation
+, runCommand
 , stdenv
 , lib
 
@@ -39,23 +40,29 @@
 mkDerivation ({
   pname = "opencv";
   version = "0.0.0";
-  src = lib.sourceByRegex ./. [
-    "^src$"
-    "^src/.*"
-    "^include$"
-    "^include/.*"
-    "^test$"
-    "^test/.*"
-    "^bench$"
-    "^bench/.*"
-    "^data$"
-    "^data/.*"
-    "^doc$"
-    "^doc/.*"
-    "^LICENSE$"
-    "^opencv.cabal$"
-    "^Setup.hs$"
-  ];
+  src = runCommand "opencv-src"
+    { files = lib.sourceByRegex ./. [
+        "^src$"
+        "^src/.*"
+        "^include$"
+        "^include/.*"
+        "^test$"
+        "^test/.*"
+        "^bench$"
+        "^bench/.*"
+        "^opencv.cabal$"
+        "^Setup.hs$"
+      ];
+      doc     = ../doc;
+      data    = ../data;
+      LICENSE = ../LICENSE;
+    } ''
+      mkdir -p $out
+      cp -r $files/* $out #*/
+      cp -r $doc     $out/doc
+      cp -r $data    $out/data
+      cp $LICENSE    $out/LICENSE
+    '';
 
   libraryHaskellDepends = [
     aeson

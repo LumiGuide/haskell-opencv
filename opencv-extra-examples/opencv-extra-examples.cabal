@@ -2,6 +2,7 @@ name:          opencv-extra-examples
 version:       0.0.0.0
 homepage:      lumiguide.eu
 license:       BSD3
+license-file:  LICENSE
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Simple
@@ -17,11 +18,13 @@ executable tracker
   hs-source-dirs: src
   ghc-options: -Wall -O2
 
-  build-depends: base >=4.8 && < 4.10
-               , opencv
-               , opencv-extra
-               , opencv-examples
-               , linear
-               , vector
-               , transformers
+  build-depends:
+      base         >= 4.8 && < 4.10
+    , opencv
+    , opencv-extra
+    , opencv-examples
+    , linear       >= 1.20.4
+    , transformers >= 0.4.2
+    , vector       >= 0.11
+
   default-language: Haskell2010

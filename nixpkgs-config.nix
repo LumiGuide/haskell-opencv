@@ -3,10 +3,10 @@
     let
       haskellOverrides = {
         overrides = self: super: {
-          opencv                = self.callPackage (import ./haskell-opencv.nix) {};
-          opencv-examples       = self.callPackage (import ./examples/opencv-examples.nix) {};
+          opencv                = self.callPackage (import ./opencv/opencv.nix) {};
+          opencv-examples       = self.callPackage (import ./opencv-examples/opencv-examples.nix) {};
           opencv-extra          = self.callPackage (import ./opencv-extra/opencv-extra.nix) {};
-          opencv-extra-examples = self.callPackage (import ./opencv-extra/examples/opencv-extra-examples.nix) {};
+          opencv-extra-examples = self.callPackage (import ./opencv-extra-examples/opencv-extra-examples.nix) {};
         };
       };
       osx = builtins.currentSystem == "x86_64-darwin";

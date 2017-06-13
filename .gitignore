@@ -1,4 +1,4 @@
-src/**/*.cpp
+opencv/src/**/*.cpp
 opencv-extra/src/**/*.cpp
 dist
 .stack-work
