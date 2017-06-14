@@ -49,6 +49,7 @@ library
     c-sources:
         src/OpenCV/Calib3d.cpp
         src/OpenCV/Core/ArrayOps.cpp
+        src/OpenCV/Core/Cluster.cpp
         src/OpenCV/Core/Types.cpp
         src/OpenCV/Core/Types/Mat.cpp
         src/OpenCV/Core/Types/Mat/Repa.cpp
@@ -108,6 +109,7 @@ library
         OpenCV
         OpenCV.Calib3d
         OpenCV.Core.ArrayOps
+        OpenCV.Core.Cluster
         OpenCV.Core.Types
         OpenCV.Core.Types.Mat
         OpenCV.Core.Types.Mat.HMat
