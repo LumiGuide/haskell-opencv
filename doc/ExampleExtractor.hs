@@ -17,6 +17,7 @@ import "base" Data.Either
 import "base" Data.Maybe
 import "base" Data.Monoid
 import "base" Data.Word
+import "base" System.IO ( hFlush, stdout )
 import qualified "containers" Data.Map.Strict as M
 import "directory" System.Directory ( canonicalizePath )
 import qualified "haskell-src-exts" Language.Haskell.Exts.Extension as Hse
@@ -52,6 +53,7 @@ renderImage
 renderImage fp img = do
     let bs = CV.exceptError $ CV.imencode (CV.OutputPng CV.defaultPngParams) img
     putStr $ "Writing image " <> dest <> " ..."
+    hFlush stdout
     B.writeFile dest bs
     putStrLn " OK"
   where
@@ -63,6 +65,7 @@ renderAnimation
     -> IO ()
 renderAnimation fp imgs = do
     putStr $ "Writing animation " <> dest <> " ..."
+    hFlush stdout
     case gif of
       Left errMsg -> putStrLn $ " " <> errMsg
       Right bs -> BL.writeFile dest bs
@@ -74,7 +77,7 @@ renderAnimation fp imgs = do
     palImgs :: [(JP.Palette, JP.GifDelay, JP.Image JP.Pixel8)]
     palImgs =
         map (\(delay, img) ->
-              let (img8, pal) = JP.palettize JP.defaultPaletteOptions img
+              let (img8, pal) = JP.palettize paletteOptions img
               in (pal, delay, img8)
             )
             jpImgs
@@ -83,6 +86,13 @@ renderAnimation fp imgs = do
     jpImgs = map (second CVJ.toImage) imgs
 
     dest = mkDestPath fp
+
+    paletteOptions =
+        JP.PaletteOptions
+        { paletteCreationMethod = JP.MedianMeanCut
+        , enableImageDithering  = False
+        , paletteColorCount     = 256
+        }
 
 mkDestPath :: FilePath -> FilePath
 mkDestPath fp = "doc/generated/" <> fp
