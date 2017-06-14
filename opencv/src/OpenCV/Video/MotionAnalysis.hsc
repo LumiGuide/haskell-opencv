@@ -90,9 +90,11 @@ mog2Anim = do
 @
 
 Original:
+
 <<doc/generated/examples/car.gif carAnim>>
 
 Foreground:
+
 <<doc/generated/examples/mog2.gif mog2Anim>>
 -}
 
