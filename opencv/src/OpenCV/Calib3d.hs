@@ -1,5 +1,4 @@
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Calib3d
@@ -62,17 +61,23 @@ marshalWhichImage = \case
     Image1 -> 1
     Image2 -> 2
 
-
-data FindHomographyMethod = FindHomographyMethod0
-                          | FindHomographyMethodRANSAC
-                          | FindHomographyMethodLMEDS
-                          | FindHomographyMethodRHO
+data FindHomographyMethod
+   = FindHomographyMethod_0
+     -- ^ A regular method using all the points.
+   | FindHomographyMethod_RANSAC
+     -- ^ RANSAC-based robust method.
+   | FindHomographyMethod_LMEDS
+     -- ^ Least-Median robust method.
+   | FindHomographyMethod_RHO
+     -- ^ PROSAC-based robust method.
+     deriving (Show)
 
 marshalFindHomographyMethod :: FindHomographyMethod -> Int32
-marshalFindHomographyMethod FindHomographyMethod0 = 0
-marshalFindHomographyMethod FindHomographyMethodRANSAC = c'RANSAC
-marshalFindHomographyMethod FindHomographyMethodLMEDS  = c'LMEDS
-marshalFindHomographyMethod FindHomographyMethodRHO    = c'RHO
+marshalFindHomographyMethod = \case
+    FindHomographyMethod_0      -> 0
+    FindHomographyMethod_RANSAC -> c'RANSAC
+    FindHomographyMethod_LMEDS  -> c'LMEDS
+    FindHomographyMethod_RHO    -> c'RHO
 
 --------------------------------------------------------------------------------
 
@@ -135,7 +140,7 @@ findFundamentalMat pts1 pts2 method = do
            )
   where
     c'findFundamentalMat = unsafeWrapException $ do
-      fm   <- newEmptyMat
+      fm        <- newEmptyMat
       pointMask <- newEmptyMat
       handleCvException (pure (fm, pointMask)) $
         withPtr fm $ \fmPtr ->
@@ -160,24 +165,21 @@ findFundamentalMat pts1 pts2 method = do
     c'numPts2 = fromIntegral $ V.length pts2
     (c'method, c'p1, c'p2) = marshalFundamentalMatMethod method
 
-
-
-data FindHomographyParams = FindHomographyParams
-    { method :: FindHomographyMethod
-    , ransacReprojThreshold :: Double
-    , maxIters :: Int
-    , confidence :: Double
-    }
-
+data FindHomographyParams
+   = FindHomographyParams
+     { fhpMethod                :: !FindHomographyMethod
+     , fhpRansacReprojThreshold :: !Double
+     , fhpMaxIters              :: !Int
+     , fhpConfidence            :: !Double
+     } deriving (Show)
 
 instance Default FindHomographyParams where
     def = FindHomographyParams
-            { method = FindHomographyMethod0
-            , ransacReprojThreshold = 3
-            , maxIters = 2000
-            , confidence = 0.995
-            }
-
+          { fhpMethod                = FindHomographyMethod_0
+          , fhpRansacReprojThreshold = 3
+          , fhpMaxIters              = 2000
+          , fhpConfidence            = 0.995
+          }
 
 findHomography
     :: (IsPoint2 point2 CDouble)
@@ -188,7 +190,7 @@ findHomography
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
                         )
                 )
-findHomography srcPoints dstPoints (FindHomographyParams{..}) = do
+findHomography srcPoints dstPoints fhp = do
     (fm, pointMask) <- c'findHomography
     -- If the c++ function can't find a fundamental matrix it will
     -- return an empty matrix. We check for this case by trying to
@@ -199,7 +201,7 @@ findHomography srcPoints dstPoints (FindHomographyParams{..}) = do
            )
   where
     c'findHomography = unsafeWrapException $ do
-      fm <- newEmptyMat
+      fm        <- newEmptyMat
       pointMask <- newEmptyMat
       handleCvException (pure (fm, pointMask)) $
         withPtr fm $ \fmPtr ->
@@ -222,11 +224,10 @@ findHomography srcPoints dstPoints (FindHomographyParams{..}) = do
           |]
     c'numSrcPts = fromIntegral $ V.length srcPoints
     c'numDstPts = fromIntegral $ V.length dstPoints
-    c'method = marshalFindHomographyMethod method
-    c'ransacReprojThreshold = realToFrac ransacReprojThreshold
-    c'maxIters = fromIntegral maxIters
-    c'confidence = realToFrac confidence
-
+    c'method = marshalFindHomographyMethod $ fhpMethod fhp
+    c'ransacReprojThreshold = realToFrac $ fhpRansacReprojThreshold fhp
+    c'maxIters = fromIntegral $ fhpMaxIters fhp
+    c'confidence = realToFrac $ fhpConfidence fhp
 
 {- | For points in an image of a stereo pair, computes the corresponding epilines in the other image
 
