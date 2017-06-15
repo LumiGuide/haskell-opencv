@@ -44,6 +44,8 @@ module OpenCV.Core.ArrayOps
     , meanStdDev
     , matFlip, FlipDirection(..)
     , matTranspose
+    , hconcat
+    , vconcat
     ) where
 
 import "base" Data.Proxy ( Proxy(..) )
@@ -922,3 +924,77 @@ matTranspose src = unsafePerformIO $ do
           cv::transpose(*$(Mat * srcPtr), *$(Mat * dstPtr));
         }|]
     pure $ unsafeCoerceMat dst
+
+{- | Applies horizontal concatenation to given matrices.
+
+Example:
+
+@
+hconcatImg :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)
+hconcatImg = exceptError $
+    hconcat $ V.fromList
+      [ halfSize birds_768x512
+      , halfSize flower_768x512
+      , halfSize sailboat_768x512
+      ]
+  where
+    halfSize = exceptError . resize (ResizeRel 0.5) InterArea
+@
+
+<<doc/generated/examples/hconcatImg.png hconcatImg>>
+-}
+hconcat
+    :: V.Vector (Mat ('S '[rows, 'D]) channels depth)
+    -> CvExcept (Mat ('S '[rows, 'D]) channels depth)
+hconcat mats = unsafeWrapException $ do
+    dst <- unsafeCoerceMat <$> newEmptyMat
+    handleCvException (pure dst) $
+      withArrayPtr mats $ \matsPtr ->
+      withPtr dst $ \dstPtr ->
+        [cvExcept|
+          cv::hconcat
+            ( $(Mat * matsPtr)
+            , $(size_t c'numMats)
+            , *$(Mat * dstPtr)
+            );
+        |]
+  where
+    c'numMats :: C.CSize
+    c'numMats = fromIntegral $ V.length mats
+
+{- | Applies vertical concatenation to given matrices.
+
+Example:
+
+@
+vconcatImg :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)
+vconcatImg = exceptError $
+    vconcat $ V.fromList
+      [ halfSize birds_768x512
+      , halfSize flower_768x512
+      , halfSize sailboat_768x512
+      ]
+  where
+    halfSize = exceptError . resize (ResizeRel 0.5) InterArea
+@
+
+<<doc/generated/examples/vconcatImg.png vconcatImg>>
+-}
+vconcat
+    :: V.Vector (Mat ('S '[ 'D, cols ]) channels depth)
+    -> CvExcept (Mat ('S '[ 'D, cols ]) channels depth)
+vconcat mats = unsafeWrapException $ do
+    dst <- unsafeCoerceMat <$> newEmptyMat
+    handleCvException (pure dst) $
+      withArrayPtr mats $ \matsPtr ->
+      withPtr dst $ \dstPtr ->
+        [cvExcept|
+          cv::vconcat
+            ( $(Mat * matsPtr)
+            , $(size_t c'numMats)
+            , *$(Mat * dstPtr)
+            );
+        |]
+  where
+    c'numMats :: C.CSize
+    c'numMats = fromIntegral $ V.length mats
