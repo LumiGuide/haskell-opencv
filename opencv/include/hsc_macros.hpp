@@ -9,6 +9,7 @@ https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/utils.html#custo
 #include <bindings.dsl.h>
 
 #define bc_sizeof_varid(name) {printf("c'sizeof_");bc_word(name);}; \
+
 #define bc_alignof_varid(name) {printf("c'alignof_");bc_word(name);}; \
 
 /*
