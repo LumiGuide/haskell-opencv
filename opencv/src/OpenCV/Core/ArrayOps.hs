@@ -44,15 +44,17 @@ module OpenCV.Core.ArrayOps
     , meanStdDev
     , matFlip, FlipDirection(..)
     , matTranspose
+    , perspectiveTransform
     , hconcat
     , vconcat
     ) where
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
+import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr )
+import "base" Foreign.Ptr ( Ptr, castPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" Data.Int ( Int32 )
@@ -998,3 +1000,37 @@ vconcat mats = unsafeWrapException $ do
   where
     c'numMats :: C.CSize
     c'numMats = fromIntegral $ V.length mats
+
+
+{-| Performs the perspective matrix transformation of vectors. 
+
+    TODO: Modify this function for accept 3D points
+    TODO: Generalize return type to
+          V.Vector (point2 CDouble)
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#perspectivetransform OpenCV Sphinx doc>
+-}
+perspectiveTransform
+    :: (IsPoint2 point2 CDouble)
+    => V.Vector (point2 CDouble)
+    -> Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
+    -> V.Vector (Point2d)
+perspectiveTransform srcPoints transformationMat = unsafePerformIO $
+    withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
+    withPtr transformationMat $ \tmPtr ->
+    allocaArray numPts $ \(dstPtr :: Ptr (V2 CDouble)) -> do
+        let dstPtr' = castPtr dstPtr
+        [C.block| void {
+            cv::_InputArray srcPts  = cv::_InputArray( $(Point2d * srcPtr),  $(int32_t c'numPts));
+            cv::_OutputArray dstPts = cv::_OutputArray($(Point2d * dstPtr'), $(int32_t c'numPts));
+            cv::perspectiveTransform
+                ( srcPts
+                , dstPts
+                , *$(Mat * tmPtr)
+                );
+            }|]
+        peekArray numPts dstPtr >>= return . V.fromList . map toPoint
+  where
+    numPts   = fromIntegral $ V.length srcPoints
+    c'numPts = fromIntegral $ V.length srcPoints
+
