@@ -386,7 +386,8 @@ arcLength curve isClosed = unsafeWrapException $
       c'numPoints = fromIntegral $ V.length curve
 
 minAreaRect :: (IsPoint2 point2 Int32)
-            => V.Vector (point2 Int32) -> RotatedRect
+            => V.Vector (point2 Int32)
+            -> RotatedRect
 minAreaRect points =
     unsafePerformIO $ fromPtr $
     withArrayPtr (V.map toPoint points) $ \pointsPtr ->
