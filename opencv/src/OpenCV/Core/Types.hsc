@@ -295,8 +295,6 @@ keyPointAsRec kpt = unsafePerformIO $
         <*> peek octavePtr
         <*> peek classIdPtr
 
-mkPlacementNewInstance ''KeyPoint
-
 --------------------------------------------------------------------------------
 -- DMatch
 --------------------------------------------------------------------------------
