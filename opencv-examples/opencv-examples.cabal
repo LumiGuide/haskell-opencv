@@ -14,6 +14,11 @@ extra-source-files:
     data/*.jpg
     data/*.xml
 
+source-repository head
+  type:     git
+  location: git://github.com/LumiGuide/haskell-opencv.git
+  subdir:   opencv-examples
+
 library
     hs-source-dirs: lib
     exposed-modules:

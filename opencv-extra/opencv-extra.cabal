@@ -15,6 +15,11 @@ extra-doc-files:
     doc/generated/*.png
     doc/generated/examples/*.png
 
+source-repository head
+  type:     git
+  location: git://github.com/LumiGuide/haskell-opencv.git
+  subdir:   opencv-extra
+
 flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
