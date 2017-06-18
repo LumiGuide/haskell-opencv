@@ -15,7 +15,7 @@
 
       opencv3 = pkgs.opencv3.override {
         enableIpp       = !osx;
-        enableContrib   = !osx;
+        enableContrib   = true;
         enableGtk2      = true;
         enableFfmpeg    = !osx;
         enableGStreamer = true;
