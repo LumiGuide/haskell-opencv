@@ -7,7 +7,7 @@
 Haskell OpenCV-3.x binding
 ==========================
 
-<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo.png" width="200px" alt="Haskell OpenCV-3.x logo" />
+<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png" alt="Haskell OpenCV-3.x logo" />
 
 
 This is a Haskell library providing a binding to OpenCV-3.x. It binds directly
