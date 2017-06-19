@@ -15,6 +15,12 @@ description:   This is a Haskell library providing a binding to OpenCV-3.x.
                .
                The library is far from complete but the framework is there to easily
                bind missing functionality.
+               .
+               Note that the OpenCV contrib modules are provided by
+               <http://hackage.haskell.org/package/opencv-extra opencv-extra>.
+               .
+               Make sure to checkout the
+               <https://github.com/LumiGuide/haskell-opencv/tree/master/opencv-examples opencv-examples>.
 
 extra-source-files:
     data/*.png

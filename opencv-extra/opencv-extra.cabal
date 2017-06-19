@@ -10,6 +10,14 @@ build-type:    Custom
 cabal-version: >=1.23
 category:      AI, Graphics
 synopsis:      Haskell binding to OpenCV-3.x extra modules
+description:   This is a Haskell library providing a binding to the OpenCV-3.x contrib modules.
+               It binds directly with the C++ API using the @inline-c@ Haskell library.
+               .
+               The library is far from complete but the framework is there to easily
+               bind missing functionality.
+               .
+               Make sure to checkout the
+               <https://github.com/LumiGuide/haskell-opencv/tree/master/opencv-extra-examples opencv-extra-examples>.
 
 extra-doc-files:
     doc/generated/*.png
