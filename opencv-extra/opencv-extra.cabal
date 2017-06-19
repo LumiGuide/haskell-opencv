@@ -1,5 +1,5 @@
 name:          opencv-extra
-version:       0.0.0.0
+version:       0.0.0.1
 homepage:      https://github.com/LumiGuide/haskell-opencv
 bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
 license:       BSD3
@@ -18,6 +18,9 @@ description:   This is a Haskell library providing a binding to the OpenCV-3.x c
                .
                Make sure to checkout the
                <https://github.com/LumiGuide/haskell-opencv/tree/master/opencv-extra-examples opencv-extra-examples>.
+
+extra-source-files:
+    CHANGELOG.md
 
 extra-doc-files:
     doc/generated/*.png

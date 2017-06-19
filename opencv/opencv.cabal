@@ -1,5 +1,5 @@
 name:          opencv
-version:       0.0.0.0
+version:       0.0.1.0
 homepage:      https://github.com/LumiGuide/haskell-opencv
 bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
 license:       BSD3
@@ -23,6 +23,7 @@ description:   This is a Haskell library providing a binding to OpenCV-3.x.
                <https://github.com/LumiGuide/haskell-opencv/tree/master/opencv-examples opencv-examples>.
 
 extra-source-files:
+    CHANGELOG.md
     data/*.png
     data/*.jpg
 
