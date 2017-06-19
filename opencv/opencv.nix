@@ -103,8 +103,8 @@ mkDerivation ({
   libraryPkgconfigDepends = [ opencv3 ];
 
   configureFlags =
-    [ "--with-gcc=g++"
-      "--with-ld=g++"
+    [ "--with-gcc=${stdenv.cc}/bin/c++"
+      "--with-ld=${stdenv.cc}/bin/c++"
     ];
 
   hardeningDisable = [ "bindnow" ];
