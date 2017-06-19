@@ -45,11 +45,11 @@ break between minor releases, so be careful.
 Development
 -----------
 
-We use Nix to enter an environment containing all the needed dependencies. For
-the moment the following commands only work on Linux. The Nix expression for
-opencv-extra currently fails to build on OS X.
+To get into an environment that contains all the needed dependencies we use Nix. 
+The following commands work both on Linux and OS X:
 
     curl https://nixos.org/nix/install | sh   # Only execute this if you haven't installed Nix yet.
+    cd opencv[-extra]
     nix-shell
 
 Then you should be able to use `cabal` as normal.
