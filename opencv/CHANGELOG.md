@@ -1,4 +1,4 @@
-## 0.0.1.0 - 2017-06-20
+## [0.0.1.0] - 2017-06-20
 
 ### Added
 
@@ -16,3 +16,6 @@
 ## 0.0.0.0 - 2017-06-11
 
 - Initial version
+
+
+[0.0.1.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.0.0...opencv-0.0.1.0
