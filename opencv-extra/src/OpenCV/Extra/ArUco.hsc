@@ -34,6 +34,7 @@ module OpenCV.Extra.ArUco
 import "opencv" OpenCV.Internal.Exception
 import "base" Control.Monad (guard)
 import "primitive" Control.Monad.Primitive
+import "base" Data.Int ( Int32 )
 import "base" Data.Monoid ((<>))
 import "base" Data.Word ( Word8 )
 import qualified "vector" Data.Vector.Storable as SV
@@ -68,85 +69,63 @@ C.using "namespace cv"
 C.using "namespace cv::aruco"
 C.using "namespace std"
 
+#include <bindings.dsl.h>
+#include "opencv2/aruco.hpp"
+#include "aruco-namespace.hpp"
+
 {-| A @Dictionary@ describes the possible QR codes used for ArUco markers. Use
 'getPredefinedDictionary' to lookup known dictionaries.
 -}
-newtype Dictionary = Dictionary
-  { unDictionary :: ForeignPtr C'Ptr'Dictionary
-  }
-
+newtype Dictionary = Dictionary { unDictionary :: ForeignPtr C'Ptr'Dictionary }
 
 type instance C Dictionary = C'Ptr'Dictionary
 
-
 instance FromPtr Dictionary where
-  fromPtr =
-    objFromPtr Dictionary $ \ptr ->
-      [CU.block| void { delete $(Ptr_Dictionary * ptr); }|]
-
+  fromPtr = objFromPtr Dictionary $ \ptr ->
+              [CU.block| void { delete $(Ptr_Dictionary * ptr); }|]
 
 instance WithPtr Dictionary where
   withPtr = withForeignPtr . unDictionary
-
-
 
 {-| A ChArUco board is used to perform camera calibration from ArUco markers
 overlaid on a chess board of known size. Use 'createChArUcoBoard' to create
 values of this type.
 -}
-newtype ChArUcoBoard = ChArUcoBoard
-  { unChArUcoBoard :: ForeignPtr C'Ptr'CharucoBoard
-  }
-
+newtype ChArUcoBoard =
+        ChArUcoBoard { unChArUcoBoard :: ForeignPtr C'Ptr'CharucoBoard }
 
 type instance C ChArUcoBoard = C'Ptr'CharucoBoard
 
-
 instance FromPtr ChArUcoBoard where
-  fromPtr =
-    objFromPtr ChArUcoBoard $ \ptr ->
-      [CU.block| void { delete $(Ptr_CharucoBoard * ptr); }|]
-
+  fromPtr = objFromPtr ChArUcoBoard $ \ptr ->
+              [CU.block| void { delete $(Ptr_CharucoBoard * ptr); }|]
 
 instance WithPtr ChArUcoBoard where
   withPtr = withForeignPtr . unChArUcoBoard
 
-
-newtype Vector'Int = Vector'Int
-  { unVectorInt :: ForeignPtr C'Vector'Int
-  }
-
+newtype Vector'Int =
+        Vector'Int { unVectorInt :: ForeignPtr C'Vector'Int }
 
 type instance C Vector'Int = C'Vector'Int
 
-
 instance FromPtr Vector'Int where
-  fromPtr =
-    objFromPtr Vector'Int $ \ptr ->
-      [CU.block| void { delete $(VectorInt * ptr); }|]
-
+  fromPtr = objFromPtr Vector'Int $ \ptr ->
+              [CU.block| void { delete $(VectorInt * ptr); }|]
 
 instance WithPtr Vector'Int where
   withPtr = withForeignPtr . unVectorInt
 
-
-newtype Vector'Vector'Point2f = Vector'Vector'Point2f
-  { unVectorVectorPoint2f :: ForeignPtr C'Vector'Vector'Point2f
-  }
-
+newtype Vector'Vector'Point2f =
+        Vector'Vector'Point2f { unVectorVectorPoint2f :: ForeignPtr C'Vector'Vector'Point2f }
 
 type instance C Vector'Vector'Point2f = C'Vector'Vector'Point2f
 
-
 instance FromPtr Vector'Vector'Point2f where
-  fromPtr =
-    objFromPtr Vector'Vector'Point2f $ \ptr ->
-      [CU.block| void { delete $(VectorVectorPoint2f * ptr); }|]
-
+  fromPtr = objFromPtr Vector'Vector'Point2f $ \ptr ->
+              [CU.block| void { delete $(VectorVectorPoint2f * ptr); }|]
 
 instance WithPtr Vector'Vector'Point2f where
   withPtr = withForeignPtr . unVectorVectorPoint2f
-
 
 {-| An encoding of the result of 'interpolateChArUcoMarkers'.
 -}
@@ -154,7 +133,6 @@ data ChArUcoMarkers = ChArUcoMarkers
     { charucoIds :: Mat 'D 'D 'D
     , charucoCorners :: Mat 'D 'D 'D
     }
-
 
 {-| Given an image and the detected ArUco markers in that image, attempt to
 perform ChAruco calibration.
@@ -200,7 +178,6 @@ interpolateChArUcoMarkers charucoBoard image ArUcoMarkers {..} =
     corners <- fromPtr (peek charucoCornersPtr)
     return (ChArUcoMarkers ids corners <$ guard (success /= 0))
 
-
 {- | Given an image, the ChArUco markers in that image, and the camera
 calibration, estimate the pose of the board.
 -}
@@ -235,10 +212,8 @@ estimatePoseChArUcoBoard charucoBoard ChArUcoMarkers {..} (cameraMatrix, distCoe
           }|]
         return (( fromVec rvec , fromVec tvec) <$ guard (success /= 0))
 
-
 {- | Given an estimated pose for a board, draw the axis over an image.
 -}
-
 drawEstimatedPose
   :: PrimMonad m
   => Matx33d
@@ -266,7 +241,6 @@ drawEstimatedPose cameraMatrix distCoeffs (rvec, tvec) image =
                  *$(Vec3d * tvecPtr),
                  1);
       }|]
-
 
 {- | Given a list of ChArUco calibration results, combine all results into
 camera calibration.
@@ -350,14 +324,12 @@ calibrateCameraFromFrames board width height frames =
     c'width = fromIntegral width
     c'height = fromIntegral height
 
-
 {- | The result of calling 'detectMarkers' on an image.
 -}
 data ArUcoMarkers = ArUcoMarkers
     { arucoCorners :: Vector'Vector'Point2f
     , arucoIds :: Vector'Int
     }
-
 
 {- | Perform ArUco marker detection.
 -}
@@ -391,7 +363,6 @@ detectMarkers dictionary image =
     ids <- fromPtr (peek idsOutPtr)
     return (ArUcoMarkers corners ids <$ guard success)
 
-
 {- | Given a frame, overlay the result of ArUco marker detection.
 -}
 drawDetectedMarkers
@@ -413,7 +384,6 @@ drawDetectedMarkers image ArUcoMarkers{..} =
                         *$(VectorInt * c'idsPtr));
   }|]
 
-
 {- | Given a frame, overlay the result of ChArUco marker detection.
 -}
 drawDetectedCornersCharuco
@@ -433,7 +403,6 @@ drawDetectedCornersCharuco image ChArUcoMarkers{..} =
                                *$(Mat * c'cornersPtr),
                                *$(Mat * c'idsPtr));
   }|]
-
 
 {-| Create a new ChArUco board configuration.
 -}
@@ -466,11 +435,65 @@ createChArUcoBoard squaresX squaresY squareLength markerLength dictionary =
         c'squareLength = realToFrac squareLength
         c'markerLength = realToFrac markerLength
 
-
 {-| The set of predefined ArUco dictionaries known to OpenCV.
 -}
-data PredefinedDictionaryName = DICT_7X7_1000
+data PredefinedDictionaryName
+    = DICT_4X4_50
+    | DICT_4X4_100
+    | DICT_4X4_250
+    | DICT_4X4_1000
+    | DICT_5X5_50
+    | DICT_5X5_100
+    | DICT_5X5_250
+    | DICT_5X5_1000
+    | DICT_6X6_50
+    | DICT_6X6_100
+    | DICT_6X6_250
+    | DICT_6X6_1000
+    | DICT_7X7_50
+    | DICT_7X7_100
+    | DICT_7X7_250
+    | DICT_7X7_1000
+    | DICT_ARUCO_ORIGINAL
+      deriving (Show, Eq)
 
+#num DICT_4X4_50
+#num DICT_4X4_100
+#num DICT_4X4_250
+#num DICT_4X4_1000
+#num DICT_5X5_50
+#num DICT_5X5_100
+#num DICT_5X5_250
+#num DICT_5X5_1000
+#num DICT_6X6_50
+#num DICT_6X6_100
+#num DICT_6X6_250
+#num DICT_6X6_1000
+#num DICT_7X7_50
+#num DICT_7X7_100
+#num DICT_7X7_250
+#num DICT_7X7_1000
+#num DICT_ARUCO_ORIGINAL
+
+marshalPredefinedDictionaryName :: PredefinedDictionaryName -> Int32
+marshalPredefinedDictionaryName = \case
+    DICT_4X4_50         -> c'DICT_4X4_50
+    DICT_4X4_100        -> c'DICT_4X4_100
+    DICT_4X4_250        -> c'DICT_4X4_250
+    DICT_4X4_1000       -> c'DICT_4X4_1000
+    DICT_5X5_50         -> c'DICT_5X5_50
+    DICT_5X5_100        -> c'DICT_5X5_100
+    DICT_5X5_250        -> c'DICT_5X5_250
+    DICT_5X5_1000       -> c'DICT_5X5_1000
+    DICT_6X6_50         -> c'DICT_6X6_50
+    DICT_6X6_100        -> c'DICT_6X6_100
+    DICT_6X6_250        -> c'DICT_6X6_250
+    DICT_6X6_1000       -> c'DICT_6X6_1000
+    DICT_7X7_50         -> c'DICT_7X7_50
+    DICT_7X7_100        -> c'DICT_7X7_100
+    DICT_7X7_250        -> c'DICT_7X7_250
+    DICT_7X7_1000       -> c'DICT_7X7_1000
+    DICT_ARUCO_ORIGINAL -> c'DICT_ARUCO_ORIGINAL
 
 {-| Turn a predefined dictionary name into a ArUco dictionary.
 -}
@@ -479,14 +502,11 @@ getPredefinedDictionary name =
   unsafePerformIO $
   fromPtr $
   [C.block| Ptr_Dictionary * {
-    return
-      new Ptr<Dictionary>(getPredefinedDictionary($(int c'name)));
+    return new Ptr<Dictionary>(getPredefinedDictionary($(int32_t c'name)));
   }|]
   where
-    c'name =
-        case name of
-            DICT_7X7_1000 -> [C.pure| int { DICT_7X7_1000 } |]
-
+    c'name :: Int32
+    c'name = marshalPredefinedDictionaryName name
 
 {-| Draw a ChArUco board, ready to be printed and used for calibration/marke
 detection.
@@ -531,6 +551,7 @@ drawChArUcoBoard charucoBoard width height = unsafePerformIO $ do
     h = toInt32 height
 
 --------------------------------------------------------------------------------
+
 withPtrs
     :: WithPtr a
     => [a] -> (SV.Vector (Ptr (C a)) -> IO b) -> IO b

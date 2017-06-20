@@ -50,6 +50,7 @@ library
         tracking.hpp
         white-ballance.hpp
         xfeatures/surf.hpp
+        aruco-namespace.hpp
 
     c-sources:
         src/OpenCV/Extra/ArUco.cpp

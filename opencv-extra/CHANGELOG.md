@@ -1,3 +1,10 @@
+## HEAD
+
+### Added
+
+- Added all constructors of OpenCV.Extra.ArUco.PredefinedDictionaryName
+
+
 ## [0.0.0.1] - 2017-06-20
 
 ### Changed
