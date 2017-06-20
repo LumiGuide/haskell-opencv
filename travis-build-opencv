@@ -26,7 +26,7 @@ fi
 if [[ ! -e "$HOME/usr/installed-${OPENCV_VERSION}" ]]; then
 TMP=$(mktemp -d)
 if [[ ! -d "opencv-${OPENCV_VERSION}/build" ]]; then
-  curl -sL https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.zip > ${TMP}/opencv.zip
+  curl -sL https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip > ${TMP}/opencv.zip
   unzip -q ${TMP}/opencv.zip
   mkdir opencv-${OPENCV_VERSION}/build
   rm ${TMP}/opencv.zip
@@ -57,4 +57,3 @@ make install && touch $HOME/usr/installed-${OPENCV_VERSION}
 cd ../..
 touch $HOME/fresh-cache
 fi
-
