@@ -1,5 +1,5 @@
 name:          opencv
-version:       0.0.1.0
+version:       0.0.1.1
 homepage:      https://github.com/LumiGuide/haskell-opencv
 bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
 license:       BSD3
@@ -28,6 +28,8 @@ extra-source-files:
     CHANGELOG.md
     data/*.png
     data/*.jpg
+    data/*.mp4
+    data/*.xml
 
 extra-doc-files:
     doc/generated/*.png

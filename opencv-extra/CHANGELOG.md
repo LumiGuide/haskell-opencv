@@ -1,8 +1,12 @@
-## HEAD
+## [0.1.0.0] - 2017-06-23
 
 ### Added
 
-- Added all constructors of OpenCV.Extra.ArUco.PredefinedDictionaryName
+- Added all constructors of `OpenCV.Extra.ArUco.PredefinedDictionaryName`.
+
+### Changed
+
+- Fix test-suite by including missing data files.
 
 
 ## [0.0.0.1] - 2017-06-20
@@ -13,9 +17,11 @@
 - Add source repo to cabal file.
 - Added a Cabal package description.
 
+
 ## 0.0.0.0 - 2017-06-11
 
 - Initial version
 
 
+[0.1.0.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.0.0.1...opencv-extra-0.1.0.0
 [0.0.0.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.0.0.0...opencv-extra-0.0.0.1

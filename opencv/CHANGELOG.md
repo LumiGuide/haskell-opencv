@@ -1,3 +1,10 @@
+## [0.0.1.1] - 2017-06-23
+
+### Changed
+
+- Fix test-suite by including missing data files.
+
+
 ## [0.0.1.0] - 2017-06-20
 
 ### Added
@@ -18,4 +25,5 @@
 - Initial version
 
 
+[0.0.1.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.1.0...opencv-0.0.1.1
 [0.0.1.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.0.0...opencv-0.0.1.0
