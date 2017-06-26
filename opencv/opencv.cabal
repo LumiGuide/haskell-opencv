@@ -48,7 +48,7 @@ flag internal-documentation
     manual: True
 
 custom-setup
-    setup-depends: base, Cabal
+    setup-depends: base, Cabal >= 1.23
 
 library
     hs-source-dirs: src
