@@ -1,3 +1,11 @@
+## To be released
+
+### Changed
+
+- Specify the more accurate `pkgconfig-depends: opencv >= 3.0.0` so that Cabal
+  doesn't use the wrong version..
+
+
 ## [0.0.1.1] - 2017-06-23
 
 ### Changed
