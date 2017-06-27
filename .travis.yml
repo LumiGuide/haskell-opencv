@@ -9,24 +9,15 @@ language: c
 addons:
   apt:
     packages:
-    - libgmp-dev
     - build-essential
     - cmake
     - git
-    - libgtk2.0-dev
     - pkg-config
-    - libavcodec-dev
-    - libavformat-dev
-    - libswscale-dev
-    - python-dev
-    - python-numpy
-    - libtbb2
-    - libtbb-dev
+    - libgmp-dev
     - libjpeg-dev
     - libpng-dev
     - libtiff-dev
     - libjasper-dev
-    - libdc1394-22-dev
 
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.

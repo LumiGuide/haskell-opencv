@@ -36,22 +36,128 @@ if [[ ! -d "opencv_contrib-${OPENCV_VERSION}/modules" ]]; then
    curl -sL https://github.com/opencv/opencv_contrib/archive/${OPENCV_VERSION}.zip > ${TMP}/opencv-contrib.zip
    unzip -q ${TMP}/opencv-contrib.zip
    rm ${TMP}/opencv-contrib.zip
+
+   # Fix the freetype module. See: https://github.com/opencv/opencv_contrib/pull/926
+   curl -sL https://github.com/opencv/opencv_contrib/commit/abf44fcccfe2f281b7442dac243e37b7f436d961.patch > \
+     path -d opencv_contrib-${OPENCV_VERSION} -p1
 fi
 rmdir ${TMP}
 
 cd opencv-${OPENCV_VERSION}/build
-cmake -D WITH_IPP=${GRAPHICAL} \
+cmake -D CMAKE_INSTALL_PREFIX=$HOME/usr \
+      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${OPENCV_VERSION}/modules \
+      -D WITH_IPP=${GRAPHICAL} \
       -D WITH_OPENGL=${GRAPHICAL} \
       -D WITH_QT=${GRAPHICAL} \
+      -D WITH_JPEG=ON \
+      -D WITH_JASPER=ON \
+      -D WITH_PNG=ON \
+      -D WITH_TIFF=ON \
+      -D WITH_1394=OFF \
+      -D WITH_AVFOUNDATION=OFF \
+      -D WITH_CARBON=OFF \
+      -D WITH_CAROTENE=OFF \
+      -D WITH_VTK=OFF \
+      -D WITH_CUDA=OFF \
+      -D WITH_CUFFT=OFF \
+      -D WITH_CUBLAS=OFF \
+      -D WITH_NVCUVID=OFF \
+      -D WITH_EIGEN=OFF \
+      -D WITH_VFW=OFF \
+      -D WITH_FFMPEG=OFF \
+      -D WITH_GSTREAMER=OFF \
+      -D WITH_GSTREAMER_0_10=OFF \
+      -D WITH_GTK=OFF \
+      -D WITH_GTK_2_X=OFF \
+      -D WITH_WEBP=OFF \
+      -D WITH_OPENEXR=OFF \
+      -D WITH_OPENVX=OFF \
+      -D WITH_OPENNI=OFF \
+      -D WITH_OPENNI2=OFF \
+      -D WITH_GDCM=OFF \
+      -D WITH_PVAPI=OFF \
+      -D WITH_GIGEAPI=OFF \
+      -D WITH_ARAVIS=OFF \
+      -D WITH_WIN32UI=OFF \
+      -D WITH_QUICKTIME=OFF \
+      -D WITH_QTKIT=OFF \
+      -D WITH_TBB=OFF \
+      -D WITH_OPENMP=OFF \
+      -D WITH_CSTRIPES=OFF \
+      -D WITH_PTHREADS_PF=OFF \
+      -D WITH_UNICAP=OFF \
+      -D WITH_V4L=OFF \
+      -D WITH_LIBV4L=OFF \
+      -D WITH_DSHOW=OFF \
+      -D WITH_MSMF=OFF \
+      -D WITH_XIMEA=OFF \
+      -D WITH_XINE=OFF \
+      -D WITH_CLP=OFF \
+      -D WITH_OPENCL=OFF \
+      -D WITH_OPENCL_SVM=OFF \
+      -D WITH_OPENCLAMDFFT=OFF \
+      -D WITH_OPENCLAMDBLAS=OFF \
+      -D WITH_DIRECTX=OFF \
+      -D WITH_INTELPERC=OFF \
+      -D WITH_IPP_A=OFF \
+      -D WITH_MATLAB=OFF \
+      -D WITH_VA=OFF \
+      -D WITH_VA_INTEL=OFF \
+      -D WITH_GDAL=OFF \
+      -D WITH_GPHOTO2=OFF \
+      -D WITH_LAPACK=OFF \
+      -D BUILD_opencv_apps=OFF \
+      -D BUILD_ANDROID_EXAMPLES=OFF \
+      -D BUILD_DOCS=OFF \
       -D BUILD_EXAMPLES=OFF \
+      -D BUILD_PACKAGE=OFF \
+      -D BUILD_PERF_TESTS=OFF \
       -D BUILD_TESTS=OFF \
-      -D BUILD_PERF_TESTS=OFF  \
+      -D BUILD_WITH_DEBUG_INFO=OFF \
+      -D BUILD_WITH_STATIC_CRT=OFF \
+      -D BUILD_WITH_DYNAMIC_IPP=OFF \
+      -D BUILD_FAT_JAVA_LIB=OFF \
+      -D BUILD_ANDROID_SERVICE=OFF \
+      -D BUILD_CUDA_STUBS=OFF \
+      -D BUILD_PROTOBUF=OFF \
       -D BUILD_opencv_java=OFF \
       -D BUILD_opencv_python=OFF \
       -D BUILD_opencv_python2=OFF \
       -D BUILD_opencv_python3=OFF \
-      -D CMAKE_INSTALL_PREFIX=$HOME/usr \
-      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${OPENCV_VERSION}/modules ..
+      ..
+      # -D BUILD_opencv_aruco=ON \
+      # -D BUILD_opencv_bgsegm=ON \
+      # -D BUILD_opencv_bioinspired=OFF \
+      # -D BUILD_opencv_ccalib=OFF \
+      # -D BUILD_opencv_cnn_3dobj=OFF \
+      # -D BUILD_opencv_contrib_world=OFF \
+      # -D BUILD_opencv_cvv=OFF \
+      # -D BUILD_opencv_datasets=ON \
+      # -D BUILD_opencv_dnn=ON \
+      # -D BUILD_opencv_dnns_easily_fooled=OFF \
+      # -D BUILD_opencv_dpm=OFF \
+      # -D BUILD_opencv_face=OFF \
+      # -D BUILD_opencv_freetype=OFF \
+      # -D BUILD_opencv_fuzzy=OFF \
+      # -D BUILD_opencv_hdf=OFF \
+      # -D BUILD_opencv_line_descriptor=OFF \
+      # -D BUILD_opencv_matlab=OFF \
+      # -D BUILD_opencv_optflow=OFF \
+      # -D BUILD_opencv_phase_unwrapping=OFF \
+      # -D BUILD_opencv_plot=ON \
+      # -D BUILD_opencv_reg=OFF \
+      # -D BUILD_opencv_rgbd=OFF \
+      # -D BUILD_opencv_saliency=OFF \
+      # -D BUILD_opencv_sfm=OFF \
+      # -D BUILD_opencv_stereo=OFF \
+      # -D BUILD_opencv_structured_light=OFF \
+      # -D BUILD_opencv_surface_matching=OFF \
+      # -D BUILD_opencv_text=OFF \
+      # -D BUILD_opencv_tracking=ON \
+      # -D BUILD_opencv_xfeatures2d=ON \
+      # -D BUILD_opencv_ximgproc=OFF \
+      # -D BUILD_opencv_xobjdetect=OFF \
+      # -D BUILD_opencv_xphoto=ON \
 make -j8
 make install && touch $HOME/usr/installed-${OPENCV_VERSION}
 cd ../..
