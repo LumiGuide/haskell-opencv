@@ -48,6 +48,7 @@ C.include "opencv2/tracking.hpp"
 C.include "tracking.hpp"
 
 C.using "namespace cv"
+
 --------------------------------------------------------------------------------
 
 data TrackerType
@@ -90,9 +91,9 @@ newTracker trackerType =
   unsafePrimToPrim $ fromPtr $
     withCString (show trackerType) $ \c'trackerType ->
     [CU.block|Ptr_Tracker * {
-      cv::Ptr<cv::Tracker> tacker =
+      cv::Ptr<cv::Tracker> tracker =
         cv::Tracker::create ( cv::String($(const char * c'trackerType)));
-      return new cv::Ptr<cv::Tracker>(tacker);
+      return new cv::Ptr<cv::Tracker>(tracker);
     }|]
 
 initTracker
