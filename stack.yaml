@@ -4,5 +4,7 @@ packages:
 - opencv-examples/
 - opencv-extra/
 - opencv-extra-examples/
+extra-deps:
+- repa-3.4.1.3
 flags: {}
 allow-newer: true
