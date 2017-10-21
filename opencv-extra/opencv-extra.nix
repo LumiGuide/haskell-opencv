@@ -2,6 +2,7 @@
 , runCommand
 , stdenv
 , lib
+, pkgconfig
 
 , opencv3
 
@@ -69,6 +70,8 @@ mkDerivation {
     haskell-src-exts
     JuicyPixels
   ];
+
+  buildDepends = [ pkgconfig ];
 
   libraryPkgconfigDepends = [ opencv3 ];
 

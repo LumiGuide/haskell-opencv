@@ -2,6 +2,7 @@
 , runCommand
 , stdenv
 , lib
+, pkgconfig
 
 , opencv3
 
@@ -99,6 +100,8 @@ mkDerivation ({
 
     criterion
   ];
+
+  buildDepends = [ pkgconfig ];
 
   libraryPkgconfigDepends = [ opencv3 ];
 

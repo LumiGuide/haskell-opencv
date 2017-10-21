@@ -21,7 +21,7 @@ mkDerivation {
         "^src/.*"
         "^opencv-extra-examples.cabal$"
       ];
-      data = ../../data;
+      data = ../data;
       LICENSE = ../LICENSE;
     } ''
       mkdir -p $out

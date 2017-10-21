@@ -1,10 +1,8 @@
 #!/bin/bash
 set -eux -o pipefail
 
-#OPENCV_VERSION=3.1.0
-OPENCV_VERSION=${OPENCV_VERSION:-3.2.0}
+OPENCV_VERSION=${OPENCV_VERSION:-3.3.0}
 
-#GRAPHICAL=ON
 GRAPHICAL=${GRAPHICAL:-OFF}
 
 # OpenCV looks for libjpeg in /usr/lib/libjpeg.so, for some reason. However,

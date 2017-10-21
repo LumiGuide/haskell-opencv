@@ -14,12 +14,13 @@
       haskellPackages = pkgs.haskellPackages.override haskellOverrides;
 
       opencv3 = pkgs.opencv3.override {
-        enableIpp       = !osx;
+        enableIpp       = true;
         enableContrib   = true;
         enableGtk2      = true;
         enableFfmpeg    = !osx;
         enableGStreamer = true;
         enableEigen     = true;
+        enableDocs      = true;
       };
     };
 }
