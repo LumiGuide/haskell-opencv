@@ -34,6 +34,7 @@ module OpenCV.ImgProc.ImgFiltering
     ( MorphShape(..)
     , MorphOperation(..)
 
+    , bilateralFilter
     , laplacian
     , medianBlur
     , erode
@@ -131,6 +132,84 @@ marshalMorphOperation = \case
 --------------------------------------------------------------------------------
 -- Image Filtering
 --------------------------------------------------------------------------------
+
+{- | Calculates the bilateralFilter of an image
+
+The function applies bilateral filtering to the input image, as described in
+<http://www.dai.ed.ac.uk/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html Bilateral_Filtering>
+bilateralFilter can reduce unwanted noise very well while keeping edges fairly sharp. However, it is very slow compared to most filters.
+Example:
+
+@
+bilateralFilterImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+bilateralFilterImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \imgM -> do
+      birdsFiltered <- pureExcept $ bilateralFilter (Just 9) Nothing Nothing Nothing birds_512x341
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) birdsFiltered Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/bilateralFilterImg.png bilateralFilterImg>>
+
+<https://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#bilateralfilter OpenCV Sphinx doc>
+-}
+bilateralFilter
+    :: ( depth    `In` '[Word8, Float, Double]
+       , channels `In` '[1, 3]
+       -- , Length shape <= 2
+       )
+    => Maybe Int32
+       -- ^ Diameter of each pixel neighborhood that is used during filtering.
+       -- If it is non-positive, it is computed from sigmaSpace. Default value is 5.
+    -> Maybe Double
+       -- ^ Filter sigma in the color space. A larger value of the parameter means that farther colors within
+       -- the pixel neighborhood (see sigmaSpace) will be mixed together, resulting in larger areas of semi-equal color.
+       -- Default value is 50
+    -> Maybe Double
+       -- ^ Filter sigma in the coordinate space. A larger value of the parameter means that farther pixels will
+       -- influence each other as long as their colors are close enough (see sigmaColor ). When d>0, it specifies
+       -- the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace.
+       -- Default value is 50
+    -> Maybe BorderMode
+       -- ^ Pixel extrapolation method. Default value is BorderReflect101
+    -> Mat shape ('S channels) ('S depth)
+    -> CvExcept (Mat shape ('S channels) ('S depth))
+bilateralFilter d sigmaColor sigmaSpace borderType src = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr src $ \srcPtr ->
+      withPtr dst $ \dstPtr ->
+      [cvExcept|
+        cv::bilateralFilter
+        ( *$(Mat *   srcPtr      )
+        , *$(Mat *   dstPtr      )
+        ,  $(int32_t c'd         )
+        ,  $(double  c'sigmaColor)
+        ,  $(double  c'sigmaSpace)
+        ,  $(int32_t c'borderType)
+        );
+      |]
+  where
+    c'd = fromMaybe 5 d
+    c'sigmaColor = maybe 50 realToFrac sigmaColor
+    c'sigmaSpace = maybe 50 realToFrac sigmaSpace
+    c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType
+
+
 
 {- | Calculates the Laplacian of an image
 
