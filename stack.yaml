@@ -1,4 +1,4 @@
-resolver: lts-9.9
+resolver: lts-9.10
 packages:
 - opencv/
 - opencv-examples/
@@ -6,3 +6,6 @@ packages:
 - opencv-extra-examples/
 flags: {}
 allow-newer: true
+
+extra-deps:
+- repa-3.4.1.3

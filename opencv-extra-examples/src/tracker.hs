@@ -25,12 +25,6 @@ import Control.Monad.Trans.Class
 
 import System.IO.Unsafe
 
-main :: IO ()
-main = putStrLn $
-  "FIXME: this executable depends on the module OpenCV.Extra.Tracking which " ++
-  "doesn't yet build with opencv-3.3.0. So we disable it for now."
-
-{-
 class LoopEnum a where
   next :: a -> a
 
@@ -99,4 +93,3 @@ main = do
 
         -- Out of frames, stop looping.
         _ -> pure ()
--}

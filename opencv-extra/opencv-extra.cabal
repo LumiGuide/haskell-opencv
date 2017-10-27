@@ -51,7 +51,7 @@ library
     install-includes:
         aruco.hpp
         bgsegm.hpp
-        -- tracking.hpp
+        tracking.hpp
         white-ballance.hpp
         xfeatures/surf.hpp
         aruco-namespace.hpp
@@ -59,7 +59,7 @@ library
     c-sources:
         src/OpenCV/Extra/ArUco.cpp
         src/OpenCV/Extra/Bgsegm.cpp
-        -- src/OpenCV/Extra/Tracking.cpp
+        src/OpenCV/Extra/Tracking.cpp
         src/OpenCV/Extra/XPhoto.cpp
         src/OpenCV/Extra/XPhoto/WhiteBalancer.cpp
         src/OpenCV/Extra/XFeatures2d.cpp
@@ -88,10 +88,7 @@ library
         OpenCV.Extra.ArUco
         OpenCV.Extra.Bgsegm
         OpenCV.Extra.XFeatures2d
-
-        -- Doesn't build with opencv-3.3.0 anymore
-        -- OpenCV.Extra.Tracking
-
+        OpenCV.Extra.Tracking
         OpenCV.Extra.XPhoto
         OpenCV.Extra.XPhoto.WhiteBalancer
 

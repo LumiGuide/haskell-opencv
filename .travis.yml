@@ -31,7 +31,7 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-- ARGS="--jobs 2 --resolver lts-9.9" CACHE_NAME=LTS_9_9_CV_3_3_0
+- ARGS="--jobs 2 --resolver lts-9.10" CACHE_NAME=LTS_9_10_CV_3_3_1
 
 before_install:
 # Install OpenCV 3

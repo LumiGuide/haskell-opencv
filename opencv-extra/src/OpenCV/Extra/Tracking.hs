@@ -57,6 +57,7 @@ data TrackerType
   | KCF         -- ^
   | MEDIANFLOW  -- ^
   | TLD         -- ^
+  | GOTURN      -- ^ https://github.com/opencv/opencv_extra/tree/c4219d5eb3105ed8e634278fad312a1a8d2c182d/testdata/tracking
     deriving (Eq, Show, Enum, Bounded)
 
 data TrackerFeatureType
@@ -87,14 +88,13 @@ newTracker
   => TrackerType
      -- ^ Name
   -> m (Tracker (PrimState m))
-newTracker trackerType =
-  unsafePrimToPrim $ fromPtr $
-    withCString (show trackerType) $ \c'trackerType ->
-    [CU.block|Ptr_Tracker * {
-      cv::Ptr<cv::Tracker> tracker =
-        cv::Tracker::create ( cv::String($(const char * c'trackerType)));
-      return new cv::Ptr<cv::Tracker>(tracker);
-    }|]
+newTracker tType = unsafePrimToPrim $ fromPtr $ case tType of
+  BOOSTING   -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerBoosting::create());}|]
+  MIL        -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerMIL::create());}|]
+  KCF        -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerKCF::create());}|]
+  MEDIANFLOW -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerMedianFlow::create());}|]
+  TLD        -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerTLD::create());}|]
+  GOTURN     -> [CU.block|Ptr_Tracker * {return new cv::Ptr<cv::Tracker>(cv::TrackerGOTURN::create());}|]
 
 initTracker
   :: (PrimMonad m, IsRect rect C.CDouble)
@@ -185,16 +185,11 @@ instance FromPtr (MultiTrackerAlt s) where
 
 newMultiTracker
     :: (PrimMonad m)
-    => TrackerType
-       -- ^ Name
-    -> m (MultiTracker (PrimState m))
-newMultiTracker trackerType =
+    => m (MultiTracker (PrimState m))
+newMultiTracker =
   unsafePrimToPrim $ fromPtr $
-    withCString (show trackerType) $ \c'trackerType ->
     [CU.block|Ptr_MultiTracker * {
-    cv::Ptr<cv::MultiTracker> mtracker =
-      new cv::MultiTracker ( cv::String($(const char * c'trackerType)));
-      return new cv::Ptr<cv::MultiTracker>(mtracker);
+      return new cv::Ptr<cv::MultiTracker>(new cv::MultiTracker ());
     }|]
 
 --------------------------------------------------------------------------------
@@ -211,5 +206,4 @@ newTrackerFeature trackerFeatureType =
         cv::Ptr<cv::TrackerFeature> ftracker =
           cv::TrackerFeature::create ( cv::String($(const char * c'trackerFeatureType)));
           return new cv::Ptr<cv::TrackerFeature>(ftracker);
-
     }|]
