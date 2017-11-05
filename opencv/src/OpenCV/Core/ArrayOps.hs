@@ -51,6 +51,7 @@ module OpenCV.Core.ArrayOps
 
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
+import "base" Foreign.C.Types ( CDouble )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
 import "base" Foreign.Ptr ( Ptr, castPtr )
@@ -1001,7 +1002,7 @@ vconcat mats = unsafeWrapException $ do
     c'numMats = fromIntegral $ V.length mats
 
 
-{-| Performs the perspective matrix transformation of vectors. 
+{-| Performs the perspective matrix transformation of vectors.
 
     TODO: Modify this function for accept 3D points
     TODO: Generalize return type to
@@ -1013,7 +1014,7 @@ perspectiveTransform
     :: (IsPoint2 point2 CDouble)
     => V.Vector (point2 CDouble)
     -> Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
-    -> V.Vector (Point2d)
+    -> V.Vector Point2d
 perspectiveTransform srcPoints transformationMat = unsafePerformIO $
     withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
     withPtr transformationMat $ \tmPtr ->
