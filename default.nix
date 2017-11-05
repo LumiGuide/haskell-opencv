@@ -1,1 +1,3 @@
-import (import ./nixpkgs.nix) {config = import ./nixpkgs-config.nix;}
+import (import ./nixpkgs.nix) {
+  overlays = [ (import ./overlay.nix) ];
+}
