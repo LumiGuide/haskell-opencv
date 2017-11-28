@@ -1,5 +1,5 @@
 {-# language CPP #-}
-{-# LANGUAGE RankNTypes #-}
+{-# language RankNTypes #-}
 {-# language QuasiQuotes #-}
 {-# language ConstraintKinds #-}
 {-# language TemplateHaskell #-}
@@ -42,6 +42,7 @@ module OpenCV.Internal.Core.Types.Mat
     , createMat
     , withMatM
     , cloneMatM
+    , deallocateMatM
 
       -- * Meta information
     , MatInfo(..)
@@ -68,6 +69,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
+import "base" Control.Exception ( throwIO )
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
 import "base" Data.Maybe
@@ -454,6 +456,19 @@ cloneMatM :: (PrimMonad m)
           -> m (Mat shape channels depth)
 cloneMatM = unsafePrimToPrim . cloneMatIO
 
+-- | Deallocates the matrix data.
+--
+-- Highly unsafe. Subsequent operations that need the data will
+-- generate exceptions (or segfaults).
+deallocateMatM
+    :: (PrimMonad m)
+    => Mut (Mat shape channels depth) (PrimState m)
+    -> m ()
+deallocateMatM mutMat = unsafePrimToPrim $ do
+    e <- handleCvException (pure ()) $
+           withPtr mutMat $ \mutMatPtr ->
+             [cvExcept| $(Mat * mutMatPtr)->deallocate(); |]
+    either throwIO pure e
 
 --------------------------------------------------------------------------------
 -- Meta information
@@ -464,8 +479,7 @@ data MatInfo
      { miShape    :: ![Int32]
      , miDepth    :: !Depth
      , miChannels :: !Int32
-     }
-     deriving (Show, Eq)
+     } deriving (Show, Eq)
 
 matInfo :: Mat shape channels depth -> MatInfo
 matInfo mat = unsafePerformIO $

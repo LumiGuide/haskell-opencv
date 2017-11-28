@@ -19,6 +19,7 @@ import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM )
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
@@ -68,6 +69,7 @@ main = defaultMain $ testGroup "opencv"
           ]
         , testGroup "Mat"
           [ HU.testCase "emptyMat" $ testMatType emptyMat
+          , HU.testCase "deallocate" $ testDeallocate
           , testGroup "matInfo"
             [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
             , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
@@ -234,6 +236,12 @@ testMatType mat =
     case typeCheckMat mat of
       [] -> pure ()
       errors -> assertFailure $ show errors
+
+testDeallocate :: HU.Assertion
+testDeallocate = do
+    mat <- loadLambda
+    mutMat <- thaw mat
+    deallocateMatM mutMat
 
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
