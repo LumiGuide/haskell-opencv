@@ -10,7 +10,13 @@ let
   };
   osx = builtins.currentSystem == "x86_64-darwin";
 in  {
-  haskellPackages = previous.haskellPackages.override haskellOverrides;
+  haskellPackages = previous.haskell.packages.ghc802.override haskellOverrides;
+  haskell = previous.haskell // {
+    packages = previous.haskell.packages // {
+      ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
+      ghc822 = previous.haskell.packages.ghc822.override haskellOverrides;
+    };
+  };
 
   opencv3 = previous.opencv3.override {
     enableIpp       = true;
