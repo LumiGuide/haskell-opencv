@@ -1,23 +1,21 @@
-{ rev, sha256 }:
+{ rev
+, sha256
+, owner ? "NixOS"
+, repo  ? "nixpkgs"
+}:
+
+let url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
+in
 
 if 0 <= builtins.compareVersions builtins.nixVersion "1.12"
-then
-
-builtins.fetchTarball {
-  url = "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
-  inherit sha256;
-}
-
+then builtins.fetchTarball { inherit url sha256; }
 else
 
 # `builtins.fetchTarball` only accepts a `sha256` argument in Nix version 1.12 or later
 with rec {
   system = builtins.currentSystem;
 
-  tarball = import <nix/fetchurl.nix> {
-    url = "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
-    inherit sha256;
-  };
+  tarball = import <nix/fetchurl.nix> { inherit url sha256; };
 
   builtin-paths = import <nix/config.nix>;
 
