@@ -25,6 +25,6 @@ in  {
     enableFfmpeg    = !osx;
     enableGStreamer = true;
     enableEigen     = true;
-    enableDocs      = true;
+    # enableDocs      = true;
   };
 }

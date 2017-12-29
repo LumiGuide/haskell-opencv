@@ -13,6 +13,11 @@ let
   pkgs = import nixpkgs {};
 
   patches = [
+    # # opencv: 3.3.0 -> 3.3.1
+    # (pkgs.fetchpatch {
+    #   url = "https://github.com/NixOS/nixpkgs/commit/929d3d43e2252299a790cd9e53f7154db8848bd6.patch";
+    #   sha256 = "08vlx44ndfl0l321qd0302p2fy9qf7qma0ach1iwm5vqc8jhlgcr";
+    # })
   ];
 
 in if builtins.length patches == 0

@@ -19,6 +19,8 @@ module OpenCV.Internal.Core.Types.Mat
     ( -- * Matrix
       Mat(..)
 
+    , getNrOfMats
+
     , typeCheckMat
     , relaxMat
     , coerceMat
@@ -72,6 +74,8 @@ module OpenCV.Internal.Core.Types.Mat
 import "base" Control.Exception ( throwIO )
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
+import "base" Data.IORef
+-- import "base" Data.Functor ( void )
 import "base" Data.Maybe
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
@@ -127,8 +131,33 @@ instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
 instance FromPtr (Mat shape channels depth) where
-    fromPtr = objFromPtr Mat $ \ptr ->
-                [CU.exp| void { delete $(Mat * ptr) }|]
+    fromPtr mkObjPtr =
+        objFromPtr Mat finalize create
+      where
+        finalize ptr = do
+            decrementMatCounter
+            [CU.exp| void { delete $(Mat * ptr) }|]
+
+        create = do
+            incrementMatCounter
+            mkObjPtr
+
+matCounterRef :: IORef Integer
+matCounterRef =  unsafePerformIO (newIORef 0)
+{-# NOINLINE matCounterRef #-}
+
+incrementMatCounter :: IO ()
+incrementMatCounter = do
+    n <- atomicModifyIORef' matCounterRef $ \x -> let z = x + 1 in (z,z)
+    putStrLn $ "inc " ++ show n
+
+decrementMatCounter :: IO ()
+decrementMatCounter = do
+    n <- atomicModifyIORef' matCounterRef $ \x -> let z = x - 1 in (z,z)
+    putStrLn $ "dec " ++ show n
+
+getNrOfMats :: IO Integer
+getNrOfMats = readIORef matCounterRef
 
 instance FreezeThaw (Mat shape channels depth) where
     freeze = cloneMatM . unMut
