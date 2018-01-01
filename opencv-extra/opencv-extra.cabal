@@ -57,7 +57,7 @@ library
         aruco-namespace.hpp
 
     cc-options: -Wall -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
@@ -113,7 +113,7 @@ test-suite doc-images-opencv-extra
         ExampleExtractor
         Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
-    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     cpp-options: -DHAVE_OPENCV_EXTRA
     build-depends:
         base              >= 4.8 && < 5

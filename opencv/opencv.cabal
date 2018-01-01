@@ -63,7 +63,7 @@ library
         video_motion_analysis.hpp
 
     cc-options: -Wall -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
@@ -187,7 +187,7 @@ test-suite doc-images-opencv
         ExampleExtractor
         Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
-    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     build-depends:
         base              >= 4.8 && < 5
       , bytestring        >= 0.10.6
@@ -222,7 +222,7 @@ test-suite test-opencv
     hs-source-dirs:   test
     main-is:          test.hs
     default-language: Haskell2010
-    ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options:      -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     build-depends:
         base              >= 4.8 && < 5
       , bytestring        >= 0.10.6
@@ -250,7 +250,7 @@ benchmark bench-opencv
     hs-source-dirs:   bench
     main-is:          bench.hs
     default-language: Haskell2010
-    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -O2 -rtsopts
+    ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     build-depends:
         base              >= 4.8 && < 5
       , bytestring        >= 0.10.6
