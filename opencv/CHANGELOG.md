@@ -1,3 +1,10 @@
+## [0.0.2.1] - 2018-01-01
+
+### Changed
+
+- opencv now only builds on GHC >= 8.2.
+
+
 ## [0.0.2.0] - 2017-11-06
 
 - Support OpenCV-3.3.x
@@ -42,6 +49,7 @@
 - Initial version
 
 
+[0.0.2.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.2.0...opencv-0.0.2.1
 [0.0.2.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.1.1...opencv-0.0.2.0
 [0.0.1.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.1.0...opencv-0.0.1.1
 [0.0.1.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-0.0.0.0...opencv-0.0.1.0

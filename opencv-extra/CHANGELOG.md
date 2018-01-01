@@ -1,3 +1,10 @@
+## [0.2.0.1] - 2018-01-01
+
+### Changed
+
+- opencv-extra now only builds on GHC >= 8.2.
+
+
 ## [0.2.0.0] - 2017-11-06
 
 - Support OpenCV-3.3.x
@@ -36,6 +43,7 @@
 - Initial version
 
 
+[0.2.0.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.2.0.0...opencv-extra-0.2.0.1
 [0.2.0.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.1.0.0...opencv-extra-0.2.0.0
 [0.1.0.0]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.0.0.1...opencv-extra-0.1.0.0
 [0.0.0.1]: https://github.com/LumiGuide/haskell-opencv/compare/opencv-extra-0.0.0.0...opencv-extra-0.0.0.1

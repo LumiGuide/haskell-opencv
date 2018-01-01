@@ -1,5 +1,5 @@
 name:          opencv-extra
-version:       0.2.0.0
+version:       0.2.0.1
 homepage:      https://github.com/LumiGuide/haskell-opencv
 bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
 license:       BSD3
