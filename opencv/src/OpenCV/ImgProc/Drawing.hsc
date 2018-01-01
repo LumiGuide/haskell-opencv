@@ -813,7 +813,7 @@ drawContours contours color drawMode img = unsafePrimToPrim $
     [C.exp|void {
       int32_t *contourLengths = $(int32_t * contourLengthsPtr);
       Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
-      std::vector<std::vector<cv::Point>> contours;
+      std::vector< std::vector<cv::Point> > contours;
       int32_t numContours = $(int32_t numContours);
 
       int k = 0;

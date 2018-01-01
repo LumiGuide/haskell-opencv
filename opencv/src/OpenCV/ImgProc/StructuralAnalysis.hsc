@@ -207,7 +207,7 @@ findContours mode method src = unsafePrimToPrim $
   alloca $ \(hierarchyPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
   alloca $ \(numContoursPtr :: Ptr Int32) -> mask_ $ do
     [C.block| void {
-      std::vector<std::vector<cv::Point>> contours;
+      std::vector< std::vector<cv::Point> > contours;
       std::vector<cv::Vec4i> hierarchy;
       cv::findContours(
         *$(Mat * srcPtr),
@@ -231,7 +231,7 @@ findContours mode method src = unsafePrimToPrim $
       int32_t * contourLengthsPtr = new int32_t [contours.size()];
       *contourLengthsPtrPtr = contourLengthsPtr;
 
-      for (std::vector<std::vector<cv::Point>>::size_type i = 0; i < contours.size(); i++) {
+      for (std::vector< std::vector<cv::Point> >::size_type i = 0; i < contours.size(); i++) {
         std::vector<cv::Point> & contourPoints = contours[i];
         cv::Vec4i hierarchyInfo = hierarchy[i];
 
