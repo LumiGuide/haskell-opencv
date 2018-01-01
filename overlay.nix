@@ -10,7 +10,7 @@ let
   };
   osx = builtins.currentSystem == "x86_64-darwin";
 in  {
-  haskellPackages = previous.haskell.packages.ghc802.override haskellOverrides;
+  haskellPackages = previous.haskellPackages.override haskellOverrides;
   haskell = previous.haskell // {
     packages = previous.haskell.packages // {
       ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
