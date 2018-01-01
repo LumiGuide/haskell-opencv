@@ -13,7 +13,7 @@ build:
 .PHONY: clean
 clean:
 	cabal clean && \
-	find doc/generated -name "*.png" -type f -delete
+	find doc/generated -name "*.png" -o -name "*.gif" -type f -delete
 
 .PHONY: test
 test:
