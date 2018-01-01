@@ -62,39 +62,6 @@ library
         termcriteria.hpp
         video_motion_analysis.hpp
 
-    c-sources:
-        src/OpenCV/Calib3d.cpp
-        src/OpenCV/Core/ArrayOps.cpp
-        src/OpenCV/Core/Types.cpp
-        src/OpenCV/Core/Types/Mat.cpp
-        src/OpenCV/Core/Types/Mat/Repa.cpp
-        src/OpenCV/Core/Types/Matx.cpp
-        src/OpenCV/Core/Types/Point.cpp
-        src/OpenCV/Core/Types/Rect.cpp
-        src/OpenCV/Core/Types/Size.cpp
-        src/OpenCV/Core/Types/Vec.cpp
-        src/OpenCV/Features2d.cpp
-        src/OpenCV/HighGui.cpp
-        src/OpenCV/ImgCodecs.cpp
-        src/OpenCV/ImgProc/ColorMaps.cpp
-        src/OpenCV/ImgProc/Drawing.cpp
-        src/OpenCV/ImgProc/FeatureDetection.cpp
-        src/OpenCV/ImgProc/GeometricImgTransform.cpp
-        src/OpenCV/ImgProc/ImgFiltering.cpp
-        src/OpenCV/ImgProc/MiscImgTransform.cpp
-        src/OpenCV/ImgProc/ObjectDetection.cpp
-        src/OpenCV/ImgProc/StructuralAnalysis.cpp
-        src/OpenCV/ImgProc/CascadeClassifier.cpp
-        src/OpenCV/Internal/Core/Types.cpp
-        src/OpenCV/Internal/Core/Types/Mat.cpp
-        src/OpenCV/Internal/Core/Types/Mat/ToFrom.cpp
-        src/OpenCV/Internal/Exception.cpp
-        src/OpenCV/Photo.cpp
-        src/OpenCV/Video.cpp
-        src/OpenCV/VideoIO/VideoCapture.cpp
-        src/OpenCV/VideoIO/VideoWriter.cpp
-        src/OpenCV/Video/MotionAnalysis.cpp
-
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -O2
     if flag(internal-documentation)
@@ -109,8 +76,8 @@ library
       , containers        >= 0.5.6.2
       , data-default      >= 0.7.1.1
       , deepseq           >= 1.4.1.1
-      , inline-c          >= 0.5.5.5
-      , inline-c-cpp      >= 0.1
+      , inline-c          >= 0.6
+      , inline-c-cpp      >= 0.2.1
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , primitive         >= 0.6.1

@@ -19,8 +19,7 @@ test:
 .PHONY: clean
 clean:
 	cabal clean && \
-	find doc/generated -name "*.png" -type f -delete && \
-	find src           -name "*.cpp" -type f -delete
+	find doc/generated -name "*.png" -type f -delete
 
 .PHONY: doc
 doc:
