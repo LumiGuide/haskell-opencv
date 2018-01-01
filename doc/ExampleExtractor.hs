@@ -278,9 +278,7 @@ mkRenderExampleImages renderTargets = [d|
             else VarE render `AppE` fp `AppE` sym
 
 findHaskellPaths :: FilePath -> IO [FilePath]
-findHaskellPaths srcDir = do
-  (paths, _) <- G.globDir [G.compile "**/*.hs", G.compile "**/*.hsc"] srcDir
-  pure $ concat paths
+findHaskellPaths = fmap concat . G.globDir [G.compile "**/*.hs", G.compile "**/*.hsc"]
 
 haddockToHaskell :: T.Text -> T.Text
 haddockToHaskell =
