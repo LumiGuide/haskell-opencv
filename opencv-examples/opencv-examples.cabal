@@ -24,7 +24,7 @@ library
     exposed-modules:
       OpenCV.Example
     build-depends:
-        base             >= 4.8 && < 4.10
+        base             >= 4.8 && < 5
       , opencv
       , temporary        >= 1.2
       , bytestring       >= 0.10.6
@@ -40,7 +40,7 @@ executable highgui
     ghc-options: -Wall -O2
 
     build-depends:
-        base       >= 4.8 && < 4.10
+        base       >= 4.8 && < 5
       , bytestring >= 0.10.6
       , opencv
 
@@ -52,7 +52,7 @@ executable videoio-bilateral
     ghc-options: -Wall -O2
 
     build-depends:
-        base >= 4.8 && < 4.10
+        base >= 4.8 && < 5
       , opencv
       , opencv-examples
 
@@ -64,7 +64,7 @@ executable videoio
     ghc-options: -Wall -O2
 
     build-depends:
-        base >= 4.8 && < 4.10
+        base >= 4.8 && < 5
       , opencv
 
     default-language: Haskell2010
@@ -75,7 +75,7 @@ executable videoio-noise-multi
     ghc-options: -Wall -O2
 
     build-depends:
-        base   >= 4.8 && < 4.10
+        base   >= 4.8 && < 5
       , opencv
       , opencv-examples
       , vector >= 0.11
@@ -88,7 +88,7 @@ executable videoio-decolor
     ghc-options: -Wall -O2
 
     build-depends:
-        base >= 4.8 && < 4.10
+        base >= 4.8 && < 5
       , opencv
       , opencv-examples
 
@@ -100,7 +100,7 @@ executable videoio-background-sub
     ghc-options: -Wall -O2
 
     build-depends:
-        base >= 4.8 && < 4.10
+        base >= 4.8 && < 5
       , opencv
       , opencv-examples
 
@@ -112,7 +112,7 @@ executable face-detect
     ghc-options: -Wall -O2
 
     build-depends:
-        base         >= 4.8 && < 4.10
+        base         >= 4.8 && < 5
       , opencv
       , opencv-examples
       , linear       >= 1.20.4

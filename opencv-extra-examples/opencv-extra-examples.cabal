@@ -24,7 +24,7 @@ executable tracker
   ghc-options: -Wall -O2
 
   build-depends:
-      base         >= 4.8 && < 4.10
+      base         >= 4.8 && < 5
     , opencv
     , opencv-extra
     , opencv-examples
