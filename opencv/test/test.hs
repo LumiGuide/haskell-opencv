@@ -1,5 +1,6 @@
 {-# language FlexibleInstances #-}
 {-# language TypeSynonymInstances #-}
+{-# language CPP #-}
 {-# options_ghc -fno-warn-orphans #-}
 
 module Main where
@@ -397,6 +398,14 @@ eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 --------------------------------------------------------------------------------
 -- QuikcCheck Arbitrary Instances
 --------------------------------------------------------------------------------
+
+#if !MIN_VERSION_QuickCheck(2,10,1)
+instance QC.Arbitrary CFloat where
+    arbitrary = CFloat <$> QC.arbitrary
+
+instance QC.Arbitrary CDouble where
+    arbitrary = CDouble <$> QC.arbitrary
+#endif
 
 instance (QC.Arbitrary a) => QC.Arbitrary (V2 a) where
     arbitrary = V2 <$> QC.arbitrary <*> QC.arbitrary

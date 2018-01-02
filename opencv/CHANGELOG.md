@@ -1,3 +1,10 @@
+## To be released
+
+### Changed
+
+- Support versions of QuickCheck < 2.10.1 and Glob < 0.9.
+
+
 ## [0.0.2.1] - 2018-01-01
 
 ### Changed

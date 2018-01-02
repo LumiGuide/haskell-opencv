@@ -194,7 +194,7 @@ test-suite doc-images-opencv
       , containers        >= 0.5.6.2
       , data-default      >= 0.7.1.1
       , directory         >= 1.2.2
-      , Glob              >= 0.9
+      , Glob              >= 0.7.5
       , haskell-src-exts  >= 1.18.2
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
@@ -229,7 +229,7 @@ test-suite test-opencv
       , lens              >= 4.13
       , linear            >= 1.20.4
       , opencv
-      , QuickCheck        >= 2.10.1
+      , QuickCheck        >= 2.8.2
       , repa              >= 3.4.0.2
       , tasty             >= 0.11.0.2
       , tasty-hunit       >= 0.9.2

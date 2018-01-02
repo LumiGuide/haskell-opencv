@@ -1,5 +1,6 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
+{-# language CPP #-}
 
 module ExampleExtractor
   ( Animation
@@ -277,8 +278,14 @@ mkRenderExampleImages renderTargets = [d|
             then VarE '(>>=) `AppE` sym `AppE` (VarE render `AppE` fp)
             else VarE render `AppE` fp `AppE` sym
 
+#if MIN_VERSION_Glob(0,9,0)
 findHaskellPaths :: FilePath -> IO [FilePath]
 findHaskellPaths = fmap concat . G.globDir [G.compile "**/*.hs", G.compile "**/*.hsc"]
+#else
+findHaskellPaths srcDir = do
+  (paths, _) <- G.globDir [G.compile "**/*.hs", G.compile "**/*.hsc"] srcDir
+  pure $ concat paths
+#endif
 
 haddockToHaskell :: T.Text -> T.Text
 haddockToHaskell =

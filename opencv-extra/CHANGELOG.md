@@ -1,3 +1,10 @@
+## To be released
+
+### Changed
+
+- Support versions of Glob < 0.9.
+
+
 ## [0.2.0.1] - 2018-01-01
 
 ### Changed
