@@ -10,11 +10,15 @@ module OpenCV.Calib3d
     , findFundamentalMat
     , findHomography
     , computeCorrespondEpilines
+
+    , SolvePnPMethod(..)
+    , solvePnP
     ) where
 
 import "base" Data.Int
 import "base" Data.Word
 import "base" Foreign.C.Types
+import "base" Foreign.Marshal.Utils ( fromBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "data-default" Data.Default
@@ -263,3 +267,221 @@ computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
   where
     c'numPoints = fromIntegral $ V.length points
     c'whichImage = marshalWhichImage whichImage
+
+data SolvePnPMethod
+   = SolvePnP_Iterative !Bool
+   | SolvePnP_P3P
+   | SolvePnP_AP3P
+   | SolvePnP_EPNP
+   | SolvePnP_DLS
+   | SolvePnP_UPNP
+
+marshalSolvePnPMethod :: SolvePnPMethod -> (Int32, Int32)
+marshalSolvePnPMethod = \case
+    SolvePnP_Iterative useExtrinsicGuess
+                  -> (c'SOLVEPNP_ITERATIVE, fromBool useExtrinsicGuess)
+    SolvePnP_P3P  -> (c'SOLVEPNP_P3P , fromBool False)
+    SolvePnP_AP3P -> (c'SOLVEPNP_AP3P, fromBool False)
+    SolvePnP_EPNP -> (c'SOLVEPNP_EPNP, fromBool False)
+    SolvePnP_DLS  -> (c'SOLVEPNP_DLS , fromBool False)
+    SolvePnP_UPNP -> (c'SOLVEPNP_UPNP, fromBool False)
+
+{- | Finds an object pose from 3D-2D point correspondences.
+
+Parameters:
+
+  [@objectImageMatches@]: Correspondences between object coordinate space (3D)
+    and image points (2D).
+
+  [@cameraMatrix@]: Input camera matrix
+    \[
+    A =
+    \begin{bmatrix}
+    f_x & 0   & c_x \\
+    0   & f_y & c_y \\
+    0   & 0   & 1
+    \end{bmatrix}
+    \]
+
+  [@distCoeffs@]: Input distortion coefficients
+    \( \left ( k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y ] ] ] ] \right ) \)
+    of 4, 5, 8, 12 or 14 elements. If not given, the zero distortion
+    coefficients are assumed.
+
+In case of success the algorithm outputs 3 values:
+
+  [@rvec@]: Output rotation vector that, together with __tvec__, brings points
+    from the model coordinate system to the camera coordinate system.
+
+  [@tvec@]: Output translation vector.
+
+  [@cameraMatrix@]: Output camera matrix. In most cases a copy of the input
+    camera matrix.  With the 'SolvePnP_UPNP' method the \(f_x\) and \(f_y\)
+    parameters will be estimated.
+
+The function estimates the object pose given a set of object points, their
+corresponding image projections, as well as the camera matrix and the distortion
+coefficients, see the figure below (more precisely, the X-axis of the camera
+frame is pointing to the right, the Y-axis downward and the Z-axis forward).
+
+<<data/solvepnp.jpg solvepnp explanatory figure>>
+
+Points expressed in the world frame \(\bf{X_w}\) are projected into the image
+plane \([u,v]\) using the perspective projection model \(\bf{\Pi}\) and the
+camera intrinsic parameters matrix \(\bf{A}\):
+
+\[
+  \begin{align*}
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  u \\
+  v \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  f_x & 0   & c_x \\
+  0   & f_y & c_y \\
+  0   & 0   & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  1 & 0 & 0 & 0 \\
+  0 & 1 & 0 & 0 \\
+  0 & 0 & 1 & 0
+  \end{bmatrix}
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0 & 0 & 0 & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\]
+
+The estimated pose is thus the rotation (__rvec__) and the translation
+(__tvec__) vectors that allow to transform a 3D point expressed in the world
+frame into the camera frame:
+
+\[
+  \begin{align*}
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \hspace{0.2em} ^{c}\bf{M}_w
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix} \\
+  \begin{bmatrix}
+  X_c \\
+  Y_c \\
+  Z_c \\
+  1
+  \end{bmatrix} &=
+  \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} & t_x \\
+  r_{21} & r_{22} & r_{23} & t_y \\
+  r_{31} & r_{32} & r_{33} & t_z \\
+  0      & 0      & 0      & 1
+  \end{bmatrix}
+  \begin{bmatrix}
+  X_{w} \\
+  Y_{w} \\
+  Z_{w} \\
+  1
+  \end{bmatrix}
+  \end{align*}
+\]
+
+-}
+solvePnP
+    :: forall point3 point2 distCoeffs
+     . ( IsPoint3 point3 CDouble
+       , IsPoint2 point2 CDouble
+       , ToMat distCoeffs
+       , MatShape distCoeffs `In` '[ 'S '[ 'S  4, 'S 1 ]
+                                   , 'S '[ 'S  5, 'S 1 ]
+                                   , 'S '[ 'S  8, 'S 1 ]
+                                   , 'S '[ 'S 12, 'S 1 ]
+                                   , 'S '[ 'S 14, 'S 1 ]
+                                   ]
+       )
+    => V.Vector (point3 CDouble, point2 CDouble) -- ^ 3D-2D point correspondences.
+    -> Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- ^ Camera matrix.
+    -> Maybe distCoeffs -- ^ Distortion coefficients.
+    -> SolvePnPMethod
+    -> CvExcept
+       ( Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- rotation vector
+       , Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- translation vector
+       , Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- output camera matrix
+       )
+solvePnP objectImageMatches cameraMatrix mbDistCoeffs method = unsafeWrapException $ do
+    rvec <- newEmptyMat
+    tvec <- newEmptyMat
+    let cameraMatrixOut = cloneMat cameraMatrix
+    handleCvException (pure ( unsafeCoerceMat rvec
+                            , unsafeCoerceMat tvec
+                            , cameraMatrixOut
+                            )) $
+      withArrayPtr objectPoints $ \objectPoinstPtr ->
+      withArrayPtr imagePoints $ \imagePointsPtr ->
+      withPtr cameraMatrixOut $ \cameraMatrixOutPtr ->
+      withPtr (toMat <$> mbDistCoeffs) $ \distCoeffsPtr ->
+      withPtr rvec $ \rvecPtr ->
+      withPtr tvec $ \tvecPtr ->
+        [cvExcept|
+          cv::_InputArray objectPoints =
+            cv::_InputArray( $(Point3d * objectPoinstPtr)
+                           , $(int32_t c'numPoints)
+                           );
+          cv::_InputArray imagePoints =
+            cv::_InputArray( $(Point2d * imagePointsPtr)
+                           , $(int32_t c'numPoints)
+                           );
+          cv::Mat * distCoeffsPtr = $(Mat * distCoeffsPtr);
+          bool retval =
+            cv::solvePnP
+            ( objectPoints
+            , imagePoints
+            , *$(Mat * cameraMatrixOutPtr)
+            , distCoeffsPtr
+              ? cv::_InputArray(*distCoeffsPtr)
+              : cv::_InputArray(cv::noArray())
+            , *$(Mat * rvecPtr)
+            , *$(Mat * tvecPtr)
+            , $(int32_t useExtrinsicGuess)
+            , $(int32_t methodFlag)
+            );
+        |]
+  where
+    (methodFlag, useExtrinsicGuess) = marshalSolvePnPMethod method
+
+    c'numPoints :: Int32
+    c'numPoints = fromIntegral $ V.length objectImageMatches
+
+    objectPoints :: V.Vector Point3d
+    objectPoints = V.map (toPoint . fst) objectImageMatches
+
+    imagePoints :: V.Vector Point2d
+    imagePoints = V.map (toPoint . snd) objectImageMatches
