@@ -42,24 +42,63 @@ C.using "namespace cv"
 
 --------------------------------------------------------------------------------
 
--- | <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/object_detection.html#matchtemplate OpenCV Sphinx doc>
+-- | Type of the template matching operation
+--
+-- In the formulae for the comparison methods \(\bf{I}\) denotes image,
+-- \(\bf{T}\) template and \(\bf{R}\) result. Each method supports
+-- normalization. See 'MatchTemplateNormalisation'.
 data MatchTemplateMethod
    = MatchTemplateSqDiff
-       -- ^ * not normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/f096a706cb9499736423f10d901c7fe13a1e6926.png>>
-       --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/6d6a720237b3a4c1365c8e86a9cfcf0895d5e265.png>>
+       {- ^
+       * not normed:
+           \[
+           R(x,y) = \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2
+           \]
+
+       * normed:
+           \[
+           R(x,y) = \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}
+                         {\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+           \]
+       -}
    | MatchTemplateCCorr
-       -- ^ * not normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/93f1747a86a3c5095a0e6a187442c6e2a0ae0968.png>>
-       --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/6a72ad9ae17c4dad88e33ed16308fc1cfba549b8.png>>
+       {- ^
+       * not normed:
+           \[
+           R(x,y) = \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))
+           \]
+
+       * normed:
+           \[
+           R(x,y) = \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}
+                         {\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+           \]
+       -}
    | MatchTemplateCCoeff
-       -- ^ * not normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/c9b62df96d0692d90cc1d8a5912a68a44461910c.png>>
-       --   * where <<http://docs.opencv.org/3.0-last-rst/_images/math/ffb6954b6020b02e13b73c79bd852c1627cfb79c.png>>
-       --   * normed: <<http://docs.opencv.org/3.0-last-rst/_images/math/235e42ec68d2d773899efcf0a4a9d35a7afedb64.png>>
+       {- ^
+       * not normed:
+           \[
+           R(x,y) = \sum _{x',y'} (T'(x',y') \cdot I'(x+x',y+y'))
+           \]
+
+       * where
+           \[ \begin{array}{l}
+           T'(x',y') = T(x',y') - 1/(w \cdot h) \cdot \sum _{x'',y''} T(x'',y'')
+           \\ I'(x+x',y+y') = I(x+x',y+y') - 1/(w \cdot h) \cdot \sum _{x'',y''} I(x+x'',y+y'')
+           \end{array} \]
+
+       * normed:
+           \[
+           R(x,y) = \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }
+                         { \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }
+           \]
+       -}
      deriving Show
 
 -- | Whether to use normalisation. See 'MatchTemplateMethod'.
 data MatchTemplateNormalisation
-   = MatchTemplateNotNormed
-   | MatchTemplateNormed
+   = MatchTemplateNotNormed -- ^ Do not use normalization.
+   | MatchTemplateNormed    -- ^ Use normalization.
    deriving (Show, Eq)
 
 #num CV_TM_SQDIFF
@@ -79,21 +118,23 @@ marshalMatchTemplateMethod m n =
       (MatchTemplateCCoeff, False) -> c'CV_TM_CCOEFF
       (MatchTemplateCCoeff, True ) -> c'CV_TM_CCOEFF_NORMED
 
--- | <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/object_detection.html#matchtemplate OpenCV Sphinx doc>
---
--- Compares a template against overlapped image regions.
---
--- The function slides through image, compares the overlapped patches
--- of size
--- <<http://docs.opencv.org/3.0-last-rst/_images/math/d47153257f0243694e5632bb23b85009eb9e5599.png w \times h>>
--- against templ using the specified method and stores the comparison
--- results in result . Here are the formulae for the available
--- comparison methods
--- (<<http://docs.opencv.org/3.0-last-rst/_images/math/06f9f0fcaa8d96a6a23b0f7d1566fe5efaa789ad.png I>> denotes image,
--- <<http://docs.opencv.org/3.0-last-rst/_images/math/87804527283a4539e1e17c5861df8cb92a97fd6d.png T>> template,
--- <<http://docs.opencv.org/3.0-last-rst/_images/math/8fa391da5431a5d6eaba1325c3e7cb3da22812b5.png R>> result).
--- The summation is done over template and/or the image patch:
--- <<http://docs.opencv.org/3.0-last-rst/_images/math/ff90cafd4a71d85875237787b54815ee8ac77bff.png x' = 0...w-1, y' = 0...h-1>>
+{- | Compares a template against overlapped image regions.
+
+The function slides through image, compares the overlapped patches of size
+  \( w \times h \)
+against templ using the specified method and stores the comparison
+results in result. The summation is done over template and/or the image patch:
+  \( x' = 0...w-1, y' = 0...h-1 \)
+
+After the function finishes the comparison, the best matches can be found as
+global minimums (when 'MatchTemplateSqDiff' was used) or maximums (when
+'MatchTemplateCCorr' or 'MatchTemplateCCoeff' was used) using the 'minMaxLoc'
+function. In case of a color image, template summation in the numerator and each
+sum in the denominator is done over all of the channels and separate mean values
+are used for each channel.  That is, the function can take a color template and
+a color image. The result will still be a single-channel image, which is easier
+to analyze.
+-}
 matchTemplate
     :: ( depth `In` [Word8, Float]
        , Length searchShape <= 2
@@ -102,18 +143,12 @@ matchTemplate
        -- ^ Image where the search is running. It must be 8-bit or 32-bit floating-point.
     -> Mat ('S [th, tw]) ('S 1) ('S depth)
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
-    -> MatchTemplateMethod
-       -- ^ Parameter specifying the comparison method.
-    -> MatchTemplateNormalisation
-       -- ^ Normalise
+    -> MatchTemplateMethod -- ^ Comparison method.
+    -> MatchTemplateNormalisation -- ^ Normalization.
     -> CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
-       -- ^ Map of comparison results. It must be single-channel 32-bit floating-point.
-       -- If image is
-       -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e4926c3d97c3f7434c6317ba24b8b9294a0aba64.png>>
-       -- and templ is
-       -- <<http://docs.opencv.org/3.0-last-rst/_images/math/d47153257f0243694e5632bb23b85009eb9e5599.png>>
-       -- , then result is
-       -- <<http://docs.opencv.org/3.0-last-rst/_images/math/e318d7237b57e08135e689fd9136b9ac8e4a4102.png>>.
+       -- ^ Map of comparison results. It must be single-channel 32-bit
+       -- floating-point. If image is \(W \times H\) and templ is
+       -- \(w \times h\), then result is \((W-w+1) \times (H-h+1)\).
 matchTemplate image templ method normalisation = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
