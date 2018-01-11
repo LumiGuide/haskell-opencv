@@ -174,11 +174,11 @@ Example:
 rotateBirds :: Mat (ShapeT [2, 3]) ('S 1) ('S Double)
 rotateBirds = getRotationMatrix2D (V2 256 170 :: V2 CFloat) 45 0.75
 
-warpAffineImg :: Birds_512x341
+warpAffineImg :: Kodak_512x341
 warpAffineImg = exceptError $
     warpAffine birds_512x341 rotateBirds InterArea False False (BorderConstant black)
 
-warpAffineInvImg :: Birds_512x341
+warpAffineInvImg :: Kodak_512x341
 warpAffineInvImg = exceptError $
     warpAffine warpAffineImg rotateBirds InterCubic True False (BorderConstant black)
 @
@@ -336,7 +336,7 @@ remapImg
             (height   :: Nat)
             (channels :: Nat)
             (depth    :: *  )
-   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Birds_512x341)
+   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConstant black)
   where
@@ -418,7 +418,7 @@ undistortImg
             (height   :: Nat)
             (channels :: Nat)
             (depth    :: *  )
-   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Birds_512x341)
+   . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 undistortImg = undistort birds_512x341 intrinsics coefficients
   where intrinsics :: M33 Float

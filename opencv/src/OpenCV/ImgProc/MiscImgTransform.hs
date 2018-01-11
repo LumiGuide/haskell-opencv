@@ -116,7 +116,7 @@ cvtColorImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ (width + width)
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -196,7 +196,7 @@ floodFillImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Sailboat_768x512
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_768x512
        , width2 ~ (width + width)
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -435,7 +435,7 @@ watershed img markers =
 Example:
 
 @
-grabCutBird :: Birds_512x341
+grabCutBird :: Kodak_512x341
 grabCutBird = exceptError $ do
     mask <- withMatM (Proxy :: Proxy [341, 512])
                      (Proxy :: Proxy 1)

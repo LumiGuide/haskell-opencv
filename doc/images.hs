@@ -47,18 +47,8 @@ blue        = toScalar (V4 255   0   0 255 :: V4 Double)
 green       = toScalar (V4   0 255   0 255 :: V4 Double)
 red         = toScalar (V4   0   0 255 255 :: V4 Double)
 
-type Birds_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-type Flower_768x512   = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-type Sailboat_768x512 = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-type Barn_768x512     = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-type Bikes_768x512    = Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-
-type Birds_512x341    = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-type Flower_512x341   = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-type Sailboat_512x341 = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-type Barn_512x341     = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-type Bikes_512x341    = Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-
+type Kodak_768x512    = Mat (ShapeT [ 512,  768]) ('S 3) ('S Word8)
+type Kodak_512x341    = Mat (ShapeT [ 341,  512]) ('S 3) ('S Word8)
 type Frog             = Mat (ShapeT [ 390,  500]) ('S 3) ('S Word8)
 type Lambda           = Mat (ShapeT [ 256,  256]) ('S 1) ('S Word8)
 type Circles_1000x625 = Mat (ShapeT [ 625, 1000]) ('S 3) ('S Word8)
@@ -68,26 +58,26 @@ type Lenna_512x512    = Mat (ShapeT [ 512,  512]) ('S 3) ('S Word8)
 type Arnold           = Mat (ShapeT [3504, 2336]) ('S 3) ('S Word8)
 type Arnold_small     = Mat (ShapeT [ 900,  600]) ('S 3) ('S Word8)
 
-birds_768x512 :: Birds_768x512
+birds_768x512 :: Kodak_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
                   imdecode ImreadUnchanged <$> B.readFile "data/kodim23.png"
 
-flower_768x512 :: Flower_768x512
+flower_768x512 :: Kodak_768x512
 flower_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim07.png"
 
-sailboat_768x512 :: Sailboat_768x512
+sailboat_768x512 :: Kodak_768x512
 sailboat_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim06.png"
 
-bikes_768x512 :: Sailboat_768x512
+bikes_768x512 :: Kodak_768x512
 bikes_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim05.png"
 
-barn_768x512 :: Barn_768x512
+barn_768x512 :: Kodak_768x512
 barn_768x512 =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/kodim22.png"
@@ -97,28 +87,26 @@ damageMask =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/damage_mask.png"
 
-smallerKodakImg
-    :: Mat (ShapeT [512, 768]) ('S 3) ('S Word8)
-    -> Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+smallerKodakImg :: Kodak_768x512 -> Kodak_512x341
 smallerKodakImg img =
     exceptError $ coerceMat =<<
       resize (ResizeAbs $ toSize (V2 512 341 :: V2 Int32))
              InterArea
              img
 
-birds_512x341 :: Birds_512x341
+birds_512x341 :: Kodak_512x341
 birds_512x341 = smallerKodakImg birds_768x512
 
-flower_512x341 :: Flower_512x341
+flower_512x341 :: Kodak_512x341
 flower_512x341 = smallerKodakImg flower_768x512
 
-sailboat_512x341 :: Sailboat_512x341
+sailboat_512x341 :: Kodak_512x341
 sailboat_512x341 = smallerKodakImg sailboat_768x512
 
-barn_512x341 :: Barn_512x341
+barn_512x341 :: Kodak_512x341
 barn_512x341 = smallerKodakImg barn_768x512
 
-bikes_512x341 :: Bikes_512x341
+bikes_512x341 :: Kodak_512x341
 bikes_512x341 = smallerKodakImg bikes_768x512
 
 frog :: Frog

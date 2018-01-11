@@ -58,7 +58,7 @@ Example:
 @
 inpaintImg
     :: forall h h2 w w2 c d
-     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Bikes_512x341
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Kodak_512x341
        , h2 ~ ((*) h 2)
        , w2 ~ ((*) w 2)
        )
@@ -325,7 +325,7 @@ Example:
 @
 decolorImg
     :: forall h h2 w w2 c d
-     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Bikes_512x341
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Kodak_512x341
        , h2 ~ ((*) h 2)
        , w2 ~ ((*) w 2)
        )

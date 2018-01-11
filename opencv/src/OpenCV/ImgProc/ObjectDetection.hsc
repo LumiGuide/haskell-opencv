@@ -140,7 +140,7 @@ Example:
 @
 matchTemplateImg
     :: forall (width :: Nat) (height :: Nat) (width2 :: Nat)
-     . ( Mat (ShapeT [height, width]) ('S 3) ('S Word8) ~ Barn_512x341
+     . ( Mat (ShapeT [height, width]) ('S 3) ('S Word8) ~ Kodak_512x341
        , width2 ~ (width + width)
        )
     => Mat (ShapeT [height, width2]) ('S 3) ('S Word8)

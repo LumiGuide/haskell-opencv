@@ -212,7 +212,7 @@ Example:
 @
 grayworldWBImg
     :: forall h w h2 w2 c d
-     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Sailboat_768x512
+     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Kodak_768x512
        , w2 ~ ((*) w 2)
        , h2 ~ ((*) h 2)
        )

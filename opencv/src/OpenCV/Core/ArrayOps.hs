@@ -581,7 +581,7 @@ matSplitImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width3 ~ ((*) width 3)
        )
     => Mat (ShapeT [height, width3]) ('S channels) ('S depth)

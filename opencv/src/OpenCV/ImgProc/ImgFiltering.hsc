@@ -147,7 +147,7 @@ bilateralFilterImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -221,7 +221,7 @@ Example:
 @
 laplacianImg
     :: forall shape channels depth
-     . (Mat shape channels depth ~ Birds_512x341)
+     . (Mat shape channels depth ~ Kodak_512x341)
     => Mat shape ('S 1) ('S Double)
 laplacianImg = exceptError $ do
     imgG <- cvtColor bgr gray birds_512x341
@@ -282,7 +282,7 @@ medianBlurImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -335,7 +335,7 @@ boxBlurImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -496,7 +496,7 @@ filter2DImg
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
     => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
