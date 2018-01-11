@@ -44,10 +44,10 @@ update-git-haddock: doc/color_conversions.png
 	cabal haddock --hyperlink-source && \
 	git checkout gh-pages && \
 	git pull && \
-	git rm -r doc && rm -rf doc && mv ./dist/doc/html/opencv doc && \
-	git add doc && \
-	git rm -r hpc && rm -rf hpc && mv ./dist/hpc/vanilla/html/opencv-0.0.0 hpc && \
-	git add hpc && \
+	git rm -r ../doc && rm -rf ../doc && mv ./dist/doc/html/opencv ../doc && \
+	git add ../doc && \
+	git rm -r ../hpc && rm -rf ../hpc && mv ./dist/hpc/vanilla/html/opencv-0.0.2.1 ../hpc && \
+	git add ../hpc && \
 	git commit -m 'updated haddock documentation' && \
 	git push && \
 	git checkout master
