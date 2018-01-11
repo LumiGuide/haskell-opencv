@@ -364,11 +364,12 @@ matMax src1 src2 = unsafeWrapException $ do
           );
         |]
 
+-- | Performs a per-element comparison of an array and a scalar value.
 matScalarCompare
-    :: Mat shape channels depth -- ^
+    :: Mat shape ('S 1) depth -- ^
     -> Double
     -> CmpType
-    -> CvExcept (Mat shape channels depth)
+    -> CvExcept (Mat shape ('S 1) ('S Word8))
 matScalarCompare src x cmpType = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
