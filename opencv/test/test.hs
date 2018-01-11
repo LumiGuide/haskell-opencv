@@ -11,7 +11,6 @@ import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.Foldable ( forM_ )
-import "base" Control.Exception ( evaluate )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
