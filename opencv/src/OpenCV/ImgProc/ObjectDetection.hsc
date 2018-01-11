@@ -134,14 +134,70 @@ sum in the denominator is done over all of the channels and separate mean values
 are used for each channel.  That is, the function can take a color template and
 a color image. The result will still be a single-channel image, which is easier
 to analyze.
+
+Example:
+
+@
+matchTemplateImg
+    :: forall (width :: Nat) (height :: Nat) (width2 :: Nat)
+     . ( Mat (ShapeT [height, width]) ('S 3) ('S Word8) ~ Barn_512x341
+       , width2 ~ (width + width)
+       )
+    => Mat (ShapeT [height, width2]) ('S 3) ('S Word8)
+matchTemplateImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy 3)
+             (Proxy :: Proxy Word8)
+             transparent $ \\imgM -> do
+      matCopyToM imgM (V2 0 0) barn_512x341 Nothing
+      rectangle imgM templateRect blue 1 LineType_8 0
+      matCopyToM imgM (V2 width 0) resultImg Nothing
+      rectangle imgM matchRect blue 1 LineType_8 0
+  where
+    -- Recovered location of 'template', translated for rendering.
+    matchRect :: Rect2i
+    matchRect = toRect $ HRect (fromPoint maxLoc ^+^ V2 width 0)
+                               (V2 20 20)
+
+    -- Find location of best match in 'result'.
+    _minVal, _maxVal :: Double
+    _minLoc, maxLoc :: Point2i
+    (_minVal, _maxVal, _minLoc, maxLoc) = exceptError $ minMaxLoc result
+
+    -- Result matrix converted to color image for rendering.
+    resultImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+    resultImg = exceptError $ do
+        resultGray
+            :: Mat ('S ['D, 'D]) ('S 1) ('S Word8)
+            <- matConvertTo (Just 255) Nothing result
+        cvtColor gray bgr resultGray
+
+    -- Result of looking for 'template' in 'barn_512x341'.
+    result :: Mat ('S ['D, 'D]) ('S 1) ('S Float)
+    result = exceptError $
+        matchTemplate barn_512x341 template MatchTemplateCCoeff MatchTemplateNormed
+
+    -- Small part of the barn image which we want to find again.
+    template :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+    template = exceptError $ matSubRect barn_512x341 templateRect
+
+    -- Rectangle that defines a small part of the barn image.
+    templateRect :: Rect2i
+    templateRect = toRect $ HRect (V2 183 24) (V2 20 20)
+
+    width :: Int32
+    width = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/matchTemplateImg.png matchTemplateImg>>
 -}
 matchTemplate
     :: ( depth `In` [Word8, Float]
        , Length searchShape <= 2
        )
-    => Mat ('S searchShape) ('S 1) ('S depth)
+    => Mat ('S searchShape) ('S channels) ('S depth)
        -- ^ Image where the search is running. It must be 8-bit or 32-bit floating-point.
-    -> Mat ('S [th, tw]) ('S 1) ('S depth)
+    -> Mat ('S [th, tw]) ('S channels) ('S depth)
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
     -> MatchTemplateMethod -- ^ Comparison method.
     -> MatchTemplateNormalisation -- ^ Normalization.
