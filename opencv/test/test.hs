@@ -1,5 +1,6 @@
 {-# language FlexibleInstances #-}
 {-# language TypeSynonymInstances #-}
+{-# language TypeFamilies #-}
 {-# language CPP #-}
 {-# options_ghc -fno-warn-orphans #-}
 
@@ -10,6 +11,7 @@ import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.Foldable ( forM_ )
+import "base" Control.Exception ( evaluate )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
@@ -40,7 +42,12 @@ main = defaultMain $ testGroup "opencv"
       , HU.testCase "computeCorrespondEpilines" testComputeCorrespondEpilines
       ]
     , testGroup "Core"
-      [ testGroup "Iso"
+      [ testGroup "ArrayOps"
+        [ HU.testCase "matAdd      different shapes" (testArrayBinOpArgDiff matAdd)
+        , HU.testCase "matSubtract different shapes" (testArrayBinOpArgDiff matSubtract)
+        , HU.testCase "matAbsDiff  different shapes" (testArrayBinOpArgDiff matAbsDiff)
+        ]
+      , testGroup "Iso"
         [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32   -> Point2i) fromPoint
         , testIso "isoPoint2fV2" (toPoint  :: V2 CFloat  -> Point2f) fromPoint
         , testIso "isoPoint2dV2" (toPoint  :: V2 CDouble -> Point2d) fromPoint
@@ -102,7 +109,7 @@ main = defaultMain $ testGroup "opencv"
         [ HU.testCase "findContours" testFindContours
         ]
       , testGroup "Feature Detection"
-        [ HU.testCase "houghLinesP"   testHoughLinesP
+        [ HU.testCase "houghLinesP" testHoughLinesP
         ]
       , testGroup "Cascade Classifier"
         [ HU.testCase "newCascadeClassifier algorithm" testNewCascadeClassifierAlgorithm
@@ -133,6 +140,33 @@ main = defaultMain $ testGroup "opencv"
       [
       ]
     ]
+
+testArrayBinOpArgDiff
+    :: forall testShapeA testShapeB
+     . ( testShapeA ~ 'S ['S 2, 'S 3]
+       , testShapeB ~ 'S ['S 4, 'S 4]
+       )
+    => (Mat 'D 'D 'D -> Mat 'D 'D 'D -> CvExcept (Mat 'D 'D 'D))
+    -> HU.Assertion
+testArrayBinOpArgDiff arrayOp =
+    case runExcept $ arrayOp (relaxMat a) (relaxMat b) of
+      Left _err -> pure ()
+      Right _mat -> assertFailure "result despite different shapes"
+  where
+    a :: Mat testShapeA ('S 1) ('S Double)
+    a = exceptError $ mkMat (Proxy :: Proxy testShapeA)
+                            (Proxy :: Proxy 1)
+                            (Proxy :: Proxy Double)
+                            black
+
+    b :: Mat testShapeB ('S 1) ('S Double)
+    b = exceptError $ mkMat (Proxy :: Proxy testShapeB)
+                            (Proxy :: Proxy 1)
+                            (Proxy :: Proxy Double)
+                            black
+
+    black :: Scalar
+    black = toScalar (0 :: V4 Double)
 
 testFindFundamentalMat_noPoints :: HU.Assertion
 testFindFundamentalMat_noPoints =

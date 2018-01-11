@@ -151,7 +151,7 @@ Example:
 
 @
 matAbsDiffImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-matAbsDiffImg = matAbsDiff flower_512x341 sailboat_512x341
+matAbsDiffImg = exceptError $ matAbsDiff flower_512x341 sailboat_512x341
 @
 
 <<doc/generated/examples/matAbsDiffImg.png matAbsDiffImg>>
@@ -161,19 +161,19 @@ matAbsDiffImg = matAbsDiff flower_512x341 sailboat_512x341
 matAbsDiff
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Mat shape channels depth
-matAbsDiff src1 src2 = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+matAbsDiff src1 src2 = unsafeWrapException $ do
     dst <- newEmptyMat
-    withPtr dst $ \dstPtr ->
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
       withPtr src2 $ \src2Ptr ->
-        [C.block| void {
+        [cvExcept|
           cv::absdiff( *$(Mat * src1Ptr)
                      , *$(Mat * src2Ptr)
                      , *$(Mat * dstPtr )
                      );
-        }|]
-    pure $ unsafeCoerceMat dst
+        |]
 
 {- | Calculates the per-element sum of two arrays.
 
@@ -181,7 +181,7 @@ Example:
 
 @
 matAddImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-matAddImg = matAdd flower_512x341 sailboat_512x341
+matAddImg = exceptError $ matAdd flower_512x341 sailboat_512x341
 @
 
 <<doc/generated/examples/matAddImg.png matAddImg>>
@@ -192,21 +192,21 @@ matAddImg = matAdd flower_512x341 sailboat_512x341
 matAdd
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Mat shape channels depth
-matAdd src1 src2 = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+matAdd src1 src2 = unsafeWrapException $ do
     dst <- newEmptyMat
-    withPtr dst $ \dstPtr ->
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
       withPtr src2 $ \src2Ptr ->
-        [C.block| void {
+        [cvExcept|
           cv::add
           ( *$(Mat * src1Ptr)
           , *$(Mat * src2Ptr)
           , *$(Mat * dstPtr)
           , cv::noArray()
           );
-        }|]
-    pure $ unsafeCoerceMat dst
+        |]
 
 {- | Calculates the per-element difference between two arrays
 
@@ -214,7 +214,7 @@ Example:
 
 @
 matSubtractImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
-matSubtractImg = matSubtract flower_512x341 sailboat_512x341
+matSubtractImg = exceptError $ matSubtract flower_512x341 sailboat_512x341
 @
 
 <<doc/generated/examples/matSubtractImg.png matSubtractImg>>
@@ -225,21 +225,21 @@ matSubtractImg = matSubtract flower_512x341 sailboat_512x341
 matSubtract
     :: Mat shape channels depth -- ^
     -> Mat shape channels depth
-    -> Mat shape channels depth
-matSubtract src1 src2 = unsafePerformIO $ do
+    -> CvExcept (Mat shape channels depth)
+matSubtract src1 src2 = unsafeWrapException $ do
     dst <- newEmptyMat
-    withPtr dst $ \dstPtr ->
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
       withPtr src1 $ \src1Ptr ->
       withPtr src2 $ \src2Ptr ->
-        [C.block| void {
+        [cvExcept|
           cv::subtract
           ( *$(Mat * src1Ptr)
           , *$(Mat * src2Ptr)
           , *$(Mat * dstPtr)
           , cv::noArray()
           );
-        }|]
-    pure $ unsafeCoerceMat dst
+        |]
 
 {- | Calculates the weighted sum of two arrays
 
