@@ -46,6 +46,7 @@ main = defaultMain $ testGroup "opencv"
         [ HU.testCase "matAdd      different shapes" (testArrayBinOpArgDiff matAdd)
         , HU.testCase "matSubtract different shapes" (testArrayBinOpArgDiff matSubtract)
         , HU.testCase "matAbsDiff  different shapes" (testArrayBinOpArgDiff matAbsDiff)
+        , HU.testCase "matMultiply different shapes" (testArrayBinOpArgDiff matMultiply)
         ]
       , testGroup "Iso"
         [ testIso "isoPoint2iV2" (toPoint  :: V2 Int32   -> Point2i) fromPoint

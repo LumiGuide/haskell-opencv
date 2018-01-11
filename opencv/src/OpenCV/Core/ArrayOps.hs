@@ -17,12 +17,12 @@ module OpenCV.Core.ArrayOps
     , matAbsDiff
     , matAdd
     , matSubtract
+    , matMultiply
     , matAddWeighted
     , matScaleAdd
     , matMax
     , CmpType(..)
     , matScalarCompare
-    , matMultiply
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -242,6 +242,29 @@ matSubtract src1 src2 = unsafeWrapException $ do
           );
         |]
 
+{- | Per-element multiplication of two arrays.
+
+<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#multiply OpenCV Sphinx doc>
+-}
+-- TODO (RvD): handle different depths
+matMultiply
+    :: Mat shape channels depth -- ^
+    -> Mat shape channels depth
+    -> CvExcept (Mat shape channels depth)
+matMultiply src1 src2 = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
+      withPtr src1 $ \src1Ptr ->
+      withPtr src2 $ \src2Ptr ->
+        [cvExcept|
+          cv::multiply
+          ( *$(Mat * src1Ptr)
+          , *$(Mat * src2Ptr)
+          , *$(Mat * dstPtr)
+          );
+        |]
+
 {- | Calculates the weighted sum of two arrays
 
 Example:
@@ -322,29 +345,6 @@ matScaleAdd src1 scale src2 = unsafeWrapException $ do
       |]
   where
     c'scale = realToFrac scale
-
-{- | Per-element multiplication of two arrays.
-
-<http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#multiply OpenCV Sphinx doc>
--}
--- TODO (RvD): handle different depths
-matMultiply
-    :: Mat shape channels depth -- ^
-    -> Mat shape channels depth
-    -> Mat shape channels depth
-matMultiply src1 src2 = unsafePerformIO $ do
-    dst <- newEmptyMat
-    withPtr dst $ \dstPtr ->
-      withPtr src1 $ \src1Ptr ->
-      withPtr src2 $ \src2Ptr ->
-        [C.block| void {
-          cv::multiply
-          ( *$(Mat * src1Ptr)
-          , *$(Mat * src2Ptr)
-          , *$(Mat * dstPtr)
-          );
-        }|]
-    pure $ unsafeCoerceMat dst
 
 matMax
     :: Mat shape channels depth -- ^
