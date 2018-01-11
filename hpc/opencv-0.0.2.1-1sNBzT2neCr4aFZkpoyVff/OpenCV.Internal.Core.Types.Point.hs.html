@@ -1,0 +1,92 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language ConstraintKinds #-}
+<span class="lineno">    3 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    6 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>module OpenCV.Internal.Core.Types.Point
+<span class="lineno">   10 </span>  ( Point(..)
+<span class="lineno">   11 </span>  , PointDim
+<span class="lineno">   12 </span>  , IsPoint(..)
+<span class="lineno">   13 </span>  , IsPoint2
+<span class="lineno">   14 </span>  , IsPoint3
+<span class="lineno">   15 </span>  ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import &quot;base&quot; Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+<span class="lineno">   18 </span>import &quot;base&quot; GHC.TypeLits
+<span class="lineno">   19 </span>import &quot;linear&quot; Linear ( V2, V3 )
+<span class="lineno">   20 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>--------------------------------------------------------------------------------
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>newtype Point (dim :: Nat) (depth :: *)
+<span class="lineno">   25 </span>      = Point {<span class="istickedoff"><span class="decl"><span class="istickedoff">unPoint</span></span></span> :: ForeignPtr (C'Point dim depth)}
+<span class="lineno">   26 </span>
+<span class="lineno">   27 </span>type instance C (Point dim depth) = C'Point dim depth
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>instance WithPtr (Point dim depth) where
+<span class="lineno">   30 </span>    <span class="decl"><span class="istickedoff">withPtr = withForeignPtr . unPoint</span></span>
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>type family PointDim (v :: * -&gt; *) :: Nat
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>type instance PointDim (Point dim) = dim
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>type instance PointDim V2 = 2
+<span class="lineno">   37 </span>type instance PointDim V3 = 3
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>class IsPoint (p :: * -&gt; *) (depth :: *)  where
+<span class="lineno">   40 </span>    toPoint   :: p depth -&gt; Point (PointDim p) depth
+<span class="lineno">   41 </span>    fromPoint :: Point (PointDim p) depth -&gt; p depth
+<span class="lineno">   42 </span>
+<span class="lineno">   43 </span>    toPointIO :: p depth -&gt; IO (Point (PointDim p) depth)
+<span class="lineno">   44 </span>    <span class="decl"><span class="nottickedoff">toPointIO = pure . toPoint</span></span>
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span>type IsPoint2 p depth = (IsPoint p depth, PointDim p ~ 2)
+<span class="lineno">   47 </span>type IsPoint3 p depth = (IsPoint p depth, PointDim p ~ 3)
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>--------------------------------------------------------------------------------
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>instance (IsPoint V2 a, Show a)
+<span class="lineno">   52 </span>      =&gt; Show (Point 2 a) where
+<span class="lineno">   53 </span>    <span class="decl"><span class="nottickedoff">showsPrec prec point =</span>
+<span class="lineno">   54 </span><span class="spaces">        </span><span class="nottickedoff">showParen (prec &gt;= 10)</span>
+<span class="lineno">   55 </span><span class="spaces">        </span><span class="nottickedoff">$ showString &quot;toPoint &quot;</span>
+<span class="lineno">   56 </span><span class="spaces">        </span><span class="nottickedoff">. showParen True (shows v2)</span>
+<span class="lineno">   57 </span><span class="spaces">      </span><span class="nottickedoff">where</span>
+<span class="lineno">   58 </span><span class="spaces">        </span><span class="nottickedoff">v2 :: V2 a</span>
+<span class="lineno">   59 </span><span class="spaces">        </span><span class="nottickedoff">v2 = fromPoint point</span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>instance (IsPoint V3 a, Show a)
+<span class="lineno">   62 </span>      =&gt; Show (Point 3 a) where
+<span class="lineno">   63 </span>    <span class="decl"><span class="nottickedoff">showsPrec prec point =</span>
+<span class="lineno">   64 </span><span class="spaces">        </span><span class="nottickedoff">showParen (prec &gt;= 10)</span>
+<span class="lineno">   65 </span><span class="spaces">        </span><span class="nottickedoff">$ showString &quot;toPoint &quot;</span>
+<span class="lineno">   66 </span><span class="spaces">        </span><span class="nottickedoff">. showParen True (shows v3)</span>
+<span class="lineno">   67 </span><span class="spaces">      </span><span class="nottickedoff">where</span>
+<span class="lineno">   68 </span><span class="spaces">        </span><span class="nottickedoff">v3 :: V3 a</span>
+<span class="lineno">   69 </span><span class="spaces">        </span><span class="nottickedoff">v3 = fromPoint point</span></span>
+
+</pre>
+</body>
+</html>

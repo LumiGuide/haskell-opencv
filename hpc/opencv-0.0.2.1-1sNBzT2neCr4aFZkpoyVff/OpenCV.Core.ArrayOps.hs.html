@@ -1,0 +1,1058 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    6 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>{- | Operations on arrays
+<span class="lineno">   10 </span>-}
+<span class="lineno">   11 </span>module OpenCV.Core.ArrayOps
+<span class="lineno">   12 </span>    ( -- * Per element operations
+<span class="lineno">   13 </span>      -- $per_element_intro
+<span class="lineno">   14 </span>      matScalarAdd
+<span class="lineno">   15 </span>    , matScalarMult
+<span class="lineno">   16 </span>    , matAbs
+<span class="lineno">   17 </span>    , matAbsDiff
+<span class="lineno">   18 </span>    , matAdd
+<span class="lineno">   19 </span>    , matSubtract
+<span class="lineno">   20 </span>    , matAddWeighted
+<span class="lineno">   21 </span>    , matScaleAdd
+<span class="lineno">   22 </span>    , matMax
+<span class="lineno">   23 </span>    , CmpType(..)
+<span class="lineno">   24 </span>    , matScalarCompare
+<span class="lineno">   25 </span>      -- ** Bitwise operations
+<span class="lineno">   26 </span>      -- $bitwise_intro
+<span class="lineno">   27 </span>    , bitwiseNot
+<span class="lineno">   28 </span>    , bitwiseAnd
+<span class="lineno">   29 </span>    , bitwiseOr
+<span class="lineno">   30 </span>    , bitwiseXor
+<span class="lineno">   31 </span>      -- * Channel operations
+<span class="lineno">   32 </span>    , matMerge
+<span class="lineno">   33 </span>    , matSplit
+<span class="lineno">   34 </span>    , matChannelMapM
+<span class="lineno">   35 </span>      -- * Other
+<span class="lineno">   36 </span>    , minMaxLoc
+<span class="lineno">   37 </span>    , NormType(..)
+<span class="lineno">   38 </span>    , NormAbsRel(..)
+<span class="lineno">   39 </span>    , norm
+<span class="lineno">   40 </span>    , normDiff
+<span class="lineno">   41 </span>    , normalize
+<span class="lineno">   42 </span>    , matSum
+<span class="lineno">   43 </span>    , matSumM
+<span class="lineno">   44 </span>    , meanStdDev
+<span class="lineno">   45 </span>    , matFlip, FlipDirection(..)
+<span class="lineno">   46 </span>    , matTranspose
+<span class="lineno">   47 </span>    , hconcat
+<span class="lineno">   48 </span>    , vconcat
+<span class="lineno">   49 </span>    , perspectiveTransform
+<span class="lineno">   50 </span>    ) where
+<span class="lineno">   51 </span>
+<span class="lineno">   52 </span>import &quot;base&quot; Data.Proxy ( Proxy(..) )
+<span class="lineno">   53 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   54 </span>import &quot;base&quot; Foreign.C.Types ( CDouble )
+<span class="lineno">   55 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca )
+<span class="lineno">   56 </span>import &quot;base&quot; Foreign.Marshal.Array ( allocaArray, peekArray )
+<span class="lineno">   57 </span>import &quot;base&quot; Foreign.Ptr ( Ptr, castPtr )
+<span class="lineno">   58 </span>import &quot;base&quot; Foreign.Storable ( Storable(..), peek )
+<span class="lineno">   59 </span>import &quot;base&quot; GHC.TypeLits
+<span class="lineno">   60 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   61 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   62 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   63 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   64 </span>import &quot;linear&quot; Linear.Vector ( zero )
+<span class="lineno">   65 </span>import &quot;linear&quot; Linear.V2 ( V2(..) )
+<span class="lineno">   66 </span>import &quot;primitive&quot; Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+<span class="lineno">   67 </span>import &quot;this&quot; OpenCV.Core.Types.Mat
+<span class="lineno">   68 </span>import &quot;this&quot; OpenCV.Core.Types.Point
+<span class="lineno">   69 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   70 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   71 </span>import &quot;this&quot; OpenCV.Internal.Core.ArrayOps
+<span class="lineno">   72 </span>import &quot;this&quot; OpenCV.Internal.Core.Types
+<span class="lineno">   73 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   74 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   75 </span>import &quot;this&quot; OpenCV.Internal.Mutable
+<span class="lineno">   76 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   77 </span>import &quot;transformers&quot; Control.Monad.Trans.Except
+<span class="lineno">   78 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>--------------------------------------------------------------------------------
+<span class="lineno">   81 </span>
+<span class="lineno">   82 </span>C.context openCvCtx
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   85 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   86 </span>
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>--------------------------------------------------------------------------------
+<span class="lineno">   89 </span>-- Per element operations
+<span class="lineno">   90 </span>--------------------------------------------------------------------------------
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>{- $per_element_intro
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>The following functions work on the individual elements of matrices.
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>Examples are based on the following two images:
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>&lt;&lt;doc/generated/flower_512x341.png Flower&gt;&gt;
+<span class="lineno">   99 </span>&lt;&lt;doc/generated/sailboat_512x341.png Sailboat&gt;&gt;
+<span class="lineno">  100 </span>-}
+<span class="lineno">  101 </span>
+<span class="lineno">  102 </span>matScalarAdd
+<span class="lineno">  103 </span>    :: (ToScalar scalar)
+<span class="lineno">  104 </span>    =&gt; Mat shape channels depth -- ^
+<span class="lineno">  105 </span>    -&gt; scalar
+<span class="lineno">  106 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  107 </span><span class="decl"><span class="nottickedoff">matScalarAdd src x = unsafePerformIO $ do</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="nottickedoff">withPtr (toScalar x) $ \xPtr -&gt;</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="nottickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="nottickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  112 </span><span class="spaces">          </span><span class="nottickedoff">[C.block| void {</span>
+<span class="lineno">  113 </span><span class="spaces">            </span><span class="nottickedoff">*$(Mat * dstPtr) = *$(Mat * srcPtr) + *$(Scalar * xPtr);</span>
+<span class="lineno">  114 </span><span class="spaces">          </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="nottickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>matScalarMult
+<span class="lineno">  118 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  119 </span>    -&gt; Double
+<span class="lineno">  120 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  121 </span><span class="decl"><span class="nottickedoff">matScalarMult src x = unsafePerformIO $ do</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  123 </span><span class="spaces">    </span><span class="nottickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  125 </span><span class="spaces">        </span><span class="nottickedoff">[C.block| void {</span>
+<span class="lineno">  126 </span><span class="spaces">          </span><span class="nottickedoff">*$(Mat * dstPtr) = *$(Mat * srcPtr) * $(double c'x);</span>
+<span class="lineno">  127 </span><span class="spaces">        </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">pure $ unsafeCoerceMat dst</span>
+<span class="lineno">  129 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  130 </span><span class="spaces">    </span><span class="nottickedoff">c'x = realToFrac x</span></span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>{- | Calculates an absolute value of each matrix element.
+<span class="lineno">  133 </span>
+<span class="lineno">  134 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#abs OpenCV Sphinx doc&gt;
+<span class="lineno">  135 </span>-}
+<span class="lineno">  136 </span>matAbs
+<span class="lineno">  137 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  138 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  139 </span><span class="decl"><span class="nottickedoff">matAbs src = unsafePerformIO $ do</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  141 </span><span class="spaces">    </span><span class="nottickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  142 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  143 </span><span class="spaces">        </span><span class="nottickedoff">[C.block| void {</span>
+<span class="lineno">  144 </span><span class="spaces">          </span><span class="nottickedoff">*$(Mat * dstPtr) = cv::abs(*$(Mat * srcPtr));</span>
+<span class="lineno">  145 </span><span class="spaces">        </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="nottickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>{- | Calculates the per-element absolute difference between two arrays.
+<span class="lineno">  149 </span>
+<span class="lineno">  150 </span>Example:
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>@
+<span class="lineno">  153 </span>matAbsDiffImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  154 </span>matAbsDiffImg = matAbsDiff flower_512x341 sailboat_512x341
+<span class="lineno">  155 </span>@
+<span class="lineno">  156 </span>
+<span class="lineno">  157 </span>&lt;&lt;doc/generated/examples/matAbsDiffImg.png matAbsDiffImg&gt;&gt;
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#absdiff OpenCV Sphinx doc&gt;
+<span class="lineno">  160 </span>-}
+<span class="lineno">  161 </span>matAbsDiff
+<span class="lineno">  162 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  163 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  164 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  165 </span><span class="decl"><span class="istickedoff">matAbsDiff src1 src2 = unsafePerformIO $ do</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  171 </span><span class="spaces">          </span><span class="istickedoff">cv::absdiff( *$(Mat * src1Ptr)</span>
+<span class="lineno">  172 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  173 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Mat * dstPtr )</span>
+<span class="lineno">  174 </span><span class="spaces">                     </span><span class="istickedoff">);</span>
+<span class="lineno">  175 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  176 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  177 </span>
+<span class="lineno">  178 </span>{- | Calculates the per-element sum of two arrays.
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>Example:
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>@
+<span class="lineno">  183 </span>matAddImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  184 </span>matAddImg = matAdd flower_512x341 sailboat_512x341
+<span class="lineno">  185 </span>@
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>&lt;&lt;doc/generated/examples/matAddImg.png matAddImg&gt;&gt;
+<span class="lineno">  188 </span>
+<span class="lineno">  189 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#add OpenCV Sphinx doc&gt;
+<span class="lineno">  190 </span>-}
+<span class="lineno">  191 </span>-- TODO (RvD): handle different depths
+<span class="lineno">  192 </span>matAdd
+<span class="lineno">  193 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  194 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  195 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  196 </span><span class="decl"><span class="istickedoff">matAdd src1 src2 = unsafePerformIO $ do</span>
+<span class="lineno">  197 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  199 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  200 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  201 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  202 </span><span class="spaces">          </span><span class="istickedoff">cv::add</span>
+<span class="lineno">  203 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  204 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  205 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  206 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  207 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  208 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  210 </span>
+<span class="lineno">  211 </span>{- | Calculates the per-element difference between two arrays
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>Example:
+<span class="lineno">  214 </span>
+<span class="lineno">  215 </span>@
+<span class="lineno">  216 </span>matSubtractImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  217 </span>matSubtractImg = matSubtract flower_512x341 sailboat_512x341
+<span class="lineno">  218 </span>@
+<span class="lineno">  219 </span>
+<span class="lineno">  220 </span>&lt;&lt;doc/generated/examples/matSubtractImg.png matSubtractImg&gt;&gt;
+<span class="lineno">  221 </span>
+<span class="lineno">  222 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#subtract OpenCV Sphinx doc&gt;
+<span class="lineno">  223 </span>-}
+<span class="lineno">  224 </span>-- TODO (RvD): handle different depths
+<span class="lineno">  225 </span>matSubtract
+<span class="lineno">  226 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  227 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  228 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  229 </span><span class="decl"><span class="istickedoff">matSubtract src1 src2 = unsafePerformIO $ do</span>
+<span class="lineno">  230 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  231 </span><span class="spaces">    </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  232 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  233 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  234 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  235 </span><span class="spaces">          </span><span class="istickedoff">cv::subtract</span>
+<span class="lineno">  236 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  237 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  238 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  239 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  240 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  241 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  242 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  243 </span>
+<span class="lineno">  244 </span>{- | Calculates the weighted sum of two arrays
+<span class="lineno">  245 </span>
+<span class="lineno">  246 </span>Example:
+<span class="lineno">  247 </span>
+<span class="lineno">  248 </span>@
+<span class="lineno">  249 </span>matAddWeightedImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  250 </span>matAddWeightedImg = exceptError $
+<span class="lineno">  251 </span>    matAddWeighted flower_512x341 0.5 sailboat_512x341 0.5 0.0
+<span class="lineno">  252 </span>@
+<span class="lineno">  253 </span>
+<span class="lineno">  254 </span>&lt;&lt;doc/generated/examples/matAddWeightedImg.png matAddWeightedImg&gt;&gt;
+<span class="lineno">  255 </span>
+<span class="lineno">  256 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#addweighted OpenCV Sphinx doc&gt;
+<span class="lineno">  257 </span>-}
+<span class="lineno">  258 </span>
+<span class="lineno">  259 </span>-- TODO (RvD): handle different depths
+<span class="lineno">  260 </span>matAddWeighted
+<span class="lineno">  261 </span>    :: forall shape channels srcDepth dstDepth
+<span class="lineno">  262 </span>     . (ToDepthDS (Proxy dstDepth))
+<span class="lineno">  263 </span>    =&gt; Mat shape channels srcDepth -- ^ src1
+<span class="lineno">  264 </span>    -&gt; Double -- ^ alpha
+<span class="lineno">  265 </span>    -&gt; Mat shape channels srcDepth -- ^ src2
+<span class="lineno">  266 </span>    -&gt; Double -- ^ beta
+<span class="lineno">  267 </span>    -&gt; Double -- ^ gamma
+<span class="lineno">  268 </span>    -&gt; CvExcept (Mat shape channels dstDepth)
+<span class="lineno">  269 </span><span class="decl"><span class="istickedoff">matAddWeighted src1 alpha src2 beta gamma = unsafeWrapException $ do</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  272 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  273 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  274 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  275 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  276 </span><span class="spaces">        </span><span class="istickedoff">cv::addWeighted</span>
+<span class="lineno">  277 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  278 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'alpha)</span>
+<span class="lineno">  279 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  280 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'beta)</span>
+<span class="lineno">  281 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'gamma)</span>
+<span class="lineno">  282 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  283 </span><span class="spaces">          </span><span class="istickedoff">, $(int32_t c'dtype)</span>
+<span class="lineno">  284 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  285 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  286 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="istickedoff">c'alpha = realToFrac alpha</span>
+<span class="lineno">  288 </span><span class="spaces">    </span><span class="istickedoff">c'beta  = realToFrac beta</span>
+<span class="lineno">  289 </span><span class="spaces">    </span><span class="istickedoff">c'gamma = realToFrac gamma</span>
+<span class="lineno">  290 </span><span class="spaces">    </span><span class="istickedoff">c'dtype = maybe <span class="nottickedoff">(-1)</span> marshalDepth $ dsToMaybe $ toDepthDS <span class="nottickedoff">(Proxy :: Proxy dstDepth)</span></span></span>
+<span class="lineno">  291 </span>
+<span class="lineno">  292 </span>{- | Calculates the sum of a scaled array and another array.
+<span class="lineno">  293 </span>
+<span class="lineno">  294 </span>The function scaleAdd is one of the classical primitive linear algebra
+<span class="lineno">  295 </span>operations, known as DAXPY or SAXPY in BLAS. It calculates the sum of a scaled
+<span class="lineno">  296 </span>array and another array.
+<span class="lineno">  297 </span>
+<span class="lineno">  298 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#scaleadd OpenCV Sphinx doc&gt;
+<span class="lineno">  299 </span>-}
+<span class="lineno">  300 </span>matScaleAdd
+<span class="lineno">  301 </span>    :: Mat shape channels depth
+<span class="lineno">  302 </span>       -- ^ First input array.
+<span class="lineno">  303 </span>    -&gt; Double
+<span class="lineno">  304 </span>       -- ^ Scale factor for the first array.
+<span class="lineno">  305 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  306 </span>       -- ^ Second input array.
+<span class="lineno">  307 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  308 </span><span class="decl"><span class="nottickedoff">matScaleAdd src1 scale src2 = unsafeWrapException $ do</span>
+<span class="lineno">  309 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  310 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  311 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  312 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  313 </span><span class="spaces">      </span><span class="nottickedoff">withPtr dst  $ \dstPtr  -&gt;</span>
+<span class="lineno">  314 </span><span class="spaces">      </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  315 </span><span class="spaces">        </span><span class="nottickedoff">cv::scaleAdd</span>
+<span class="lineno">  316 </span><span class="spaces">          </span><span class="nottickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  317 </span><span class="spaces">          </span><span class="nottickedoff">, $(double c'scale)</span>
+<span class="lineno">  318 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  319 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  320 </span><span class="spaces">          </span><span class="nottickedoff">);</span>
+<span class="lineno">  321 </span><span class="spaces">      </span><span class="nottickedoff">|]</span>
+<span class="lineno">  322 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  323 </span><span class="spaces">    </span><span class="nottickedoff">c'scale = realToFrac scale</span></span>
+<span class="lineno">  324 </span>
+<span class="lineno">  325 </span>matMax
+<span class="lineno">  326 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  327 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  328 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  329 </span><span class="decl"><span class="nottickedoff">matMax src1 src2 = unsafeWrapException $ do</span>
+<span class="lineno">  330 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  331 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  332 </span><span class="spaces">      </span><span class="nottickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  333 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src1 $ \src1Ptr -&gt;</span>
+<span class="lineno">  334 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src2 $ \src2Ptr -&gt;</span>
+<span class="lineno">  335 </span><span class="spaces">        </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  336 </span><span class="spaces">          </span><span class="nottickedoff">cv::max</span>
+<span class="lineno">  337 </span><span class="spaces">          </span><span class="nottickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  338 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  339 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  340 </span><span class="spaces">          </span><span class="nottickedoff">);</span>
+<span class="lineno">  341 </span><span class="spaces">        </span><span class="nottickedoff">|]</span></span>
+<span class="lineno">  342 </span>
+<span class="lineno">  343 </span>matScalarCompare
+<span class="lineno">  344 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  345 </span>    -&gt; Double
+<span class="lineno">  346 </span>    -&gt; CmpType
+<span class="lineno">  347 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  348 </span><span class="decl"><span class="istickedoff">matScalarCompare src x cmpType = unsafeWrapException $ do</span>
+<span class="lineno">  349 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  350 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  351 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  352 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  353 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  354 </span><span class="spaces">          </span><span class="istickedoff">cv::compare</span>
+<span class="lineno">  355 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  356 </span><span class="spaces">          </span><span class="istickedoff">, $(double c'x)</span>
+<span class="lineno">  357 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  358 </span><span class="spaces">          </span><span class="istickedoff">, $(int32_t c'cmpOp)</span>
+<span class="lineno">  359 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  360 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  361 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="istickedoff">c'x = realToFrac x</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">c'cmpOp = marshalCmpType cmpType</span></span>
+<span class="lineno">  364 </span>
+<span class="lineno">  365 </span>--------------------------------------------------------------------------------
+<span class="lineno">  366 </span>-- Per element bitwise operations
+<span class="lineno">  367 </span>--------------------------------------------------------------------------------
+<span class="lineno">  368 </span>
+<span class="lineno">  369 </span>{- $bitwise_intro
+<span class="lineno">  370 </span>
+<span class="lineno">  371 </span>The examples for the bitwise operations make use of the following images:
+<span class="lineno">  372 </span>
+<span class="lineno">  373 </span>Example:
+<span class="lineno">  374 </span>
+<span class="lineno">  375 </span>@
+<span class="lineno">  376 </span>type VennShape = [200, 320]
+<span class="lineno">  377 </span>
+<span class="lineno">  378 </span>vennCircleAImg :: Mat (ShapeT VennShape) ('S 1) ('S Word8)
+<span class="lineno">  379 </span>vennCircleAImg = exceptError $
+<span class="lineno">  380 </span>    withMatM
+<span class="lineno">  381 </span>      (Proxy :: Proxy VennShape)
+<span class="lineno">  382 </span>      (Proxy :: Proxy 1)
+<span class="lineno">  383 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  384 </span>      black $ \\imgM -&gt; lift $ vennCircleA imgM white (-1)
+<span class="lineno">  385 </span>
+<span class="lineno">  386 </span>vennCircleBImg :: Mat (ShapeT VennShape) ('S 1) ('S Word8)
+<span class="lineno">  387 </span>vennCircleBImg = exceptError $
+<span class="lineno">  388 </span>    withMatM
+<span class="lineno">  389 </span>      (Proxy :: Proxy VennShape)
+<span class="lineno">  390 </span>      (Proxy :: Proxy 1)
+<span class="lineno">  391 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  392 </span>      black $ \\imgM -&gt; lift $ vennCircleB imgM white (-1)
+<span class="lineno">  393 </span>@
+<span class="lineno">  394 </span>
+<span class="lineno">  395 </span>&lt;&lt;doc/generated/examples/vennCircleAImg.png vennCircleAImg&gt;&gt;
+<span class="lineno">  396 </span>&lt;&lt;doc/generated/examples/vennCircleBImg.png vennCircleBImg&gt;&gt;
+<span class="lineno">  397 </span>-}
+<span class="lineno">  398 </span>
+<span class="lineno">  399 </span>{- |
+<span class="lineno">  400 </span>
+<span class="lineno">  401 </span>Example:
+<span class="lineno">  402 </span>
+<span class="lineno">  403 </span>@
+<span class="lineno">  404 </span>bitwiseNotImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+<span class="lineno">  405 </span>bitwiseNotImg = exceptError $ do
+<span class="lineno">  406 </span>    img &lt;- bitwiseNot vennCircleAImg
+<span class="lineno">  407 </span>    imgBgr &lt;- cvtColor gray bgr img
+<span class="lineno">  408 </span>    createMat $ do
+<span class="lineno">  409 </span>      imgM &lt;- lift $ thaw imgBgr
+<span class="lineno">  410 </span>      lift $ vennCircleA imgM blue 2
+<span class="lineno">  411 </span>      pure imgM
+<span class="lineno">  412 </span>@
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>&lt;&lt;doc/generated/examples/bitwiseNotImg.png bitwiseNotImg&gt;&gt;
+<span class="lineno">  415 </span>
+<span class="lineno">  416 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-not OpenCV Sphinx doc&gt;
+<span class="lineno">  417 </span>-}
+<span class="lineno">  418 </span>bitwiseNot
+<span class="lineno">  419 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  420 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  421 </span><span class="decl"><span class="istickedoff">bitwiseNot src = unsafeWrapException $ do</span>
+<span class="lineno">  422 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  423 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  424 </span><span class="spaces">      </span><span class="istickedoff">withPtr src    $ \srcPtr -&gt;</span>
+<span class="lineno">  425 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr -&gt;</span>
+<span class="lineno">  426 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  427 </span><span class="spaces">          </span><span class="istickedoff">cv::bitwise_not</span>
+<span class="lineno">  428 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  429 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  430 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  431 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  432 </span><span class="spaces">        </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  433 </span>
+<span class="lineno">  434 </span>{- |
+<span class="lineno">  435 </span>
+<span class="lineno">  436 </span>Example:
+<span class="lineno">  437 </span>
+<span class="lineno">  438 </span>@
+<span class="lineno">  439 </span>bitwiseAndImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+<span class="lineno">  440 </span>bitwiseAndImg = exceptError $ do
+<span class="lineno">  441 </span>    img &lt;- bitwiseAnd vennCircleAImg vennCircleBImg
+<span class="lineno">  442 </span>    imgBgr &lt;- cvtColor gray bgr img
+<span class="lineno">  443 </span>    createMat $ do
+<span class="lineno">  444 </span>      imgM &lt;- lift $ thaw imgBgr
+<span class="lineno">  445 </span>      lift $ vennCircleA imgM blue 2
+<span class="lineno">  446 </span>      lift $ vennCircleB imgM red  2
+<span class="lineno">  447 </span>      pure imgM
+<span class="lineno">  448 </span>@
+<span class="lineno">  449 </span>
+<span class="lineno">  450 </span>&lt;&lt;doc/generated/examples/bitwiseAndImg.png bitwiseAndImg&gt;&gt;
+<span class="lineno">  451 </span>
+<span class="lineno">  452 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-and OpenCV Sphinx doc&gt;
+<span class="lineno">  453 </span>-}
+<span class="lineno">  454 </span>bitwiseAnd
+<span class="lineno">  455 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  456 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  457 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  458 </span><span class="decl"><span class="istickedoff">bitwiseAnd src1 src2 = unsafeWrapException $ do</span>
+<span class="lineno">  459 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  460 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  461 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1   $ \src1Ptr -&gt;</span>
+<span class="lineno">  462 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2   $ \src2Ptr -&gt;</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr  -&gt;</span>
+<span class="lineno">  464 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  465 </span><span class="spaces">          </span><span class="istickedoff">cv::bitwise_and</span>
+<span class="lineno">  466 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  467 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  468 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  469 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  470 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  471 </span><span class="spaces">        </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  472 </span>
+<span class="lineno">  473 </span>{- |
+<span class="lineno">  474 </span>
+<span class="lineno">  475 </span>Example:
+<span class="lineno">  476 </span>
+<span class="lineno">  477 </span>@
+<span class="lineno">  478 </span>bitwiseOrImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+<span class="lineno">  479 </span>bitwiseOrImg = exceptError $ do
+<span class="lineno">  480 </span>    img &lt;- bitwiseOr vennCircleAImg vennCircleBImg
+<span class="lineno">  481 </span>    imgBgr &lt;- cvtColor gray bgr img
+<span class="lineno">  482 </span>    createMat $ do
+<span class="lineno">  483 </span>      imgM &lt;- lift $ thaw imgBgr
+<span class="lineno">  484 </span>      lift $ vennCircleA imgM blue 2
+<span class="lineno">  485 </span>      lift $ vennCircleB imgM red  2
+<span class="lineno">  486 </span>      pure imgM
+<span class="lineno">  487 </span>@
+<span class="lineno">  488 </span>
+<span class="lineno">  489 </span>&lt;&lt;doc/generated/examples/bitwiseOrImg.png bitwiseOrImg&gt;&gt;
+<span class="lineno">  490 </span>
+<span class="lineno">  491 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-or OpenCV Sphinx doc&gt;
+<span class="lineno">  492 </span>-}
+<span class="lineno">  493 </span>bitwiseOr
+<span class="lineno">  494 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  495 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  496 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  497 </span><span class="decl"><span class="istickedoff">bitwiseOr src1 src2 = unsafeWrapException $ do</span>
+<span class="lineno">  498 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  499 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  500 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1   $ \src1Ptr -&gt;</span>
+<span class="lineno">  501 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2   $ \src2Ptr -&gt;</span>
+<span class="lineno">  502 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr  -&gt;</span>
+<span class="lineno">  503 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  504 </span><span class="spaces">          </span><span class="istickedoff">cv::bitwise_or</span>
+<span class="lineno">  505 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  506 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  507 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  508 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  509 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  510 </span><span class="spaces">        </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  511 </span>
+<span class="lineno">  512 </span>{- |
+<span class="lineno">  513 </span>
+<span class="lineno">  514 </span>Example:
+<span class="lineno">  515 </span>
+<span class="lineno">  516 </span>@
+<span class="lineno">  517 </span>bitwiseXorImg :: Mat (ShapeT VennShape) ('S 3) ('S Word8)
+<span class="lineno">  518 </span>bitwiseXorImg = exceptError $ do
+<span class="lineno">  519 </span>    img &lt;- bitwiseXor vennCircleAImg vennCircleBImg
+<span class="lineno">  520 </span>    imgBgr &lt;- cvtColor gray bgr img
+<span class="lineno">  521 </span>    createMat $ do
+<span class="lineno">  522 </span>      imgM &lt;- lift $ thaw imgBgr
+<span class="lineno">  523 </span>      lift $ vennCircleA imgM blue 2
+<span class="lineno">  524 </span>      lift $ vennCircleB imgM red  2
+<span class="lineno">  525 </span>      pure imgM
+<span class="lineno">  526 </span>@
+<span class="lineno">  527 </span>
+<span class="lineno">  528 </span>&lt;&lt;doc/generated/examples/bitwiseXorImg.png bitwiseXorImg&gt;&gt;
+<span class="lineno">  529 </span>
+<span class="lineno">  530 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#bitwise-xor OpenCV Sphinx doc&gt;
+<span class="lineno">  531 </span>-}
+<span class="lineno">  532 </span>bitwiseXor
+<span class="lineno">  533 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  534 </span>    -&gt; Mat shape channels depth
+<span class="lineno">  535 </span>    -&gt; CvExcept (Mat shape channels depth)
+<span class="lineno">  536 </span><span class="decl"><span class="istickedoff">bitwiseXor src1 src2 = unsafeWrapException $ do</span>
+<span class="lineno">  537 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  538 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  539 </span><span class="spaces">      </span><span class="istickedoff">withPtr src1   $ \src1Ptr -&gt;</span>
+<span class="lineno">  540 </span><span class="spaces">      </span><span class="istickedoff">withPtr src2   $ \src2Ptr -&gt;</span>
+<span class="lineno">  541 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr  -&gt;</span>
+<span class="lineno">  542 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  543 </span><span class="spaces">          </span><span class="istickedoff">cv::bitwise_xor</span>
+<span class="lineno">  544 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat * src1Ptr)</span>
+<span class="lineno">  545 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  546 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  547 </span><span class="spaces">          </span><span class="istickedoff">, cv::noArray()</span>
+<span class="lineno">  548 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  549 </span><span class="spaces">        </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  550 </span>
+<span class="lineno">  551 </span>{- | Creates one multichannel array out of several single-channel ones.
+<span class="lineno">  552 </span>
+<span class="lineno">  553 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#merge OpenCV Sphinx doc&gt;
+<span class="lineno">  554 </span>-}
+<span class="lineno">  555 </span>matMerge
+<span class="lineno">  556 </span>    :: V.Vector (Mat shape ('S 1) depth) -- ^
+<span class="lineno">  557 </span>    -&gt; Mat shape 'D depth
+<span class="lineno">  558 </span><span class="decl"><span class="istickedoff">matMerge srcVec = unsafePerformIO $ do</span>
+<span class="lineno">  559 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  560 </span><span class="spaces">    </span><span class="istickedoff">withArrayPtr srcVec $ \srcVecPtr -&gt;</span>
+<span class="lineno">  561 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  562 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  563 </span><span class="spaces">          </span><span class="istickedoff">cv::merge</span>
+<span class="lineno">  564 </span><span class="spaces">          </span><span class="istickedoff">( $(Mat * srcVecPtr)</span>
+<span class="lineno">  565 </span><span class="spaces">          </span><span class="istickedoff">, $(size_t c'srcVecLength)</span>
+<span class="lineno">  566 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  567 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  568 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  569 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span>
+<span class="lineno">  570 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  571 </span><span class="spaces">    </span><span class="istickedoff">c'srcVecLength = fromIntegral $ V.length srcVec</span></span>
+<span class="lineno">  572 </span>
+<span class="lineno">  573 </span>{- | Divides a multi-channel array into several single-channel arrays.
+<span class="lineno">  574 </span>
+<span class="lineno">  575 </span>Example:
+<span class="lineno">  576 </span>
+<span class="lineno">  577 </span>@
+<span class="lineno">  578 </span>matSplitImg
+<span class="lineno">  579 </span>    :: forall (width    :: Nat)
+<span class="lineno">  580 </span>              (width3   :: Nat)
+<span class="lineno">  581 </span>              (height   :: Nat)
+<span class="lineno">  582 </span>              (channels :: Nat)
+<span class="lineno">  583 </span>              (depth    :: *)
+<span class="lineno">  584 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+<span class="lineno">  585 </span>       , width3 ~ ((*) width 3)
+<span class="lineno">  586 </span>       )
+<span class="lineno">  587 </span>    =&gt; Mat (ShapeT [height, width3]) ('S channels) ('S depth)
+<span class="lineno">  588 </span>matSplitImg = exceptError $ do
+<span class="lineno">  589 </span>    zeroImg &lt;- mkMat (Proxy :: Proxy [height, width])
+<span class="lineno">  590 </span>                     (Proxy :: Proxy 1)
+<span class="lineno">  591 </span>                     (Proxy :: Proxy depth)
+<span class="lineno">  592 </span>                     black
+<span class="lineno">  593 </span>    let blueImg  = matMerge $ V.fromList [channelImgs V.! 0, zeroImg, zeroImg]
+<span class="lineno">  594 </span>        greenImg = matMerge $ V.fromList [zeroImg, channelImgs V.! 1, zeroImg]
+<span class="lineno">  595 </span>        redImg   = matMerge $ V.fromList [zeroImg, zeroImg, channelImgs V.! 2]
+<span class="lineno">  596 </span>
+<span class="lineno">  597 </span>    withMatM (Proxy :: Proxy [height, width3])
+<span class="lineno">  598 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  599 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  600 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  601 </span>      matCopyToM imgM (V2 (w*0) 0) (unsafeCoerceMat blueImg)  Nothing
+<span class="lineno">  602 </span>      matCopyToM imgM (V2 (w*1) 0) (unsafeCoerceMat greenImg) Nothing
+<span class="lineno">  603 </span>      matCopyToM imgM (V2 (w*2) 0) (unsafeCoerceMat redImg)   Nothing
+<span class="lineno">  604 </span>  where
+<span class="lineno">  605 </span>    channelImgs = matSplit birds_512x341
+<span class="lineno">  606 </span>
+<span class="lineno">  607 </span>    w :: Int32
+<span class="lineno">  608 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  609 </span>@
+<span class="lineno">  610 </span>
+<span class="lineno">  611 </span>&lt;&lt;doc/generated/examples/matSplitImg.png matSplitImg&gt;&gt;
+<span class="lineno">  612 </span>
+<span class="lineno">  613 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#split OpenCV Sphinx doc&gt;
+<span class="lineno">  614 </span>-}
+<span class="lineno">  615 </span>matSplit
+<span class="lineno">  616 </span>    :: Mat shape channels depth -- ^
+<span class="lineno">  617 </span>    -&gt; V.Vector (Mat shape ('S 1) depth)
+<span class="lineno">  618 </span><span class="decl"><span class="istickedoff">matSplit src = unsafePerformIO $</span>
+<span class="lineno">  619 </span><span class="spaces">    </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  620 </span><span class="spaces">    </span><span class="istickedoff">allocaArray numChans $ \(splitsArray :: Ptr (Ptr C'Mat)) -&gt; do</span>
+<span class="lineno">  621 </span><span class="spaces">      </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  622 </span><span class="spaces">        </span><span class="istickedoff">cv::Mat * srcPtr = $(Mat * srcPtr);</span>
+<span class="lineno">  623 </span><span class="spaces">        </span><span class="istickedoff">int32_t numChans = $(int32_t c'numChans);</span>
+<span class="lineno">  624 </span><span class="spaces">        </span><span class="istickedoff">cv::Mat *splits = new cv::Mat[numChans];</span>
+<span class="lineno">  625 </span><span class="spaces">        </span><span class="istickedoff">cv::split(*srcPtr, splits);</span>
+<span class="lineno">  626 </span><span class="spaces">        </span><span class="istickedoff">for(int i = 0; i &lt; numChans; i++){</span>
+<span class="lineno">  627 </span><span class="spaces">          </span><span class="istickedoff">$(Mat * * splitsArray)[i] = new cv::Mat(splits[i]);</span>
+<span class="lineno">  628 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  629 </span><span class="spaces">        </span><span class="istickedoff">delete [] splits;</span>
+<span class="lineno">  630 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  631 </span><span class="spaces">      </span><span class="istickedoff">fmap V.fromList . mapM (fromPtr . pure) =&lt;&lt; peekArray numChans splitsArray</span>
+<span class="lineno">  632 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  633 </span><span class="spaces">    </span><span class="istickedoff">numChans = fromIntegral $ miChannels $ matInfo src</span>
+<span class="lineno">  634 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  635 </span><span class="spaces">    </span><span class="istickedoff">c'numChans :: Int32</span>
+<span class="lineno">  636 </span><span class="spaces">    </span><span class="istickedoff">c'numChans = fromIntegral numChans</span></span>
+<span class="lineno">  637 </span>
+<span class="lineno">  638 </span>{- | Apply the same 1 dimensional action to every channel
+<span class="lineno">  639 </span>-}
+<span class="lineno">  640 </span>matChannelMapM
+<span class="lineno">  641 </span>   :: Monad m
+<span class="lineno">  642 </span>   =&gt; (Mat shape ('S 1) depth -&gt; m (Mat shape ('S 1) depth))
+<span class="lineno">  643 </span>   -&gt; Mat shape channelsOut depth
+<span class="lineno">  644 </span>   -&gt; m (Mat shape channelsOut depth)
+<span class="lineno">  645 </span><span class="decl"><span class="istickedoff">matChannelMapM f img = unsafeCoerceMat . matMerge &lt;$&gt; V.mapM f (matSplit img)</span></span>
+<span class="lineno">  646 </span>
+<span class="lineno">  647 </span>{- | Finds the global minimum and maximum in an array
+<span class="lineno">  648 </span>
+<span class="lineno">  649 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#minmaxloc OpenCV Sphinx doc&gt;
+<span class="lineno">  650 </span>-}
+<span class="lineno">  651 </span>-- TODO (RvD): implement mask
+<span class="lineno">  652 </span>minMaxLoc
+<span class="lineno">  653 </span>    :: Mat ('S [height, width]) channels depth -- ^
+<span class="lineno">  654 </span>    -&gt; CvExcept (Double, Double, Point2i, Point2i)
+<span class="lineno">  655 </span><span class="decl"><span class="istickedoff">minMaxLoc src = unsafeWrapException $ do</span>
+<span class="lineno">  656 </span><span class="spaces">    </span><span class="istickedoff">minLoc &lt;- toPointIO $ V2 0 0</span>
+<span class="lineno">  657 </span><span class="spaces">    </span><span class="istickedoff">maxLoc &lt;- toPointIO $ V2 0 0</span>
+<span class="lineno">  658 </span><span class="spaces">    </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  659 </span><span class="spaces">      </span><span class="istickedoff">withPtr minLoc $ \minLocPtr -&gt;</span>
+<span class="lineno">  660 </span><span class="spaces">      </span><span class="istickedoff">withPtr maxLoc $ \maxLocPtr -&gt;</span>
+<span class="lineno">  661 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \minValPtr -&gt;</span>
+<span class="lineno">  662 </span><span class="spaces">      </span><span class="istickedoff">alloca $ \maxValPtr -&gt; do</span>
+<span class="lineno">  663 </span><span class="spaces">        </span><span class="istickedoff">handleCvException</span>
+<span class="lineno">  664 </span><span class="spaces">          </span><span class="istickedoff">( (,, <span class="nottickedoff">minLoc</span>, maxLoc)</span>
+<span class="lineno">  665 </span><span class="spaces">            </span><span class="istickedoff">&lt;$&gt; (<span class="nottickedoff">realToFrac</span> &lt;$&gt; peek minValPtr)</span>
+<span class="lineno">  666 </span><span class="spaces">            </span><span class="istickedoff">&lt;*&gt; (<span class="nottickedoff">realToFrac</span> &lt;$&gt; peek maxValPtr)</span>
+<span class="lineno">  667 </span><span class="spaces">          </span><span class="istickedoff">)</span>
+<span class="lineno">  668 </span><span class="spaces">          </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  669 </span><span class="spaces">            </span><span class="istickedoff">cv::minMaxLoc( *$(Mat * srcPtr)</span>
+<span class="lineno">  670 </span><span class="spaces">                         </span><span class="istickedoff">, $(double * minValPtr)</span>
+<span class="lineno">  671 </span><span class="spaces">                         </span><span class="istickedoff">, $(double * maxValPtr)</span>
+<span class="lineno">  672 </span><span class="spaces">                         </span><span class="istickedoff">, $(Point2i * minLocPtr)</span>
+<span class="lineno">  673 </span><span class="spaces">                         </span><span class="istickedoff">, $(Point2i * maxLocPtr)</span>
+<span class="lineno">  674 </span><span class="spaces">                         </span><span class="istickedoff">);</span>
+<span class="lineno">  675 </span><span class="spaces">          </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  676 </span>
+<span class="lineno">  677 </span>{- | Calculates an absolute array norm
+<span class="lineno">  678 </span>
+<span class="lineno">  679 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc&gt;
+<span class="lineno">  680 </span>-}
+<span class="lineno">  681 </span>norm
+<span class="lineno">  682 </span>    :: NormType
+<span class="lineno">  683 </span>    -&gt; Maybe (Mat shape ('S 1) ('S Word8))
+<span class="lineno">  684 </span>       -- ^ Optional operation mask; it must have the same size as the input
+<span class="lineno">  685 </span>       -- array, depth 'Depth_8U' and 1 channel.
+<span class="lineno">  686 </span>    -&gt; Mat shape channels depth -- ^ Input array.
+<span class="lineno">  687 </span>    -&gt; CvExcept Double  -- ^ Calculated norm.
+<span class="lineno">  688 </span><span class="decl"><span class="nottickedoff">norm normType mbMask src = unsafeWrapException $</span>
+<span class="lineno">  689 </span><span class="spaces">    </span><span class="nottickedoff">withPtr src    $ \srcPtr  -&gt;</span>
+<span class="lineno">  690 </span><span class="spaces">    </span><span class="nottickedoff">withPtr mbMask $ \mskPtr  -&gt;</span>
+<span class="lineno">  691 </span><span class="spaces">    </span><span class="nottickedoff">alloca         $ \normPtr -&gt;</span>
+<span class="lineno">  692 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (realToFrac &lt;$&gt; peek normPtr) $</span>
+<span class="lineno">  693 </span><span class="spaces">      </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  694 </span><span class="spaces">        </span><span class="nottickedoff">Mat * mskPtr = $(Mat * mskPtr);</span>
+<span class="lineno">  695 </span><span class="spaces">        </span><span class="nottickedoff">*$(double * normPtr) =</span>
+<span class="lineno">  696 </span><span class="spaces">          </span><span class="nottickedoff">cv::norm( *$(Mat * srcPtr)</span>
+<span class="lineno">  697 </span><span class="spaces">                  </span><span class="nottickedoff">, $(int32_t c'normType)</span>
+<span class="lineno">  698 </span><span class="spaces">                  </span><span class="nottickedoff">, mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())</span>
+<span class="lineno">  699 </span><span class="spaces">                  </span><span class="nottickedoff">);</span>
+<span class="lineno">  700 </span><span class="spaces">      </span><span class="nottickedoff">|]</span>
+<span class="lineno">  701 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  702 </span><span class="spaces">    </span><span class="nottickedoff">c'normType = marshalNormType NormAbsolute normType</span></span>
+<span class="lineno">  703 </span>
+<span class="lineno">  704 </span>{- | Calculates an absolute difference norm, or a relative difference norm
+<span class="lineno">  705 </span>
+<span class="lineno">  706 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#norm OpenCV Sphinx doc&gt;
+<span class="lineno">  707 </span>-}
+<span class="lineno">  708 </span>normDiff
+<span class="lineno">  709 </span>    :: NormAbsRel -- ^ Absolute or relative norm.
+<span class="lineno">  710 </span>    -&gt; NormType
+<span class="lineno">  711 </span>    -&gt; Maybe (Mat shape ('S 1) ('S Word8))
+<span class="lineno">  712 </span>       -- ^ Optional operation mask; it must have the same size as the input
+<span class="lineno">  713 </span>       -- array, depth 'Depth_8U' and 1 channel.
+<span class="lineno">  714 </span>    -&gt; Mat shape channels depth -- ^ First input array.
+<span class="lineno">  715 </span>    -&gt; Mat shape channels depth -- ^ Second input array of the same size and type as the first.
+<span class="lineno">  716 </span>    -&gt; CvExcept Double -- ^ Calculated norm.
+<span class="lineno">  717 </span><span class="decl"><span class="nottickedoff">normDiff absRel normType mbMask src1 src2 = unsafeWrapException $</span>
+<span class="lineno">  718 </span><span class="spaces">    </span><span class="nottickedoff">withPtr src1   $ \src1Ptr -&gt;</span>
+<span class="lineno">  719 </span><span class="spaces">    </span><span class="nottickedoff">withPtr src2   $ \src2Ptr -&gt;</span>
+<span class="lineno">  720 </span><span class="spaces">    </span><span class="nottickedoff">withPtr mbMask $ \mskPtr  -&gt;</span>
+<span class="lineno">  721 </span><span class="spaces">    </span><span class="nottickedoff">alloca         $ \normPtr -&gt;</span>
+<span class="lineno">  722 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (realToFrac &lt;$&gt; peek normPtr) $</span>
+<span class="lineno">  723 </span><span class="spaces">      </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  724 </span><span class="spaces">        </span><span class="nottickedoff">Mat * mskPtr = $(Mat * mskPtr);</span>
+<span class="lineno">  725 </span><span class="spaces">        </span><span class="nottickedoff">*$(double * normPtr) =</span>
+<span class="lineno">  726 </span><span class="spaces">          </span><span class="nottickedoff">cv::norm( *$(Mat * src1Ptr)</span>
+<span class="lineno">  727 </span><span class="spaces">                  </span><span class="nottickedoff">, *$(Mat * src2Ptr)</span>
+<span class="lineno">  728 </span><span class="spaces">                  </span><span class="nottickedoff">, $(int32_t c'normType)</span>
+<span class="lineno">  729 </span><span class="spaces">                  </span><span class="nottickedoff">, mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())</span>
+<span class="lineno">  730 </span><span class="spaces">                  </span><span class="nottickedoff">);</span>
+<span class="lineno">  731 </span><span class="spaces">      </span><span class="nottickedoff">|]</span>
+<span class="lineno">  732 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  733 </span><span class="spaces">    </span><span class="nottickedoff">c'normType = marshalNormType absRel normType</span></span>
+<span class="lineno">  734 </span>
+<span class="lineno">  735 </span>{- | Normalizes the norm or value range of an array
+<span class="lineno">  736 </span>
+<span class="lineno">  737 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#normalize OpenCV Sphinx doc&gt;
+<span class="lineno">  738 </span>-}
+<span class="lineno">  739 </span>normalize
+<span class="lineno">  740 </span>    :: forall shape channels srcDepth dstDepth
+<span class="lineno">  741 </span>     . (ToDepthDS (Proxy dstDepth))
+<span class="lineno">  742 </span>    =&gt; Double
+<span class="lineno">  743 </span>       -- ^ Norm value to normalize to or the lower range boundary in case of
+<span class="lineno">  744 </span>       -- the range normalization.
+<span class="lineno">  745 </span>    -&gt; Double
+<span class="lineno">  746 </span>       -- ^ Upper range boundary in case of the range normalization; it is not
+<span class="lineno">  747 </span>       -- used for the norm normalization.
+<span class="lineno">  748 </span>    -&gt; NormType
+<span class="lineno">  749 </span>    -&gt; Maybe (Mat shape ('S 1) ('S Word8)) -- ^ Optional operation mask.
+<span class="lineno">  750 </span>    -&gt; Mat shape channels srcDepth -- ^ Input array.
+<span class="lineno">  751 </span>    -&gt; CvExcept (Mat shape channels dstDepth)
+<span class="lineno">  752 </span><span class="decl"><span class="nottickedoff">normalize alpha beta normType mbMask src = unsafeWrapException $ do</span>
+<span class="lineno">  753 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  754 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  755 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src    $ \srcPtr -&gt;</span>
+<span class="lineno">  756 </span><span class="spaces">      </span><span class="nottickedoff">withPtr dst    $ \dstPtr -&gt;</span>
+<span class="lineno">  757 </span><span class="spaces">      </span><span class="nottickedoff">withPtr mbMask $ \mskPtr -&gt;</span>
+<span class="lineno">  758 </span><span class="spaces">        </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  759 </span><span class="spaces">          </span><span class="nottickedoff">Mat * mskPtr = $(Mat * mskPtr);</span>
+<span class="lineno">  760 </span><span class="spaces">          </span><span class="nottickedoff">cv::normalize( *$(Mat * srcPtr)</span>
+<span class="lineno">  761 </span><span class="spaces">                       </span><span class="nottickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  762 </span><span class="spaces">                       </span><span class="nottickedoff">, $(double c'alpha)</span>
+<span class="lineno">  763 </span><span class="spaces">                       </span><span class="nottickedoff">, $(double c'beta)</span>
+<span class="lineno">  764 </span><span class="spaces">                       </span><span class="nottickedoff">, $(int32_t c'normType)</span>
+<span class="lineno">  765 </span><span class="spaces">                       </span><span class="nottickedoff">, $(int32_t c'dtype)</span>
+<span class="lineno">  766 </span><span class="spaces">                       </span><span class="nottickedoff">, mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())</span>
+<span class="lineno">  767 </span><span class="spaces">                       </span><span class="nottickedoff">);</span>
+<span class="lineno">  768 </span><span class="spaces">        </span><span class="nottickedoff">|]</span>
+<span class="lineno">  769 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  770 </span><span class="spaces">    </span><span class="nottickedoff">c'alpha    = realToFrac alpha</span>
+<span class="lineno">  771 </span><span class="spaces">    </span><span class="nottickedoff">c'beta     = realToFrac beta</span>
+<span class="lineno">  772 </span><span class="spaces">    </span><span class="nottickedoff">c'normType = marshalNormType NormAbsolute normType</span>
+<span class="lineno">  773 </span><span class="spaces">    </span><span class="nottickedoff">c'dtype    = maybe (-1) marshalDepth $ dsToMaybe $ toDepthDS (Proxy :: Proxy dstDepth)</span></span>
+<span class="lineno">  774 </span>
+<span class="lineno">  775 </span>{- | Calculates the sum of array elements
+<span class="lineno">  776 </span>
+<span class="lineno">  777 </span>Example:
+<span class="lineno">  778 </span>
+<span class="lineno">  779 </span>@
+<span class="lineno">  780 </span>matSumImg :: Mat (ShapeT [201, 201]) ('S 3) ('S Word8)
+<span class="lineno">  781 </span>matSumImg = exceptError $
+<span class="lineno">  782 </span>    withMatM
+<span class="lineno">  783 </span>      (Proxy :: Proxy [201, 201])
+<span class="lineno">  784 </span>      (Proxy :: Proxy 3)
+<span class="lineno">  785 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  786 </span>      black $ \\imgM -&gt; do
+<span class="lineno">  787 </span>        -- Draw a filled circle. Each pixel has a value of (255,255,255)
+<span class="lineno">  788 </span>        lift $ circle imgM (pure radius :: V2 Int32) radius white (-1) LineType_8 0
+<span class="lineno">  789 </span>        -- Calculate the sum of all pixels.
+<span class="lineno">  790 </span>        scalar &lt;- matSumM imgM
+<span class="lineno">  791 </span>        let V4 area _y _z _w = fromScalar scalar :: V4 Double
+<span class="lineno">  792 </span>        -- Circle area = pi * radius * radius
+<span class="lineno">  793 </span>        let approxPi = area \/ 255 \/ (radius * radius)
+<span class="lineno">  794 </span>        lift $ putText imgM
+<span class="lineno">  795 </span>                       (T.pack $ show approxPi)
+<span class="lineno">  796 </span>                       (V2 40 110 :: V2 Int32)
+<span class="lineno">  797 </span>                       (Font FontHersheyDuplex NotSlanted 1)
+<span class="lineno">  798 </span>                       blue
+<span class="lineno">  799 </span>                       1
+<span class="lineno">  800 </span>                       LineType_AA
+<span class="lineno">  801 </span>                       False
+<span class="lineno">  802 </span>  where
+<span class="lineno">  803 </span>    radius :: forall a. Num a =&gt; a
+<span class="lineno">  804 </span>    radius = 100
+<span class="lineno">  805 </span>@
+<span class="lineno">  806 </span>
+<span class="lineno">  807 </span>&lt;&lt;doc/generated/examples/matSumImg.png matSumImg&gt;&gt;
+<span class="lineno">  808 </span>
+<span class="lineno">  809 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#sum OpenCV Sphinx doc&gt;
+<span class="lineno">  810 </span>-}
+<span class="lineno">  811 </span>matSum
+<span class="lineno">  812 </span>    :: Mat shape channels depth
+<span class="lineno">  813 </span>       -- ^ Input array that must have from 1 to 4 channels.
+<span class="lineno">  814 </span>    -&gt; CvExcept Scalar
+<span class="lineno">  815 </span><span class="decl"><span class="nottickedoff">matSum src = runCvExceptST $ matSumM =&lt;&lt; unsafeThaw src</span></span>
+<span class="lineno">  816 </span>
+<span class="lineno">  817 </span>matSumM
+<span class="lineno">  818 </span>    :: (PrimMonad m)
+<span class="lineno">  819 </span>    =&gt; Mut (Mat shape channels depth) (PrimState m)
+<span class="lineno">  820 </span>       -- ^ Input array that must have from 1 to 4 channels.
+<span class="lineno">  821 </span>    -&gt; CvExceptT m Scalar
+<span class="lineno">  822 </span><span class="decl"><span class="istickedoff">matSumM srcM = ExceptT $ unsafePrimToPrim $ do</span>
+<span class="lineno">  823 </span><span class="spaces">    </span><span class="istickedoff">s &lt;- newScalar zero</span>
+<span class="lineno">  824 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure s) $</span>
+<span class="lineno">  825 </span><span class="spaces">      </span><span class="istickedoff">withPtr srcM $ \srcPtr -&gt;</span>
+<span class="lineno">  826 </span><span class="spaces">      </span><span class="istickedoff">withPtr s    $ \sPtr   -&gt;</span>
+<span class="lineno">  827 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  828 </span><span class="spaces">          </span><span class="istickedoff">*$(Scalar * sPtr) = cv::sum(*$(Mat * srcPtr));</span>
+<span class="lineno">  829 </span><span class="spaces">        </span><span class="istickedoff">|]</span></span>
+<span class="lineno">  830 </span>
+<span class="lineno">  831 </span>{- | Calculates a mean and standard deviation of array elements
+<span class="lineno">  832 </span>
+<span class="lineno">  833 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#meanstddev OpenCV Sphinx doc&gt;
+<span class="lineno">  834 </span>-}
+<span class="lineno">  835 </span>meanStdDev
+<span class="lineno">  836 </span>    :: (1 &lt;= channels, channels &lt;= 4)
+<span class="lineno">  837 </span>    =&gt; Mat shape ('S channels) depth
+<span class="lineno">  838 </span>    -&gt; Maybe (Mat shape ('S 1) ('S Word8))
+<span class="lineno">  839 </span>       -- ^ Optional operation mask.
+<span class="lineno">  840 </span>    -&gt; CvExcept (Scalar, Scalar)
+<span class="lineno">  841 </span><span class="decl"><span class="nottickedoff">meanStdDev src mask = unsafeWrapException $ do</span>
+<span class="lineno">  842 </span><span class="spaces">    </span><span class="nottickedoff">mean   &lt;- newScalar $ pure 0</span>
+<span class="lineno">  843 </span><span class="spaces">    </span><span class="nottickedoff">stddev &lt;- newScalar $ pure 0</span>
+<span class="lineno">  844 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure (mean, stddev)) $</span>
+<span class="lineno">  845 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src    $ \srcPtr    -&gt;</span>
+<span class="lineno">  846 </span><span class="spaces">      </span><span class="nottickedoff">withPtr mask   $ \maskPtr   -&gt;</span>
+<span class="lineno">  847 </span><span class="spaces">      </span><span class="nottickedoff">withPtr mean   $ \meanPtr   -&gt;</span>
+<span class="lineno">  848 </span><span class="spaces">      </span><span class="nottickedoff">withPtr stddev $ \stddevPtr -&gt;</span>
+<span class="lineno">  849 </span><span class="spaces">        </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  850 </span><span class="spaces">          </span><span class="nottickedoff">cv::Mat * maskPtr = $(Mat * maskPtr);</span>
+<span class="lineno">  851 </span><span class="spaces">          </span><span class="nottickedoff">cv::meanStdDev</span>
+<span class="lineno">  852 </span><span class="spaces">          </span><span class="nottickedoff">( *$(Mat * srcPtr)</span>
+<span class="lineno">  853 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Scalar * meanPtr)</span>
+<span class="lineno">  854 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Scalar * stddevPtr)</span>
+<span class="lineno">  855 </span><span class="spaces">          </span><span class="nottickedoff">, maskPtr ? cv::_InputArray(*maskPtr) : cv::_InputArray(cv::noArray())</span>
+<span class="lineno">  856 </span><span class="spaces">          </span><span class="nottickedoff">);</span>
+<span class="lineno">  857 </span><span class="spaces">        </span><span class="nottickedoff">|]</span></span>
+<span class="lineno">  858 </span>
+<span class="lineno">  859 </span>{- | Flips a 2D matrix around vertical, horizontal, or both axes.
+<span class="lineno">  860 </span>
+<span class="lineno">  861 </span>The example scenarios of using the function are the following: Vertical flipping
+<span class="lineno">  862 </span>of the image ('FlipVertically') to switch between top-left and bottom-left image
+<span class="lineno">  863 </span>origin. This is a typical operation in video processing on Microsoft Windows*
+<span class="lineno">  864 </span>OS. Horizontal flipping of the image with the subsequent horizontal shift and
+<span class="lineno">  865 </span>absolute difference calculation to check for a vertical-axis symmetry
+<span class="lineno">  866 </span>('FlipHorizontally'). Simultaneous horizontal and vertical flipping of the image
+<span class="lineno">  867 </span>with the subsequent shift and absolute difference calculation to check for a
+<span class="lineno">  868 </span>central symmetry ('FlipBoth'). Reversing the order of point arrays
+<span class="lineno">  869 </span>('FlipHorizontally' or 'FlipVertically').
+<span class="lineno">  870 </span>
+<span class="lineno">  871 </span>Example:
+<span class="lineno">  872 </span>
+<span class="lineno">  873 </span>@
+<span class="lineno">  874 </span>matFlipImg :: Mat (ShapeT [341, 512]) ('S 3) ('S Word8)
+<span class="lineno">  875 </span>matFlipImg = matFlip sailboat_512x341 FlipBoth
+<span class="lineno">  876 </span>@
+<span class="lineno">  877 </span>
+<span class="lineno">  878 </span>&lt;&lt;doc/generated/examples/matFlipImg.png matFlipImg&gt;&gt;
+<span class="lineno">  879 </span>-}
+<span class="lineno">  880 </span>matFlip
+<span class="lineno">  881 </span>    :: Mat ('S '[height, width]) channels depth
+<span class="lineno">  882 </span>    -&gt; FlipDirection -- ^ How to flip.
+<span class="lineno">  883 </span>    -&gt; Mat ('S '[height, width]) channels depth
+<span class="lineno">  884 </span><span class="decl"><span class="istickedoff">matFlip src flipDir = unsafePerformIO $ do</span>
+<span class="lineno">  885 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  886 </span><span class="spaces">    </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  887 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  888 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  889 </span><span class="spaces">          </span><span class="istickedoff">cv::flip(*$(Mat * srcPtr), *$(Mat * dstPtr), $(int32_t flipCode));</span>
+<span class="lineno">  890 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  891 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span>
+<span class="lineno">  892 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  893 </span><span class="spaces">    </span><span class="istickedoff">flipCode :: Int32</span>
+<span class="lineno">  894 </span><span class="spaces">    </span><span class="istickedoff">flipCode = marshallFlipDirection flipDir</span></span>
+<span class="lineno">  895 </span>
+<span class="lineno">  896 </span>data FlipDirection = FlipVertically   -- ^ Flip around the x-axis.
+<span class="lineno">  897 </span>                   | FlipHorizontally -- ^ Flip around the y-axis.
+<span class="lineno">  898 </span>                   | FlipBoth         -- ^ Flip around both x and y-axis.
+<span class="lineno">  899 </span>                     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  900 </span>
+<span class="lineno">  901 </span>marshallFlipDirection :: FlipDirection -&gt; Int32
+<span class="lineno">  902 </span><span class="decl"><span class="istickedoff">marshallFlipDirection = \case</span>
+<span class="lineno">  903 </span><span class="spaces">    </span><span class="istickedoff">FlipVertically   -&gt;  <span class="nottickedoff">0</span></span>
+<span class="lineno">  904 </span><span class="spaces">    </span><span class="istickedoff">FlipHorizontally -&gt;  <span class="nottickedoff">1</span></span>
+<span class="lineno">  905 </span><span class="spaces">    </span><span class="istickedoff">FlipBoth         -&gt; -1</span></span>
+<span class="lineno">  906 </span>
+<span class="lineno">  907 </span>{- | Transposes a matrix.
+<span class="lineno">  908 </span>
+<span class="lineno">  909 </span>Example:
+<span class="lineno">  910 </span>
+<span class="lineno">  911 </span>@
+<span class="lineno">  912 </span>matTransposeImg :: Mat (ShapeT [512, 341]) ('S 3) ('S Word8)
+<span class="lineno">  913 </span>matTransposeImg = matTranspose sailboat_512x341
+<span class="lineno">  914 </span>@
+<span class="lineno">  915 </span>
+<span class="lineno">  916 </span>&lt;&lt;doc/generated/examples/matTransposeImg.png matTransposeImg&gt;&gt;
+<span class="lineno">  917 </span>-}
+<span class="lineno">  918 </span>matTranspose
+<span class="lineno">  919 </span>    :: Mat ('S '[height, width]) channels depth -- ^
+<span class="lineno">  920 </span>    -&gt; Mat ('S '[width, height]) channels depth
+<span class="lineno">  921 </span><span class="decl"><span class="istickedoff">matTranspose src = unsafePerformIO $ do</span>
+<span class="lineno">  922 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  923 </span><span class="spaces">    </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  924 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  925 </span><span class="spaces">        </span><span class="istickedoff">[C.block| void {</span>
+<span class="lineno">  926 </span><span class="spaces">          </span><span class="istickedoff">cv::transpose(*$(Mat * srcPtr), *$(Mat * dstPtr));</span>
+<span class="lineno">  927 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  928 </span><span class="spaces">    </span><span class="istickedoff">pure $ unsafeCoerceMat dst</span></span>
+<span class="lineno">  929 </span>
+<span class="lineno">  930 </span>{- | Applies horizontal concatenation to given matrices.
+<span class="lineno">  931 </span>
+<span class="lineno">  932 </span>Example:
+<span class="lineno">  933 </span>
+<span class="lineno">  934 </span>@
+<span class="lineno">  935 </span>hconcatImg :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)
+<span class="lineno">  936 </span>hconcatImg = exceptError $
+<span class="lineno">  937 </span>    hconcat $ V.fromList
+<span class="lineno">  938 </span>      [ halfSize birds_768x512
+<span class="lineno">  939 </span>      , halfSize flower_768x512
+<span class="lineno">  940 </span>      , halfSize sailboat_768x512
+<span class="lineno">  941 </span>      ]
+<span class="lineno">  942 </span>  where
+<span class="lineno">  943 </span>    halfSize = exceptError . resize (ResizeRel 0.5) InterArea
+<span class="lineno">  944 </span>@
+<span class="lineno">  945 </span>
+<span class="lineno">  946 </span>&lt;&lt;doc/generated/examples/hconcatImg.png hconcatImg&gt;&gt;
+<span class="lineno">  947 </span>-}
+<span class="lineno">  948 </span>hconcat
+<span class="lineno">  949 </span>    :: V.Vector (Mat ('S '[rows, 'D]) channels depth)
+<span class="lineno">  950 </span>    -&gt; CvExcept (Mat ('S '[rows, 'D]) channels depth)
+<span class="lineno">  951 </span><span class="decl"><span class="istickedoff">hconcat mats = unsafeWrapException $ do</span>
+<span class="lineno">  952 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- unsafeCoerceMat &lt;$&gt; newEmptyMat</span>
+<span class="lineno">  953 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure dst) $</span>
+<span class="lineno">  954 </span><span class="spaces">      </span><span class="istickedoff">withArrayPtr mats $ \matsPtr -&gt;</span>
+<span class="lineno">  955 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  956 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  957 </span><span class="spaces">          </span><span class="istickedoff">cv::hconcat</span>
+<span class="lineno">  958 </span><span class="spaces">            </span><span class="istickedoff">( $(Mat * matsPtr)</span>
+<span class="lineno">  959 </span><span class="spaces">            </span><span class="istickedoff">, $(size_t c'numMats)</span>
+<span class="lineno">  960 </span><span class="spaces">            </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  961 </span><span class="spaces">            </span><span class="istickedoff">);</span>
+<span class="lineno">  962 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  963 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  964 </span><span class="spaces">    </span><span class="istickedoff">c'numMats :: C.CSize</span>
+<span class="lineno">  965 </span><span class="spaces">    </span><span class="istickedoff">c'numMats = fromIntegral $ V.length mats</span></span>
+<span class="lineno">  966 </span>
+<span class="lineno">  967 </span>{- | Applies vertical concatenation to given matrices.
+<span class="lineno">  968 </span>
+<span class="lineno">  969 </span>Example:
+<span class="lineno">  970 </span>
+<span class="lineno">  971 </span>@
+<span class="lineno">  972 </span>vconcatImg :: Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)
+<span class="lineno">  973 </span>vconcatImg = exceptError $
+<span class="lineno">  974 </span>    vconcat $ V.fromList
+<span class="lineno">  975 </span>      [ halfSize birds_768x512
+<span class="lineno">  976 </span>      , halfSize flower_768x512
+<span class="lineno">  977 </span>      , halfSize sailboat_768x512
+<span class="lineno">  978 </span>      ]
+<span class="lineno">  979 </span>  where
+<span class="lineno">  980 </span>    halfSize = exceptError . resize (ResizeRel 0.5) InterArea
+<span class="lineno">  981 </span>@
+<span class="lineno">  982 </span>
+<span class="lineno">  983 </span>&lt;&lt;doc/generated/examples/vconcatImg.png vconcatImg&gt;&gt;
+<span class="lineno">  984 </span>-}
+<span class="lineno">  985 </span>vconcat
+<span class="lineno">  986 </span>    :: V.Vector (Mat ('S '[ 'D, cols ]) channels depth)
+<span class="lineno">  987 </span>    -&gt; CvExcept (Mat ('S '[ 'D, cols ]) channels depth)
+<span class="lineno">  988 </span><span class="decl"><span class="istickedoff">vconcat mats = unsafeWrapException $ do</span>
+<span class="lineno">  989 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- unsafeCoerceMat &lt;$&gt; newEmptyMat</span>
+<span class="lineno">  990 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure dst) $</span>
+<span class="lineno">  991 </span><span class="spaces">      </span><span class="istickedoff">withArrayPtr mats $ \matsPtr -&gt;</span>
+<span class="lineno">  992 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  993 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  994 </span><span class="spaces">          </span><span class="istickedoff">cv::vconcat</span>
+<span class="lineno">  995 </span><span class="spaces">            </span><span class="istickedoff">( $(Mat * matsPtr)</span>
+<span class="lineno">  996 </span><span class="spaces">            </span><span class="istickedoff">, $(size_t c'numMats)</span>
+<span class="lineno">  997 </span><span class="spaces">            </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  998 </span><span class="spaces">            </span><span class="istickedoff">);</span>
+<span class="lineno">  999 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno"> 1000 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno"> 1001 </span><span class="spaces">    </span><span class="istickedoff">c'numMats :: C.CSize</span>
+<span class="lineno"> 1002 </span><span class="spaces">    </span><span class="istickedoff">c'numMats = fromIntegral $ V.length mats</span></span>
+<span class="lineno"> 1003 </span>
+<span class="lineno"> 1004 </span>
+<span class="lineno"> 1005 </span>{-| Performs the perspective matrix transformation of vectors.
+<span class="lineno"> 1006 </span>
+<span class="lineno"> 1007 </span>    TODO: Modify this function for accept 3D points
+<span class="lineno"> 1008 </span>    TODO: Generalize return type to
+<span class="lineno"> 1009 </span>          V.Vector (point2 CDouble)
+<span class="lineno"> 1010 </span>
+<span class="lineno"> 1011 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/core/doc/operations_on_arrays.html#perspectivetransform OpenCV Sphinx doc&gt;
+<span class="lineno"> 1012 </span>-}
+<span class="lineno"> 1013 </span>perspectiveTransform
+<span class="lineno"> 1014 </span>    :: (IsPoint2 point2 CDouble)
+<span class="lineno"> 1015 </span>    =&gt; V.Vector (point2 CDouble)
+<span class="lineno"> 1016 </span>    -&gt; Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
+<span class="lineno"> 1017 </span>    -&gt; V.Vector Point2d
+<span class="lineno"> 1018 </span><span class="decl"><span class="nottickedoff">perspectiveTransform srcPoints transformationMat = unsafePerformIO $</span>
+<span class="lineno"> 1019 </span><span class="spaces">    </span><span class="nottickedoff">withArrayPtr (V.map toPoint srcPoints) $ \srcPtr -&gt;</span>
+<span class="lineno"> 1020 </span><span class="spaces">    </span><span class="nottickedoff">withPtr transformationMat $ \tmPtr -&gt;</span>
+<span class="lineno"> 1021 </span><span class="spaces">    </span><span class="nottickedoff">allocaArray numPts $ \(dstPtr :: Ptr (V2 CDouble)) -&gt; do</span>
+<span class="lineno"> 1022 </span><span class="spaces">        </span><span class="nottickedoff">let dstPtr' = castPtr dstPtr</span>
+<span class="lineno"> 1023 </span><span class="spaces">        </span><span class="nottickedoff">[C.block| void {</span>
+<span class="lineno"> 1024 </span><span class="spaces">            </span><span class="nottickedoff">cv::_InputArray srcPts  = cv::_InputArray( $(Point2d * srcPtr),  $(int32_t c'numPts));</span>
+<span class="lineno"> 1025 </span><span class="spaces">            </span><span class="nottickedoff">cv::_OutputArray dstPts = cv::_OutputArray($(Point2d * dstPtr'), $(int32_t c'numPts));</span>
+<span class="lineno"> 1026 </span><span class="spaces">            </span><span class="nottickedoff">cv::perspectiveTransform</span>
+<span class="lineno"> 1027 </span><span class="spaces">                </span><span class="nottickedoff">( srcPts</span>
+<span class="lineno"> 1028 </span><span class="spaces">                </span><span class="nottickedoff">, dstPts</span>
+<span class="lineno"> 1029 </span><span class="spaces">                </span><span class="nottickedoff">, *$(Mat * tmPtr)</span>
+<span class="lineno"> 1030 </span><span class="spaces">                </span><span class="nottickedoff">);</span>
+<span class="lineno"> 1031 </span><span class="spaces">            </span><span class="nottickedoff">}|]</span>
+<span class="lineno"> 1032 </span><span class="spaces">        </span><span class="nottickedoff">peekArray numPts dstPtr &gt;&gt;= return . V.fromList . map toPoint</span>
+<span class="lineno"> 1033 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno"> 1034 </span><span class="spaces">    </span><span class="nottickedoff">numPts   = fromIntegral $ V.length srcPoints</span>
+<span class="lineno"> 1035 </span><span class="spaces">    </span><span class="nottickedoff">c'numPts = fromIntegral $ V.length srcPoints</span></span>
+
+</pre>
+</body>
+</html>

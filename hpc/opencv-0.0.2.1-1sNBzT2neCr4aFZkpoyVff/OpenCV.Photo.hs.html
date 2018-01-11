@@ -1,0 +1,392 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    6 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>module OpenCV.Photo
+<span class="lineno">   10 </span>  ( InpaintingMethod(..)
+<span class="lineno">   11 </span>  , decolor
+<span class="lineno">   12 </span>  , inpaint
+<span class="lineno">   13 </span>  , denoise_TVL1
+<span class="lineno">   14 </span>  , fastNlMeansDenoisingColored
+<span class="lineno">   15 </span>  , fastNlMeansDenoisingColoredMulti
+<span class="lineno">   16 </span>  ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   19 </span>import &quot;base&quot; Data.Word ( Word8 )
+<span class="lineno">   20 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   21 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   22 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   23 </span>import &quot;this&quot; OpenCV.Internal.C.Types ( withPtr )
+<span class="lineno">   24 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   25 </span>import &quot;this&quot; OpenCV.Internal.Photo.Constants
+<span class="lineno">   26 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   27 </span>import &quot;this&quot; OpenCV.Internal.Core.Types ( withArrayPtr )
+<span class="lineno">   28 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   31 </span>
+<span class="lineno">   32 </span>--------------------------------------------------------------------------------
+<span class="lineno">   33 </span>
+<span class="lineno">   34 </span>C.context openCvCtx
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   37 </span>C.include &quot;opencv2/photo.hpp&quot;
+<span class="lineno">   38 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>--------------------------------------------------------------------------------
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>data InpaintingMethod
+<span class="lineno">   43 </span>   = InpaintNavierStokes
+<span class="lineno">   44 </span>     -- ^ Navier-Stokes based method.
+<span class="lineno">   45 </span>   | InpaintTelea
+<span class="lineno">   46 </span>     -- ^ Method by Alexandru Telea.
+<span class="lineno">   47 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>marshalInpaintingMethod :: InpaintingMethod -&gt; Int32
+<span class="lineno">   50 </span><span class="decl"><span class="istickedoff">marshalInpaintingMethod = \case</span>
+<span class="lineno">   51 </span><span class="spaces">  </span><span class="istickedoff">InpaintNavierStokes -&gt; c'INPAINT_NS</span>
+<span class="lineno">   52 </span><span class="spaces">  </span><span class="istickedoff">InpaintTelea        -&gt; c'INPAINT_TELEA</span></span>
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>{- | Restores the selected region in an image using the region neighborhood.
+<span class="lineno">   55 </span>
+<span class="lineno">   56 </span>Example:
+<span class="lineno">   57 </span>
+<span class="lineno">   58 </span>@
+<span class="lineno">   59 </span>inpaintImg
+<span class="lineno">   60 </span>    :: forall h h2 w w2 c d
+<span class="lineno">   61 </span>     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Kodak_512x341
+<span class="lineno">   62 </span>       , h2 ~ ((*) h 2)
+<span class="lineno">   63 </span>       , w2 ~ ((*) w 2)
+<span class="lineno">   64 </span>       )
+<span class="lineno">   65 </span>    =&gt; Mat ('S ['S h2, 'S w2]) ('S c) ('S d)
+<span class="lineno">   66 </span>inpaintImg = exceptError $ do
+<span class="lineno">   67 </span>    maskInv &lt;- bitwiseNot mask
+<span class="lineno">   68 </span>    maskBgr &lt;- cvtColor gray bgr maskInv
+<span class="lineno">   69 </span>    damaged &lt;- bitwiseAnd bikes_512x341 maskBgr
+<span class="lineno">   70 </span>    repairedNS &lt;- inpaint 3 InpaintNavierStokes damaged mask
+<span class="lineno">   71 </span>    repairedT  &lt;- inpaint 3 InpaintTelea        damaged mask
+<span class="lineno">   72 </span>    withMatM
+<span class="lineno">   73 </span>      (Proxy :: Proxy [h2, w2])
+<span class="lineno">   74 </span>      (Proxy :: Proxy c)
+<span class="lineno">   75 </span>      (Proxy :: Proxy d)
+<span class="lineno">   76 </span>      black $ \\imgM -&gt; do
+<span class="lineno">   77 </span>        matCopyToM imgM (V2 0 0) damaged Nothing
+<span class="lineno">   78 </span>        matCopyToM imgM (V2 w 0) maskBgr Nothing
+<span class="lineno">   79 </span>        matCopyToM imgM (V2 0 h) repairedNS Nothing
+<span class="lineno">   80 </span>        matCopyToM imgM (V2 w h) repairedT  Nothing
+<span class="lineno">   81 </span>  where
+<span class="lineno">   82 </span>    mask = damageMask
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">   85 </span>    h = fromInteger $ natVal (Proxy :: Proxy h)
+<span class="lineno">   86 </span>@
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>&lt;&lt;doc/generated/examples/inpaintImg.png inpaintImg&gt;&gt;
+<span class="lineno">   89 </span>-}
+<span class="lineno">   90 </span>inpaint
+<span class="lineno">   91 </span>   :: (channels `In` [1, 3])
+<span class="lineno">   92 </span>   =&gt; Double
+<span class="lineno">   93 </span>      -- ^ inpaintRadius - Radius of a circular neighborhood of each
+<span class="lineno">   94 </span>      -- point inpainted that is considered by the algorithm.
+<span class="lineno">   95 </span>   -&gt; InpaintingMethod
+<span class="lineno">   96 </span>   -&gt; Mat ('S [h, w]) ('S channels) ('S Word8) -- ^ Input image.
+<span class="lineno">   97 </span>   -&gt; Mat ('S [h, w]) ('S 1) ('S Word8) -- ^ Inpainting mask.
+<span class="lineno">   98 </span>   -&gt; CvExcept (Mat ('S [h, w]) ('S channels) ('S Word8)) -- ^ Output image.
+<span class="lineno">   99 </span><span class="decl"><span class="istickedoff">inpaint inpaintRadius method src inpaintMask = unsafeWrapException $ do</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="istickedoff">withPtr src         $ \srcPtr         -&gt;</span>
+<span class="lineno">  103 </span><span class="spaces">      </span><span class="istickedoff">withPtr inpaintMask $ \inpaintMaskPtr -&gt;</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst         $ \dstPtr         -&gt;</span>
+<span class="lineno">  105 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  106 </span><span class="spaces">        </span><span class="istickedoff">cv::inpaint( *$(Mat * srcPtr)</span>
+<span class="lineno">  107 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * inpaintMaskPtr)</span>
+<span class="lineno">  108 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  109 </span><span class="spaces">                   </span><span class="istickedoff">, $(double c'inpaintRadius)</span>
+<span class="lineno">  110 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t c'method)</span>
+<span class="lineno">  111 </span><span class="spaces">                   </span><span class="istickedoff">);</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  113 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">c'method = marshalInpaintingMethod method</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">c'inpaintRadius = realToFrac inpaintRadius</span></span>
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>{- | Perform fastNlMeansDenoising function for colored images. Denoising is not
+<span class="lineno">  118 </span>     per channel but in a different colour space
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>Example:
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>@
+<span class="lineno">  123 </span>fastNlMeansDenoisingColoredImg
+<span class="lineno">  124 </span>    :: forall h w w2 c d
+<span class="lineno">  125 </span>     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Lenna_512x512
+<span class="lineno">  126 </span>       , w2 ~ ((*) w 2)
+<span class="lineno">  127 </span>       )
+<span class="lineno">  128 </span>    =&gt; Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+<span class="lineno">  129 </span>fastNlMeansDenoisingColoredImg = exceptError $ do
+<span class="lineno">  130 </span>    denoised &lt;- fastNlMeansDenoisingColored 3 10 7 21 lenna_512x512
+<span class="lineno">  131 </span>    withMatM
+<span class="lineno">  132 </span>      (Proxy :: Proxy [h, w2])
+<span class="lineno">  133 </span>      (Proxy :: Proxy c)
+<span class="lineno">  134 </span>      (Proxy :: Proxy d)
+<span class="lineno">  135 </span>      black $ \\imgM -&gt; do
+<span class="lineno">  136 </span>        matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
+<span class="lineno">  137 </span>        matCopyToM imgM (V2 w 0) denoised Nothing
+<span class="lineno">  138 </span>  where
+<span class="lineno">  139 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  140 </span>@
+<span class="lineno">  141 </span>
+<span class="lineno">  142 </span>&lt;&lt;doc/generated/examples/fastNlMeansDenoisingColoredImg.png fastNlMeansDenoisingColoredImg&gt;&gt;
+<span class="lineno">  143 </span>-}
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>fastNlMeansDenoisingColored
+<span class="lineno">  146 </span>   :: Double -- ^ Parameter regulating filter strength for luminance component.
+<span class="lineno">  147 </span>             -- Bigger h value perfectly removes noise but also removes image
+<span class="lineno">  148 </span>             -- details, smaller h value preserves details but also preserves
+<span class="lineno">  149 </span>             -- some noise
+<span class="lineno">  150 </span>   -&gt; Double -- ^ The same as h but for color components. For most images value
+<span class="lineno">  151 </span>             -- equals 10 will be enough to remove colored noise and do not
+<span class="lineno">  152 </span>             -- distort colors
+<span class="lineno">  153 </span>   -&gt; Int32  -- ^ templateWindowSize Size in pixels of the template patch that
+<span class="lineno">  154 </span>             -- is used to compute weights.
+<span class="lineno">  155 </span>             -- Should be odd. Recommended value 7 pixels
+<span class="lineno">  156 </span>   -&gt; Int32  -- ^ searchWindowSize. Size in pixels of the window that is used
+<span class="lineno">  157 </span>             -- to compute weighted average for given pixel. Should be odd.
+<span class="lineno">  158 </span>             -- Affect performance linearly: greater searchWindowsSize
+<span class="lineno">  159 </span>             -- - greater denoising time. Recommended value 21 pixels
+<span class="lineno">  160 </span>   -&gt; Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image 8-bit 3-channel image.
+<span class="lineno">  161 </span>   -&gt; CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+<span class="lineno">  162 </span>             -- ^ Output image same size and type as input.
+<span class="lineno">  163 </span><span class="decl"><span class="istickedoff">fastNlMeansDenoisingColored h hColor templateWindowSize searchWindowSize src =</span>
+<span class="lineno">  164 </span><span class="spaces">  </span><span class="istickedoff">unsafeWrapException $ do</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="istickedoff">withPtr src         $ \srcPtr         -&gt;</span>
+<span class="lineno">  168 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst         $ \dstPtr         -&gt;</span>
+<span class="lineno">  169 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  170 </span><span class="spaces">        </span><span class="istickedoff">cv::fastNlMeansDenoisingColored( *$(Mat * srcPtr)</span>
+<span class="lineno">  171 </span><span class="spaces">                                       </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  172 </span><span class="spaces">                                       </span><span class="istickedoff">, $(double c'h)</span>
+<span class="lineno">  173 </span><span class="spaces">                                       </span><span class="istickedoff">, $(double c'hColor)</span>
+<span class="lineno">  174 </span><span class="spaces">                                       </span><span class="istickedoff">, $(int32_t templateWindowSize)</span>
+<span class="lineno">  175 </span><span class="spaces">                                       </span><span class="istickedoff">, $(int32_t searchWindowSize)</span>
+<span class="lineno">  176 </span><span class="spaces">                                       </span><span class="istickedoff">);</span>
+<span class="lineno">  177 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  178 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  179 </span><span class="spaces">    </span><span class="istickedoff">c'h = realToFrac h</span>
+<span class="lineno">  180 </span><span class="spaces">    </span><span class="istickedoff">c'hColor = realToFrac hColor</span></span>
+<span class="lineno">  181 </span>
+<span class="lineno">  182 </span>{- | Perform fastNlMeansDenoisingColoredMulti function for colored images.
+<span class="lineno">  183 </span>     Denoising is not pre channel but in a different colour space.
+<span class="lineno">  184 </span>     This wrapper differs from the original OpenCV version by using all input
+<span class="lineno">  185 </span>     images and denoising the middle one. The original version would allow
+<span class="lineno">  186 </span>     to have some arbitrary length vector and slide window over it. As we have
+<span class="lineno">  187 </span>     to copy the haskell vector before we can use it as `std::vector` on the cpp
+<span class="lineno">  188 </span>     side it is easier to trim the vector before sending and use all frames.
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>Example:
+<span class="lineno">  191 </span>
+<span class="lineno">  192 </span>@
+<span class="lineno">  193 </span>fastNlMeansDenoisingColoredMultiImg
+<span class="lineno">  194 </span>    :: forall h w w2 c d
+<span class="lineno">  195 </span>     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Lenna_512x512
+<span class="lineno">  196 </span>       , w2 ~ ((*) w 2)
+<span class="lineno">  197 </span>       )
+<span class="lineno">  198 </span>    =&gt; Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+<span class="lineno">  199 </span>fastNlMeansDenoisingColoredMultiImg = exceptError $ do
+<span class="lineno">  200 </span>    denoised &lt;- fastNlMeansDenoisingColoredMulti 3 10 7 21 (V.singleton lenna_512x512)
+<span class="lineno">  201 </span>    withMatM
+<span class="lineno">  202 </span>      (Proxy :: Proxy [h, w2])
+<span class="lineno">  203 </span>      (Proxy :: Proxy c)
+<span class="lineno">  204 </span>      (Proxy :: Proxy d)
+<span class="lineno">  205 </span>      black $ \\imgM -&gt; do
+<span class="lineno">  206 </span>        matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
+<span class="lineno">  207 </span>        matCopyToM imgM (V2 w 0) denoised Nothing
+<span class="lineno">  208 </span>  where
+<span class="lineno">  209 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  210 </span>@
+<span class="lineno">  211 </span>
+<span class="lineno">  212 </span>&lt;&lt;doc/generated/examples/fastNlMeansDenoisingColoredMultiImg.png fastNlMeansDenoisingColoredMultiImg&gt;&gt;
+<span class="lineno">  213 </span>-}
+<span class="lineno">  214 </span>
+<span class="lineno">  215 </span>fastNlMeansDenoisingColoredMulti
+<span class="lineno">  216 </span>   :: Double -- ^ Parameter regulating filter strength for luminance component.
+<span class="lineno">  217 </span>             -- Bigger h value perfectly removes noise but also removes image
+<span class="lineno">  218 </span>             -- details, smaller h value preserves details but also preserves
+<span class="lineno">  219 </span>             -- some noise
+<span class="lineno">  220 </span>   -&gt; Double -- ^ The same as h but for color components. For most images value
+<span class="lineno">  221 </span>             -- equals 10 will be enough to remove colored noise and do not
+<span class="lineno">  222 </span>             -- distort colors
+<span class="lineno">  223 </span>   -&gt; Int32  -- ^ templateWindowSize Size in pixels of the template patch that
+<span class="lineno">  224 </span>             -- is used to compute weights. Should be odd.
+<span class="lineno">  225 </span>             -- Recommended value 7 pixels
+<span class="lineno">  226 </span>   -&gt; Int32  -- ^ searchWindowSize. Size in pixels of the window that is used to
+<span class="lineno">  227 </span>             -- compute weighted average for given pixel. Should be odd.
+<span class="lineno">  228 </span>             -- Affect performance linearly: greater searchWindowsSize -
+<span class="lineno">  229 </span>             -- greater denoising time. Recommended value 21 pixels
+<span class="lineno">  230 </span>   -&gt; V.Vector (Mat ('S [h, w]) ('S 3) ('S Word8))
+<span class="lineno">  231 </span>             -- ^ Vector of odd number of input 8-bit 3-channel images.
+<span class="lineno">  232 </span>   -&gt; CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+<span class="lineno">  233 </span>             -- ^ Output image same size and type as input.
+<span class="lineno">  234 </span>
+<span class="lineno">  235 </span><span class="decl"><span class="istickedoff">fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize srcVec =</span>
+<span class="lineno">  236 </span><span class="spaces">  </span><span class="istickedoff">unsafeWrapException $ do</span>
+<span class="lineno">  237 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  238 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  239 </span><span class="spaces">      </span><span class="istickedoff">withArrayPtr srcVec $ \srcVecPtr      -&gt;</span>
+<span class="lineno">  240 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst         $ \dstPtr         -&gt;</span>
+<span class="lineno">  241 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  242 </span><span class="spaces">        </span><span class="istickedoff">std::vector&lt;Mat&gt; buffer( $(Mat * srcVecPtr)</span>
+<span class="lineno">  243 </span><span class="spaces">                    </span><span class="istickedoff">, $(Mat * srcVecPtr) + $(int32_t c'temporalWindowSize) );</span>
+<span class="lineno">  244 </span><span class="spaces">        </span><span class="istickedoff">cv::fastNlMeansDenoisingColoredMulti( buffer</span>
+<span class="lineno">  245 </span><span class="spaces">                                            </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  246 </span><span class="spaces">                                            </span><span class="istickedoff">, $(int32_t c'imgToDenoiseIndex)</span>
+<span class="lineno">  247 </span><span class="spaces">                                            </span><span class="istickedoff">, $(int32_t c'temporalWindowSize)</span>
+<span class="lineno">  248 </span><span class="spaces">                                            </span><span class="istickedoff">, $(double c'h)</span>
+<span class="lineno">  249 </span><span class="spaces">                                            </span><span class="istickedoff">, $(double c'hColor)</span>
+<span class="lineno">  250 </span><span class="spaces">                                            </span><span class="istickedoff">, $(int32_t templateWindowSize)</span>
+<span class="lineno">  251 </span><span class="spaces">                                            </span><span class="istickedoff">, $(int32_t searchWindowSize)</span>
+<span class="lineno">  252 </span><span class="spaces">                                            </span><span class="istickedoff">);</span>
+<span class="lineno">  253 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  254 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  255 </span><span class="spaces">    </span><span class="istickedoff">c'h = realToFrac h</span>
+<span class="lineno">  256 </span><span class="spaces">    </span><span class="istickedoff">c'hColor = realToFrac hColor</span>
+<span class="lineno">  257 </span><span class="spaces">    </span><span class="istickedoff">c'srcVecLength = fromIntegral $ V.length srcVec</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">-- if it is not odd we drop the last image</span>
+<span class="lineno">  259 </span><span class="spaces">    </span><span class="istickedoff">c'temporalWindowSize</span>
+<span class="lineno">  260 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">c'srcVecLength `mod` 2 == 1</span> = c'srcVecLength</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="istickedoff">| <span class="nottickedoff">otherwise</span>                   = <span class="nottickedoff">c'srcVecLength - 1</span></span>
+<span class="lineno">  262 </span><span class="spaces">    </span><span class="istickedoff">c'imgToDenoiseIndex = (c'temporalWindowSize - 1) `div` 2</span></span>
+<span class="lineno">  263 </span>
+<span class="lineno">  264 </span>{- | Perform denoise_TVL1
+<span class="lineno">  265 </span>
+<span class="lineno">  266 </span>Example:
+<span class="lineno">  267 </span>
+<span class="lineno">  268 </span>@
+<span class="lineno">  269 </span>
+<span class="lineno">  270 </span>denoise_TVL1Img
+<span class="lineno">  271 </span>    :: forall h w w2 c d
+<span class="lineno">  272 </span>     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Lenna_512x512
+<span class="lineno">  273 </span>       , w2 ~ ((*) w 2)
+<span class="lineno">  274 </span>       )
+<span class="lineno">  275 </span>    =&gt; Mat ('S ['S h, 'S w2]) ('S c) ('S d)
+<span class="lineno">  276 </span>denoise_TVL1Img = exceptError $ do
+<span class="lineno">  277 </span>    denoised &lt;- matChannelMapM (denoise_TVL1 2 50 . V.singleton) lenna_512x512
+<span class="lineno">  278 </span>    withMatM
+<span class="lineno">  279 </span>      (Proxy :: Proxy [h, w2])
+<span class="lineno">  280 </span>      (Proxy :: Proxy c)
+<span class="lineno">  281 </span>      (Proxy :: Proxy d)
+<span class="lineno">  282 </span>      black $ \\imgM -&gt; do
+<span class="lineno">  283 </span>        matCopyToM imgM (V2 0 0) lenna_512x512 Nothing
+<span class="lineno">  284 </span>        matCopyToM imgM (V2 w 0) denoised Nothing
+<span class="lineno">  285 </span>  where
+<span class="lineno">  286 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  287 </span>@
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>&lt;&lt;doc/generated/examples/denoise_TVL1Img.png denoise_TVL1Img&gt;&gt;
+<span class="lineno">  290 </span>-}
+<span class="lineno">  291 </span>
+<span class="lineno">  292 </span>denoise_TVL1
+<span class="lineno">  293 </span>   :: Double -- ^ details more is more 2
+<span class="lineno">  294 </span>   -&gt; Int32  -- ^ Number of iterations that the algorithm will run
+<span class="lineno">  295 </span>   -&gt; V.Vector (Mat ('S [h, w]) ('S 1) ('S Word8))
+<span class="lineno">  296 </span>             -- ^ Vector of odd number of input 8-bit 3-channel images.
+<span class="lineno">  297 </span>   -&gt; CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
+<span class="lineno">  298 </span>             -- ^ Output image same size and type as input.
+<span class="lineno">  299 </span>
+<span class="lineno">  300 </span><span class="decl"><span class="istickedoff">denoise_TVL1 lambda niters srcVec = unsafeWrapException $ do</span>
+<span class="lineno">  301 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  302 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  303 </span><span class="spaces">      </span><span class="istickedoff">withArrayPtr srcVec $ \srcVecPtr      -&gt;</span>
+<span class="lineno">  304 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst         $ \dstPtr         -&gt;</span>
+<span class="lineno">  305 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  306 </span><span class="spaces">        </span><span class="istickedoff">std::vector&lt;Mat&gt; buffer( $(Mat * srcVecPtr)</span>
+<span class="lineno">  307 </span><span class="spaces">                           </span><span class="istickedoff">, $(Mat * srcVecPtr) + $(int32_t c'srcVecLength) );</span>
+<span class="lineno">  308 </span><span class="spaces">        </span><span class="istickedoff">cv::denoise_TVL1( buffer</span>
+<span class="lineno">  309 </span><span class="spaces">                        </span><span class="istickedoff">, *$(Mat * dstPtr)</span>
+<span class="lineno">  310 </span><span class="spaces">                        </span><span class="istickedoff">, $(double c'lambda)</span>
+<span class="lineno">  311 </span><span class="spaces">                        </span><span class="istickedoff">, $(int32_t niters)</span>
+<span class="lineno">  312 </span><span class="spaces">                        </span><span class="istickedoff">);</span>
+<span class="lineno">  313 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  314 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  315 </span><span class="spaces">    </span><span class="istickedoff">c'lambda = realToFrac lambda</span>
+<span class="lineno">  316 </span><span class="spaces">    </span><span class="istickedoff">c'srcVecLength = fromIntegral $ V.length srcVec</span></span>
+<span class="lineno">  317 </span>
+<span class="lineno">  318 </span>
+<span class="lineno">  319 </span>{- | Perform decolor
+<span class="lineno">  320 </span>
+<span class="lineno">  321 </span>Decolor a color image to a grayscale (1 channel) and a color boosted image (3 channel)
+<span class="lineno">  322 </span>
+<span class="lineno">  323 </span>Example:
+<span class="lineno">  324 </span>
+<span class="lineno">  325 </span>@
+<span class="lineno">  326 </span>decolorImg
+<span class="lineno">  327 </span>    :: forall h h2 w w2 c d
+<span class="lineno">  328 </span>     . ( Mat (ShapeT [h, w]) ('S c) ('S d) ~ Kodak_512x341
+<span class="lineno">  329 </span>       , h2 ~ ((*) h 2)
+<span class="lineno">  330 </span>       , w2 ~ ((*) w 2)
+<span class="lineno">  331 </span>       )
+<span class="lineno">  332 </span>    =&gt; Mat ('S ['S h2, 'S w2]) ('S c) ('S d)
+<span class="lineno">  333 </span>decolorImg = exceptError $ do
+<span class="lineno">  334 </span>    (bikesGray, boost) &lt;- decolor bikes_512x341
+<span class="lineno">  335 </span>    colorGray &lt;- cvtColor gray bgr bikesGray
+<span class="lineno">  336 </span>    withMatM
+<span class="lineno">  337 </span>      (Proxy :: Proxy [h2, w2])
+<span class="lineno">  338 </span>      (Proxy :: Proxy c)
+<span class="lineno">  339 </span>      (Proxy :: Proxy d)
+<span class="lineno">  340 </span>      white $ \\imgM -&gt; do
+<span class="lineno">  341 </span>        matCopyToM imgM (V2 0 0) bikes_512x341 Nothing
+<span class="lineno">  342 </span>        matCopyToM imgM (V2 0 h) colorGray Nothing
+<span class="lineno">  343 </span>        matCopyToM imgM (V2 w h) boost  Nothing
+<span class="lineno">  344 </span>  where
+<span class="lineno">  345 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  346 </span>    h = fromInteger $ natVal (Proxy :: Proxy h)
+<span class="lineno">  347 </span>@
+<span class="lineno">  348 </span>
+<span class="lineno">  349 </span>&lt;&lt;doc/generated/examples/decolorImg.png decolorImg&gt;&gt;
+<span class="lineno">  350 </span>-}
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>decolor
+<span class="lineno">  353 </span>   :: Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
+<span class="lineno">  354 </span>   -&gt; CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8), Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output images.
+<span class="lineno">  355 </span>
+<span class="lineno">  356 </span><span class="decl"><span class="istickedoff">decolor src = unsafeWrapException $ do</span>
+<span class="lineno">  357 </span><span class="spaces">    </span><span class="istickedoff">gray &lt;- newEmptyMat</span>
+<span class="lineno">  358 </span><span class="spaces">    </span><span class="istickedoff">boost &lt;- newEmptyMat</span>
+<span class="lineno">  359 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  360 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure (unsafeCoerceMat gray, unsafeCoerceMat boost)) $</span>
+<span class="lineno">  361 </span><span class="spaces">      </span><span class="istickedoff">withPtr src         $ \srcPtr         -&gt;</span>
+<span class="lineno">  362 </span><span class="spaces">      </span><span class="istickedoff">withPtr gray        $ \grayPtr        -&gt;</span>
+<span class="lineno">  363 </span><span class="spaces">      </span><span class="istickedoff">withPtr boost       $ \boostPtr       -&gt;</span>
+<span class="lineno">  364 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  365 </span><span class="spaces">        </span><span class="istickedoff">cv::decolor( *$(Mat * srcPtr)</span>
+<span class="lineno">  366 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * grayPtr)</span>
+<span class="lineno">  367 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Mat * boostPtr)</span>
+<span class="lineno">  368 </span><span class="spaces">                   </span><span class="istickedoff">);</span>
+<span class="lineno">  369 </span><span class="spaces">      </span><span class="istickedoff">|]</span></span>
+
+</pre>
+</body>
+</html>

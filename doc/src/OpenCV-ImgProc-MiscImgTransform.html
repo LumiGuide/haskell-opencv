@@ -125,7 +125,7 @@
 <a name="line-116"></a>              (height   :: Nat)
 <a name="line-117"></a>              (channels :: Nat)
 <a name="line-118"></a>              (depth    :: *)
-<a name="line-119"></a>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Birds_512x341
+<a name="line-119"></a>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
 <a name="line-120"></a>       , width2 ~ (width + width)
 <a name="line-121"></a>       )
 <a name="line-122"></a>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -133,7 +133,7 @@
 <a name="line-124"></a>    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
 <a name="line-125"></a>             (Proxy :: Proxy channels)
 <a name="line-126"></a>             (Proxy :: Proxy depth)
-<a name="line-127"></a>             white $ \imgM -&gt; do
+<a name="line-127"></a>             white $ \\imgM -&gt; do
 <a name="line-128"></a>      birds_gray &lt;- pureExcept $   cvtColor gray bgr
 <a name="line-129"></a>                               =&lt;&lt; cvtColor bgr gray birds_512x341
 <a name="line-130"></a>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
@@ -205,7 +205,7 @@
 <a name="line-196"></a>              (height   :: Nat)
 <a name="line-197"></a>              (channels :: Nat)
 <a name="line-198"></a>              (depth    :: *)
-<a name="line-199"></a>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Sailboat_768x512
+<a name="line-199"></a>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_768x512
 <a name="line-200"></a>       , width2 ~ (width + width)
 <a name="line-201"></a>       )
 <a name="line-202"></a>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
@@ -213,7 +213,7 @@
 <a name="line-204"></a>    withMatM ((Proxy :: Proxy height) ::: (Proxy :: Proxy width2) ::: Z)
 <a name="line-205"></a>             (Proxy :: Proxy channels)
 <a name="line-206"></a>             (Proxy :: Proxy depth)
-<a name="line-207"></a>             white $ \imgM -&gt; do
+<a name="line-207"></a>             white $ \\imgM -&gt; do
 <a name="line-208"></a>      sailboatEvening_768x512 &lt;- thaw sailboat_768x512
 <a name="line-209"></a>      mask &lt;- mkMatM (Proxy :: Proxy [height + 2, width + 2])
 <a name="line-210"></a>                     (Proxy :: Proxy 1)
@@ -444,12 +444,12 @@
 <a name="line-435"></a>Example:
 <a name="line-436"></a>
 <a name="line-437"></a>@
-<a name="line-438"></a>grabCutBird :: Birds_512x341
+<a name="line-438"></a>grabCutBird :: Kodak_512x341
 <a name="line-439"></a>grabCutBird = exceptError $ do
 <a name="line-440"></a>    mask &lt;- withMatM (Proxy :: Proxy [341, 512])
 <a name="line-441"></a>                     (Proxy :: Proxy 1)
 <a name="line-442"></a>                     (Proxy :: Proxy Word8)
-<a name="line-443"></a>                     black $ \mask -&gt; do
+<a name="line-443"></a>                     black $ \\mask -&gt; do
 <a name="line-444"></a>      fgTmp &lt;- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
 <a name="line-445"></a>      bgTmp &lt;- mkMatM (Proxy :: Proxy [1, 65]) (Proxy :: Proxy 1) (Proxy :: Proxy Double) black
 <a name="line-446"></a>      grabCut birds_512x341 mask fgTmp bgTmp 5 (GrabCut_InitWithRect rect)
@@ -457,7 +457,7 @@
 <a name="line-448"></a>    withMatM (Proxy :: Proxy [341, 512])
 <a name="line-449"></a>             (Proxy :: Proxy 3)
 <a name="line-450"></a>             (Proxy :: Proxy Word8)
-<a name="line-451"></a>             transparent $ \imgM -&gt; do
+<a name="line-451"></a>             transparent $ \\imgM -&gt; do
 <a name="line-452"></a>      matCopyToM imgM (V2 0 0) birds_512x341 (Just mask')
 <a name="line-453"></a>  where
 <a name="line-454"></a>    rect :: Rect Int32

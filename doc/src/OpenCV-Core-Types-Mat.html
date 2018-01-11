@@ -156,7 +156,7 @@
 <a name="line-147"></a>    withMatM (h ::: 2 * w ::: Z)
 <a name="line-148"></a>             (Proxy :: Proxy 3)
 <a name="line-149"></a>             (Proxy :: Proxy Word8)
-<a name="line-150"></a>             white $ \imgM -&gt; do
+<a name="line-150"></a>             white $ \\imgM -&gt; do
 <a name="line-151"></a>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
 <a name="line-152"></a>      matCopyToM imgM (V2 w 0) subImg        Nothing
 <a name="line-153"></a>      lift $ rectangle imgM subRect blue 1 LineType_4 0

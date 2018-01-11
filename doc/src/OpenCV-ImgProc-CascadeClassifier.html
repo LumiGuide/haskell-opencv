@@ -92,10 +92,10 @@
 <a name="line-83"></a>      withMatM (Proxy :: Proxy [height, width])
 <a name="line-84"></a>               (Proxy :: Proxy channels)
 <a name="line-85"></a>               (Proxy :: Proxy depth)
-<a name="line-86"></a>               white $ \imgM -&gt; do
+<a name="line-86"></a>               white $ \\imgM -&gt; do
 <a name="line-87"></a>        void $ matCopyToM imgM (V2 0 0) arnold_small Nothing
-<a name="line-88"></a>        forM_ eyes  $ \eyeRect  -&gt; lift $ rectangle imgM eyeRect  blue  2 LineType_8 0
-<a name="line-89"></a>        forM_ faces $ \faceRect -&gt; lift $ rectangle imgM faceRect green 2 LineType_8 0
+<a name="line-88"></a>        forM_ eyes  $ \\eyeRect  -&gt; lift $ rectangle imgM eyeRect  blue  2 LineType_8 0
+<a name="line-89"></a>        forM_ faces $ \\faceRect -&gt; lift $ rectangle imgM faceRect green 2 LineType_8 0
 <a name="line-90"></a>  where
 <a name="line-91"></a>    arnoldGray = exceptError $ cvtColor bgr gray arnold_small
 <a name="line-92"></a>

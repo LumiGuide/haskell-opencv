@@ -1,0 +1,108 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    4 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    5 </span>#endif
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>module OpenCV.Internal.VideoIO.Constants where
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>--------------------------------------------------------------------------------
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>#include &lt;bindings.dsl.h&gt;
+<span class="lineno">   12 </span>#include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   13 </span>#include &quot;opencv2/videoio.hpp&quot;
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>#include &quot;namespace.hpp&quot;
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span><span class="decl"><span class="nottickedoff">#num CAP_PROP_POS_MSEC</span>
+<span class="lineno">   18 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_POS_FRAMES</span>
+<span class="lineno">   19 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_POS_AVI_RATIO</span>
+<span class="lineno">   20 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FRAME_WIDTH</span>
+<span class="lineno">   21 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FRAME_HEIGHT</span>
+<span class="lineno">   22 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FPS</span>
+<span class="lineno">   23 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FOURCC</span>
+<span class="lineno">   24 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FRAME_COUNT</span>
+<span class="lineno">   25 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FORMAT</span>
+<span class="lineno">   26 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_MODE</span>
+<span class="lineno">   27 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_BRIGHTNESS </span>
+<span class="lineno">   28 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_CONTRAST </span>
+<span class="lineno">   29 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_SATURATION </span>
+<span class="lineno">   30 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_HUE </span>
+<span class="lineno">   31 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_GAIN </span>
+<span class="lineno">   32 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_EXPOSURE </span>
+<span class="lineno">   33 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_CONVERT_RGB </span>
+<span class="lineno">   34 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_WHITE_BALANCE_BLUE_U </span>
+<span class="lineno">   35 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_RECTIFICATION </span>
+<span class="lineno">   36 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_MONOCHROME </span>
+<span class="lineno">   37 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_SHARPNESS </span>
+<span class="lineno">   38 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_AUTO_EXPOSURE </span>
+<span class="lineno">   39 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_GAMMA </span>
+<span class="lineno">   40 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_TEMPERATURE </span>
+<span class="lineno">   41 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_TRIGGER </span>
+<span class="lineno">   42 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_TRIGGER_DELAY </span>
+<span class="lineno">   43 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_WHITE_BALANCE_RED_V </span>
+<span class="lineno">   44 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_ZOOM </span>
+<span class="lineno">   45 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_FOCUS </span>
+<span class="lineno">   46 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_GUID </span>
+<span class="lineno">   47 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_ISO_SPEED </span>
+<span class="lineno">   48 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_BACKLIGHT </span>
+<span class="lineno">   49 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_PAN </span>
+<span class="lineno">   50 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_TILT </span>
+<span class="lineno">   51 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_ROLL </span>
+<span class="lineno">   52 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_IRIS </span>
+<span class="lineno">   53 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_SETTINGS </span>
+<span class="lineno">   54 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_BUFFERSIZE </span>
+<span class="lineno">   55 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PROP_AUTOFOCUS </span>
+<span class="lineno">   56 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">   57 </span><span class="decl"><span class="nottickedoff">#num CAP_ANY</span>
+<span class="lineno">   58 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_VFW  </span>
+<span class="lineno">   59 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_V4L  </span>
+<span class="lineno">   60 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_V4L2  </span>
+<span class="lineno">   61 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_FIREWIRE  </span>
+<span class="lineno">   62 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_FIREWARE  </span>
+<span class="lineno">   63 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_IEEE1394  </span>
+<span class="lineno">   64 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_DC1394  </span>
+<span class="lineno">   65 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_CMU1394  </span>
+<span class="lineno">   66 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_QT  </span>
+<span class="lineno">   67 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_UNICAP  </span>
+<span class="lineno">   68 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_DSHOW  </span>
+<span class="lineno">   69 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_PVAPI  </span>
+<span class="lineno">   70 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_OPENNI  </span>
+<span class="lineno">   71 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_OPENNI_ASUS  </span>
+<span class="lineno">   72 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_ANDROID   </span>
+<span class="lineno">   73 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_XIAPI   </span>
+<span class="lineno">   74 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_AVFOUNDATION   </span>
+<span class="lineno">   75 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_GIGANETIX   </span>
+<span class="lineno">   76 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_MSMF   </span>
+<span class="lineno">   77 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_WINRT   </span>
+<span class="lineno">   78 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_INTELPERC   </span>
+<span class="lineno">   79 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_OPENNI2   </span>
+<span class="lineno">   80 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_OPENNI2_ASUS   </span>
+<span class="lineno">   81 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_GPHOTO2   </span>
+<span class="lineno">   82 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_GSTREAMER   </span>
+<span class="lineno">   83 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_FFMPEG   </span>
+<span class="lineno">   84 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CAP_IMAGES   </span>
+<span class="lineno">   85 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+
+</pre>
+</body>
+</html>

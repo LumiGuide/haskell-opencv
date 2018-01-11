@@ -1,0 +1,900 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE QuasiQuotes #-}
+<span class="lineno">    2 </span>{-# LANGUAGE TemplateHaskell #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module OpenCV.ImgProc.Drawing
+<span class="lineno">    5 </span>    ( LineType(..)
+<span class="lineno">    6 </span>    , Font(..)
+<span class="lineno">    7 </span>    , FontFace(..)
+<span class="lineno">    8 </span>    , FontSlant(..)
+<span class="lineno">    9 </span>    , ContourDrawMode(..)
+<span class="lineno">   10 </span>    , arrowedLine
+<span class="lineno">   11 </span>    , circle
+<span class="lineno">   12 </span>    , ellipse
+<span class="lineno">   13 </span>    , fillConvexPoly
+<span class="lineno">   14 </span>    , fillPoly
+<span class="lineno">   15 </span>    , polylines
+<span class="lineno">   16 </span>    , line
+<span class="lineno">   17 </span>    , getTextSize
+<span class="lineno">   18 </span>    , putText
+<span class="lineno">   19 </span>    , rectangle
+<span class="lineno">   20 </span>    , drawContours
+<span class="lineno">   21 </span>    , marker
+<span class="lineno">   22 </span>    ) where
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   25 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   26 </span>import qualified &quot;vector&quot; Data.Vector.Storable as VS
+<span class="lineno">   27 </span>import &quot;base&quot; Foreign.Marshal.Alloc ( alloca )
+<span class="lineno">   28 </span>import &quot;base&quot; Foreign.Marshal.Array ( withArray )
+<span class="lineno">   29 </span>import &quot;base&quot; Foreign.Marshal.Utils ( fromBool )
+<span class="lineno">   30 </span>import &quot;base&quot; Foreign.Ptr ( Ptr )
+<span class="lineno">   31 </span>import &quot;base&quot; Foreign.Storable ( peek )
+<span class="lineno">   32 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   33 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   34 </span>import &quot;primitive&quot; Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+<span class="lineno">   35 </span>import &quot;text&quot; Data.Text ( Text )
+<span class="lineno">   36 </span>import qualified &quot;text&quot; Data.Text as T ( append )
+<span class="lineno">   37 </span>import qualified &quot;text&quot; Data.Text.Foreign as T ( withCStringLen )
+<span class="lineno">   38 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   39 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   40 </span>import &quot;this&quot; OpenCV.Internal.Core.Types
+<span class="lineno">   41 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   42 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   43 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>--------------------------------------------------------------------------------
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>C.context openCvCtx
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   50 </span>C.include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   51 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>#include &lt;bindings.dsl.h&gt;
+<span class="lineno">   54 </span>#include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   55 </span>#include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>#include &quot;namespace.hpp&quot;
+<span class="lineno">   58 </span>
+<span class="lineno">   59 </span>--------------------------------------------------------------------------------
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>data LineType
+<span class="lineno">   62 </span>   = LineType_8
+<span class="lineno">   63 </span>     -- ^ 8-connected line.
+<span class="lineno">   64 </span>     --
+<span class="lineno">   65 </span>     -- &lt;&lt;doc/generated/LineType_8.png 8-connected line&gt;&gt;
+<span class="lineno">   66 </span>   | LineType_4
+<span class="lineno">   67 </span>     -- ^ 4-connected line.
+<span class="lineno">   68 </span>     --
+<span class="lineno">   69 </span>     -- &lt;&lt;doc/generated/LineType_4.png 4-connected line&gt;&gt;
+<span class="lineno">   70 </span>   | LineType_AA
+<span class="lineno">   71 </span>     -- ^ Antialiased line.
+<span class="lineno">   72 </span>     --
+<span class="lineno">   73 </span>     -- &lt;&lt;doc/generated/LineType_AA.png Antialised line&gt;&gt;
+<span class="lineno">   74 </span>     deriving (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Bounded</span></span></span></span>)
+<span class="lineno">   75 </span>
+<span class="lineno">   76 </span><span class="decl"><span class="istickedoff">#num LINE_8</span>
+<span class="lineno">   77 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num LINE_4</span>
+<span class="lineno">   78 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num LINE_AA </span>
+<span class="lineno">   79 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">   80 </span>marshalLineType :: LineType -&gt; Int32
+<span class="lineno">   81 </span><span class="decl"><span class="istickedoff">marshalLineType = \case</span>
+<span class="lineno">   82 </span><span class="spaces">  </span><span class="istickedoff">LineType_8  -&gt; c'LINE_8</span>
+<span class="lineno">   83 </span><span class="spaces">  </span><span class="istickedoff">LineType_4  -&gt; c'LINE_4</span>
+<span class="lineno">   84 </span><span class="spaces">  </span><span class="istickedoff">LineType_AA -&gt; c'LINE_AA</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>data Font
+<span class="lineno">   87 </span>   = Font
+<span class="lineno">   88 </span>     { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">_fontFace</span></span></span>  :: !FontFace
+<span class="lineno">   89 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">_fontSlant</span></span></span> :: !FontSlant
+<span class="lineno">   90 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">_fontScale</span></span></span> :: !Double
+<span class="lineno">   91 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>data FontFace
+<span class="lineno">   94 </span>   = FontHersheySimplex
+<span class="lineno">   95 </span>     -- ^ Normal size sans-serif font. Does not have a 'Slanted' variant.
+<span class="lineno">   96 </span>     --
+<span class="lineno">   97 </span>     -- &lt;&lt;doc/generated/FontHersheySimplex.png FontHersheySimplex&gt;&gt;
+<span class="lineno">   98 </span>   | FontHersheyPlain
+<span class="lineno">   99 </span>     -- ^ Small size sans-serif font.
+<span class="lineno">  100 </span>     --
+<span class="lineno">  101 </span>     -- &lt;&lt;doc/generated/FontHersheyPlain.png FontHersheyPlain&gt;&gt;
+<span class="lineno">  102 </span>     --
+<span class="lineno">  103 </span>     -- &lt;&lt;doc/generated/FontHersheyPlain_slanted.png FontHersheyPlain&gt;&gt;
+<span class="lineno">  104 </span>   | FontHersheyDuplex
+<span class="lineno">  105 </span>     -- ^ Normal size sans-serif font (more complex than
+<span class="lineno">  106 </span>     -- 'FontHersheySimplex'). Does not have a 'Slanted' variant.
+<span class="lineno">  107 </span>     --
+<span class="lineno">  108 </span>     -- &lt;&lt;doc/generated/FontHersheyDuplex.png FontHersheyDuplex&gt;&gt;
+<span class="lineno">  109 </span>   | FontHersheyComplex
+<span class="lineno">  110 </span>     -- ^ Normal size serif font.
+<span class="lineno">  111 </span>     --
+<span class="lineno">  112 </span>     -- &lt;&lt;doc/generated/FontHersheyComplex.png FontHersheyComplex&gt;&gt;
+<span class="lineno">  113 </span>     --
+<span class="lineno">  114 </span>     -- &lt;&lt;doc/generated/FontHersheyComplex_slanted.png FontHersheyComplex&gt;&gt;
+<span class="lineno">  115 </span>   | FontHersheyTriplex
+<span class="lineno">  116 </span>     -- ^ Normal size serif font (more complex than 'FontHersheyComplex').
+<span class="lineno">  117 </span>     --
+<span class="lineno">  118 </span>     -- &lt;&lt;doc/generated/FontHersheyTriplex.png FontHersheyTriplex&gt;&gt;
+<span class="lineno">  119 </span>     --
+<span class="lineno">  120 </span>     -- &lt;&lt;doc/generated/FontHersheyTriplex_slanted.png FontHersheyTriplex&gt;&gt;
+<span class="lineno">  121 </span>   | FontHersheyComplexSmall
+<span class="lineno">  122 </span>     -- ^ Smaller version of 'FontHersheyComplex'.
+<span class="lineno">  123 </span>     --
+<span class="lineno">  124 </span>     -- &lt;&lt;doc/generated/FontHersheyComplexSmall.png FontHersheyComplexSmall&gt;&gt;
+<span class="lineno">  125 </span>     --
+<span class="lineno">  126 </span>     -- &lt;&lt;doc/generated/FontHersheyComplexSmall_slanted.png FontHersheyComplexSmall&gt;&gt;
+<span class="lineno">  127 </span>   | FontHersheyScriptSimplex
+<span class="lineno">  128 </span>     -- ^ Hand-writing style font. Does not have a 'Slanted' variant.
+<span class="lineno">  129 </span>     --
+<span class="lineno">  130 </span>     -- &lt;&lt;doc/generated/FontHersheyScriptSimplex.png FontHersheyScriptSimplex&gt;&gt;
+<span class="lineno">  131 </span>   | FontHersheyScriptComplex
+<span class="lineno">  132 </span>     -- ^ More complex variant of 'FontHersheyScriptSimplex'. Does not have a
+<span class="lineno">  133 </span>     -- 'Slanted' variant.
+<span class="lineno">  134 </span>     --
+<span class="lineno">  135 </span>     -- &lt;&lt;doc/generated/FontHersheyScriptComplex.png FontHersheyScriptComplex&gt;&gt;
+<span class="lineno">  136 </span>     deriving (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Enum</span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="istickedoff">Bounded</span></span></span></span>)
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>data FontSlant
+<span class="lineno">  139 </span>   = NotSlanted
+<span class="lineno">  140 </span>   | Slanted
+<span class="lineno">  141 </span>     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>marshalFont :: Font -&gt; (Int32, C.CDouble)
+<span class="lineno">  144 </span><span class="decl"><span class="istickedoff">marshalFont (Font face slant scale) =</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">( marshalFontFace face + marshalFontSlant slant</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">, realToFrac scale</span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="istickedoff">)</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span><span class="decl"><span class="istickedoff">#num FONT_ITALIC </span>
+<span class="lineno">  150 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">  151 </span>marshalFontSlant :: FontSlant -&gt; Int32
+<span class="lineno">  152 </span><span class="decl"><span class="istickedoff">marshalFontSlant = \case</span>
+<span class="lineno">  153 </span><span class="spaces">   </span><span class="istickedoff">NotSlanted -&gt; 0</span>
+<span class="lineno">  154 </span><span class="spaces">   </span><span class="istickedoff">Slanted    -&gt; c'FONT_ITALIC</span></span>
+<span class="lineno">  155 </span>
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_SIMPLEX</span>
+<span class="lineno">  157 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_PLAIN</span>
+<span class="lineno">  158 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_DUPLEX</span>
+<span class="lineno">  159 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_COMPLEX</span>
+<span class="lineno">  160 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_TRIPLEX</span>
+<span class="lineno">  161 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_COMPLEX_SMALL</span>
+<span class="lineno">  162 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_SCRIPT_SIMPLEX</span>
+<span class="lineno">  163 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num FONT_HERSHEY_SCRIPT_COMPLEX</span>
+<span class="lineno">  164 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">  165 </span>marshalFontFace :: FontFace -&gt; Int32
+<span class="lineno">  166 </span><span class="decl"><span class="istickedoff">marshalFontFace = \case</span>
+<span class="lineno">  167 </span><span class="spaces">   </span><span class="istickedoff">FontHersheySimplex       -&gt; c'FONT_HERSHEY_SIMPLEX</span>
+<span class="lineno">  168 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyPlain         -&gt; c'FONT_HERSHEY_PLAIN</span>
+<span class="lineno">  169 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyDuplex        -&gt; c'FONT_HERSHEY_DUPLEX</span>
+<span class="lineno">  170 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyComplex       -&gt; c'FONT_HERSHEY_COMPLEX</span>
+<span class="lineno">  171 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyTriplex       -&gt; c'FONT_HERSHEY_TRIPLEX</span>
+<span class="lineno">  172 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyComplexSmall  -&gt; c'FONT_HERSHEY_COMPLEX_SMALL</span>
+<span class="lineno">  173 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyScriptSimplex -&gt; c'FONT_HERSHEY_SCRIPT_SIMPLEX</span>
+<span class="lineno">  174 </span><span class="spaces">   </span><span class="istickedoff">FontHersheyScriptComplex -&gt; c'FONT_HERSHEY_SCRIPT_COMPLEX</span></span>
+<span class="lineno">  175 </span>
+<span class="lineno">  176 </span>
+<span class="lineno">  177 </span>{- | Draws a arrow segment pointing from the first point to the second one
+<span class="lineno">  178 </span>
+<span class="lineno">  179 </span>Example:
+<span class="lineno">  180 </span>
+<span class="lineno">  181 </span>@
+<span class="lineno">  182 </span>arrowedLineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
+<span class="lineno">  183 </span>arrowedLineImg = exceptError $
+<span class="lineno">  184 </span>    withMatM
+<span class="lineno">  185 </span>      (Proxy :: Proxy [200, 300])
+<span class="lineno">  186 </span>      (Proxy :: Proxy 4)
+<span class="lineno">  187 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  188 </span>      transparent $ \\imgM -&gt; do
+<span class="lineno">  189 </span>        arrowedLine imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0 0.15
+<span class="lineno">  190 </span>        arrowedLine imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0 0.4
+<span class="lineno">  191 </span>@
+<span class="lineno">  192 </span>
+<span class="lineno">  193 </span>&lt;&lt;doc/generated/examples/arrowedLineImg.png arrowedLineImg&gt;&gt;
+<span class="lineno">  194 </span>
+<span class="lineno">  195 </span>&lt;http://docs.opencv.org/3.0.0/d6/d6e/group__imgproc__draw.html#ga0a165a3ca093fd488ac709fdf10c05b2 OpenCV Doxygen doc&gt;
+<span class="lineno">  196 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#arrowedline OpenCV Sphinx doc&gt;
+<span class="lineno">  197 </span>-}
+<span class="lineno">  198 </span>arrowedLine
+<span class="lineno">  199 </span>    :: ( IsPoint2 fromPoint2 Int32
+<span class="lineno">  200 </span>       , IsPoint2 toPoint2   Int32
+<span class="lineno">  201 </span>       , ToScalar  color
+<span class="lineno">  202 </span>       , PrimMonad m
+<span class="lineno">  203 </span>       )
+<span class="lineno">  204 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  205 </span>    -&gt; fromPoint2 Int32 -- ^ The point the arrow starts from.
+<span class="lineno">  206 </span>    -&gt; toPoint2 Int32 -- ^ The point the arrow points to.
+<span class="lineno">  207 </span>    -&gt; color -- ^ Line color.
+<span class="lineno">  208 </span>    -&gt; Int32 -- ^ Line thickness.
+<span class="lineno">  209 </span>    -&gt; LineType
+<span class="lineno">  210 </span>    -&gt; Int32 -- ^ Number of fractional bits in the point coordinates.
+<span class="lineno">  211 </span>    -&gt; Double -- ^ The length of the arrow tip in relation to the arrow length.
+<span class="lineno">  212 </span>    -&gt; m ()
+<span class="lineno">  213 </span><span class="decl"><span class="istickedoff">arrowedLine img pt1 pt2 color thickness lineType shift tipLength =</span>
+<span class="lineno">  214 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  215 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  216 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint pt1) $ \pt1Ptr   -&gt;</span>
+<span class="lineno">  217 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint pt2) $ \pt2Ptr   -&gt;</span>
+<span class="lineno">  218 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  219 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  220 </span><span class="spaces">        </span><span class="istickedoff">cv::arrowedLine( *$(Mat * matPtr)</span>
+<span class="lineno">  221 </span><span class="spaces">                       </span><span class="istickedoff">, *$(Point2i * pt1Ptr)</span>
+<span class="lineno">  222 </span><span class="spaces">                       </span><span class="istickedoff">, *$(Point2i * pt2Ptr)</span>
+<span class="lineno">  223 </span><span class="spaces">                       </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  224 </span><span class="spaces">                       </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  225 </span><span class="spaces">                       </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  226 </span><span class="spaces">                       </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  227 </span><span class="spaces">                       </span><span class="istickedoff">, $(double c'tipLength)</span>
+<span class="lineno">  228 </span><span class="spaces">                       </span><span class="istickedoff">)</span>
+<span class="lineno">  229 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  230 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  231 </span><span class="spaces">    </span><span class="istickedoff">c'lineType  = marshalLineType lineType</span>
+<span class="lineno">  232 </span><span class="spaces">    </span><span class="istickedoff">c'tipLength = realToFrac tipLength</span></span>
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>{- | Draws a circle.
+<span class="lineno">  235 </span>
+<span class="lineno">  236 </span>Example:
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>@
+<span class="lineno">  239 </span>circleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+<span class="lineno">  240 </span>circleImg = exceptError $
+<span class="lineno">  241 </span>    withMatM
+<span class="lineno">  242 </span>      (Proxy :: Proxy [200, 400])
+<span class="lineno">  243 </span>      (Proxy :: Proxy 4)
+<span class="lineno">  244 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  245 </span>      transparent $ \\imgM -&gt; do
+<span class="lineno">  246 </span>        lift $ circle imgM (V2 100 100 :: V2 Int32) 90 blue  5  LineType_AA 0
+<span class="lineno">  247 </span>        lift $ circle imgM (V2 300 100 :: V2 Int32) 45 red (-1) LineType_AA 0
+<span class="lineno">  248 </span>@
+<span class="lineno">  249 </span>
+<span class="lineno">  250 </span>&lt;&lt;doc/generated/examples/circleImg.png circleImg&gt;&gt;
+<span class="lineno">  251 </span>
+<span class="lineno">  252 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#circle OpenCV Sphinx doc&gt;
+<span class="lineno">  253 </span>-}
+<span class="lineno">  254 </span>circle
+<span class="lineno">  255 </span>    :: ( PrimMonad m
+<span class="lineno">  256 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  257 </span>       , ToScalar color
+<span class="lineno">  258 </span>       )
+<span class="lineno">  259 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image where the circle is drawn.
+<span class="lineno">  260 </span>    -&gt; point2 Int32 -- ^ Center of the circle.
+<span class="lineno">  261 </span>    -&gt; Int32 -- ^ Radius of the circle.
+<span class="lineno">  262 </span>    -&gt; color -- ^ Circle color.
+<span class="lineno">  263 </span>    -&gt; Int32 -- ^ Thickness of the circle outline, if positive. Negative thickness means that a filled circle is to be drawn.
+<span class="lineno">  264 </span>    -&gt; LineType -- ^ Type of the circle boundary.
+<span class="lineno">  265 </span>    -&gt; Int32 -- ^ Number of fractional bits in the coordinates of the center and in the radius value.
+<span class="lineno">  266 </span>    -&gt; m ()
+<span class="lineno">  267 </span><span class="decl"><span class="istickedoff">circle img center radius color thickness lineType shift =</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint center) $ \centerPtr -&gt;</span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr  -&gt;</span>
+<span class="lineno">  272 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  273 </span><span class="spaces">        </span><span class="istickedoff">cv::circle( *$(Mat * matPtr)</span>
+<span class="lineno">  274 </span><span class="spaces">                  </span><span class="istickedoff">, *$(Point2i * centerPtr)</span>
+<span class="lineno">  275 </span><span class="spaces">                  </span><span class="istickedoff">, $(int32_t radius)</span>
+<span class="lineno">  276 </span><span class="spaces">                  </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  277 </span><span class="spaces">                  </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  278 </span><span class="spaces">                  </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  279 </span><span class="spaces">                  </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  280 </span><span class="spaces">                  </span><span class="istickedoff">)</span>
+<span class="lineno">  281 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  282 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  283 </span><span class="spaces">    </span><span class="istickedoff">c'lineType  = marshalLineType lineType</span></span>
+<span class="lineno">  284 </span>
+<span class="lineno">  285 </span>{- | Draws a simple or thick elliptic arc or fills an ellipse sector
+<span class="lineno">  286 </span>
+<span class="lineno">  287 </span>Example:
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>@
+<span class="lineno">  290 </span>ellipseImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+<span class="lineno">  291 </span>ellipseImg = exceptError $
+<span class="lineno">  292 </span>    withMatM
+<span class="lineno">  293 </span>      (Proxy :: Proxy [200, 400])
+<span class="lineno">  294 </span>      (Proxy :: Proxy 4)
+<span class="lineno">  295 </span>      (Proxy :: Proxy Word8)
+<span class="lineno">  296 </span>      transparent $ \\imgM -&gt; do
+<span class="lineno">  297 </span>        lift $ ellipse imgM (V2 100 100 :: V2 Int32) (V2 90 60 :: V2 Int32)  30  0 360 blue  5  LineType_AA 0
+<span class="lineno">  298 </span>        lift $ ellipse imgM (V2 300 100 :: V2 Int32) (V2 80 40 :: V2 Int32) 160 40 290 red (-1) LineType_AA 0
+<span class="lineno">  299 </span>@
+<span class="lineno">  300 </span>
+<span class="lineno">  301 </span>&lt;&lt;doc/generated/examples/ellipseImg.png ellipseImg&gt;&gt;
+<span class="lineno">  302 </span>
+<span class="lineno">  303 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#ellipse OpenCV Sphinx doc&gt;
+<span class="lineno">  304 </span>-}
+<span class="lineno">  305 </span>ellipse
+<span class="lineno">  306 </span>    :: ( PrimMonad m
+<span class="lineno">  307 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  308 </span>       , IsSize   size   Int32
+<span class="lineno">  309 </span>       , ToScalar color
+<span class="lineno">  310 </span>       )
+<span class="lineno">  311 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  312 </span>    -&gt; point2 Int32 -- ^ Center of the ellipse.
+<span class="lineno">  313 </span>    -&gt; size   Int32  -- ^ Half of the size of the ellipse main axes.
+<span class="lineno">  314 </span>    -&gt; Double -- ^ Ellipse rotation angle in degrees.
+<span class="lineno">  315 </span>    -&gt; Double -- ^ Starting angle of the elliptic arc in degrees.
+<span class="lineno">  316 </span>    -&gt; Double -- ^ Ending angle of the elliptic arc in degrees.
+<span class="lineno">  317 </span>    -&gt; color -- ^ Ellipse color.
+<span class="lineno">  318 </span>    -&gt; Int32
+<span class="lineno">  319 </span>       -- ^ Thickness of the ellipse arc outline, if
+<span class="lineno">  320 </span>       -- positive. Otherwise, this indicates that a filled ellipse
+<span class="lineno">  321 </span>       -- sector is to be drawn.
+<span class="lineno">  322 </span>    -&gt; LineType -- ^ Type of the ellipse boundary.
+<span class="lineno">  323 </span>    -&gt; Int32 -- ^ Number of fractional bits in the coordinates of the center and values of axes.
+<span class="lineno">  324 </span>    -&gt; m ()
+<span class="lineno">  325 </span><span class="decl"><span class="istickedoff">ellipse img center axes angle startAngle endAngle color thickness lineType shift =</span>
+<span class="lineno">  326 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  327 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  328 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint  center) $ \centerPtr -&gt;</span>
+<span class="lineno">  329 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toSize   axes  ) $ \axesPtr   -&gt;</span>
+<span class="lineno">  330 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color ) $ \colorPtr  -&gt;</span>
+<span class="lineno">  331 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  332 </span><span class="spaces">        </span><span class="istickedoff">cv::ellipse( *$(Mat * matPtr)</span>
+<span class="lineno">  333 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Point2i * centerPtr)</span>
+<span class="lineno">  334 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Size2i * axesPtr)</span>
+<span class="lineno">  335 </span><span class="spaces">                   </span><span class="istickedoff">, $(double c'angle)</span>
+<span class="lineno">  336 </span><span class="spaces">                   </span><span class="istickedoff">, $(double c'startAngle)</span>
+<span class="lineno">  337 </span><span class="spaces">                   </span><span class="istickedoff">, $(double c'endAngle)</span>
+<span class="lineno">  338 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  339 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  340 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  341 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  342 </span><span class="spaces">                   </span><span class="istickedoff">)</span>
+<span class="lineno">  343 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  344 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  345 </span><span class="spaces">    </span><span class="istickedoff">c'angle      = realToFrac angle</span>
+<span class="lineno">  346 </span><span class="spaces">    </span><span class="istickedoff">c'startAngle = realToFrac startAngle</span>
+<span class="lineno">  347 </span><span class="spaces">    </span><span class="istickedoff">c'endAngle   = realToFrac endAngle</span>
+<span class="lineno">  348 </span><span class="spaces">    </span><span class="istickedoff">c'lineType   = marshalLineType lineType</span></span>
+<span class="lineno">  349 </span>
+<span class="lineno">  350 </span>{- | Fills a convex polygon.
+<span class="lineno">  351 </span>
+<span class="lineno">  352 </span>The function 'fillConvexPoly' draws a filled convex polygon. This
+<span class="lineno">  353 </span>function is much faster than the function 'fillPoly' . It can fill
+<span class="lineno">  354 </span>not only convex polygons but any monotonic polygon without
+<span class="lineno">  355 </span>self-intersections, that is, a polygon whose contour intersects
+<span class="lineno">  356 </span>every horizontal line (scan line) twice at the most (though, its
+<span class="lineno">  357 </span>top-most and/or the bottom edge could be horizontal).
+<span class="lineno">  358 </span>
+<span class="lineno">  359 </span>Example:
+<span class="lineno">  360 </span>
+<span class="lineno">  361 </span>@
+<span class="lineno">  362 </span>fillConvexPolyImg
+<span class="lineno">  363 </span>    :: forall (h :: Nat) (w :: Nat)
+<span class="lineno">  364 </span>     . (h ~ 300, w ~ 300)
+<span class="lineno">  365 </span>    =&gt; Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+<span class="lineno">  366 </span>fillConvexPolyImg = exceptError $
+<span class="lineno">  367 </span>    withMatM (Proxy :: Proxy [h, w])
+<span class="lineno">  368 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  369 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  370 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  371 </span>      lift $ fillConvexPoly imgM pentagon blue LineType_AA 0
+<span class="lineno">  372 </span>  where
+<span class="lineno">  373 </span>    pentagon :: V.Vector (V2 Int32)
+<span class="lineno">  374 </span>    pentagon = V.fromList
+<span class="lineno">  375 </span>               [ V2 150   0
+<span class="lineno">  376 </span>               , V2   7 104
+<span class="lineno">  377 </span>               , V2  62 271
+<span class="lineno">  378 </span>               , V2 238 271
+<span class="lineno">  379 </span>               , V2 293 104
+<span class="lineno">  380 </span>               ]
+<span class="lineno">  381 </span>@
+<span class="lineno">  382 </span>
+<span class="lineno">  383 </span>&lt;&lt;doc/generated/examples/fillConvexPolyImg.png fillConvexPolyImg&gt;&gt;
+<span class="lineno">  384 </span>
+<span class="lineno">  385 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillconvexpoly OpenCV Sphinx doc&gt;
+<span class="lineno">  386 </span>-}
+<span class="lineno">  387 </span>fillConvexPoly
+<span class="lineno">  388 </span>    :: ( PrimMonad m
+<span class="lineno">  389 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  390 </span>       , ToScalar  color
+<span class="lineno">  391 </span>       )
+<span class="lineno">  392 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  393 </span>    -&gt; V.Vector (point2 Int32) -- ^ Polygon vertices.
+<span class="lineno">  394 </span>    -&gt; color -- ^ Polygon color.
+<span class="lineno">  395 </span>    -&gt; LineType
+<span class="lineno">  396 </span>    -&gt; Int32 -- ^ Number of fractional bits in the vertex coordinates.
+<span class="lineno">  397 </span>    -&gt; m ()
+<span class="lineno">  398 </span><span class="decl"><span class="istickedoff">fillConvexPoly img points color lineType shift =</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  400 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">withArrayPtr (V.map toPoint points) $ \pointsPtr -&gt;</span>
+<span class="lineno">  402 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  403 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  404 </span><span class="spaces">        </span><span class="istickedoff">cv::fillConvexPoly( *$(Mat * matPtr)</span>
+<span class="lineno">  405 </span><span class="spaces">                          </span><span class="istickedoff">, $(Point2i * pointsPtr)</span>
+<span class="lineno">  406 </span><span class="spaces">                          </span><span class="istickedoff">, $(int32_t c'numPoints)</span>
+<span class="lineno">  407 </span><span class="spaces">                          </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  408 </span><span class="spaces">                          </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  409 </span><span class="spaces">                          </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  410 </span><span class="spaces">                          </span><span class="istickedoff">)</span>
+<span class="lineno">  411 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  412 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  413 </span><span class="spaces">    </span><span class="istickedoff">c'numPoints = fromIntegral $ V.length points</span>
+<span class="lineno">  414 </span><span class="spaces">    </span><span class="istickedoff">c'lineType  = marshalLineType lineType</span></span>
+<span class="lineno">  415 </span>
+<span class="lineno">  416 </span>{- | Fills the area bounded by one or more polygons.
+<span class="lineno">  417 </span>
+<span class="lineno">  418 </span>Example:
+<span class="lineno">  419 </span>
+<span class="lineno">  420 </span>@
+<span class="lineno">  421 </span>rookPts :: Int32 -&gt; Int32 -&gt; V.Vector (V.Vector (V2 Int32))
+<span class="lineno">  422 </span>rookPts w h = V.singleton $ V.fromList
+<span class="lineno">  423 </span>          [ V2 (    w \`div`  4) ( 7*h \`div`  8)
+<span class="lineno">  424 </span>          , V2 (  3*w \`div`  4) ( 7*h \`div`  8)
+<span class="lineno">  425 </span>          , V2 (  3*w \`div`  4) (13*h \`div` 16)
+<span class="lineno">  426 </span>          , V2 ( 11*w \`div` 16) (13*h \`div` 16)
+<span class="lineno">  427 </span>          , V2 ( 19*w \`div` 32) ( 3*h \`div`  8)
+<span class="lineno">  428 </span>          , V2 (  3*w \`div`  4) ( 3*h \`div`  8)
+<span class="lineno">  429 </span>          , V2 (  3*w \`div`  4) (   h \`div`  8)
+<span class="lineno">  430 </span>          , V2 ( 26*w \`div` 40) (   h \`div`  8)
+<span class="lineno">  431 </span>          , V2 ( 26*w \`div` 40) (   h \`div`  4)
+<span class="lineno">  432 </span>          , V2 ( 22*w \`div` 40) (   h \`div`  4)
+<span class="lineno">  433 </span>          , V2 ( 22*w \`div` 40) (   h \`div`  8)
+<span class="lineno">  434 </span>          , V2 ( 18*w \`div` 40) (   h \`div`  8)
+<span class="lineno">  435 </span>          , V2 ( 18*w \`div` 40) (   h \`div`  4)
+<span class="lineno">  436 </span>          , V2 ( 14*w \`div` 40) (   h \`div`  4)
+<span class="lineno">  437 </span>          , V2 ( 14*w \`div` 40) (   h \`div`  8)
+<span class="lineno">  438 </span>          , V2 (    w \`div`  4) (   h \`div`  8)
+<span class="lineno">  439 </span>          , V2 (    w \`div`  4) ( 3*h \`div`  8)
+<span class="lineno">  440 </span>          , V2 ( 13*w \`div` 32) ( 3*h \`div`  8)
+<span class="lineno">  441 </span>          , V2 (  5*w \`div` 16) (13*h \`div` 16)
+<span class="lineno">  442 </span>          , V2 (    w \`div`  4) (13*h \`div` 16)
+<span class="lineno">  443 </span>          ]
+<span class="lineno">  444 </span>
+<span class="lineno">  445 </span>fillPolyImg
+<span class="lineno">  446 </span>    :: forall (h :: Nat) (w :: Nat)
+<span class="lineno">  447 </span>     . (h ~ 300, w ~ 300)
+<span class="lineno">  448 </span>    =&gt; Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+<span class="lineno">  449 </span>fillPolyImg = exceptError $
+<span class="lineno">  450 </span>    withMatM (Proxy :: Proxy [h, w])
+<span class="lineno">  451 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  452 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  453 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  454 </span>      lift $ fillPoly imgM (rookPts w h) blue LineType_AA 0
+<span class="lineno">  455 </span>  where
+<span class="lineno">  456 </span>    h = fromInteger $ natVal (Proxy :: Proxy h)
+<span class="lineno">  457 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  458 </span>@
+<span class="lineno">  459 </span>
+<span class="lineno">  460 </span>&lt;&lt;doc/generated/examples/fillPolyImg.png fillPolyImg&gt;&gt;
+<span class="lineno">  461 </span>
+<span class="lineno">  462 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#fillpoly OpenCV Sphinx doc&gt;
+<span class="lineno">  463 </span>-}
+<span class="lineno">  464 </span>fillPoly
+<span class="lineno">  465 </span>    :: ( PrimMonad m
+<span class="lineno">  466 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  467 </span>       , ToScalar color
+<span class="lineno">  468 </span>       )
+<span class="lineno">  469 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  470 </span>    -&gt; V.Vector (V.Vector (point2 Int32)) -- ^ Polygons.
+<span class="lineno">  471 </span>    -&gt; color -- ^ Polygon color.
+<span class="lineno">  472 </span>    -&gt; LineType
+<span class="lineno">  473 </span>    -&gt; Int32 -- ^ Number of fractional bits in the vertex coordinates.
+<span class="lineno">  474 </span>    -&gt; m ()
+<span class="lineno">  475 </span><span class="decl"><span class="istickedoff">fillPoly img polygons color lineType shift =</span>
+<span class="lineno">  476 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  477 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  478 </span><span class="spaces">    </span><span class="istickedoff">withPolygons polygons $ \polygonsPtr -&gt;</span>
+<span class="lineno">  479 </span><span class="spaces">    </span><span class="istickedoff">VS.unsafeWith npts $ \nptsPtr -&gt;</span>
+<span class="lineno">  480 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  481 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  482 </span><span class="spaces">        </span><span class="istickedoff">cv::fillPoly( *$(Mat * matPtr)</span>
+<span class="lineno">  483 </span><span class="spaces">                    </span><span class="istickedoff">, $(const Point2i * * polygonsPtr)</span>
+<span class="lineno">  484 </span><span class="spaces">                    </span><span class="istickedoff">, $(int32_t * nptsPtr)</span>
+<span class="lineno">  485 </span><span class="spaces">                    </span><span class="istickedoff">, $(int32_t c'numPolygons)</span>
+<span class="lineno">  486 </span><span class="spaces">                    </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  487 </span><span class="spaces">                    </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  488 </span><span class="spaces">                    </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  489 </span><span class="spaces">                    </span><span class="istickedoff">)</span>
+<span class="lineno">  490 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  491 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  492 </span><span class="spaces">    </span><span class="istickedoff">c'numPolygons = fromIntegral $ V.length polygons</span>
+<span class="lineno">  493 </span><span class="spaces">    </span><span class="istickedoff">c'lineType    = marshalLineType lineType</span>
+<span class="lineno">  494 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  495 </span><span class="spaces">    </span><span class="istickedoff">npts :: VS.Vector Int32</span>
+<span class="lineno">  496 </span><span class="spaces">    </span><span class="istickedoff">npts = VS.convert $ V.map (fromIntegral . V.length) polygons</span></span>
+<span class="lineno">  497 </span>
+<span class="lineno">  498 </span>{- | Draws several polygonal curves
+<span class="lineno">  499 </span>
+<span class="lineno">  500 </span>Example:
+<span class="lineno">  501 </span>
+<span class="lineno">  502 </span>@
+<span class="lineno">  503 </span>polylinesImg
+<span class="lineno">  504 </span>    :: forall (h :: Nat) (w :: Nat)
+<span class="lineno">  505 </span>     . (h ~ 300, w ~ 300)
+<span class="lineno">  506 </span>    =&gt; Mat (ShapeT [h, w]) ('S 4) ('S Word8)
+<span class="lineno">  507 </span>polylinesImg = exceptError $
+<span class="lineno">  508 </span>    withMatM (Proxy :: Proxy [h, w])
+<span class="lineno">  509 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  510 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  511 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  512 </span>      lift $ polylines imgM (rookPts w h) True blue 2 LineType_AA 0
+<span class="lineno">  513 </span>  where
+<span class="lineno">  514 </span>    h = fromInteger $ natVal (Proxy :: Proxy h)
+<span class="lineno">  515 </span>    w = fromInteger $ natVal (Proxy :: Proxy w)
+<span class="lineno">  516 </span>@
+<span class="lineno">  517 </span>
+<span class="lineno">  518 </span>&lt;&lt;doc/generated/examples/polylinesImg.png polylinesImg&gt;&gt;
+<span class="lineno">  519 </span>
+<span class="lineno">  520 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#polylines OpenCV Sphinx doc&gt;
+<span class="lineno">  521 </span>-}
+<span class="lineno">  522 </span>polylines
+<span class="lineno">  523 </span>    :: ( PrimMonad m
+<span class="lineno">  524 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  525 </span>       , ToScalar color
+<span class="lineno">  526 </span>       )
+<span class="lineno">  527 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  528 </span>    -&gt; V.Vector (V.Vector (point2 Int32)) -- ^ Vertices.
+<span class="lineno">  529 </span>    -&gt; Bool
+<span class="lineno">  530 </span>       -- ^ Flag indicating whether the drawn polylines are closed or not. If
+<span class="lineno">  531 </span>       -- they are closed, the function draws a line from the last vertex of
+<span class="lineno">  532 </span>       -- each curve to its first vertex.
+<span class="lineno">  533 </span>    -&gt; color
+<span class="lineno">  534 </span>    -&gt; Int32 -- ^ Thickness of the polyline edges.
+<span class="lineno">  535 </span>    -&gt; LineType
+<span class="lineno">  536 </span>    -&gt; Int32 -- ^ Number of fractional bits in the vertex coordinates.
+<span class="lineno">  537 </span>    -&gt; m ()
+<span class="lineno">  538 </span><span class="decl"><span class="istickedoff">polylines img curves isClosed color thickness lineType shift =</span>
+<span class="lineno">  539 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  540 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  541 </span><span class="spaces">    </span><span class="istickedoff">withPolygons curves $ \curvesPtr -&gt;</span>
+<span class="lineno">  542 </span><span class="spaces">    </span><span class="istickedoff">VS.unsafeWith npts $ \nptsPtr -&gt;</span>
+<span class="lineno">  543 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  544 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  545 </span><span class="spaces">        </span><span class="istickedoff">cv::polylines</span>
+<span class="lineno">  546 </span><span class="spaces">        </span><span class="istickedoff">( *$(Mat * matPtr)</span>
+<span class="lineno">  547 </span><span class="spaces">        </span><span class="istickedoff">, $(const Point2i * * curvesPtr)</span>
+<span class="lineno">  548 </span><span class="spaces">        </span><span class="istickedoff">, $(int32_t * nptsPtr)</span>
+<span class="lineno">  549 </span><span class="spaces">        </span><span class="istickedoff">, $(int32_t c'numCurves)</span>
+<span class="lineno">  550 </span><span class="spaces">        </span><span class="istickedoff">, $(bool c'isClosed)</span>
+<span class="lineno">  551 </span><span class="spaces">        </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  552 </span><span class="spaces">        </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  553 </span><span class="spaces">        </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  554 </span><span class="spaces">        </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  555 </span><span class="spaces">        </span><span class="istickedoff">);</span>
+<span class="lineno">  556 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  557 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  558 </span><span class="spaces">    </span><span class="istickedoff">c'numCurves = fromIntegral $ V.length curves</span>
+<span class="lineno">  559 </span><span class="spaces">    </span><span class="istickedoff">c'isClosed  = fromBool isClosed</span>
+<span class="lineno">  560 </span><span class="spaces">    </span><span class="istickedoff">c'lineType  = marshalLineType lineType</span>
+<span class="lineno">  561 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  562 </span><span class="spaces">    </span><span class="istickedoff">npts :: VS.Vector Int32</span>
+<span class="lineno">  563 </span><span class="spaces">    </span><span class="istickedoff">npts = VS.convert $ V.map (fromIntegral . V.length) curves</span></span>
+<span class="lineno">  564 </span>
+<span class="lineno">  565 </span>{- | Draws a line segment connecting two points.
+<span class="lineno">  566 </span>
+<span class="lineno">  567 </span>Example:
+<span class="lineno">  568 </span>
+<span class="lineno">  569 </span>@
+<span class="lineno">  570 </span>lineImg :: Mat (ShapeT [200, 300]) ('S 4) ('S Word8)
+<span class="lineno">  571 </span>lineImg = exceptError $
+<span class="lineno">  572 </span>    withMatM (Proxy :: Proxy [200, 300])
+<span class="lineno">  573 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  574 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  575 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  576 </span>      lift $ line imgM (V2  10 130 :: V2 Int32) (V2 190  40 :: V2 Int32) blue 5 LineType_AA 0
+<span class="lineno">  577 </span>      lift $ line imgM (V2 210  50 :: V2 Int32) (V2 250 180 :: V2 Int32) red  8 LineType_AA 0
+<span class="lineno">  578 </span>@
+<span class="lineno">  579 </span>
+<span class="lineno">  580 </span>&lt;&lt;doc/generated/examples/lineImg.png lineImg&gt;&gt;
+<span class="lineno">  581 </span>
+<span class="lineno">  582 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#line OpenCV Sphinx doc&gt;
+<span class="lineno">  583 </span>-}
+<span class="lineno">  584 </span>line
+<span class="lineno">  585 </span>    :: ( PrimMonad m
+<span class="lineno">  586 </span>       , IsPoint2 fromPoint2 Int32
+<span class="lineno">  587 </span>       , IsPoint2 toPoint2   Int32
+<span class="lineno">  588 </span>       , ToScalar color
+<span class="lineno">  589 </span>       )
+<span class="lineno">  590 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  591 </span>    -&gt; fromPoint2 Int32 -- ^ First point of the line segment.
+<span class="lineno">  592 </span>    -&gt; toPoint2   Int32 -- ^ Scond point of the line segment.
+<span class="lineno">  593 </span>    -&gt; color -- ^ Line color.
+<span class="lineno">  594 </span>    -&gt; Int32 -- ^ Line thickness.
+<span class="lineno">  595 </span>    -&gt; LineType
+<span class="lineno">  596 </span>    -&gt; Int32 -- ^ Number of fractional bits in the point coordinates.
+<span class="lineno">  597 </span>    -&gt; m ()
+<span class="lineno">  598 </span><span class="decl"><span class="istickedoff">line img pt1 pt2 color thickness lineType shift =</span>
+<span class="lineno">  599 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  600 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  601 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint pt1) $ \pt1Ptr -&gt;</span>
+<span class="lineno">  602 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint pt2) $ \pt2Ptr -&gt;</span>
+<span class="lineno">  603 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  604 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  605 </span><span class="spaces">        </span><span class="istickedoff">cv::line( *$(Mat * matPtr)</span>
+<span class="lineno">  606 </span><span class="spaces">                </span><span class="istickedoff">, *$(Point2i * pt1Ptr)</span>
+<span class="lineno">  607 </span><span class="spaces">                </span><span class="istickedoff">, *$(Point2i * pt2Ptr)</span>
+<span class="lineno">  608 </span><span class="spaces">                </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  609 </span><span class="spaces">                </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  610 </span><span class="spaces">                </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  611 </span><span class="spaces">                </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  612 </span><span class="spaces">                </span><span class="istickedoff">)</span>
+<span class="lineno">  613 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  614 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  615 </span><span class="spaces">    </span><span class="istickedoff">c'lineType = marshalLineType lineType</span></span>
+<span class="lineno">  616 </span>
+<span class="lineno">  617 </span>{- | Calculates the size of a box that contains the specified text
+<span class="lineno">  618 </span>
+<span class="lineno">  619 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#gettextsize OpenCV Sphinx doc&gt;
+<span class="lineno">  620 </span>-}
+<span class="lineno">  621 </span>getTextSize
+<span class="lineno">  622 </span>    :: Text
+<span class="lineno">  623 </span>    -&gt; Font
+<span class="lineno">  624 </span>    -&gt; Int32 -- ^ Thickness of lines used to render the text.
+<span class="lineno">  625 </span>    -&gt; (Size2i, Int32)
+<span class="lineno">  626 </span>       -- ^ (size, baseLine) =
+<span class="lineno">  627 </span>       -- (The size of a box that contains the specified text.
+<span class="lineno">  628 </span>       -- , y-coordinate of the baseline relative to the bottom-most text point)
+<span class="lineno">  629 </span><span class="decl"><span class="istickedoff">getTextSize text font thickness = unsafePerformIO $</span>
+<span class="lineno">  630 </span><span class="spaces">    </span><span class="istickedoff">T.withCStringLen (T.append text &quot;\0&quot;) $ \(c'text, _textLength) -&gt;</span>
+<span class="lineno">  631 </span><span class="spaces">    </span><span class="istickedoff">alloca $ \(c'baseLinePtr :: Ptr Int32) -&gt; do</span>
+<span class="lineno">  632 </span><span class="spaces">      </span><span class="istickedoff">size &lt;- fromPtr $</span>
+<span class="lineno">  633 </span><span class="spaces">        </span><span class="istickedoff">[C.block|Size2i * {</span>
+<span class="lineno">  634 </span><span class="spaces">          </span><span class="istickedoff">Size size = cv::getTextSize( $(char * c'text)</span>
+<span class="lineno">  635 </span><span class="spaces">                                     </span><span class="istickedoff">, $(int32_t c'fontFace)</span>
+<span class="lineno">  636 </span><span class="spaces">                                     </span><span class="istickedoff">, $(double c'fontScale)</span>
+<span class="lineno">  637 </span><span class="spaces">                                     </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  638 </span><span class="spaces">                                     </span><span class="istickedoff">, $(int32_t * c'baseLinePtr)</span>
+<span class="lineno">  639 </span><span class="spaces">                                     </span><span class="istickedoff">);</span>
+<span class="lineno">  640 </span><span class="spaces">          </span><span class="istickedoff">return new Size(size);</span>
+<span class="lineno">  641 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  642 </span><span class="spaces">      </span><span class="istickedoff">baseLine &lt;- peek c'baseLinePtr</span>
+<span class="lineno">  643 </span><span class="spaces">      </span><span class="istickedoff">pure (size, baseLine)</span>
+<span class="lineno">  644 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  645 </span><span class="spaces">    </span><span class="istickedoff">(c'fontFace, c'fontScale) = marshalFont font</span></span>
+<span class="lineno">  646 </span>
+<span class="lineno">  647 </span>{- | Draws a text string.
+<span class="lineno">  648 </span>
+<span class="lineno">  649 </span>The function putText renders the specified text string in the
+<span class="lineno">  650 </span>image. Symbols that cannot be rendered using the specified font are
+<span class="lineno">  651 </span>replaced by question marks.
+<span class="lineno">  652 </span>
+<span class="lineno">  653 </span>Example:
+<span class="lineno">  654 </span>
+<span class="lineno">  655 </span>@
+<span class="lineno">  656 </span>putTextImg :: Mat ('S ['D, 'S 400]) ('S 4) ('S Word8)
+<span class="lineno">  657 </span>putTextImg = exceptError $
+<span class="lineno">  658 </span>    withMatM (height ::: (Proxy :: Proxy 400) ::: Z)
+<span class="lineno">  659 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  660 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  661 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  662 </span>      forM_ (zip [0..] [minBound .. maxBound]) $ \\(n, fontFace) -&gt;
+<span class="lineno">  663 </span>        lift $ putText imgM
+<span class="lineno">  664 </span>                       (T.pack $ show fontFace)
+<span class="lineno">  665 </span>                       (V2 10 (35 + n * 30) :: V2 Int32)
+<span class="lineno">  666 </span>                       (Font fontFace NotSlanted 1.0)
+<span class="lineno">  667 </span>                       black
+<span class="lineno">  668 </span>                       1
+<span class="lineno">  669 </span>                       LineType_AA
+<span class="lineno">  670 </span>                       False
+<span class="lineno">  671 </span>  where
+<span class="lineno">  672 </span>    height :: Int32
+<span class="lineno">  673 </span>    height = 50 + fromIntegral (30 * fromEnum (maxBound :: FontFace))
+<span class="lineno">  674 </span>@
+<span class="lineno">  675 </span>
+<span class="lineno">  676 </span>&lt;&lt;doc/generated/examples/putTextImg.png putTextImg&gt;&gt;
+<span class="lineno">  677 </span>
+<span class="lineno">  678 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#puttext OpenCV Sphinx doc&gt;
+<span class="lineno">  679 </span>-}
+<span class="lineno">  680 </span>putText
+<span class="lineno">  681 </span>    :: ( PrimMonad m
+<span class="lineno">  682 </span>       , IsPoint2 point2 Int32
+<span class="lineno">  683 </span>       , ToScalar color
+<span class="lineno">  684 </span>       )
+<span class="lineno">  685 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  686 </span>    -&gt; Text -- ^ Text string to be drawn.
+<span class="lineno">  687 </span>    -&gt; point2 Int32 -- ^ Bottom-left corner of the text string in the image.
+<span class="lineno">  688 </span>    -&gt; Font
+<span class="lineno">  689 </span>    -&gt; color -- ^ Text color.
+<span class="lineno">  690 </span>    -&gt; Int32 -- ^ Thickness of the lines used to draw a text.
+<span class="lineno">  691 </span>    -&gt; LineType
+<span class="lineno">  692 </span>    -&gt; Bool -- ^ When 'True', the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner.
+<span class="lineno">  693 </span>    -&gt; m ()
+<span class="lineno">  694 </span><span class="decl"><span class="istickedoff">putText img text org font color thickness lineType bottomLeftOrigin =</span>
+<span class="lineno">  695 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  696 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  697 </span><span class="spaces">    </span><span class="istickedoff">T.withCStringLen (T.append text &quot;\0&quot;) $ \(c'text, _textLength) -&gt;</span>
+<span class="lineno">  698 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint org) $ \orgPtr -&gt;</span>
+<span class="lineno">  699 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  700 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  701 </span><span class="spaces">        </span><span class="istickedoff">cv::putText( *$(Mat * matPtr)</span>
+<span class="lineno">  702 </span><span class="spaces">                   </span><span class="istickedoff">, $(char * c'text)</span>
+<span class="lineno">  703 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Point2i * orgPtr)</span>
+<span class="lineno">  704 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t c'fontFace)</span>
+<span class="lineno">  705 </span><span class="spaces">                   </span><span class="istickedoff">, $(double c'fontScale)</span>
+<span class="lineno">  706 </span><span class="spaces">                   </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  707 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  708 </span><span class="spaces">                   </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  709 </span><span class="spaces">                   </span><span class="istickedoff">, $(bool c'bottomLeftOrigin)</span>
+<span class="lineno">  710 </span><span class="spaces">                   </span><span class="istickedoff">)</span>
+<span class="lineno">  711 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  712 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  713 </span><span class="spaces">    </span><span class="istickedoff">(c'fontFace, c'fontScale) = marshalFont font</span>
+<span class="lineno">  714 </span><span class="spaces">    </span><span class="istickedoff">c'lineType = marshalLineType lineType</span>
+<span class="lineno">  715 </span><span class="spaces">    </span><span class="istickedoff">c'bottomLeftOrigin = fromBool bottomLeftOrigin</span></span>
+<span class="lineno">  716 </span>
+<span class="lineno">  717 </span>{- | Draws a simple, thick, or filled up-right rectangle
+<span class="lineno">  718 </span>
+<span class="lineno">  719 </span>Example:
+<span class="lineno">  720 </span>
+<span class="lineno">  721 </span>@
+<span class="lineno">  722 </span>rectangleImg :: Mat (ShapeT [200, 400]) ('S 4) ('S Word8)
+<span class="lineno">  723 </span>rectangleImg = exceptError $
+<span class="lineno">  724 </span>    withMatM (Proxy :: Proxy [200, 400])
+<span class="lineno">  725 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  726 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  727 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  728 </span>      lift $ rectangle imgM (toRect $ HRect (V2  10 10) (V2 180 180)) blue  5  LineType_8 0
+<span class="lineno">  729 </span>      lift $ rectangle imgM (toRect $ HRect (V2 260 30) (V2  80 140)) red (-1) LineType_8 0
+<span class="lineno">  730 </span>@
+<span class="lineno">  731 </span>
+<span class="lineno">  732 </span>&lt;&lt;doc/generated/examples/rectangleImg.png rectangleImg&gt;&gt;
+<span class="lineno">  733 </span>
+<span class="lineno">  734 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/drawing_functions.html#rectangle OpenCV Sphinx doc&gt;
+<span class="lineno">  735 </span>-}
+<span class="lineno">  736 </span>rectangle
+<span class="lineno">  737 </span>    :: (PrimMonad m, ToScalar color, IsRect rect Int32)
+<span class="lineno">  738 </span>    =&gt; Mut (Mat ('S [height, width]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  739 </span>    -&gt; rect Int32
+<span class="lineno">  740 </span>    -&gt; color -- ^ Rectangle color or brightness (grayscale image).
+<span class="lineno">  741 </span>    -&gt; Int32 -- ^ Line thickness.
+<span class="lineno">  742 </span>    -&gt; LineType
+<span class="lineno">  743 </span>    -&gt; Int32 -- ^ Number of fractional bits in the point coordinates.
+<span class="lineno">  744 </span>    -&gt; m ()
+<span class="lineno">  745 </span><span class="decl"><span class="istickedoff">rectangle img rect color thickness lineType shift =</span>
+<span class="lineno">  746 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  747 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  748 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toRect rect) $ \rectPtr -&gt;</span>
+<span class="lineno">  749 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  750 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  751 </span><span class="spaces">        </span><span class="istickedoff">cv::rectangle( *$(Mat * matPtr)</span>
+<span class="lineno">  752 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Rect2i * rectPtr)</span>
+<span class="lineno">  753 </span><span class="spaces">                     </span><span class="istickedoff">, *$(Scalar * colorPtr)</span>
+<span class="lineno">  754 </span><span class="spaces">                     </span><span class="istickedoff">, $(int32_t thickness)</span>
+<span class="lineno">  755 </span><span class="spaces">                     </span><span class="istickedoff">, $(int32_t c'lineType)</span>
+<span class="lineno">  756 </span><span class="spaces">                     </span><span class="istickedoff">, $(int32_t shift)</span>
+<span class="lineno">  757 </span><span class="spaces">                     </span><span class="istickedoff">)</span>
+<span class="lineno">  758 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  759 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  760 </span><span class="spaces">    </span><span class="istickedoff">c'lineType = marshalLineType lineType</span></span>
+<span class="lineno">  761 </span>
+<span class="lineno">  762 </span>
+<span class="lineno">  763 </span>data ContourDrawMode
+<span class="lineno">  764 </span>   = OutlineContour LineType
+<span class="lineno">  765 </span>                    Int32 -- ^ Thickness of lines the contours are drawn with.
+<span class="lineno">  766 </span>   | FillContours -- ^ Draw the contour, filling in the area.
+<span class="lineno">  767 </span>
+<span class="lineno">  768 </span>marshalContourDrawMode
+<span class="lineno">  769 </span>    :: ContourDrawMode -&gt; (Int32, Int32)
+<span class="lineno">  770 </span><span class="decl"><span class="istickedoff">marshalContourDrawMode = \case</span>
+<span class="lineno">  771 </span><span class="spaces">    </span><span class="istickedoff">OutlineContour lineType thickness -&gt; (marshalLineType lineType, thickness)</span>
+<span class="lineno">  772 </span><span class="spaces">    </span><span class="istickedoff">FillContours -&gt; <span class="nottickedoff">(marshalLineType LineType_4, -1)</span></span></span>
+<span class="lineno">  773 </span>
+<span class="lineno">  774 </span>{-|
+<span class="lineno">  775 </span>
+<span class="lineno">  776 </span>Draw contours onto a black image.
+<span class="lineno">  777 </span>
+<span class="lineno">  778 </span>Example:
+<span class="lineno">  779 </span>
+<span class="lineno">  780 </span>@
+<span class="lineno">  781 </span>flowerContours :: Mat ('S ['S 512, 'S 768]) ('S 3) ('S Word8)
+<span class="lineno">  782 </span>flowerContours = exceptError $
+<span class="lineno">  783 </span>  withMatM (Proxy :: Proxy [512,768])
+<span class="lineno">  784 </span>           (Proxy :: Proxy 3)
+<span class="lineno">  785 </span>           (Proxy :: Proxy Word8)
+<span class="lineno">  786 </span>           black $ \\imgM -&gt; do
+<span class="lineno">  787 </span>    edges &lt;- thaw $ exceptError $
+<span class="lineno">  788 </span>             cvtColor bgr gray flower_768x512 &gt;&gt;=
+<span class="lineno">  789 </span>             canny 30 20 Nothing CannyNormL1
+<span class="lineno">  790 </span>    contours &lt;- findContours ContourRetrievalList
+<span class="lineno">  791 </span>                             ContourApproximationSimple edges
+<span class="lineno">  792 </span>    lift $ drawContours (V.map contourPoints contours)
+<span class="lineno">  793 </span>                        red
+<span class="lineno">  794 </span>                        (OutlineContour LineType_AA 1)
+<span class="lineno">  795 </span>                        imgM
+<span class="lineno">  796 </span>@
+<span class="lineno">  797 </span>
+<span class="lineno">  798 </span>&lt;&lt;doc/generated/examples/flowerContours.png flowerContours&gt;&gt;
+<span class="lineno">  799 </span>
+<span class="lineno">  800 </span>-}
+<span class="lineno">  801 </span>drawContours :: (ToScalar color, PrimMonad m)
+<span class="lineno">  802 </span>             =&gt; V.Vector (V.Vector Point2i)
+<span class="lineno">  803 </span>             -&gt; color -- ^ Color of the contours.
+<span class="lineno">  804 </span>             -&gt; ContourDrawMode
+<span class="lineno">  805 </span>             -&gt; Mut (Mat ('S [h, w]) channels depth) (PrimState m) -- ^ Image.
+<span class="lineno">  806 </span>             -&gt; m ()
+<span class="lineno">  807 </span><span class="decl"><span class="istickedoff">drawContours contours color drawMode img = unsafePrimToPrim $</span>
+<span class="lineno">  808 </span><span class="spaces">    </span><span class="istickedoff">withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr -&gt;</span>
+<span class="lineno">  809 </span><span class="spaces">    </span><span class="istickedoff">withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) -&gt;</span>
+<span class="lineno">  810 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr -&gt;</span>
+<span class="lineno">  811 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \dstPtr -&gt;</span>
+<span class="lineno">  812 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  813 </span><span class="spaces">        </span><span class="istickedoff">int32_t *contourLengths = $(int32_t * contourLengthsPtr);</span>
+<span class="lineno">  814 </span><span class="spaces">        </span><span class="istickedoff">Point2i * contoursPtr = $(Point2i * contoursPtrPtr);</span>
+<span class="lineno">  815 </span><span class="spaces">        </span><span class="istickedoff">std::vector&lt; std::vector&lt;cv::Point&gt; &gt; contours;</span>
+<span class="lineno">  816 </span><span class="spaces">        </span><span class="istickedoff">int32_t numContours = $(int32_t numContours);</span>
+<span class="lineno">  817 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  818 </span><span class="spaces">        </span><span class="istickedoff">int k = 0;</span>
+<span class="lineno">  819 </span><span class="spaces">        </span><span class="istickedoff">for(int i = 0; i &lt; numContours; i++) {</span>
+<span class="lineno">  820 </span><span class="spaces">          </span><span class="istickedoff">std::vector&lt;cv::Point&gt; contour;</span>
+<span class="lineno">  821 </span><span class="spaces">          </span><span class="istickedoff">for(int j = 0; j &lt; contourLengths[i]; j++) {</span>
+<span class="lineno">  822 </span><span class="spaces">            </span><span class="istickedoff">contour.push_back( contoursPtr[k] );</span>
+<span class="lineno">  823 </span><span class="spaces">            </span><span class="istickedoff">k++;</span>
+<span class="lineno">  824 </span><span class="spaces">          </span><span class="istickedoff">}</span>
+<span class="lineno">  825 </span><span class="spaces">          </span><span class="istickedoff">contours.push_back(contour);</span>
+<span class="lineno">  826 </span><span class="spaces">        </span><span class="istickedoff">}</span>
+<span class="lineno">  827 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  828 </span><span class="spaces">        </span><span class="istickedoff">cv::drawContours(</span>
+<span class="lineno">  829 </span><span class="spaces">          </span><span class="istickedoff">*$(Mat * dstPtr),</span>
+<span class="lineno">  830 </span><span class="spaces">          </span><span class="istickedoff">contours,</span>
+<span class="lineno">  831 </span><span class="spaces">          </span><span class="istickedoff">-1,</span>
+<span class="lineno">  832 </span><span class="spaces">          </span><span class="istickedoff">*$(Scalar * colorPtr),</span>
+<span class="lineno">  833 </span><span class="spaces">          </span><span class="istickedoff">$(int32_t c'thickness),</span>
+<span class="lineno">  834 </span><span class="spaces">          </span><span class="istickedoff">$(int32_t c'lineType)</span>
+<span class="lineno">  835 </span><span class="spaces">        </span><span class="istickedoff">);</span>
+<span class="lineno">  836 </span><span class="spaces">      </span><span class="istickedoff">}|]</span>
+<span class="lineno">  837 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  838 </span><span class="spaces">    </span><span class="istickedoff">numContours = fromIntegral (V.length contours)</span>
+<span class="lineno">  839 </span><span class="spaces">    </span><span class="istickedoff">(c'lineType, c'thickness) = marshalContourDrawMode drawMode</span></span>
+<span class="lineno">  840 </span>
+<span class="lineno">  841 </span>{-| Draws a marker on a predefined position in an image.
+<span class="lineno">  842 </span>
+<span class="lineno">  843 </span>The marker will be drawn as as a 20-pixel cross.
+<span class="lineno">  844 </span>
+<span class="lineno">  845 </span>Example:
+<span class="lineno">  846 </span>
+<span class="lineno">  847 </span>@
+<span class="lineno">  848 </span>markerImg :: Mat (ShapeT [100, 100]) ('S 4) ('S Word8)
+<span class="lineno">  849 </span>markerImg = exceptError $
+<span class="lineno">  850 </span>    withMatM (Proxy :: Proxy [100, 100])
+<span class="lineno">  851 </span>             (Proxy :: Proxy 4)
+<span class="lineno">  852 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  853 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  854 </span>      lift $ marker imgM (50 :: V2 Int32) blue
+<span class="lineno">  855 </span>@
+<span class="lineno">  856 </span>
+<span class="lineno">  857 </span>&lt;&lt;doc/generated/examples/markerImg.png markerImg&gt;&gt;
+<span class="lineno">  858 </span>-}
+<span class="lineno">  859 </span>marker
+<span class="lineno">  860 </span>  :: (PrimMonad m, IsPoint2 point2 Int32, ToScalar color)
+<span class="lineno">  861 </span>  =&gt; Mut (Mat ('S '[ height, width]) channels depth) (PrimState m)
+<span class="lineno">  862 </span>    -- ^ The image to draw the marker on.
+<span class="lineno">  863 </span>  -&gt; point2 Int32
+<span class="lineno">  864 </span>    -- ^ The point where the crosshair is positioned.
+<span class="lineno">  865 </span>  -&gt; color
+<span class="lineno">  866 </span>    -- ^ Line color.
+<span class="lineno">  867 </span>  -&gt; m ()
+<span class="lineno">  868 </span><span class="decl"><span class="istickedoff">marker img center color =</span>
+<span class="lineno">  869 </span><span class="spaces">    </span><span class="istickedoff">unsafePrimToPrim $</span>
+<span class="lineno">  870 </span><span class="spaces">    </span><span class="istickedoff">withPtr img $ \matPtr -&gt;</span>
+<span class="lineno">  871 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toPoint center) $ \centerPtr -&gt;</span>
+<span class="lineno">  872 </span><span class="spaces">    </span><span class="istickedoff">withPtr (toScalar color) $ \colorPtr  -&gt;</span>
+<span class="lineno">  873 </span><span class="spaces">      </span><span class="istickedoff">[C.exp|void {</span>
+<span class="lineno">  874 </span><span class="spaces">        </span><span class="istickedoff">cv::drawMarker( *$(Mat * matPtr)</span>
+<span class="lineno">  875 </span><span class="spaces">                      </span><span class="istickedoff">, *$(Point2i * centerPtr)</span>
+<span class="lineno">  876 </span><span class="spaces">                      </span><span class="istickedoff">, *$(Scalar * colorPtr))</span>
+<span class="lineno">  877 </span><span class="spaces">      </span><span class="istickedoff">}|]</span></span>
+
+</pre>
+</body>
+</html>

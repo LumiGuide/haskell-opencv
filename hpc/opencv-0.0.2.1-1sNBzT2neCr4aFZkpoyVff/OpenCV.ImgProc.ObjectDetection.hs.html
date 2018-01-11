@@ -1,0 +1,246 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    6 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>module OpenCV.ImgProc.ObjectDetection
+<span class="lineno">   10 </span>    ( MatchTemplateMethod(..)
+<span class="lineno">   11 </span>    , MatchTemplateNormalisation(..)
+<span class="lineno">   12 </span>    , matchTemplate
+<span class="lineno">   13 </span>    ) where
+<span class="lineno">   14 </span>
+<span class="lineno">   15 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   16 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   17 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   18 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   19 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   20 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   21 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   22 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   23 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   24 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   25 </span>
+<span class="lineno">   26 </span>--------------------------------------------------------------------------------
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>C.context openCvCtx
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   31 </span>C.include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   32 </span>C.include &quot;opencv2/objdetect.hpp&quot;
+<span class="lineno">   33 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>#include &lt;bindings.dsl.h&gt;
+<span class="lineno">   36 </span>#include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   37 </span>#include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>#include &quot;namespace.hpp&quot;
+<span class="lineno">   40 </span>#include &quot;hsc_macros.hpp&quot;
+<span class="lineno">   41 </span>
+<span class="lineno">   42 </span>--------------------------------------------------------------------------------
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>-- | Type of the template matching operation
+<span class="lineno">   45 </span>--
+<span class="lineno">   46 </span>-- In the formulae for the comparison methods \(\bf{I}\) denotes image,
+<span class="lineno">   47 </span>-- \(\bf{T}\) template and \(\bf{R}\) result. Each method supports
+<span class="lineno">   48 </span>-- normalization. See 'MatchTemplateNormalisation'.
+<span class="lineno">   49 </span>data MatchTemplateMethod
+<span class="lineno">   50 </span>   = MatchTemplateSqDiff
+<span class="lineno">   51 </span>       {- ^
+<span class="lineno">   52 </span>       * not normed:
+<span class="lineno">   53 </span>           \[
+<span class="lineno">   54 </span>           R(x,y) = \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2
+<span class="lineno">   55 </span>           \]
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>       * normed:
+<span class="lineno">   58 </span>           \[
+<span class="lineno">   59 </span>           R(x,y) = \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}
+<span class="lineno">   60 </span>                         {\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+<span class="lineno">   61 </span>           \]
+<span class="lineno">   62 </span>       -}
+<span class="lineno">   63 </span>   | MatchTemplateCCorr
+<span class="lineno">   64 </span>       {- ^
+<span class="lineno">   65 </span>       * not normed:
+<span class="lineno">   66 </span>           \[
+<span class="lineno">   67 </span>           R(x,y) = \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))
+<span class="lineno">   68 </span>           \]
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>       * normed:
+<span class="lineno">   71 </span>           \[
+<span class="lineno">   72 </span>           R(x,y) = \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}
+<span class="lineno">   73 </span>                         {\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}
+<span class="lineno">   74 </span>           \]
+<span class="lineno">   75 </span>       -}
+<span class="lineno">   76 </span>   | MatchTemplateCCoeff
+<span class="lineno">   77 </span>       {- ^
+<span class="lineno">   78 </span>       * not normed:
+<span class="lineno">   79 </span>           \[
+<span class="lineno">   80 </span>           R(x,y) = \sum _{x',y'} (T'(x',y') \cdot I'(x+x',y+y'))
+<span class="lineno">   81 </span>           \]
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span>       * where
+<span class="lineno">   84 </span>           \[ \begin{array}{l}
+<span class="lineno">   85 </span>           T'(x',y') = T(x',y') - 1/(w \cdot h) \cdot \sum _{x'',y''} T(x'',y'')
+<span class="lineno">   86 </span>           \\ I'(x+x',y+y') = I(x+x',y+y') - 1/(w \cdot h) \cdot \sum _{x'',y''} I(x+x'',y+y'')
+<span class="lineno">   87 </span>           \end{array} \]
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>       * normed:
+<span class="lineno">   90 </span>           \[
+<span class="lineno">   91 </span>           R(x,y) = \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }
+<span class="lineno">   92 </span>                         { \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }
+<span class="lineno">   93 </span>           \]
+<span class="lineno">   94 </span>       -}
+<span class="lineno">   95 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>-- | Whether to use normalisation. See 'MatchTemplateMethod'.
+<span class="lineno">   98 </span>data MatchTemplateNormalisation
+<span class="lineno">   99 </span>   = MatchTemplateNotNormed -- ^ Do not use normalization.
+<span class="lineno">  100 </span>   | MatchTemplateNormed    -- ^ Use normalization.
+<span class="lineno">  101 </span>   deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span><span class="decl"><span class="nottickedoff">#num CV_TM_SQDIFF</span>
+<span class="lineno">  104 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CV_TM_SQDIFF_NORMED</span>
+<span class="lineno">  105 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CV_TM_CCORR</span>
+<span class="lineno">  106 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CV_TM_CCORR_NORMED</span>
+<span class="lineno">  107 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num CV_TM_CCOEFF</span>
+<span class="lineno">  108 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="istickedoff">#num CV_TM_CCOEFF_NORMED</span>
+<span class="lineno">  109 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">  110 </span>marshalMatchTemplateMethod :: MatchTemplateMethod -&gt; Bool -&gt; Int32
+<span class="lineno">  111 </span><span class="decl"><span class="istickedoff">marshalMatchTemplateMethod m n =</span>
+<span class="lineno">  112 </span><span class="spaces">    </span><span class="istickedoff">case (m, n) of</span>
+<span class="lineno">  113 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateSqDiff, False) -&gt; <span class="nottickedoff">c'CV_TM_SQDIFF</span></span>
+<span class="lineno">  114 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateSqDiff, True ) -&gt; <span class="nottickedoff">c'CV_TM_SQDIFF_NORMED</span></span>
+<span class="lineno">  115 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateCCorr , False) -&gt; <span class="nottickedoff">c'CV_TM_CCORR</span></span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateCCorr , True ) -&gt; <span class="nottickedoff">c'CV_TM_CCORR_NORMED</span></span>
+<span class="lineno">  117 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateCCoeff, False) -&gt; <span class="nottickedoff">c'CV_TM_CCOEFF</span></span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">(MatchTemplateCCoeff, True ) -&gt; c'CV_TM_CCOEFF_NORMED</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>{- | Compares a template against overlapped image regions.
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>The function slides through image, compares the overlapped patches of size
+<span class="lineno">  123 </span>  \( w \times h \)
+<span class="lineno">  124 </span>against templ using the specified method and stores the comparison
+<span class="lineno">  125 </span>results in result. The summation is done over template and/or the image patch:
+<span class="lineno">  126 </span>  \( x' = 0...w-1, y' = 0...h-1 \)
+<span class="lineno">  127 </span>
+<span class="lineno">  128 </span>After the function finishes the comparison, the best matches can be found as
+<span class="lineno">  129 </span>global minimums (when 'MatchTemplateSqDiff' was used) or maximums (when
+<span class="lineno">  130 </span>'MatchTemplateCCorr' or 'MatchTemplateCCoeff' was used) using the 'minMaxLoc'
+<span class="lineno">  131 </span>function. In case of a color image, template summation in the numerator and each
+<span class="lineno">  132 </span>sum in the denominator is done over all of the channels and separate mean values
+<span class="lineno">  133 </span>are used for each channel.  That is, the function can take a color template and
+<span class="lineno">  134 </span>a color image. The result will still be a single-channel image, which is easier
+<span class="lineno">  135 </span>to analyze.
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>Example:
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>@
+<span class="lineno">  140 </span>matchTemplateImg
+<span class="lineno">  141 </span>    :: forall (width :: Nat) (height :: Nat) (width2 :: Nat)
+<span class="lineno">  142 </span>     . ( Mat (ShapeT [height, width]) ('S 3) ('S Word8) ~ Kodak_512x341
+<span class="lineno">  143 </span>       , width2 ~ (width + width)
+<span class="lineno">  144 </span>       )
+<span class="lineno">  145 </span>    =&gt; Mat (ShapeT [height, width2]) ('S 3) ('S Word8)
+<span class="lineno">  146 </span>matchTemplateImg = exceptError $
+<span class="lineno">  147 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  148 </span>             (Proxy :: Proxy 3)
+<span class="lineno">  149 </span>             (Proxy :: Proxy Word8)
+<span class="lineno">  150 </span>             transparent $ \\imgM -&gt; do
+<span class="lineno">  151 </span>      matCopyToM imgM (V2 0 0) barn_512x341 Nothing
+<span class="lineno">  152 </span>      rectangle imgM templateRect blue 1 LineType_8 0
+<span class="lineno">  153 </span>      matCopyToM imgM (V2 width 0) resultImg Nothing
+<span class="lineno">  154 </span>      rectangle imgM matchRect blue 1 LineType_8 0
+<span class="lineno">  155 </span>  where
+<span class="lineno">  156 </span>    -- Recovered location of 'template', translated for rendering.
+<span class="lineno">  157 </span>    matchRect :: Rect2i
+<span class="lineno">  158 </span>    matchRect = toRect $ HRect (fromPoint maxLoc ^+^ V2 width 0)
+<span class="lineno">  159 </span>                               (V2 20 20)
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>    -- Find location of best match in 'result'.
+<span class="lineno">  162 </span>    _minVal, _maxVal :: Double
+<span class="lineno">  163 </span>    _minLoc, maxLoc :: Point2i
+<span class="lineno">  164 </span>    (_minVal, _maxVal, _minLoc, maxLoc) = exceptError $ minMaxLoc result
+<span class="lineno">  165 </span>
+<span class="lineno">  166 </span>    -- Result matrix converted to color image for rendering.
+<span class="lineno">  167 </span>    resultImg :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+<span class="lineno">  168 </span>    resultImg = exceptError $ do
+<span class="lineno">  169 </span>        resultGray
+<span class="lineno">  170 </span>            :: Mat ('S ['D, 'D]) ('S 1) ('S Word8)
+<span class="lineno">  171 </span>            &lt;- matConvertTo (Just 255) Nothing result
+<span class="lineno">  172 </span>        cvtColor gray bgr resultGray
+<span class="lineno">  173 </span>
+<span class="lineno">  174 </span>    -- Result of looking for 'template' in 'barn_512x341'.
+<span class="lineno">  175 </span>    result :: Mat ('S ['D, 'D]) ('S 1) ('S Float)
+<span class="lineno">  176 </span>    result = exceptError $
+<span class="lineno">  177 </span>        matchTemplate barn_512x341 template MatchTemplateCCoeff MatchTemplateNormed
+<span class="lineno">  178 </span>
+<span class="lineno">  179 </span>    -- Small part of the barn image which we want to find again.
+<span class="lineno">  180 </span>    template :: Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+<span class="lineno">  181 </span>    template = exceptError $ matSubRect barn_512x341 templateRect
+<span class="lineno">  182 </span>
+<span class="lineno">  183 </span>    -- Rectangle that defines a small part of the barn image.
+<span class="lineno">  184 </span>    templateRect :: Rect2i
+<span class="lineno">  185 </span>    templateRect = toRect $ HRect (V2 183 24) (V2 20 20)
+<span class="lineno">  186 </span>
+<span class="lineno">  187 </span>    width :: Int32
+<span class="lineno">  188 </span>    width = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  189 </span>@
+<span class="lineno">  190 </span>
+<span class="lineno">  191 </span>&lt;&lt;doc/generated/examples/matchTemplateImg.png matchTemplateImg&gt;&gt;
+<span class="lineno">  192 </span>-}
+<span class="lineno">  193 </span>matchTemplate
+<span class="lineno">  194 </span>    :: (depth `In` [Word8, Float])
+<span class="lineno">  195 </span>    =&gt; Mat ('S [sh, sw]) ('S channels) ('S depth)
+<span class="lineno">  196 </span>       -- ^ Image where the search is running. It must be 8-bit or 32-bit floating-point.
+<span class="lineno">  197 </span>    -&gt; Mat ('S [th, tw]) ('S channels) ('S depth)
+<span class="lineno">  198 </span>       -- ^ Searched template. It must be not greater than the source image and have the same data type.
+<span class="lineno">  199 </span>    -&gt; MatchTemplateMethod -- ^ Comparison method.
+<span class="lineno">  200 </span>    -&gt; MatchTemplateNormalisation -- ^ Normalization.
+<span class="lineno">  201 </span>    -&gt; CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
+<span class="lineno">  202 </span>       -- ^ Map of comparison results. It must be single-channel 32-bit
+<span class="lineno">  203 </span>       -- floating-point. If image is \(W \times H\) and templ is
+<span class="lineno">  204 </span>       -- \(w \times h\), then result is \((W-w+1) \times (H-h+1)\).
+<span class="lineno">  205 </span><span class="decl"><span class="istickedoff">matchTemplate image templ method normalisation = unsafeWrapException $ do</span>
+<span class="lineno">  206 </span><span class="spaces">    </span><span class="istickedoff">result &lt;- newEmptyMat</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat result) $</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="istickedoff">withPtr result $ \resultPtr -&gt;</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="istickedoff">withPtr image $ \imagePtr -&gt;</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="istickedoff">withPtr templ $ \templPtr -&gt;</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  212 </span><span class="spaces">          </span><span class="istickedoff">cv::matchTemplate( *$(Mat * imagePtr)</span>
+<span class="lineno">  213 </span><span class="spaces">                           </span><span class="istickedoff">, *$(Mat * templPtr)</span>
+<span class="lineno">  214 </span><span class="spaces">                           </span><span class="istickedoff">, *$(Mat * resultPtr)</span>
+<span class="lineno">  215 </span><span class="spaces">                           </span><span class="istickedoff">, $(int32_t c'method)</span>
+<span class="lineno">  216 </span><span class="spaces">                           </span><span class="istickedoff">);</span>
+<span class="lineno">  217 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  218 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  219 </span><span class="spaces">    </span><span class="istickedoff">normed =</span>
+<span class="lineno">  220 </span><span class="spaces">      </span><span class="istickedoff">case normalisation of</span>
+<span class="lineno">  221 </span><span class="spaces">        </span><span class="istickedoff">MatchTemplateNotNormed -&gt; <span class="nottickedoff">False</span></span>
+<span class="lineno">  222 </span><span class="spaces">        </span><span class="istickedoff">MatchTemplateNormed -&gt; True</span>
+<span class="lineno">  223 </span><span class="spaces">    </span><span class="istickedoff">c'method = marshalMatchTemplateMethod method normed</span></span>
+
+</pre>
+</body>
+</html>

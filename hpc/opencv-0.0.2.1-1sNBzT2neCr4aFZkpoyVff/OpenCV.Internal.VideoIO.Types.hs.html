@@ -1,0 +1,238 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language GeneralizedNewtypeDeriving #-}
+<span class="lineno">    2 </span>{-# language CPP #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    5 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    6 </span>#endif
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>module OpenCV.Internal.VideoIO.Types
+<span class="lineno">    9 </span>    ( -- * VideoCodecs
+<span class="lineno">   10 </span>      FourCC(..)
+<span class="lineno">   11 </span>    , VideoCaptureProperties(..)
+<span class="lineno">   12 </span>    , marshalCaptureProperties
+<span class="lineno">   13 </span>    , VideoCaptureAPI(..)
+<span class="lineno">   14 </span>    , marshalVideoCaptureAPI
+<span class="lineno">   15 </span>    ) where
+<span class="lineno">   16 </span>
+<span class="lineno">   17 </span>import &quot;base&quot; Data.Char ( ord )
+<span class="lineno">   18 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   19 </span>import &quot;base&quot; Data.Word ( Word32 )
+<span class="lineno">   20 </span>import &quot;base&quot; Data.String ( IsString (..) )
+<span class="lineno">   21 </span>import &quot;base&quot; Data.List( unfoldr )
+<span class="lineno">   22 </span>import &quot;this&quot; OpenCV.Internal.VideoIO.Constants
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>--------------------------------------------------------------------------------
+<span class="lineno">   25 </span>-- FourCC
+<span class="lineno">   26 </span>--------------------------------------------------------------------------------
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span>newtype FourCC = FourCC { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unFourCC</span></span></span> :: Int32 }
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>instance IsString FourCC where
+<span class="lineno">   31 </span>  <span class="decl"><span class="nottickedoff">fromString &quot;ask&quot; = FourCC (-1)</span>
+<span class="lineno">   32 </span><span class="spaces">  </span><span class="nottickedoff">fromString fcc =</span>
+<span class="lineno">   33 </span><span class="spaces">      </span><span class="nottickedoff">FourCC $ foldr (\x acc -&gt; acc * 256 + fromIntegral (ord x))</span>
+<span class="lineno">   34 </span><span class="spaces">                     </span><span class="nottickedoff">0</span>
+<span class="lineno">   35 </span><span class="spaces">                     </span><span class="nottickedoff">(take 4 fcc)</span></span>
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>instance Show FourCC where
+<span class="lineno">   38 </span>  <span class="decl"><span class="nottickedoff">show (FourCC (-1)) = &quot;ask&quot;</span>
+<span class="lineno">   39 </span><span class="spaces">  </span><span class="nottickedoff">show (FourCC fcc) = take 4 $ unfoldr worker (fromIntegral fcc :: Word32)</span>
+<span class="lineno">   40 </span><span class="spaces">    </span><span class="nottickedoff">where</span>
+<span class="lineno">   41 </span><span class="spaces">      </span><span class="nottickedoff">worker 0 = Nothing</span>
+<span class="lineno">   42 </span><span class="spaces">      </span><span class="nottickedoff">worker b = Just (toEnum . fromEnum $ b `mod` 256, b `div` 256)</span></span>
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>--------------------------------------------------------------------------------
+<span class="lineno">   45 </span>-- VideoCaptureProperties
+<span class="lineno">   46 </span>-- more at https://github.com/opencv/opencv/blob/master/modules/videoio/include/opencv2/videoio.hpp
+<span class="lineno">   47 </span>--------------------------------------------------------------------------------
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>data VideoCaptureProperties
+<span class="lineno">   50 </span>   = VideoCapPropPosMsec
+<span class="lineno">   51 </span>          -- ^ Current position of the video file in milliseconds.
+<span class="lineno">   52 </span>   | VideoCapPropPosFrames
+<span class="lineno">   53 </span>          -- ^ 0-based index of the frame to be decoded/captured next.
+<span class="lineno">   54 </span>   | VideoCapPropPosAviRatio
+<span class="lineno">   55 </span>          -- ^ Relative position of the video file: 0=start of the film,
+<span class="lineno">   56 </span>          --   1=end of the film.
+<span class="lineno">   57 </span>   | VideoCapPropFrameWidth     -- ^ Width of the frames in the video stream.
+<span class="lineno">   58 </span>   | VideoCapPropFrameHeight    -- ^ Height of the frames in the video stream.
+<span class="lineno">   59 </span>   | VideoCapPropFps            -- ^ Frame rate.
+<span class="lineno">   60 </span>   | VideoCapPropFourCc         -- ^ 4-character code of codec.
+<span class="lineno">   61 </span>   | VideoCapPropFrameCount     -- ^ Number of frames in the video file.
+<span class="lineno">   62 </span>   | VideoCapPropFormat
+<span class="lineno">   63 </span>          -- ^ Format of the Mat objects returned by VideoCapture::retrieve().
+<span class="lineno">   64 </span>   | VideoCapPropMode
+<span class="lineno">   65 </span>          -- ^ Backend-specific value indicating the current capture mode.
+<span class="lineno">   66 </span>   | VideoCapPropBrightness     -- ^ Brightness of the image (only for cameras).
+<span class="lineno">   67 </span>   | VideoCapPropContrast       -- ^ Contrast of the image (only for cameras).
+<span class="lineno">   68 </span>   | VideoCapPropSaturation     -- ^ Saturation of the image (only for cameras).
+<span class="lineno">   69 </span>   | VideoCapPropHue            -- ^ Hue of the image (only for cameras).
+<span class="lineno">   70 </span>   | VideoCapPropGain           -- ^ Gain of the image (only for cameras).
+<span class="lineno">   71 </span>   | VideoCapPropExposure       -- ^ Exposure (only for cameras).
+<span class="lineno">   72 </span>   | VideoCapPropConvertRgb
+<span class="lineno">   73 </span>        -- ^ Boolean flags indicating whether images should be converted to RGB.
+<span class="lineno">   74 </span>   | VideoCapPropWhiteBalanceBlueU -- ^ Currently unsupported.
+<span class="lineno">   75 </span>   | VideoCapPropRectification
+<span class="lineno">   76 </span>        -- ^ Rectification flag for stereo cameras
+<span class="lineno">   77 </span>        --  (note: only supported by DC1394 v 2.x backend currently).
+<span class="lineno">   78 </span>   | VideoCapPropMonochrome        -- ^
+<span class="lineno">   79 </span>   | VideoCapPropSharpness         -- ^
+<span class="lineno">   80 </span>   | VideoCapPropAutoExposure
+<span class="lineno">   81 </span>        -- ^ DC1394: exposure control done by camera, user can adjust reference
+<span class="lineno">   82 </span>        -- level using this feature.
+<span class="lineno">   83 </span>   | VideoCapPropGamma             -- ^
+<span class="lineno">   84 </span>   | VideoCapPropTemperature       -- ^
+<span class="lineno">   85 </span>   | VideoCapPropTrigger           -- ^
+<span class="lineno">   86 </span>   | VideoCapPropTriggerDelay      -- ^
+<span class="lineno">   87 </span>   | VideoCapPropWhiteBalanceRedV  -- ^
+<span class="lineno">   88 </span>   | VideoCapPropZoom              -- ^
+<span class="lineno">   89 </span>   | VideoCapPropFocus             -- ^
+<span class="lineno">   90 </span>   | VideoCapPropGuid              -- ^
+<span class="lineno">   91 </span>   | VideoCapPropIsoSpeed          -- ^
+<span class="lineno">   92 </span>   | VideoCapPropBacklight         -- ^
+<span class="lineno">   93 </span>   | VideoCapPropPan               -- ^
+<span class="lineno">   94 </span>   | VideoCapPropTilt              -- ^
+<span class="lineno">   95 </span>   | VideoCapPropRoll              -- ^
+<span class="lineno">   96 </span>   | VideoCapPropIris              -- ^
+<span class="lineno">   97 </span>   | VideoCapPropSettings
+<span class="lineno">   98 </span>        -- ^ Pop up video/camera filter dialog (note: only supported by DSHOW
+<span class="lineno">   99 </span>        --  backend currently. Property value is ignored)
+<span class="lineno">  100 </span>   | VideoCapPropBuffersize        -- ^
+<span class="lineno">  101 </span>   | VideoCapPropAutofocus         -- ^
+<span class="lineno">  102 </span>   | VideoCapPropInt !Int32
+<span class="lineno">  103 </span>       -- ^ Any property we need. Meaning of this property depends on
+<span class="lineno">  104 </span>       -- the backend.
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>marshalCaptureProperties :: VideoCaptureProperties -&gt; Int32
+<span class="lineno">  107 </span><span class="decl"><span class="nottickedoff">marshalCaptureProperties = \case</span>
+<span class="lineno">  108 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropPosMsec           -&gt; c'CAP_PROP_POS_MSEC</span>
+<span class="lineno">  109 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropPosFrames         -&gt; c'CAP_PROP_POS_FRAMES</span>
+<span class="lineno">  110 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropPosAviRatio       -&gt; c'CAP_PROP_POS_AVI_RATIO</span>
+<span class="lineno">  111 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFrameWidth        -&gt; c'CAP_PROP_FRAME_WIDTH</span>
+<span class="lineno">  112 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFrameHeight       -&gt; c'CAP_PROP_FRAME_HEIGHT</span>
+<span class="lineno">  113 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFps               -&gt; c'CAP_PROP_FPS</span>
+<span class="lineno">  114 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFourCc            -&gt; c'CAP_PROP_FOURCC</span>
+<span class="lineno">  115 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFrameCount        -&gt; c'CAP_PROP_FRAME_COUNT</span>
+<span class="lineno">  116 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFormat            -&gt; c'CAP_PROP_FORMAT</span>
+<span class="lineno">  117 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropMode              -&gt; c'CAP_PROP_MODE</span>
+<span class="lineno">  118 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropBrightness        -&gt; c'CAP_PROP_BRIGHTNESS</span>
+<span class="lineno">  119 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropContrast          -&gt; c'CAP_PROP_CONTRAST</span>
+<span class="lineno">  120 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropSaturation        -&gt; c'CAP_PROP_SATURATION</span>
+<span class="lineno">  121 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropHue               -&gt; c'CAP_PROP_HUE</span>
+<span class="lineno">  122 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropGain              -&gt; c'CAP_PROP_GAIN</span>
+<span class="lineno">  123 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropExposure          -&gt; c'CAP_PROP_EXPOSURE</span>
+<span class="lineno">  124 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropConvertRgb        -&gt; c'CAP_PROP_CONVERT_RGB</span>
+<span class="lineno">  125 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropWhiteBalanceBlueU -&gt; c'CAP_PROP_WHITE_BALANCE_BLUE_U</span>
+<span class="lineno">  126 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropRectification     -&gt; c'CAP_PROP_RECTIFICATION</span>
+<span class="lineno">  127 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropMonochrome        -&gt; c'CAP_PROP_MONOCHROME</span>
+<span class="lineno">  128 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropSharpness         -&gt; c'CAP_PROP_SHARPNESS</span>
+<span class="lineno">  129 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropAutoExposure      -&gt; c'CAP_PROP_AUTO_EXPOSURE</span>
+<span class="lineno">  130 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropGamma             -&gt; c'CAP_PROP_GAMMA</span>
+<span class="lineno">  131 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropTemperature       -&gt; c'CAP_PROP_TEMPERATURE</span>
+<span class="lineno">  132 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropTrigger           -&gt; c'CAP_PROP_TRIGGER</span>
+<span class="lineno">  133 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropTriggerDelay      -&gt; c'CAP_PROP_TRIGGER_DELAY</span>
+<span class="lineno">  134 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropWhiteBalanceRedV  -&gt; c'CAP_PROP_WHITE_BALANCE_RED_V</span>
+<span class="lineno">  135 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropZoom              -&gt; c'CAP_PROP_ZOOM</span>
+<span class="lineno">  136 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropFocus             -&gt; c'CAP_PROP_FOCUS</span>
+<span class="lineno">  137 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropGuid              -&gt; c'CAP_PROP_GUID</span>
+<span class="lineno">  138 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropIsoSpeed          -&gt; c'CAP_PROP_ISO_SPEED</span>
+<span class="lineno">  139 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropBacklight         -&gt; c'CAP_PROP_BACKLIGHT</span>
+<span class="lineno">  140 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropPan               -&gt; c'CAP_PROP_PAN</span>
+<span class="lineno">  141 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropTilt              -&gt; c'CAP_PROP_TILT</span>
+<span class="lineno">  142 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropRoll              -&gt; c'CAP_PROP_ROLL</span>
+<span class="lineno">  143 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropIris              -&gt; c'CAP_PROP_IRIS</span>
+<span class="lineno">  144 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropSettings          -&gt; c'CAP_PROP_SETTINGS</span>
+<span class="lineno">  145 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropBuffersize        -&gt; c'CAP_PROP_BUFFERSIZE</span>
+<span class="lineno">  146 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropAutofocus         -&gt; c'CAP_PROP_AUTOFOCUS</span>
+<span class="lineno">  147 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPropInt a             -&gt; a</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>--------------------------------------------------------------------------------
+<span class="lineno">  150 </span>-- VideoCaptureProperties
+<span class="lineno">  151 </span>-- more at https://github.com/opencv/opencv/blob/master/modules/videoio/include/opencv2/videoio.hpp
+<span class="lineno">  152 </span>--------------------------------------------------------------------------------
+<span class="lineno">  153 </span>data VideoCaptureAPI
+<span class="lineno">  154 </span>   = VideoCapAny          -- ^ Auto detect == 0
+<span class="lineno">  155 </span>   | VideoCapVfw          -- ^ Video For Windows (platform native)
+<span class="lineno">  156 </span>   | VideoCapV4l          -- ^ V4L/V4L2 capturing support via libv4l
+<span class="lineno">  157 </span>   | VideoCapV4l2         -- ^ Same as CAP_V4L
+<span class="lineno">  158 </span>   | VideoCapFirewire     -- ^ IEEE 1394 drivers
+<span class="lineno">  159 </span>   | VideoCapFireware     -- ^ Same as CAP_FIREWIRE
+<span class="lineno">  160 </span>   | VideoCapIeee1394     -- ^ Same as CAP_FIREWIRE
+<span class="lineno">  161 </span>   | VideoCapDc1394       -- ^ Same as CAP_FIREWIRE
+<span class="lineno">  162 </span>   | VideoCapCmu1394      -- ^ Same as CAP_FIREWIRE
+<span class="lineno">  163 </span>   | VideoCapQt           -- ^ QuickTime
+<span class="lineno">  164 </span>   | VideoCapUnicap       -- ^ Unicap drivers
+<span class="lineno">  165 </span>   | VideoCapDshow        -- ^ DirectShow (via videoInput)
+<span class="lineno">  166 </span>   | VideoCapPvapi        -- ^ PvAPI, Prosilica GigE SDK
+<span class="lineno">  167 </span>   | VideoCapOpenni       -- ^ OpenNI (for Kinect)
+<span class="lineno">  168 </span>   | VideoCapOpenniAsus   -- ^ OpenNI (for Asus Xtion)
+<span class="lineno">  169 </span>   | VideoCapAndroid      -- ^ Android - not used
+<span class="lineno">  170 </span>   | VideoCapXiapi        -- ^ XIMEA Camera API
+<span class="lineno">  171 </span>   | VideoCapAvfoundation
+<span class="lineno">  172 </span>        -- ^ AVFoundation framework for iOS (OS X Lion will have the same API)
+<span class="lineno">  173 </span>   | VideoCapGiganetix    -- ^ Smartek Giganetix GigEVisionSDK
+<span class="lineno">  174 </span>   | VideoCapMsmf         -- ^ Microsoft Media Foundation (via videoInput)
+<span class="lineno">  175 </span>   | VideoCapWinrt        -- ^ Microsoft Windows Runtime using Media Foundation
+<span class="lineno">  176 </span>   | VideoCapIntelperc    -- ^ Intel Perceptual Computing SDK
+<span class="lineno">  177 </span>   | VideoCapOpenni2      -- ^ OpenNI2 (for Kinect)
+<span class="lineno">  178 </span>   | VideoCapOpenni2Asus
+<span class="lineno">  179 </span>        -- ^ OpenNI2 (for Asus Xtion and Occipital Structure sensors)
+<span class="lineno">  180 </span>   | VideoCapGphoto2      -- ^ gPhoto2 connection
+<span class="lineno">  181 </span>   | VideoCapGstreamer    -- ^ GStreamer
+<span class="lineno">  182 </span>   | VideoCapFfmpeg
+<span class="lineno">  183 </span>        -- ^ Open and record video file or stream using the FFMPEG library
+<span class="lineno">  184 </span>   | VideoCapImages       -- ^ Image Sequence (e.g. img_%02d.jpg)
+<span class="lineno">  185 </span>
+<span class="lineno">  186 </span>marshalVideoCaptureAPI :: VideoCaptureAPI -&gt; Int32
+<span class="lineno">  187 </span><span class="decl"><span class="nottickedoff">marshalVideoCaptureAPI = \case</span>
+<span class="lineno">  188 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapAny           -&gt; c'CAP_ANY</span>
+<span class="lineno">  189 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapVfw           -&gt; c'CAP_VFW</span>
+<span class="lineno">  190 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapV4l           -&gt; c'CAP_V4L</span>
+<span class="lineno">  191 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapV4l2          -&gt; c'CAP_V4L2</span>
+<span class="lineno">  192 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapFirewire      -&gt; c'CAP_FIREWIRE</span>
+<span class="lineno">  193 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapFireware      -&gt; c'CAP_FIREWARE</span>
+<span class="lineno">  194 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapIeee1394      -&gt; c'CAP_IEEE1394</span>
+<span class="lineno">  195 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapDc1394        -&gt; c'CAP_DC1394</span>
+<span class="lineno">  196 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapCmu1394       -&gt; c'CAP_CMU1394</span>
+<span class="lineno">  197 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapQt            -&gt; c'CAP_QT</span>
+<span class="lineno">  198 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapUnicap        -&gt; c'CAP_UNICAP</span>
+<span class="lineno">  199 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapDshow         -&gt; c'CAP_DSHOW</span>
+<span class="lineno">  200 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapPvapi         -&gt; c'CAP_PVAPI</span>
+<span class="lineno">  201 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapOpenni        -&gt; c'CAP_OPENNI</span>
+<span class="lineno">  202 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapOpenniAsus    -&gt; c'CAP_OPENNI_ASUS</span>
+<span class="lineno">  203 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapAndroid       -&gt; c'CAP_ANDROID</span>
+<span class="lineno">  204 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapXiapi         -&gt; c'CAP_XIAPI</span>
+<span class="lineno">  205 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapAvfoundation  -&gt; c'CAP_AVFOUNDATION</span>
+<span class="lineno">  206 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapGiganetix     -&gt; c'CAP_GIGANETIX</span>
+<span class="lineno">  207 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapMsmf          -&gt; c'CAP_MSMF</span>
+<span class="lineno">  208 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapWinrt         -&gt; c'CAP_WINRT</span>
+<span class="lineno">  209 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapIntelperc     -&gt; c'CAP_INTELPERC</span>
+<span class="lineno">  210 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapOpenni2       -&gt; c'CAP_OPENNI2</span>
+<span class="lineno">  211 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapOpenni2Asus   -&gt; c'CAP_OPENNI2_ASUS</span>
+<span class="lineno">  212 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapGphoto2       -&gt; c'CAP_GPHOTO2</span>
+<span class="lineno">  213 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapGstreamer     -&gt; c'CAP_GSTREAMER</span>
+<span class="lineno">  214 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapFfmpeg        -&gt; c'CAP_FFMPEG</span>
+<span class="lineno">  215 </span><span class="spaces">   </span><span class="nottickedoff">VideoCapImages        -&gt; c'CAP_IMAGES</span></span>
+
+</pre>
+</body>
+</html>

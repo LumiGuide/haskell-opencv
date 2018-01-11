@@ -169,9 +169,9 @@
 <a name="line-160"></a>  withMatM (Proxy :: Proxy [height, width])
 <a name="line-161"></a>           (Proxy :: Proxy channels)
 <a name="line-162"></a>           (Proxy :: Proxy depth)
-<a name="line-163"></a>           white $ \imgM -&gt; do
+<a name="line-163"></a>           white $ \\imgM -&gt; do
 <a name="line-164"></a>    void $ matCopyToM imgM (V2 0 0) frog Nothing
-<a name="line-165"></a>    forM_ features $ \f -&gt; do
+<a name="line-165"></a>    forM_ features $ \\f -&gt; do
 <a name="line-166"></a>      circle imgM (round \&lt;$&gt; f :: V2 Int32) 2 blue 5 LineType_AA 0
 <a name="line-167"></a>@
 <a name="line-168"></a>
@@ -285,9 +285,9 @@
 <a name="line-276"></a>  withMatM (Proxy :: Proxy [height, width])
 <a name="line-277"></a>           (Proxy :: Proxy channels)
 <a name="line-278"></a>           (Proxy :: Proxy depth)
-<a name="line-279"></a>           white $ \imgM -&gt; do
+<a name="line-279"></a>           white $ \\imgM -&gt; do
 <a name="line-280"></a>    void $ matCopyToM imgM (V2 0 0) circles_1000x625 Nothing
-<a name="line-281"></a>    forM_ circles $ \c -&gt; do
+<a name="line-281"></a>    forM_ circles $ \\c -&gt; do
 <a name="line-282"></a>      circle imgM (round \&lt;$&gt; circleCenter c :: V2 Int32) (round (circleRadius c)) blue 1 LineType_AA 0
 <a name="line-283"></a>@
 <a name="line-284"></a>
@@ -396,11 +396,11 @@
 <a name="line-387"></a>    withMatM (Proxy :: Proxy [height, width])
 <a name="line-388"></a>             (Proxy :: Proxy channels)
 <a name="line-389"></a>             (Proxy :: Proxy depth)
-<a name="line-390"></a>             white $ \imgM -&gt; do
+<a name="line-390"></a>             white $ \\imgM -&gt; do
 <a name="line-391"></a>      edgeImgM &lt;- thaw edgeImg
 <a name="line-392"></a>      lineSegments &lt;- houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
 <a name="line-393"></a>      void $ matCopyToM imgM (V2 0 0) edgeImgBgr Nothing
-<a name="line-394"></a>      forM_ lineSegments $ \lineSegment -&gt; do
+<a name="line-394"></a>      forM_ lineSegments $ \\lineSegment -&gt; do
 <a name="line-395"></a>        line imgM
 <a name="line-396"></a>             (lineSegmentStart lineSegment)
 <a name="line-397"></a>             (lineSegmentStop  lineSegment)

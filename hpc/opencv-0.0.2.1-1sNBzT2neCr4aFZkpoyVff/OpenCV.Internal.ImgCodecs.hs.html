@@ -1,0 +1,198 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language OverloadedLists #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    5 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    6 </span>#endif
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>module OpenCV.Internal.ImgCodecs
+<span class="lineno">    9 </span>    ( ImreadMode(..)
+<span class="lineno">   10 </span>    , marshalImreadMode
+<span class="lineno">   11 </span>    , JpegParams(..)
+<span class="lineno">   12 </span>    , defaultJpegParams
+<span class="lineno">   13 </span>    , marshalJpegParams
+<span class="lineno">   14 </span>    , PngStrategy(..)
+<span class="lineno">   15 </span>    , marshalPngStrategy
+<span class="lineno">   16 </span>    , PngParams(..)
+<span class="lineno">   17 </span>    , defaultPngParams
+<span class="lineno">   18 </span>    , marshalPngParams
+<span class="lineno">   19 </span>    , OutputFormat(..)
+<span class="lineno">   20 </span>    , marshalOutputFormat
+<span class="lineno">   21 </span>    ) where
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   24 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   25 </span>import &quot;base&quot; Foreign.C.Types
+<span class="lineno">   26 </span>import &quot;base&quot; Foreign.Marshal.Utils ( fromBool )
+<span class="lineno">   27 </span>import qualified &quot;vector&quot; Data.Vector.Storable as VS
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>#include &lt;stdint.h&gt;
+<span class="lineno">   31 </span>#include &lt;bindings.dsl.h&gt;
+<span class="lineno">   32 </span>#include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   33 </span>#include &quot;opencv2/imgcodecs.hpp&quot;
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>#include &quot;namespace.hpp&quot;
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>data ImreadMode
+<span class="lineno">   38 </span>   = ImreadUnchanged
+<span class="lineno">   39 </span>   | ImreadGrayscale
+<span class="lineno">   40 </span>   | ImreadColor
+<span class="lineno">   41 </span>   | ImreadAnyDepth
+<span class="lineno">   42 </span>   | ImreadAnyColor
+<span class="lineno">   43 </span>   | ImreadLoadGdal
+<span class="lineno">   44 </span>     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">   45 </span>
+<span class="lineno">   46 </span><span class="decl"><span class="istickedoff">#num IMREAD_UNCHANGED </span>
+<span class="lineno">   47 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num IMREAD_GRAYSCALE</span>
+<span class="lineno">   48 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_COLOR</span>
+<span class="lineno">   49 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_ANYDEPTH</span>
+<span class="lineno">   50 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_ANYCOLOR</span>
+<span class="lineno">   51 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMREAD_LOAD_GDAL</span>
+<span class="lineno">   52 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">   53 </span>marshalImreadMode :: ImreadMode -&gt; Int32
+<span class="lineno">   54 </span><span class="decl"><span class="istickedoff">marshalImreadMode = \case</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">ImreadUnchanged -&gt; c'IMREAD_UNCHANGED</span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">ImreadGrayscale -&gt; c'IMREAD_GRAYSCALE</span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">ImreadColor     -&gt; <span class="nottickedoff">c'IMREAD_COLOR</span></span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">ImreadAnyDepth  -&gt; <span class="nottickedoff">c'IMREAD_ANYDEPTH</span></span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">ImreadAnyColor  -&gt; <span class="nottickedoff">c'IMREAD_ANYCOLOR</span></span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff">ImreadLoadGdal  -&gt; <span class="nottickedoff">c'IMREAD_LOAD_GDAL</span></span></span>
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>data JpegParams =
+<span class="lineno">   63 </span>     JpegParams
+<span class="lineno">   64 </span>     { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamQuality</span></span></span>         :: Int -- ^ \[0..100\]
+<span class="lineno">   65 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamProgressive</span></span></span>     :: Bool
+<span class="lineno">   66 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamOptimize</span></span></span>        :: Bool
+<span class="lineno">   67 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamRestartInterval</span></span></span> :: Word16
+<span class="lineno">   68 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamLumaQuality</span></span></span>     :: Int
+<span class="lineno">   69 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">jpegParamChromaQuality</span></span></span>   :: Int
+<span class="lineno">   70 </span>     } deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>defaultJpegParams :: JpegParams
+<span class="lineno">   73 </span><span class="decl"><span class="nottickedoff">defaultJpegParams =</span>
+<span class="lineno">   74 </span><span class="spaces">    </span><span class="nottickedoff">JpegParams</span>
+<span class="lineno">   75 </span><span class="spaces">    </span><span class="nottickedoff">{ jpegParamQuality         = 95</span>
+<span class="lineno">   76 </span><span class="spaces">    </span><span class="nottickedoff">, jpegParamProgressive     = False</span>
+<span class="lineno">   77 </span><span class="spaces">    </span><span class="nottickedoff">, jpegParamOptimize        = False</span>
+<span class="lineno">   78 </span><span class="spaces">    </span><span class="nottickedoff">, jpegParamRestartInterval = 0</span>
+<span class="lineno">   79 </span><span class="spaces">    </span><span class="nottickedoff">, jpegParamLumaQuality     = -1</span>
+<span class="lineno">   80 </span><span class="spaces">    </span><span class="nottickedoff">, jpegParamChromaQuality   = -1</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="nottickedoff">}</span></span>
+<span class="lineno">   82 </span>
+<span class="lineno">   83 </span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_QUALITY</span>
+<span class="lineno">   84 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_PROGRESSIVE</span>
+<span class="lineno">   85 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_OPTIMIZE</span>
+<span class="lineno">   86 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_RST_INTERVAL</span>
+<span class="lineno">   87 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_LUMA_QUALITY</span>
+<span class="lineno">   88 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_JPEG_CHROMA_QUALITY</span>
+<span class="lineno">   89 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">   90 </span>marshalJpegParams :: JpegParams -&gt; VS.Vector CInt
+<span class="lineno">   91 </span><span class="decl"><span class="nottickedoff">marshalJpegParams params =</span>
+<span class="lineno">   92 </span><span class="spaces">    </span><span class="nottickedoff">[ c'IMWRITE_JPEG_QUALITY       , fromIntegral $ jpegParamQuality         params</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="nottickedoff">, c'IMWRITE_JPEG_PROGRESSIVE   , fromBool     $ jpegParamProgressive     params</span>
+<span class="lineno">   94 </span><span class="spaces">    </span><span class="nottickedoff">, c'IMWRITE_JPEG_OPTIMIZE      , fromBool     $ jpegParamOptimize        params</span>
+<span class="lineno">   95 </span><span class="spaces">    </span><span class="nottickedoff">, c'IMWRITE_JPEG_RST_INTERVAL  , fromIntegral $ jpegParamRestartInterval params</span>
+<span class="lineno">   96 </span><span class="spaces">    </span><span class="nottickedoff">, c'IMWRITE_JPEG_LUMA_QUALITY  , fromIntegral $ jpegParamLumaQuality     params</span>
+<span class="lineno">   97 </span><span class="spaces">    </span><span class="nottickedoff">, c'IMWRITE_JPEG_CHROMA_QUALITY, fromIntegral $ jpegParamChromaQuality   params</span>
+<span class="lineno">   98 </span><span class="spaces">    </span><span class="nottickedoff">]</span></span>
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span>data PngStrategy
+<span class="lineno">  101 </span>   = PngStrategyDefault
+<span class="lineno">  102 </span>   | PngStrategyFiltered
+<span class="lineno">  103 </span>   | PngStrategyHuffmanOnly
+<span class="lineno">  104 </span>   | PngStrategyRLE
+<span class="lineno">  105 </span>   | PngStrategyFixed
+<span class="lineno">  106 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">  107 </span>
+<span class="lineno">  108 </span><span class="decl"><span class="istickedoff">#num IMWRITE_PNG_STRATEGY_DEFAULT</span>
+<span class="lineno">  109 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_PNG_STRATEGY_FILTERED</span>
+<span class="lineno">  110 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY</span>
+<span class="lineno">  111 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_PNG_STRATEGY_RLE</span>
+<span class="lineno">  112 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_PNG_STRATEGY_FIXED</span>
+<span class="lineno">  113 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">  114 </span>marshalPngStrategy :: PngStrategy -&gt; CInt
+<span class="lineno">  115 </span><span class="decl"><span class="istickedoff">marshalPngStrategy = \case</span>
+<span class="lineno">  116 </span><span class="spaces">   </span><span class="istickedoff">PngStrategyDefault     -&gt; c'IMWRITE_PNG_STRATEGY_DEFAULT</span>
+<span class="lineno">  117 </span><span class="spaces">   </span><span class="istickedoff">PngStrategyFiltered    -&gt; <span class="nottickedoff">c'IMWRITE_PNG_STRATEGY_FILTERED</span></span>
+<span class="lineno">  118 </span><span class="spaces">   </span><span class="istickedoff">PngStrategyHuffmanOnly -&gt; <span class="nottickedoff">c'IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY</span></span>
+<span class="lineno">  119 </span><span class="spaces">   </span><span class="istickedoff">PngStrategyRLE         -&gt; <span class="nottickedoff">c'IMWRITE_PNG_STRATEGY_RLE</span></span>
+<span class="lineno">  120 </span><span class="spaces">   </span><span class="istickedoff">PngStrategyFixed       -&gt; <span class="nottickedoff">c'IMWRITE_PNG_STRATEGY_FIXED</span></span></span>
+<span class="lineno">  121 </span>
+<span class="lineno">  122 </span>data PngParams =
+<span class="lineno">  123 </span>     PngParams
+<span class="lineno">  124 </span>     { <span class="istickedoff"><span class="decl"><span class="istickedoff">pngParamCompression</span></span></span> :: Int
+<span class="lineno">  125 </span>     , <span class="istickedoff"><span class="decl"><span class="istickedoff">pngParamStrategy</span></span></span>    :: PngStrategy
+<span class="lineno">  126 </span>     , <span class="istickedoff"><span class="decl"><span class="istickedoff">pngParamBinaryLevel</span></span></span> :: Bool
+<span class="lineno">  127 </span>     } deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">  128 </span>
+<span class="lineno">  129 </span>defaultPngParams :: PngParams
+<span class="lineno">  130 </span><span class="decl"><span class="istickedoff">defaultPngParams =</span>
+<span class="lineno">  131 </span><span class="spaces">    </span><span class="istickedoff">PngParams</span>
+<span class="lineno">  132 </span><span class="spaces">    </span><span class="istickedoff">{ pngParamCompression = 3</span>
+<span class="lineno">  133 </span><span class="spaces">    </span><span class="istickedoff">, pngParamStrategy    = PngStrategyDefault</span>
+<span class="lineno">  134 </span><span class="spaces">    </span><span class="istickedoff">, pngParamBinaryLevel = False</span>
+<span class="lineno">  135 </span><span class="spaces">    </span><span class="istickedoff">}</span></span>
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span><span class="decl"><span class="istickedoff">#num IMWRITE_PNG_COMPRESSION </span>
+<span class="lineno">  138 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num IMWRITE_PNG_STRATEGY </span>
+<span class="lineno">  139 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num IMWRITE_PNG_BILEVEL </span>
+<span class="lineno">  140 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">  141 </span>marshalPngParams :: PngParams -&gt; VS.Vector CInt
+<span class="lineno">  142 </span><span class="decl"><span class="istickedoff">marshalPngParams params =</span>
+<span class="lineno">  143 </span><span class="spaces">    </span><span class="istickedoff">[ c'IMWRITE_PNG_COMPRESSION, fromIntegral        $ pngParamCompression params</span>
+<span class="lineno">  144 </span><span class="spaces">    </span><span class="istickedoff">, c'IMWRITE_PNG_STRATEGY   , marshalPngStrategy $ pngParamStrategy    params</span>
+<span class="lineno">  145 </span><span class="spaces">    </span><span class="istickedoff">, c'IMWRITE_PNG_BILEVEL    , fromBool            $ pngParamBinaryLevel params</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">]</span></span>
+<span class="lineno">  147 </span>
+<span class="lineno">  148 </span>data OutputFormat
+<span class="lineno">  149 </span>   = OutputBmp
+<span class="lineno">  150 </span>   | OutputExr
+<span class="lineno">  151 </span>   | OutputHdr Bool -- ^ Compression (run length encoding)
+<span class="lineno">  152 </span>   | OutputJpeg JpegParams
+<span class="lineno">  153 </span>   | OutputJpeg2000
+<span class="lineno">  154 </span>   | OutputPng PngParams
+<span class="lineno">  155 </span>   | OutputPxm Bool -- ^ Binary
+<span class="lineno">  156 </span>   | OutputSunras
+<span class="lineno">  157 </span>   | OutputTiff
+<span class="lineno">  158 </span>   | OutputWebP Int -- ^ Quality [1..100], &gt; 100 == lossless
+<span class="lineno">  159 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span><span class="decl"><span class="istickedoff">#num IMWRITE_PXM_BINARY </span>
+<span class="lineno">  162 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="nottickedoff">#num IMWRITE_WEBP_QUALITY </span>
+<span class="lineno">  163 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">  164 </span>marshalOutputFormat :: OutputFormat -&gt; (String, VS.Vector CInt)
+<span class="lineno">  165 </span><span class="decl"><span class="istickedoff">marshalOutputFormat = \case</span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">OutputBmp          -&gt; (&quot;.bmp&quot; , [])</span>
+<span class="lineno">  167 </span><span class="spaces">    </span><span class="istickedoff">OutputExr          -&gt; <span class="nottickedoff">(&quot;.exr&quot; , [])</span></span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">OutputHdr comp     -&gt; (&quot;.hdr&quot; , [fromBool comp])</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">OutputJpeg params  -&gt; <span class="nottickedoff">(&quot;.jpeg&quot;, marshalJpegParams params)</span></span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">OutputJpeg2000     -&gt; (&quot;.jp2&quot; , [])</span>
+<span class="lineno">  171 </span><span class="spaces">    </span><span class="istickedoff">OutputPng params   -&gt; (&quot;.png&quot; , marshalPngParams params)</span>
+<span class="lineno">  172 </span><span class="spaces">    </span><span class="istickedoff">OutputPxm binary   -&gt; (&quot;.pxm&quot; , [c'IMWRITE_PXM_BINARY, fromBool binary])</span>
+<span class="lineno">  173 </span><span class="spaces">    </span><span class="istickedoff">OutputSunras       -&gt; (&quot;.sr&quot;  , [])</span>
+<span class="lineno">  174 </span><span class="spaces">    </span><span class="istickedoff">OutputTiff         -&gt; (&quot;.tiff&quot;, [])</span>
+<span class="lineno">  175 </span><span class="spaces">    </span><span class="istickedoff">OutputWebP quality -&gt; <span class="nottickedoff">(&quot;.webp&quot;, [c'IMWRITE_WEBP_QUALITY, fromIntegral quality])</span></span></span>
+
+</pre>
+</body>
+</html>

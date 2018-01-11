@@ -1,0 +1,769 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    3 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    4 </span>
+<span class="lineno">    5 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    6 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">    7 </span>#endif
+<span class="lineno">    8 </span>
+<span class="lineno">    9 </span>{- |
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>Functions and classes described in this section are used to perform various
+<span class="lineno">   12 </span>linear or non-linear filtering operations on 2D images (represented as
+<span class="lineno">   13 </span>@'Mat'@\'s). It means that for each pixel location @(x,y)@ in the source image
+<span class="lineno">   14 </span>(normally, rectangular), its neighborhood is considered and used to compute the
+<span class="lineno">   15 </span>response. In case of a linear filter, it is a weighted sum of pixel values. In
+<span class="lineno">   16 </span>case of morphological operations, it is the minimum or maximum values, and so
+<span class="lineno">   17 </span>on. The computed response is stored in the destination image at the same
+<span class="lineno">   18 </span>location @(x,y)@. It means that the output image will be of the same size as the
+<span class="lineno">   19 </span>input image. Normally, the functions support multi-channel arrays, in which case
+<span class="lineno">   20 </span>every channel is processed independently. Therefore, the output image will also
+<span class="lineno">   21 </span>have the same number of channels as the input one.
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>Another common feature of the functions and classes described in this section is
+<span class="lineno">   24 </span>that, unlike simple arithmetic functions, they need to extrapolate values of
+<span class="lineno">   25 </span>some non-existing pixels. For example, if you want to smooth an image using a
+<span class="lineno">   26 </span>Gaussian @3x3@ filter, then, when processing the left-most pixels in each
+<span class="lineno">   27 </span>row, you need pixels to the left of them, that is, outside of the image. You can
+<span class="lineno">   28 </span>let these pixels be the same as the left-most image pixels (&quot;replicated border&quot;
+<span class="lineno">   29 </span>extrapolation method), or assume that all the non-existing pixels are zeros
+<span class="lineno">   30 </span>(&quot;constant border&quot; extrapolation method), and so on. OpenCV enables you to
+<span class="lineno">   31 </span>specify the extrapolation method.
+<span class="lineno">   32 </span>-}
+<span class="lineno">   33 </span>module OpenCV.ImgProc.ImgFiltering
+<span class="lineno">   34 </span>    ( MorphShape(..)
+<span class="lineno">   35 </span>    , MorphOperation(..)
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>    , bilateralFilter
+<span class="lineno">   38 </span>    , laplacian
+<span class="lineno">   39 </span>    , medianBlur
+<span class="lineno">   40 </span>    , erode
+<span class="lineno">   41 </span>    , dilate
+<span class="lineno">   42 </span>    , filter2D
+<span class="lineno">   43 </span>    , morphologyEx
+<span class="lineno">   44 </span>    , getStructuringElement
+<span class="lineno">   45 </span>    , blur
+<span class="lineno">   46 </span>    , gaussianBlur
+<span class="lineno">   47 </span>    ) where
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   50 </span>import &quot;base&quot; Data.Maybe
+<span class="lineno">   51 </span>import &quot;base&quot; Data.Proxy
+<span class="lineno">   52 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   53 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   54 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   55 </span>import &quot;linear&quot; Linear.V2 ( V2(..) )
+<span class="lineno">   56 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   57 </span>import &quot;this&quot; OpenCV.ImgProc.Types
+<span class="lineno">   58 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   59 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   60 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   61 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   62 </span>import &quot;this&quot; OpenCV.Internal.ImgProc.Types ( marshalBorderMode )
+<span class="lineno">   63 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   64 </span>
+<span class="lineno">   65 </span>--------------------------------------------------------------------------------
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>C.context openCvCtx
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   70 </span>C.include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   71 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>#include &lt;bindings.dsl.h&gt;
+<span class="lineno">   74 </span>#include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   75 </span>#include &quot;opencv2/imgproc.hpp&quot;
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>#include &quot;namespace.hpp&quot;
+<span class="lineno">   78 </span>#include &quot;hsc_macros.hpp&quot;
+<span class="lineno">   79 </span>
+<span class="lineno">   80 </span>
+<span class="lineno">   81 </span>--------------------------------------------------------------------------------
+<span class="lineno">   82 </span>-- Constants
+<span class="lineno">   83 </span>--------------------------------------------------------------------------------
+<span class="lineno">   84 </span>
+<span class="lineno">   85 </span>defaultAnchor :: Point2i
+<span class="lineno">   86 </span><span class="decl"><span class="istickedoff">defaultAnchor = toPoint (pure (-1) :: V2 Int32)</span></span>
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>--------------------------------------------------------------------------------
+<span class="lineno">   90 </span>-- Types
+<span class="lineno">   91 </span>--------------------------------------------------------------------------------
+<span class="lineno">   92 </span>
+<span class="lineno">   93 </span>data MorphShape
+<span class="lineno">   94 </span>   = MorphRect -- ^ A rectangular structuring element.
+<span class="lineno">   95 </span>   | MorphEllipse
+<span class="lineno">   96 </span>     -- ^ An elliptic structuring element, that is, a filled ellipse inscribed
+<span class="lineno">   97 </span>     -- into the rectangle Rect(0, 0, esize.width, 0.esize.height).
+<span class="lineno">   98 </span>   | MorphCross !Point2i -- ^ A cross-shaped structuring element.
+<span class="lineno">   99 </span>
+<span class="lineno">  100 </span><span class="decl"><span class="istickedoff">#num MORPH_RECT</span>
+<span class="lineno">  101 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num MORPH_ELLIPSE</span>
+<span class="lineno">  102 </span><span class="spaces"></span><span class="istickedoff"></span></span><span class="decl"><span class="istickedoff">#num MORPH_CROSS</span>
+<span class="lineno">  103 </span><span class="spaces"></span><span class="istickedoff"></span></span>
+<span class="lineno">  104 </span>marshalMorphShape :: MorphShape -&gt; (Int32, Point2i)
+<span class="lineno">  105 </span><span class="decl"><span class="istickedoff">marshalMorphShape = \case</span>
+<span class="lineno">  106 </span><span class="spaces">    </span><span class="istickedoff">MorphRect         -&gt; (c'MORPH_RECT   , defaultAnchor)</span>
+<span class="lineno">  107 </span><span class="spaces">    </span><span class="istickedoff">MorphEllipse      -&gt; (c'MORPH_ELLIPSE, defaultAnchor)</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">MorphCross anchor -&gt; (c'MORPH_CROSS  , anchor)</span></span>
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>data MorphOperation
+<span class="lineno">  111 </span>   = MorphOpen     -- ^ An opening operation: dilate . erode
+<span class="lineno">  112 </span>   | MorphClose    -- ^ A closing operation: erode . dilate
+<span class="lineno">  113 </span>   | MorphGradient -- ^ A morphological gradient: dilate - erode
+<span class="lineno">  114 </span>   | MorphTopHat   -- ^ &quot;top hat&quot;: src - open
+<span class="lineno">  115 </span>   | MorphBlackHat -- ^ &quot;black hat&quot;: close - src
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span><span class="decl"><span class="nottickedoff">#num MORPH_OPEN</span>
+<span class="lineno">  118 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num MORPH_CLOSE</span>
+<span class="lineno">  119 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num MORPH_GRADIENT</span>
+<span class="lineno">  120 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num MORPH_TOPHAT</span>
+<span class="lineno">  121 </span><span class="spaces"></span><span class="nottickedoff"></span></span><span class="decl"><span class="nottickedoff">#num MORPH_BLACKHAT</span>
+<span class="lineno">  122 </span><span class="spaces"></span><span class="nottickedoff"></span></span>
+<span class="lineno">  123 </span>marshalMorphOperation :: MorphOperation -&gt; Int32
+<span class="lineno">  124 </span><span class="decl"><span class="nottickedoff">marshalMorphOperation = \case</span>
+<span class="lineno">  125 </span><span class="spaces">    </span><span class="nottickedoff">MorphOpen     -&gt; c'MORPH_OPEN</span>
+<span class="lineno">  126 </span><span class="spaces">    </span><span class="nottickedoff">MorphClose    -&gt; c'MORPH_CLOSE</span>
+<span class="lineno">  127 </span><span class="spaces">    </span><span class="nottickedoff">MorphGradient -&gt; c'MORPH_GRADIENT</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">MorphTopHat   -&gt; c'MORPH_TOPHAT</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="nottickedoff">MorphBlackHat -&gt; c'MORPH_BLACKHAT</span></span>
+<span class="lineno">  130 </span>
+<span class="lineno">  131 </span>
+<span class="lineno">  132 </span>--------------------------------------------------------------------------------
+<span class="lineno">  133 </span>-- Image Filtering
+<span class="lineno">  134 </span>--------------------------------------------------------------------------------
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>{- | Calculates the bilateralFilter of an image
+<span class="lineno">  137 </span>
+<span class="lineno">  138 </span>The function applies bilateral filtering to the input image, as described in
+<span class="lineno">  139 </span>&lt;http://www.dai.ed.ac.uk/CVonline/LOCAL_COPIES/MANDUCHI1/Bilateral_Filtering.html Bilateral_Filtering&gt;
+<span class="lineno">  140 </span>bilateralFilter can reduce unwanted noise very well while keeping edges fairly sharp. However, it is very slow compared to most filters.
+<span class="lineno">  141 </span>Example:
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>@
+<span class="lineno">  144 </span>bilateralFilterImg
+<span class="lineno">  145 </span>    :: forall (width    :: Nat)
+<span class="lineno">  146 </span>              (width2   :: Nat)
+<span class="lineno">  147 </span>              (height   :: Nat)
+<span class="lineno">  148 </span>              (channels :: Nat)
+<span class="lineno">  149 </span>              (depth    :: *)
+<span class="lineno">  150 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+<span class="lineno">  151 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  152 </span>       )
+<span class="lineno">  153 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  154 </span>bilateralFilterImg = exceptError $
+<span class="lineno">  155 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  156 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  157 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  158 </span>             white $ \imgM -&gt; do
+<span class="lineno">  159 </span>      birdsFiltered &lt;- pureExcept $ bilateralFilter (Just 9) Nothing Nothing Nothing birds_512x341
+<span class="lineno">  160 </span>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+<span class="lineno">  161 </span>      matCopyToM imgM (V2 w 0) birdsFiltered Nothing
+<span class="lineno">  162 </span>  where
+<span class="lineno">  163 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  164 </span>@
+<span class="lineno">  165 </span>
+<span class="lineno">  166 </span>&lt;&lt;doc/generated/examples/bilateralFilterImg.png bilateralFilterImg&gt;&gt;
+<span class="lineno">  167 </span>
+<span class="lineno">  168 </span>&lt;https://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#bilateralfilter OpenCV Sphinx doc&gt;
+<span class="lineno">  169 </span>-}
+<span class="lineno">  170 </span>bilateralFilter
+<span class="lineno">  171 </span>    :: ( depth    `In` '[Word8, Float, Double]
+<span class="lineno">  172 </span>       , channels `In` '[1, 3]
+<span class="lineno">  173 </span>       -- , Length shape &lt;= 2
+<span class="lineno">  174 </span>       )
+<span class="lineno">  175 </span>    =&gt; Maybe Int32
+<span class="lineno">  176 </span>       -- ^ Diameter of each pixel neighborhood that is used during filtering.
+<span class="lineno">  177 </span>       -- If it is non-positive, it is computed from sigmaSpace. Default value is 5.
+<span class="lineno">  178 </span>    -&gt; Maybe Double
+<span class="lineno">  179 </span>       -- ^ Filter sigma in the color space. A larger value of the parameter means that farther colors within
+<span class="lineno">  180 </span>       -- the pixel neighborhood (see sigmaSpace) will be mixed together, resulting in larger areas of semi-equal color.
+<span class="lineno">  181 </span>       -- Default value is 50
+<span class="lineno">  182 </span>    -&gt; Maybe Double
+<span class="lineno">  183 </span>       -- ^ Filter sigma in the coordinate space. A larger value of the parameter means that farther pixels will
+<span class="lineno">  184 </span>       -- influence each other as long as their colors are close enough (see sigmaColor ). When d&gt;0, it specifies
+<span class="lineno">  185 </span>       -- the neighborhood size regardless of sigmaSpace. Otherwise, d is proportional to sigmaSpace.
+<span class="lineno">  186 </span>       -- Default value is 50
+<span class="lineno">  187 </span>    -&gt; Maybe BorderMode
+<span class="lineno">  188 </span>       -- ^ Pixel extrapolation method. Default value is BorderReflect101
+<span class="lineno">  189 </span>    -&gt; Mat shape ('S channels) ('S depth)
+<span class="lineno">  190 </span>    -&gt; CvExcept (Mat shape ('S channels) ('S depth))
+<span class="lineno">  191 </span><span class="decl"><span class="istickedoff">bilateralFilter d sigmaColor sigmaSpace borderType src = unsafeWrapException $ do</span>
+<span class="lineno">  192 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  193 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  194 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  195 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  196 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  197 </span><span class="spaces">        </span><span class="istickedoff">cv::bilateralFilter</span>
+<span class="lineno">  198 </span><span class="spaces">        </span><span class="istickedoff">( *$(Mat *   srcPtr      )</span>
+<span class="lineno">  199 </span><span class="spaces">        </span><span class="istickedoff">, *$(Mat *   dstPtr      )</span>
+<span class="lineno">  200 </span><span class="spaces">        </span><span class="istickedoff">,  $(int32_t c'd         )</span>
+<span class="lineno">  201 </span><span class="spaces">        </span><span class="istickedoff">,  $(double  c'sigmaColor)</span>
+<span class="lineno">  202 </span><span class="spaces">        </span><span class="istickedoff">,  $(double  c'sigmaSpace)</span>
+<span class="lineno">  203 </span><span class="spaces">        </span><span class="istickedoff">,  $(int32_t c'borderType)</span>
+<span class="lineno">  204 </span><span class="spaces">        </span><span class="istickedoff">);</span>
+<span class="lineno">  205 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="istickedoff">c'd = fromMaybe <span class="nottickedoff">5</span> d</span>
+<span class="lineno">  208 </span><span class="spaces">    </span><span class="istickedoff">c'sigmaColor = maybe 50 <span class="nottickedoff">realToFrac</span> sigmaColor</span>
+<span class="lineno">  209 </span><span class="spaces">    </span><span class="istickedoff">c'sigmaSpace = maybe 50 <span class="nottickedoff">realToFrac</span> sigmaSpace</span>
+<span class="lineno">  210 </span><span class="spaces">    </span><span class="istickedoff">c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType</span></span>
+<span class="lineno">  211 </span>
+<span class="lineno">  212 </span>
+<span class="lineno">  213 </span>
+<span class="lineno">  214 </span>{- | Calculates the Laplacian of an image
+<span class="lineno">  215 </span>
+<span class="lineno">  216 </span>The function calculates the Laplacian of the source image by adding up
+<span class="lineno">  217 </span>the second x and y derivatives calculated using the Sobel operator.
+<span class="lineno">  218 </span>
+<span class="lineno">  219 </span>Example:
+<span class="lineno">  220 </span>
+<span class="lineno">  221 </span>@
+<span class="lineno">  222 </span>laplacianImg
+<span class="lineno">  223 </span>    :: forall shape channels depth
+<span class="lineno">  224 </span>     . (Mat shape channels depth ~ Kodak_512x341)
+<span class="lineno">  225 </span>    =&gt; Mat shape ('S 1) ('S Double)
+<span class="lineno">  226 </span>laplacianImg = exceptError $ do
+<span class="lineno">  227 </span>    imgG &lt;- cvtColor bgr gray birds_512x341
+<span class="lineno">  228 </span>    laplacian Nothing Nothing Nothing Nothing imgG
+<span class="lineno">  229 </span>@
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>&lt;&lt;doc/generated/examples/laplacianImg.png laplacianImg&gt;&gt;
+<span class="lineno">  232 </span>
+<span class="lineno">  233 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#laplacian OpenCV Sphinx doc&gt;
+<span class="lineno">  234 </span>-}
+<span class="lineno">  235 </span>laplacian
+<span class="lineno">  236 </span>    :: forall shape channels srcDepth dstDepth
+<span class="lineno">  237 </span>     . (ToDepth (Proxy dstDepth))
+<span class="lineno">  238 </span>    =&gt; Maybe Int32
+<span class="lineno">  239 </span>       -- ^ Aperture size used to compute the second-derivative filters. The
+<span class="lineno">  240 </span>       -- size must be positive and odd. Default value is 1.
+<span class="lineno">  241 </span>    -&gt; Maybe Double
+<span class="lineno">  242 </span>       -- ^ Optional scale factor for the computed Laplacian values. Default
+<span class="lineno">  243 </span>       -- value is 1.
+<span class="lineno">  244 </span>    -&gt; Maybe Double
+<span class="lineno">  245 </span>       -- ^ Optional delta value that is added to the results. Default value is
+<span class="lineno">  246 </span>       -- 0.
+<span class="lineno">  247 </span>    -&gt; Maybe BorderMode
+<span class="lineno">  248 </span>       -- ^ Pixel extrapolation method.
+<span class="lineno">  249 </span>    -&gt; Mat shape channels srcDepth
+<span class="lineno">  250 </span>    -&gt; CvExcept (Mat shape channels ('S dstDepth))
+<span class="lineno">  251 </span><span class="decl"><span class="istickedoff">laplacian ksize scale delta borderType src = unsafeWrapException $ do</span>
+<span class="lineno">  252 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  253 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  254 </span><span class="spaces">      </span><span class="istickedoff">withPtr src $ \srcPtr -&gt;</span>
+<span class="lineno">  255 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst $ \dstPtr -&gt;</span>
+<span class="lineno">  256 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  257 </span><span class="spaces">        </span><span class="istickedoff">cv::Laplacian</span>
+<span class="lineno">  258 </span><span class="spaces">        </span><span class="istickedoff">( *$(Mat *   srcPtr      )</span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="istickedoff">, *$(Mat *   dstPtr      )</span>
+<span class="lineno">  260 </span><span class="spaces">        </span><span class="istickedoff">,  $(int32_t c'ddepth    )</span>
+<span class="lineno">  261 </span><span class="spaces">        </span><span class="istickedoff">,  $(int32_t c'ksize     )</span>
+<span class="lineno">  262 </span><span class="spaces">        </span><span class="istickedoff">,  $(double  c'scale     )</span>
+<span class="lineno">  263 </span><span class="spaces">        </span><span class="istickedoff">,  $(double  c'delta     )</span>
+<span class="lineno">  264 </span><span class="spaces">        </span><span class="istickedoff">,  $(int32_t c'borderType)</span>
+<span class="lineno">  265 </span><span class="spaces">        </span><span class="istickedoff">);</span>
+<span class="lineno">  266 </span><span class="spaces">      </span><span class="istickedoff">|]</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">c'ksize = fromMaybe 1 ksize</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">c'scale = maybe 1 <span class="nottickedoff">realToFrac</span> scale</span>
+<span class="lineno">  270 </span><span class="spaces">    </span><span class="istickedoff">c'delta = maybe 0 <span class="nottickedoff">realToFrac</span> delta</span>
+<span class="lineno">  271 </span><span class="spaces">    </span><span class="istickedoff">c'ddepth = marshalDepth $ toDepth <span class="nottickedoff">(Proxy :: Proxy dstDepth)</span></span>
+<span class="lineno">  272 </span><span class="spaces">    </span><span class="istickedoff">c'borderType = fst $ marshalBorderMode $ fromMaybe BorderReflect101 borderType</span></span>
+<span class="lineno">  273 </span>
+<span class="lineno">  274 </span>{- | Blurs an image using the median filter
+<span class="lineno">  275 </span>
+<span class="lineno">  276 </span>Example:
+<span class="lineno">  277 </span>
+<span class="lineno">  278 </span>@
+<span class="lineno">  279 </span>medianBlurImg
+<span class="lineno">  280 </span>    :: forall (width    :: Nat)
+<span class="lineno">  281 </span>              (width2   :: Nat)
+<span class="lineno">  282 </span>              (height   :: Nat)
+<span class="lineno">  283 </span>              (channels :: Nat)
+<span class="lineno">  284 </span>              (depth    :: *)
+<span class="lineno">  285 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+<span class="lineno">  286 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  287 </span>       )
+<span class="lineno">  288 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  289 </span>medianBlurImg = exceptError $
+<span class="lineno">  290 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  291 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  292 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  293 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  294 </span>      birdsBlurred &lt;- pureExcept $ medianBlur birds_512x341 13
+<span class="lineno">  295 </span>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+<span class="lineno">  296 </span>      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
+<span class="lineno">  297 </span>  where
+<span class="lineno">  298 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  299 </span>@
+<span class="lineno">  300 </span>
+<span class="lineno">  301 </span>&lt;&lt;doc/generated/examples/medianBlurImg.png medianBlurImg&gt;&gt;
+<span class="lineno">  302 </span>
+<span class="lineno">  303 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#medianblur OpenCV Sphinx doc&gt;
+<span class="lineno">  304 </span>-}
+<span class="lineno">  305 </span>-- TODO (Rvd): make ksize a type level argument
+<span class="lineno">  306 </span>-- if ksize in [3, 5] then depth in [Word8, Int16, Float) else depth ~ Word8
+<span class="lineno">  307 </span>medianBlur
+<span class="lineno">  308 </span>    :: ( depth    `In` '[Word8, Word16, Float]
+<span class="lineno">  309 </span>       , channels `In` '[1, 3, 4]
+<span class="lineno">  310 </span>       -- , Length shape &lt;= 2
+<span class="lineno">  311 </span>       )
+<span class="lineno">  312 </span>    =&gt; Mat shape ('S channels) ('S depth)
+<span class="lineno">  313 </span>       -- ^ Input 1-, 3-, or 4-channel image; when ksize is 3 or 5, the image
+<span class="lineno">  314 </span>       -- depth should be 'Word8', 'Word16', or 'Float', for
+<span class="lineno">  315 </span>       -- larger aperture sizes, it can only be 'Word8'.
+<span class="lineno">  316 </span>    -&gt; Int32
+<span class="lineno">  317 </span>       -- ^ Aperture linear size; it must be odd and greater than 1, for
+<span class="lineno">  318 </span>       -- example: 3, 5, 7...
+<span class="lineno">  319 </span>    -&gt; CvExcept (Mat shape ('S channels) ('S depth))
+<span class="lineno">  320 </span><span class="decl"><span class="istickedoff">medianBlur matIn ksize = unsafeWrapException $ do</span>
+<span class="lineno">  321 </span><span class="spaces">    </span><span class="istickedoff">matOut &lt;- newEmptyMat</span>
+<span class="lineno">  322 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat matOut) $</span>
+<span class="lineno">  323 </span><span class="spaces">      </span><span class="istickedoff">withPtr matOut $ \matOutPtr -&gt;</span>
+<span class="lineno">  324 </span><span class="spaces">      </span><span class="istickedoff">withPtr matIn $ \matInPtr -&gt;</span>
+<span class="lineno">  325 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept| cv::medianBlur(*$(Mat * matInPtr), *$(Mat * matOutPtr), $(int32_t ksize)); |]</span></span>
+<span class="lineno">  326 </span>
+<span class="lineno">  327 </span>{- | Blurs an image using a box filter.
+<span class="lineno">  328 </span>
+<span class="lineno">  329 </span>Example:
+<span class="lineno">  330 </span>
+<span class="lineno">  331 </span>@
+<span class="lineno">  332 </span>boxBlurImg
+<span class="lineno">  333 </span>    :: forall (width    :: Nat)
+<span class="lineno">  334 </span>              (width2   :: Nat)
+<span class="lineno">  335 </span>              (height   :: Nat)
+<span class="lineno">  336 </span>              (channels :: Nat)
+<span class="lineno">  337 </span>              (depth    :: *)
+<span class="lineno">  338 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+<span class="lineno">  339 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  340 </span>       )
+<span class="lineno">  341 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  342 </span>boxBlurImg = exceptError $
+<span class="lineno">  343 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  344 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  345 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  346 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  347 </span>      birdsBlurred &lt;- pureExcept $ blur (V2 13 13 :: V2 Int32) birds_512x341
+<span class="lineno">  348 </span>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+<span class="lineno">  349 </span>      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
+<span class="lineno">  350 </span>  where
+<span class="lineno">  351 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  352 </span>@
+<span class="lineno">  353 </span>
+<span class="lineno">  354 </span>&lt;&lt;doc/generated/examples/boxBlurImg.png boxBlurImg&gt;&gt;
+<span class="lineno">  355 </span>
+<span class="lineno">  356 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#blur OpenCV Sphinx doc&gt;
+<span class="lineno">  357 </span>-}
+<span class="lineno">  358 </span>blur
+<span class="lineno">  359 </span>  :: ( depth `In` '[Word8, Word16, Int16, Float, Double]
+<span class="lineno">  360 </span>     , IsSize  size  Int32
+<span class="lineno">  361 </span>     )
+<span class="lineno">  362 </span>  =&gt; size  Int32 -- ^ Blurring kernel size.
+<span class="lineno">  363 </span>  -&gt; Mat shape ('S channels) ('S depth)
+<span class="lineno">  364 </span>  -&gt; CvExcept (Mat shape ('S channels) ('S depth))
+<span class="lineno">  365 </span><span class="decl"><span class="istickedoff">blur size matIn =</span>
+<span class="lineno">  366 </span><span class="spaces">  </span><span class="istickedoff">unsafeWrapException $</span>
+<span class="lineno">  367 </span><span class="spaces">  </span><span class="istickedoff">do matOut &lt;- newEmptyMat</span>
+<span class="lineno">  368 </span><span class="spaces">     </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat matOut) $</span>
+<span class="lineno">  369 </span><span class="spaces">       </span><span class="istickedoff">withPtr ksize $ \ksizePtr -&gt;</span>
+<span class="lineno">  370 </span><span class="spaces">       </span><span class="istickedoff">withPtr matIn $ \matInPtr -&gt;</span>
+<span class="lineno">  371 </span><span class="spaces">       </span><span class="istickedoff">withPtr matOut $ \matOutPtr -&gt;</span>
+<span class="lineno">  372 </span><span class="spaces">       </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  373 </span><span class="spaces">           </span><span class="istickedoff">cv::blur</span>
+<span class="lineno">  374 </span><span class="spaces">           </span><span class="istickedoff">( *$(Mat * matInPtr)</span>
+<span class="lineno">  375 </span><span class="spaces">           </span><span class="istickedoff">, *$(Mat * matOutPtr)</span>
+<span class="lineno">  376 </span><span class="spaces">           </span><span class="istickedoff">, *$(Size2i * ksizePtr)</span>
+<span class="lineno">  377 </span><span class="spaces">           </span><span class="istickedoff">);</span>
+<span class="lineno">  378 </span><span class="spaces">       </span><span class="istickedoff">|]</span>
+<span class="lineno">  379 </span><span class="spaces">  </span><span class="istickedoff">where ksize :: Size2i</span>
+<span class="lineno">  380 </span><span class="spaces">        </span><span class="istickedoff">ksize = toSize size</span></span>
+<span class="lineno">  381 </span>
+<span class="lineno">  382 </span>gaussianBlur
+<span class="lineno">  383 </span>  :: ( depth `In` '[Word8, Word16, Float, Double]
+<span class="lineno">  384 </span>     , IsSize size Int32
+<span class="lineno">  385 </span>     )
+<span class="lineno">  386 </span>  =&gt; size Int32 -- ^ Blurring kernel size.
+<span class="lineno">  387 </span>  -&gt; Double -- ^ sigmaX
+<span class="lineno">  388 </span>  -&gt; Double -- ^ sigmaY
+<span class="lineno">  389 </span>  -&gt; Mat shape ('S channels) ('S depth)
+<span class="lineno">  390 </span>  -&gt; CvExcept (Mat shape ('S channels) ('S depth))
+<span class="lineno">  391 </span><span class="decl"><span class="nottickedoff">gaussianBlur size sigmaX sigmaY matIn =</span>
+<span class="lineno">  392 </span><span class="spaces">  </span><span class="nottickedoff">unsafeWrapException $</span>
+<span class="lineno">  393 </span><span class="spaces">  </span><span class="nottickedoff">do matOut &lt;- newEmptyMat</span>
+<span class="lineno">  394 </span><span class="spaces">     </span><span class="nottickedoff">handleCvException (pure $ unsafeCoerceMat matOut) $</span>
+<span class="lineno">  395 </span><span class="spaces">       </span><span class="nottickedoff">withPtr ksize $ \ksizePtr -&gt;</span>
+<span class="lineno">  396 </span><span class="spaces">       </span><span class="nottickedoff">withPtr matIn $ \matInPtr -&gt;</span>
+<span class="lineno">  397 </span><span class="spaces">       </span><span class="nottickedoff">withPtr matOut $ \matOutPtr -&gt;</span>
+<span class="lineno">  398 </span><span class="spaces">       </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  399 </span><span class="spaces">           </span><span class="nottickedoff">cv::GaussianBlur</span>
+<span class="lineno">  400 </span><span class="spaces">           </span><span class="nottickedoff">( *$(Mat * matInPtr)</span>
+<span class="lineno">  401 </span><span class="spaces">           </span><span class="nottickedoff">, *$(Mat * matOutPtr)</span>
+<span class="lineno">  402 </span><span class="spaces">           </span><span class="nottickedoff">, *$(Size2i * ksizePtr)</span>
+<span class="lineno">  403 </span><span class="spaces">           </span><span class="nottickedoff">, $(double c'sigmaX)</span>
+<span class="lineno">  404 </span><span class="spaces">           </span><span class="nottickedoff">, $(double c'sigmaY)</span>
+<span class="lineno">  405 </span><span class="spaces">           </span><span class="nottickedoff">);</span>
+<span class="lineno">  406 </span><span class="spaces">       </span><span class="nottickedoff">|]</span>
+<span class="lineno">  407 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  408 </span><span class="spaces">    </span><span class="nottickedoff">ksize :: Size2i</span>
+<span class="lineno">  409 </span><span class="spaces">    </span><span class="nottickedoff">ksize = toSize size</span>
+<span class="lineno">  410 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  411 </span><span class="spaces">    </span><span class="nottickedoff">c'sigmaX = realToFrac sigmaX</span>
+<span class="lineno">  412 </span><span class="spaces">    </span><span class="nottickedoff">c'sigmaY = realToFrac sigmaY</span></span>
+<span class="lineno">  413 </span>
+<span class="lineno">  414 </span>{- | Erodes an image by using a specific structuring element
+<span class="lineno">  415 </span>
+<span class="lineno">  416 </span>Example:
+<span class="lineno">  417 </span>
+<span class="lineno">  418 </span>@
+<span class="lineno">  419 </span>erodeImg
+<span class="lineno">  420 </span>    :: forall (width    :: Nat)
+<span class="lineno">  421 </span>              (width2   :: Nat)
+<span class="lineno">  422 </span>              (height   :: Nat)
+<span class="lineno">  423 </span>              (channels :: Nat)
+<span class="lineno">  424 </span>              (depth    :: *)
+<span class="lineno">  425 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Lambda
+<span class="lineno">  426 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  427 </span>       )
+<span class="lineno">  428 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  429 </span>erodeImg = exceptError $
+<span class="lineno">  430 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  431 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  432 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  433 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  434 </span>      erodedLambda &lt;-
+<span class="lineno">  435 </span>        pureExcept $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
+<span class="lineno">  436 </span>      matCopyToM imgM (V2 0 0) lambda Nothing
+<span class="lineno">  437 </span>      matCopyToM imgM (V2 w 0) erodedLambda Nothing
+<span class="lineno">  438 </span>  where
+<span class="lineno">  439 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  440 </span>@
+<span class="lineno">  441 </span>
+<span class="lineno">  442 </span>&lt;&lt;doc/generated/examples/erodeImg.png erodeImg&gt;&gt;
+<span class="lineno">  443 </span>
+<span class="lineno">  444 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#erode OpenCV Sphinx doc&gt;
+<span class="lineno">  445 </span>-}
+<span class="lineno">  446 </span>erode
+<span class="lineno">  447 </span>    :: ( IsPoint2 point2 Int32
+<span class="lineno">  448 </span>       , depth `In` [Word8, Word16, Int16, Float, Double]
+<span class="lineno">  449 </span>       )
+<span class="lineno">  450 </span>    =&gt; Mat shape channels ('S depth) -- ^ Input image.
+<span class="lineno">  451 </span>    -&gt; Maybe (Mat ('S [sh, sw]) ('S 1) ('S Word8))
+<span class="lineno">  452 </span>       -- ^ Structuring element used for erosion. If `emptyMat` is
+<span class="lineno">  453 </span>       -- used a @3x3@ rectangular structuring element is used. Kernel
+<span class="lineno">  454 </span>       -- can be created using `getStructuringElement`.
+<span class="lineno">  455 </span>    -&gt; Maybe (point2 Int32) -- ^ anchor
+<span class="lineno">  456 </span>    -&gt; Int -- ^ iterations
+<span class="lineno">  457 </span>    -&gt; BorderMode
+<span class="lineno">  458 </span>    -&gt; CvExcept (Mat shape channels ('S depth))
+<span class="lineno">  459 </span><span class="decl"><span class="istickedoff">erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do</span>
+<span class="lineno">  460 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  461 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  462 </span><span class="spaces">      </span><span class="istickedoff">withPtr src    $ \srcPtr    -&gt;</span>
+<span class="lineno">  463 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr    -&gt;</span>
+<span class="lineno">  464 </span><span class="spaces">      </span><span class="istickedoff">withPtr kernel $ \kernelPtr -&gt;</span>
+<span class="lineno">  465 </span><span class="spaces">      </span><span class="istickedoff">withPtr anchor $ \anchorPtr -&gt;</span>
+<span class="lineno">  466 </span><span class="spaces">      </span><span class="istickedoff">withPtr borderValue $ \borderValuePtr -&gt;</span>
+<span class="lineno">  467 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  468 </span><span class="spaces">          </span><span class="istickedoff">cv::erode</span>
+<span class="lineno">  469 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat     * srcPtr        )</span>
+<span class="lineno">  470 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * dstPtr        )</span>
+<span class="lineno">  471 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * kernelPtr     )</span>
+<span class="lineno">  472 </span><span class="spaces">          </span><span class="istickedoff">, *$(Point2i * anchorPtr     )</span>
+<span class="lineno">  473 </span><span class="spaces">          </span><span class="istickedoff">,  $(int32_t   c'iterations  )</span>
+<span class="lineno">  474 </span><span class="spaces">          </span><span class="istickedoff">,  $(int32_t   c'borderType  )</span>
+<span class="lineno">  475 </span><span class="spaces">          </span><span class="istickedoff">, *$(Scalar  * borderValuePtr)</span>
+<span class="lineno">  476 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  477 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  478 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  479 </span><span class="spaces">    </span><span class="istickedoff">kernel :: Mat 'D 'D 'D</span>
+<span class="lineno">  480 </span><span class="spaces">    </span><span class="istickedoff">kernel = maybe (relaxMat emptyMat) <span class="nottickedoff">unsafeCoerceMat</span> mbKernel</span>
+<span class="lineno">  481 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  482 </span><span class="spaces">    </span><span class="istickedoff">anchor :: Point2i</span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="istickedoff">anchor = maybe defaultAnchor <span class="nottickedoff">toPoint</span> mbAnchor</span>
+<span class="lineno">  484 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  485 </span><span class="spaces">    </span><span class="istickedoff">c'iterations = fromIntegral iterations</span>
+<span class="lineno">  486 </span><span class="spaces">    </span><span class="istickedoff">(c'borderType, borderValue) = marshalBorderMode borderMode</span></span>
+<span class="lineno">  487 </span>
+<span class="lineno">  488 </span>{- | Convolves an image with the kernel.
+<span class="lineno">  489 </span>
+<span class="lineno">  490 </span>Example:
+<span class="lineno">  491 </span>
+<span class="lineno">  492 </span>@
+<span class="lineno">  493 </span>filter2DImg
+<span class="lineno">  494 </span>    :: forall (width    :: Nat)
+<span class="lineno">  495 </span>              (width2   :: Nat)
+<span class="lineno">  496 </span>              (height   :: Nat)
+<span class="lineno">  497 </span>              (channels :: Nat)
+<span class="lineno">  498 </span>              (depth    :: *)
+<span class="lineno">  499 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+<span class="lineno">  500 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  501 </span>       )
+<span class="lineno">  502 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  503 </span>filter2DImg = exceptError $
+<span class="lineno">  504 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  505 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  506 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  507 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  508 </span>      filteredBird &lt;-
+<span class="lineno">  509 </span>        pureExcept $ filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
+<span class="lineno">  510 </span>      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+<span class="lineno">  511 </span>      matCopyToM imgM (V2 w 0) filteredBird Nothing
+<span class="lineno">  512 </span>  where
+<span class="lineno">  513 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  514 </span>    kernel =
+<span class="lineno">  515 </span>      exceptError $
+<span class="lineno">  516 </span>      withMatM (Proxy :: Proxy [3, 3])
+<span class="lineno">  517 </span>               (Proxy :: Proxy 1)
+<span class="lineno">  518 </span>               (Proxy :: Proxy Double)
+<span class="lineno">  519 </span>               black $ \\imgM -&gt; do
+<span class="lineno">  520 </span>        lift $ line imgM (V2 0 0 :: V2 Int32) (V2 0 0 :: V2 Int32) (V4 (-2) (-2) (-2) 1 :: V4 Double) 0 LineType_8 0
+<span class="lineno">  521 </span>        lift $ line imgM (V2 1 0 :: V2 Int32) (V2 0 1 :: V2 Int32) (V4 (-1) (-1) (-1) 1 :: V4 Double) 0 LineType_8 0
+<span class="lineno">  522 </span>        lift $ line imgM (V2 1 1 :: V2 Int32) (V2 1 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
+<span class="lineno">  523 </span>        lift $ line imgM (V2 1 2 :: V2 Int32) (V2 2 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
+<span class="lineno">  524 </span>        lift $ line imgM (V2 2 2 :: V2 Int32) (V2 2 2 :: V2 Int32) (V4   2    2    2  1 :: V4 Double) 0 LineType_8 0
+<span class="lineno">  525 </span>@
+<span class="lineno">  526 </span>
+<span class="lineno">  527 </span>&lt;&lt;doc/generated/examples/filter2DImg.png filter2DImg&gt;&gt;
+<span class="lineno">  528 </span>
+<span class="lineno">  529 </span>
+<span class="lineno">  530 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#filter2d OpenCV Sphinx doc&gt;
+<span class="lineno">  531 </span>-}
+<span class="lineno">  532 </span>filter2D
+<span class="lineno">  533 </span>    :: ( IsPoint2 point2 Int32
+<span class="lineno">  534 </span>       , depth `In` [Word8, Word16, Int16, Float, Double]
+<span class="lineno">  535 </span>       )
+<span class="lineno">  536 </span>    =&gt; Mat shape channels ('S depth) -- ^ Input image.
+<span class="lineno">  537 </span>    -&gt; Mat ('S [sh, sw]) ('S 1) ('S Double)
+<span class="lineno">  538 </span>       -- ^ convolution kernel (or rather a correlation kernel),
+<span class="lineno">  539 </span>       -- a single-channel floating point matrix; if you want to
+<span class="lineno">  540 </span>       -- apply different kernels to different channels, split the
+<span class="lineno">  541 </span>       -- image into separate color planes using split and process
+<span class="lineno">  542 </span>       -- them individually.
+<span class="lineno">  543 </span>    -&gt; Maybe (point2 Int32) -- ^ anchor
+<span class="lineno">  544 </span>    -&gt; Double -- ^ delta
+<span class="lineno">  545 </span>    -&gt; BorderMode
+<span class="lineno">  546 </span>    -&gt; CvExcept (Mat shape channels ('S depth))
+<span class="lineno">  547 </span><span class="decl"><span class="istickedoff">filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do</span>
+<span class="lineno">  548 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  549 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  550 </span><span class="spaces">      </span><span class="istickedoff">withPtr src    $ \srcPtr    -&gt;</span>
+<span class="lineno">  551 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr    -&gt;</span>
+<span class="lineno">  552 </span><span class="spaces">      </span><span class="istickedoff">withPtr kernel $ \kernelPtr -&gt;</span>
+<span class="lineno">  553 </span><span class="spaces">      </span><span class="istickedoff">withPtr anchor $ \anchorPtr -&gt;</span>
+<span class="lineno">  554 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  555 </span><span class="spaces">          </span><span class="istickedoff">cv::filter2D</span>
+<span class="lineno">  556 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat     * srcPtr        )</span>
+<span class="lineno">  557 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * dstPtr        )</span>
+<span class="lineno">  558 </span><span class="spaces">          </span><span class="istickedoff">, -1</span>
+<span class="lineno">  559 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * kernelPtr     )</span>
+<span class="lineno">  560 </span><span class="spaces">          </span><span class="istickedoff">, *$(Point2i * anchorPtr     )</span>
+<span class="lineno">  561 </span><span class="spaces">          </span><span class="istickedoff">,  $(double    c'delta       )</span>
+<span class="lineno">  562 </span><span class="spaces">          </span><span class="istickedoff">,  $(int32_t   c'borderType  )</span>
+<span class="lineno">  563 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  564 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  565 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  566 </span><span class="spaces">    </span><span class="istickedoff">anchor :: Point2i</span>
+<span class="lineno">  567 </span><span class="spaces">    </span><span class="istickedoff">anchor = maybe defaultAnchor <span class="nottickedoff">toPoint</span> mbAnchor</span>
+<span class="lineno">  568 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  569 </span><span class="spaces">    </span><span class="istickedoff">c'delta = realToFrac delta</span>
+<span class="lineno">  570 </span><span class="spaces">    </span><span class="istickedoff">(c'borderType, _) = marshalBorderMode borderMode</span></span>
+<span class="lineno">  571 </span>
+<span class="lineno">  572 </span>{- | Dilates an image by using a specific structuring element
+<span class="lineno">  573 </span>
+<span class="lineno">  574 </span>Example:
+<span class="lineno">  575 </span>
+<span class="lineno">  576 </span>@
+<span class="lineno">  577 </span>dilateImg
+<span class="lineno">  578 </span>    :: forall (width    :: Nat)
+<span class="lineno">  579 </span>              (width2   :: Nat)
+<span class="lineno">  580 </span>              (height   :: Nat)
+<span class="lineno">  581 </span>              (channels :: Nat)
+<span class="lineno">  582 </span>              (depth    :: *)
+<span class="lineno">  583 </span>     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Lambda
+<span class="lineno">  584 </span>       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+<span class="lineno">  585 </span>       )
+<span class="lineno">  586 </span>    =&gt; Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+<span class="lineno">  587 </span>dilateImg = exceptError $
+<span class="lineno">  588 </span>    withMatM (Proxy :: Proxy [height, width2])
+<span class="lineno">  589 </span>             (Proxy :: Proxy channels)
+<span class="lineno">  590 </span>             (Proxy :: Proxy depth)
+<span class="lineno">  591 </span>             white $ \\imgM -&gt; do
+<span class="lineno">  592 </span>      dilatedLambda &lt;-
+<span class="lineno">  593 </span>        pureExcept $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
+<span class="lineno">  594 </span>      matCopyToM imgM (V2 0 0) lambda Nothing
+<span class="lineno">  595 </span>      matCopyToM imgM (V2 w 0) dilatedLambda Nothing
+<span class="lineno">  596 </span>  where
+<span class="lineno">  597 </span>    w = fromInteger $ natVal (Proxy :: Proxy width)
+<span class="lineno">  598 </span>@
+<span class="lineno">  599 </span>
+<span class="lineno">  600 </span>&lt;&lt;doc/generated/examples/dilateImg.png dilateImg&gt;&gt;
+<span class="lineno">  601 </span>
+<span class="lineno">  602 </span>
+<span class="lineno">  603 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#dilate OpenCV Sphinx doc&gt;
+<span class="lineno">  604 </span>-}
+<span class="lineno">  605 </span>dilate
+<span class="lineno">  606 </span>    :: ( IsPoint2 point2 Int32
+<span class="lineno">  607 </span>       , depth `In` [Word8, Word16, Int16, Float, Double]
+<span class="lineno">  608 </span>       )
+<span class="lineno">  609 </span>    =&gt; Mat shape channels ('S depth) -- ^ Input image.
+<span class="lineno">  610 </span>    -&gt; Maybe (Mat ('S [sh, sw]) ('S 1) ('S Word8))
+<span class="lineno">  611 </span>       -- ^ Structuring element used for dilation. If `emptyMat` is
+<span class="lineno">  612 </span>       -- used a @3x3@ rectangular structuring element is used. Kernel
+<span class="lineno">  613 </span>       -- can be created using `getStructuringElement`.
+<span class="lineno">  614 </span>    -&gt; Maybe (point2 Int32) -- ^ anchor
+<span class="lineno">  615 </span>    -&gt; Int -- ^ iterations
+<span class="lineno">  616 </span>    -&gt; BorderMode
+<span class="lineno">  617 </span>    -&gt; CvExcept (Mat shape channels ('S depth))
+<span class="lineno">  618 </span><span class="decl"><span class="istickedoff">dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do</span>
+<span class="lineno">  619 </span><span class="spaces">    </span><span class="istickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  620 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  621 </span><span class="spaces">      </span><span class="istickedoff">withPtr src    $ \srcPtr    -&gt;</span>
+<span class="lineno">  622 </span><span class="spaces">      </span><span class="istickedoff">withPtr dst    $ \dstPtr    -&gt;</span>
+<span class="lineno">  623 </span><span class="spaces">      </span><span class="istickedoff">withPtr kernel $ \kernelPtr -&gt;</span>
+<span class="lineno">  624 </span><span class="spaces">      </span><span class="istickedoff">withPtr anchor $ \anchorPtr -&gt;</span>
+<span class="lineno">  625 </span><span class="spaces">      </span><span class="istickedoff">withPtr borderValue $ \borderValuePtr -&gt;</span>
+<span class="lineno">  626 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  627 </span><span class="spaces">          </span><span class="istickedoff">cv::dilate</span>
+<span class="lineno">  628 </span><span class="spaces">          </span><span class="istickedoff">( *$(Mat     * srcPtr        )</span>
+<span class="lineno">  629 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * dstPtr        )</span>
+<span class="lineno">  630 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat     * kernelPtr     )</span>
+<span class="lineno">  631 </span><span class="spaces">          </span><span class="istickedoff">, *$(Point2i * anchorPtr     )</span>
+<span class="lineno">  632 </span><span class="spaces">          </span><span class="istickedoff">,  $(int32_t   c'iterations  )</span>
+<span class="lineno">  633 </span><span class="spaces">          </span><span class="istickedoff">,  $(int32_t   c'borderType  )</span>
+<span class="lineno">  634 </span><span class="spaces">          </span><span class="istickedoff">, *$(Scalar  * borderValuePtr)</span>
+<span class="lineno">  635 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  636 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  637 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  638 </span><span class="spaces">    </span><span class="istickedoff">kernel :: Mat 'D 'D 'D</span>
+<span class="lineno">  639 </span><span class="spaces">    </span><span class="istickedoff">kernel = maybe (relaxMat emptyMat) <span class="nottickedoff">unsafeCoerceMat</span> mbKernel</span>
+<span class="lineno">  640 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  641 </span><span class="spaces">    </span><span class="istickedoff">anchor :: Point2i</span>
+<span class="lineno">  642 </span><span class="spaces">    </span><span class="istickedoff">anchor = maybe defaultAnchor <span class="nottickedoff">toPoint</span> mbAnchor</span>
+<span class="lineno">  643 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  644 </span><span class="spaces">    </span><span class="istickedoff">c'iterations = fromIntegral iterations</span>
+<span class="lineno">  645 </span><span class="spaces">    </span><span class="istickedoff">(c'borderType, borderValue) = marshalBorderMode borderMode</span></span>
+<span class="lineno">  646 </span>
+<span class="lineno">  647 </span>{- | Performs advanced morphological transformations
+<span class="lineno">  648 </span>
+<span class="lineno">  649 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc&gt;
+<span class="lineno">  650 </span>-}
+<span class="lineno">  651 </span>morphologyEx
+<span class="lineno">  652 </span>    :: ( IsPoint2 point2 Int32
+<span class="lineno">  653 </span>       , depth `In` [Word8, Word16, Int16, Float, Double]
+<span class="lineno">  654 </span>       )
+<span class="lineno">  655 </span>     =&gt; Mat shape channels ('S depth) -- ^ Source image.
+<span class="lineno">  656 </span>    -&gt; MorphOperation -- ^ Type of a morphological operation.
+<span class="lineno">  657 </span>    -&gt; Mat 'D 'D 'D -- ^ Structuring element.
+<span class="lineno">  658 </span>    -&gt; Maybe (point2 Int32) -- ^ Anchor position with the kernel.
+<span class="lineno">  659 </span>    -&gt; Int -- ^ Number of times erosion and dilation are applied.
+<span class="lineno">  660 </span>    -&gt; BorderMode
+<span class="lineno">  661 </span>    -&gt; CvExcept (Mat shape channels ('S depth))
+<span class="lineno">  662 </span><span class="decl"><span class="nottickedoff">morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException $ do</span>
+<span class="lineno">  663 </span><span class="spaces">    </span><span class="nottickedoff">dst &lt;- newEmptyMat</span>
+<span class="lineno">  664 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure $ unsafeCoerceMat dst) $</span>
+<span class="lineno">  665 </span><span class="spaces">      </span><span class="nottickedoff">withPtr src    $ \srcPtr    -&gt;</span>
+<span class="lineno">  666 </span><span class="spaces">      </span><span class="nottickedoff">withPtr dst    $ \dstPtr    -&gt;</span>
+<span class="lineno">  667 </span><span class="spaces">      </span><span class="nottickedoff">withPtr kernel $ \kernelPtr -&gt;</span>
+<span class="lineno">  668 </span><span class="spaces">      </span><span class="nottickedoff">withPtr anchor $ \anchorPtr -&gt;</span>
+<span class="lineno">  669 </span><span class="spaces">      </span><span class="nottickedoff">withPtr borderValue $ \borderValuePtr -&gt;</span>
+<span class="lineno">  670 </span><span class="spaces">        </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  671 </span><span class="spaces">          </span><span class="nottickedoff">cv::morphologyEx</span>
+<span class="lineno">  672 </span><span class="spaces">          </span><span class="nottickedoff">( *$(Mat     * srcPtr        )</span>
+<span class="lineno">  673 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat     * dstPtr        )</span>
+<span class="lineno">  674 </span><span class="spaces">          </span><span class="nottickedoff">,  $(int32_t   c'op          )</span>
+<span class="lineno">  675 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Mat     * kernelPtr     )</span>
+<span class="lineno">  676 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Point2i * anchorPtr     )</span>
+<span class="lineno">  677 </span><span class="spaces">          </span><span class="nottickedoff">,  $(int32_t   c'iterations  )</span>
+<span class="lineno">  678 </span><span class="spaces">          </span><span class="nottickedoff">,  $(int32_t   c'borderType  )</span>
+<span class="lineno">  679 </span><span class="spaces">          </span><span class="nottickedoff">, *$(Scalar  * borderValuePtr)</span>
+<span class="lineno">  680 </span><span class="spaces">          </span><span class="nottickedoff">);</span>
+<span class="lineno">  681 </span><span class="spaces">        </span><span class="nottickedoff">|]</span>
+<span class="lineno">  682 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  683 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  684 </span><span class="spaces">    </span><span class="nottickedoff">c'op = marshalMorphOperation op</span>
+<span class="lineno">  685 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  686 </span><span class="spaces">    </span><span class="nottickedoff">anchor :: Point2i</span>
+<span class="lineno">  687 </span><span class="spaces">    </span><span class="nottickedoff">anchor = maybe defaultAnchor toPoint mbAnchor</span>
+<span class="lineno">  688 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  689 </span><span class="spaces">    </span><span class="nottickedoff">c'iterations = fromIntegral iterations</span>
+<span class="lineno">  690 </span><span class="spaces">    </span><span class="nottickedoff">(c'borderType, borderValue) = marshalBorderMode borderMode</span></span>
+<span class="lineno">  691 </span>
+<span class="lineno">  692 </span>
+<span class="lineno">  693 </span>{- | Returns a structuring element of the specified size and shape for
+<span class="lineno">  694 </span>morphological operations
+<span class="lineno">  695 </span>
+<span class="lineno">  696 </span>Example:
+<span class="lineno">  697 </span>
+<span class="lineno">  698 </span>@
+<span class="lineno">  699 </span>type StructureImg = Mat (ShapeT [128, 128]) ('S 1) ('S Word8)
+<span class="lineno">  700 </span>
+<span class="lineno">  701 </span>structureImg :: MorphShape -&gt; StructureImg
+<span class="lineno">  702 </span>structureImg shape = exceptError $ do
+<span class="lineno">  703 </span>    mat &lt;- getStructuringElement shape (Proxy :: Proxy 128) (Proxy :: Proxy 128)
+<span class="lineno">  704 </span>    img &lt;- matConvertTo (Just 255) Nothing mat
+<span class="lineno">  705 </span>    bitwiseNot img
+<span class="lineno">  706 </span>
+<span class="lineno">  707 </span>morphRectImg :: StructureImg
+<span class="lineno">  708 </span>morphRectImg = structureImg MorphRect
+<span class="lineno">  709 </span>
+<span class="lineno">  710 </span>morphEllipseImg :: StructureImg
+<span class="lineno">  711 </span>morphEllipseImg = structureImg MorphEllipse
+<span class="lineno">  712 </span>
+<span class="lineno">  713 </span>morphCrossImg :: StructureImg
+<span class="lineno">  714 </span>morphCrossImg = structureImg $ MorphCross $ toPoint (pure (-1) :: V2 Int32)
+<span class="lineno">  715 </span>@
+<span class="lineno">  716 </span>
+<span class="lineno">  717 </span>&lt;&lt;doc/generated/examples/morphRectImg.png morphRectImg&gt;&gt;
+<span class="lineno">  718 </span>&lt;&lt;doc/generated/examples/morphEllipseImg.png morphEllipseImg&gt;&gt;
+<span class="lineno">  719 </span>&lt;&lt;doc/generated/examples/morphCrossImg.png morphCrossImg&gt;&gt;
+<span class="lineno">  720 </span>
+<span class="lineno">  721 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc&gt;
+<span class="lineno">  722 </span>-}
+<span class="lineno">  723 </span>getStructuringElement
+<span class="lineno">  724 </span>    :: (ToInt32 height, ToInt32 width)
+<span class="lineno">  725 </span>    =&gt; MorphShape -- ^
+<span class="lineno">  726 </span>    -&gt; height
+<span class="lineno">  727 </span>    -&gt; width
+<span class="lineno">  728 </span>    -&gt; CvExcept (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
+<span class="lineno">  729 </span><span class="decl"><span class="istickedoff">getStructuringElement morphShape height width = unsafeWrapException $ do</span>
+<span class="lineno">  730 </span><span class="spaces">    </span><span class="istickedoff">element &lt;- newEmptyMat</span>
+<span class="lineno">  731 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat element) $</span>
+<span class="lineno">  732 </span><span class="spaces">      </span><span class="istickedoff">withPtr ksize   $ \ksizePtr   -&gt;</span>
+<span class="lineno">  733 </span><span class="spaces">      </span><span class="istickedoff">withPtr anchor  $ \anchorPtr  -&gt;</span>
+<span class="lineno">  734 </span><span class="spaces">      </span><span class="istickedoff">withPtr element $ \elementPtr -&gt;</span>
+<span class="lineno">  735 </span><span class="spaces">       </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  736 </span><span class="spaces">         </span><span class="istickedoff">*$(Mat * elementPtr) =</span>
+<span class="lineno">  737 </span><span class="spaces">           </span><span class="istickedoff">cv::getStructuringElement</span>
+<span class="lineno">  738 </span><span class="spaces">           </span><span class="istickedoff">( $(int32_t c'morphShape)</span>
+<span class="lineno">  739 </span><span class="spaces">           </span><span class="istickedoff">, *$(Size2i * ksizePtr)</span>
+<span class="lineno">  740 </span><span class="spaces">           </span><span class="istickedoff">, *$(Point2i * anchorPtr)</span>
+<span class="lineno">  741 </span><span class="spaces">           </span><span class="istickedoff">);</span>
+<span class="lineno">  742 </span><span class="spaces">       </span><span class="istickedoff">|]</span>
+<span class="lineno">  743 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  744 </span><span class="spaces">    </span><span class="istickedoff">ksize :: Size2i</span>
+<span class="lineno">  745 </span><span class="spaces">    </span><span class="istickedoff">ksize = toSize $ V2 (toInt32 <span class="nottickedoff">width</span>) (toInt32 <span class="nottickedoff">height</span>)</span>
+<span class="lineno">  746 </span><span class="spaces">    </span><span class="istickedoff">(c'morphShape, anchor) = marshalMorphShape morphShape</span></span>
+
+</pre>
+</body>
+</html>

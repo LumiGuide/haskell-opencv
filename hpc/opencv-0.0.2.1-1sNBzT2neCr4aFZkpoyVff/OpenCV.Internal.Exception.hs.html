@@ -1,0 +1,185 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language DeriveFunctor #-}
+<span class="lineno">    3 </span>{-# language QuasiQuotes #-}
+<span class="lineno">    4 </span>{-# language RankNTypes #-}
+<span class="lineno">    5 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    6 </span>
+<span class="lineno">    7 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    8 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    9 </span>#endif
+<span class="lineno">   10 </span>
+<span class="lineno">   11 </span>module OpenCV.Internal.Exception
+<span class="lineno">   12 </span>    ( -- * Exception type
+<span class="lineno">   13 </span>      CvException(..)
+<span class="lineno">   14 </span>    , CoerceMatError(..)
+<span class="lineno">   15 </span>    , ExpectationError(..)
+<span class="lineno">   16 </span>    , CvCppException
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>      -- * Handling C++ exceptions
+<span class="lineno">   19 </span>    , handleCvException
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>      -- * Quasi quoters
+<span class="lineno">   22 </span>    , cvExcept
+<span class="lineno">   23 </span>    , cvExceptU
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>      -- * Monadic interface
+<span class="lineno">   26 </span>    , CvExcept
+<span class="lineno">   27 </span>    , CvExceptT
+<span class="lineno">   28 </span>    , pureExcept
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>      -- * Promoting exceptions to errors
+<span class="lineno">   31 </span>    , exceptError
+<span class="lineno">   32 </span>    , exceptErrorIO
+<span class="lineno">   33 </span>    , exceptErrorM
+<span class="lineno">   34 </span>    , runCvExceptST
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>      -- * Unsafe stuff
+<span class="lineno">   37 </span>    , unsafeCvExcept
+<span class="lineno">   38 </span>    , unsafeWrapException
+<span class="lineno">   39 </span>    ) where
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>import &quot;base&quot; Control.Monad.ST ( ST, runST )
+<span class="lineno">   42 </span>import &quot;base&quot; Control.Exception ( Exception, mask_, throw, throwIO )
+<span class="lineno">   43 </span>import &quot;base&quot; Control.Monad ( (&lt;=&lt;) )
+<span class="lineno">   44 </span>import &quot;base&quot; Data.Functor.Identity
+<span class="lineno">   45 </span>import &quot;base&quot; Data.Monoid ( (&lt;&gt;) )
+<span class="lineno">   46 </span>import &quot;base&quot; Foreign.C.String ( peekCString )
+<span class="lineno">   47 </span>import &quot;base&quot; Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+<span class="lineno">   48 </span>import &quot;base&quot; Foreign.Ptr ( Ptr, nullPtr )
+<span class="lineno">   49 </span>import &quot;base&quot; System.IO.Unsafe ( unsafePerformIO )
+<span class="lineno">   50 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   51 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   52 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   53 </span>import &quot;template-haskell&quot; Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
+<span class="lineno">   54 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   55 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   56 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat.Depth
+<span class="lineno">   57 </span>import &quot;this&quot; OpenCV.Internal ( objFromPtr )
+<span class="lineno">   58 </span>import &quot;transformers&quot; Control.Monad.Trans.Except
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>--------------------------------------------------------------------------------
+<span class="lineno">   61 </span>
+<span class="lineno">   62 </span>C.context openCvCtx
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   65 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   66 </span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>--------------------------------------------------------------------------------
+<span class="lineno">   69 </span>-- Exceptions
+<span class="lineno">   70 </span>--------------------------------------------------------------------------------
+<span class="lineno">   71 </span>
+<span class="lineno">   72 </span>data CvException
+<span class="lineno">   73 </span>   = BindingException !CvCppException
+<span class="lineno">   74 </span>   | CoerceMatError ![CoerceMatError]
+<span class="lineno">   75 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>data CoerceMatError
+<span class="lineno">   78 </span>   = ShapeError        !(ExpectationError Int)
+<span class="lineno">   79 </span>   | SizeError    !Int !(ExpectationError Int)
+<span class="lineno">   80 </span>   | ChannelError      !(ExpectationError Int)
+<span class="lineno">   81 </span>   | DepthError        !(ExpectationError Depth)
+<span class="lineno">   82 </span>     deriving <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>
+<span class="lineno">   83 </span>
+<span class="lineno">   84 </span>data ExpectationError a
+<span class="lineno">   85 </span>   = ExpectationError
+<span class="lineno">   86 </span>     { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">expectedValue</span></span></span> :: !a
+<span class="lineno">   87 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">actualValue</span></span></span>   :: !a
+<span class="lineno">   88 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Functor</span></span></span></span>)
+<span class="lineno">   89 </span>
+<span class="lineno">   90 </span>instance Exception CvException
+<span class="lineno">   91 </span>
+<span class="lineno">   92 </span>newtype CvCppException = CvCppException { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">unCvCppException</span></span></span> :: ForeignPtr (C CvCppException) }
+<span class="lineno">   93 </span>
+<span class="lineno">   94 </span>type instance C CvCppException = C'CvCppException
+<span class="lineno">   95 </span>
+<span class="lineno">   96 </span>instance WithPtr CvCppException where
+<span class="lineno">   97 </span>    <span class="decl"><span class="nottickedoff">withPtr = withForeignPtr . unCvCppException</span></span>
+<span class="lineno">   98 </span>
+<span class="lineno">   99 </span>instance FromPtr CvCppException where
+<span class="lineno">  100 </span>    <span class="decl"><span class="nottickedoff">fromPtr = objFromPtr CvCppException $ \ptr -&gt;</span>
+<span class="lineno">  101 </span><span class="spaces">                </span><span class="nottickedoff">[CU.exp| void { delete $(Exception * ptr) }|]</span></span>
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>instance Show CvCppException where
+<span class="lineno">  104 </span>    <span class="decl"><span class="nottickedoff">show cvException = unsafePerformIO $</span>
+<span class="lineno">  105 </span><span class="spaces">        </span><span class="nottickedoff">withPtr cvException $ \cvExceptionPtr -&gt; do</span>
+<span class="lineno">  106 </span><span class="spaces">          </span><span class="nottickedoff">charPtr &lt;- [CU.exp| const char * { $(Exception * cvExceptionPtr)-&gt;what() } |]</span>
+<span class="lineno">  107 </span><span class="spaces">          </span><span class="nottickedoff">peekCString charPtr</span></span>
+<span class="lineno">  108 </span>
+<span class="lineno">  109 </span>handleCvException
+<span class="lineno">  110 </span>    :: IO a
+<span class="lineno">  111 </span>    -&gt; IO (Ptr (C CvCppException))
+<span class="lineno">  112 </span>    -&gt; IO (Either CvException a)
+<span class="lineno">  113 </span><span class="decl"><span class="istickedoff">handleCvException okAct act = mask_ $ do</span>
+<span class="lineno">  114 </span><span class="spaces">    </span><span class="istickedoff">exceptionPtr &lt;- act</span>
+<span class="lineno">  115 </span><span class="spaces">    </span><span class="istickedoff">if <span class="tickonlyfalse">exceptionPtr /= nullPtr</span></span>
+<span class="lineno">  116 </span><span class="spaces">      </span><span class="istickedoff">then <span class="nottickedoff">do cppErr &lt;- fromPtr (pure exceptionPtr)</span></span>
+<span class="lineno">  117 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">pure $ Left $ BindingException cppErr</span></span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">else Right &lt;$&gt; okAct</span></span>
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>cvExcept :: QuasiQuoter
+<span class="lineno">  121 </span><span class="decl"><span class="nottickedoff">cvExcept = C.block {quoteExp = \s -&gt; quoteExp C.block $ cvExceptWrap s}</span></span>
+<span class="lineno">  122 </span>
+<span class="lineno">  123 </span>cvExceptU :: QuasiQuoter
+<span class="lineno">  124 </span><span class="decl"><span class="nottickedoff">cvExceptU = CU.block {quoteExp = \s -&gt; quoteExp CU.block $ cvExceptWrap s}</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>cvExceptWrap :: String -&gt; String
+<span class="lineno">  127 </span><span class="decl"><span class="nottickedoff">cvExceptWrap s = unlines</span>
+<span class="lineno">  128 </span><span class="spaces">   </span><span class="nottickedoff">[ &quot;Exception * {&quot;</span>
+<span class="lineno">  129 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  try&quot;</span>
+<span class="lineno">  130 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  {   &quot; &lt;&gt; s &lt;&gt; &quot;&quot;</span>
+<span class="lineno">  131 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;    return NULL;&quot;</span>
+<span class="lineno">  132 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  }&quot;</span>
+<span class="lineno">  133 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  catch (const cv::Exception &amp; e)&quot;</span>
+<span class="lineno">  134 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  {&quot;</span>
+<span class="lineno">  135 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;    return new cv::Exception(e);&quot;</span>
+<span class="lineno">  136 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;  }&quot;</span>
+<span class="lineno">  137 </span><span class="spaces">   </span><span class="nottickedoff">, &quot;}&quot;</span>
+<span class="lineno">  138 </span><span class="spaces">   </span><span class="nottickedoff">]</span></span>
+<span class="lineno">  139 </span>
+<span class="lineno">  140 </span>type CvExcept    a = Except  CvException   a
+<span class="lineno">  141 </span>type CvExceptT m a = ExceptT CvException m a
+<span class="lineno">  142 </span>
+<span class="lineno">  143 </span>pureExcept :: (Applicative m) =&gt; CvExcept a -&gt; CvExceptT m a
+<span class="lineno">  144 </span><span class="decl"><span class="istickedoff">pureExcept = mapExceptT (pure . runIdentity)</span></span>
+<span class="lineno">  145 </span>
+<span class="lineno">  146 </span>exceptError :: CvExcept a -&gt; a
+<span class="lineno">  147 </span><span class="decl"><span class="istickedoff">exceptError = either <span class="nottickedoff">throw</span> id . runExcept</span></span>
+<span class="lineno">  148 </span>
+<span class="lineno">  149 </span>exceptErrorIO :: CvExceptT IO a -&gt; IO a
+<span class="lineno">  150 </span><span class="decl"><span class="istickedoff">exceptErrorIO = either <span class="nottickedoff">throwIO</span> pure &lt;=&lt; runExceptT</span></span>
+<span class="lineno">  151 </span>
+<span class="lineno">  152 </span>exceptErrorM :: (Monad m) =&gt; CvExceptT m a -&gt; m a
+<span class="lineno">  153 </span><span class="decl"><span class="nottickedoff">exceptErrorM = either throw pure &lt;=&lt; runExceptT</span></span>
+<span class="lineno">  154 </span>
+<span class="lineno">  155 </span>runCvExceptST :: (forall s. CvExceptT (ST s) a) -&gt; CvExcept a
+<span class="lineno">  156 </span><span class="decl"><span class="istickedoff">runCvExceptST act = except $ runST $ runExceptT act</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>unsafeCvExcept :: CvExceptT IO a -&gt; CvExcept a
+<span class="lineno">  159 </span><span class="decl"><span class="istickedoff">unsafeCvExcept = mapExceptT (Identity . unsafePerformIO)</span></span>
+<span class="lineno">  160 </span>
+<span class="lineno">  161 </span>unsafeWrapException :: IO (Either CvException a) -&gt; CvExcept a
+<span class="lineno">  162 </span><span class="decl"><span class="istickedoff">unsafeWrapException = unsafeCvExcept . ExceptT</span></span>
+
+</pre>
+</body>
+</html>

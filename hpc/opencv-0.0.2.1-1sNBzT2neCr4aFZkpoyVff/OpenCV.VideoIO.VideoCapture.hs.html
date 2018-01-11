@@ -1,0 +1,192 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE QuasiQuotes #-}
+<span class="lineno">    2 </span>{-# LANGUAGE TemplateHaskell #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module OpenCV.VideoIO.VideoCapture
+<span class="lineno">    5 </span>  ( VideoCapture
+<span class="lineno">    6 </span>  , VideoCaptureSource(..)
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>  , newVideoCapture
+<span class="lineno">    9 </span>  , videoCaptureOpen
+<span class="lineno">   10 </span>  , videoCaptureRelease
+<span class="lineno">   11 </span>  , videoCaptureIsOpened
+<span class="lineno">   12 </span>  , videoCaptureGrab
+<span class="lineno">   13 </span>  , videoCaptureRetrieve
+<span class="lineno">   14 </span>  , videoCaptureGetD
+<span class="lineno">   15 </span>  , videoCaptureGetI
+<span class="lineno">   16 </span>  , videoCaptureSetD
+<span class="lineno">   17 </span>  , videoCaptureSetI
+<span class="lineno">   18 </span>  ) where
+<span class="lineno">   19 </span>
+<span class="lineno">   20 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   21 </span>import &quot;base&quot; Foreign.C.String ( withCString )
+<span class="lineno">   22 </span>import &quot;base&quot; Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+<span class="lineno">   23 </span>import &quot;base&quot; Foreign.Marshal.Utils ( toBool )
+<span class="lineno">   24 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   25 </span>import qualified &quot;inline-c&quot; Language.C.Inline.Unsafe as CU
+<span class="lineno">   26 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   27 </span>import &quot;this&quot; OpenCV.Core.Types.Mat
+<span class="lineno">   28 </span>import &quot;this&quot; OpenCV.Internal
+<span class="lineno">   29 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   30 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   31 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   32 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   33 </span>import &quot;this&quot; OpenCV.Internal.VideoIO.Types
+<span class="lineno">   34 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   35 </span>import &quot;transformers&quot; Control.Monad.Trans.Except ( ExceptT(ExceptT) )
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>--------------------------------------------------------------------------------
+<span class="lineno">   38 </span>
+<span class="lineno">   39 </span>C.context openCvCtx
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   42 </span>C.include &quot;opencv2/videoio.hpp&quot;
+<span class="lineno">   43 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   44 </span>
+<span class="lineno">   45 </span>--------------------------------------------------------------------------------
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>newtype VideoCapture = VideoCapture {<span class="istickedoff"><span class="decl"><span class="istickedoff">unVideoCapture</span></span></span> :: ForeignPtr (C VideoCapture)}
+<span class="lineno">   48 </span>
+<span class="lineno">   49 </span>type instance C VideoCapture = C'VideoCapture
+<span class="lineno">   50 </span>
+<span class="lineno">   51 </span>instance WithPtr VideoCapture where <span class="decl"><span class="istickedoff">withPtr = withForeignPtr . unVideoCapture</span></span>
+<span class="lineno">   52 </span>
+<span class="lineno">   53 </span>instance FromPtr VideoCapture where
+<span class="lineno">   54 </span>    <span class="decl"><span class="istickedoff">fromPtr = objFromPtr VideoCapture $ \ptr -&gt;</span>
+<span class="lineno">   55 </span><span class="spaces">                </span><span class="istickedoff">[CU.exp| void { delete $(VideoCapture * ptr) }|]</span></span>
+<span class="lineno">   56 </span>
+<span class="lineno">   57 </span>data VideoCaptureSource
+<span class="lineno">   58 </span>   = VideoFileSource      !FilePath !(Maybe VideoCaptureAPI)
+<span class="lineno">   59 </span>        -- ^ VideoFile and backend
+<span class="lineno">   60 </span>   | VideoDeviceSource    !Int32    !(Maybe VideoCaptureAPI)
+<span class="lineno">   61 </span>        -- ^ VideoDevice and backend
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>newVideoCapture :: IO VideoCapture
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">newVideoCapture = fromPtr $</span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">[CU.exp|VideoCapture * {</span>
+<span class="lineno">   66 </span><span class="spaces">      </span><span class="istickedoff">new cv::VideoCapture()</span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">}|]</span></span>
+<span class="lineno">   68 </span>
+<span class="lineno">   69 </span>videoCaptureOpen :: VideoCapture -&gt; VideoCaptureSource -&gt; CvExceptT IO ()
+<span class="lineno">   70 </span><span class="decl"><span class="istickedoff">videoCaptureOpen videoCapture src =</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">ExceptT $</span>
+<span class="lineno">   72 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure <span class="nottickedoff">()</span>) $</span>
+<span class="lineno">   73 </span><span class="spaces">    </span><span class="istickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">   74 </span><span class="spaces">      </span><span class="istickedoff">case src of</span>
+<span class="lineno">   75 </span><span class="spaces">        </span><span class="istickedoff">VideoFileSource filePath api -&gt;</span>
+<span class="lineno">   76 </span><span class="spaces">          </span><span class="istickedoff">withCString filePath $ \c'filePath -&gt;</span>
+<span class="lineno">   77 </span><span class="spaces">            </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">   78 </span><span class="spaces">              </span><span class="istickedoff">$(VideoCapture * videoCapturePtr)-&gt;open(cv::String($(const char * c'filePath)), $(int32_t c'api));</span>
+<span class="lineno">   79 </span><span class="spaces">            </span><span class="istickedoff">|]</span>
+<span class="lineno">   80 </span><span class="spaces">           </span><span class="istickedoff">where</span>
+<span class="lineno">   81 </span><span class="spaces">             </span><span class="istickedoff">c'api = maybe 0 <span class="nottickedoff">marshalVideoCaptureAPI</span> api</span>
+<span class="lineno">   82 </span><span class="spaces">        </span><span class="istickedoff">VideoDeviceSource device api -&gt;</span>
+<span class="lineno">   83 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">[cvExcept|</span></span>
+<span class="lineno">   84 </span><span class="spaces">            </span><span class="istickedoff"><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;open($(int32_t c'device ));</span></span>
+<span class="lineno">   85 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">|]</span></span>
+<span class="lineno">   86 </span><span class="spaces">            </span><span class="istickedoff">where</span>
+<span class="lineno">   87 </span><span class="spaces">              </span><span class="istickedoff"><span class="nottickedoff">c'device = device + maybe 0 marshalVideoCaptureAPI api</span></span></span>
+<span class="lineno">   88 </span>
+<span class="lineno">   89 </span>videoCaptureRelease :: VideoCapture -&gt; CvExceptT IO ()
+<span class="lineno">   90 </span><span class="decl"><span class="istickedoff">videoCaptureRelease videoCapture =</span>
+<span class="lineno">   91 </span><span class="spaces">    </span><span class="istickedoff">ExceptT $</span>
+<span class="lineno">   92 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure <span class="nottickedoff">()</span>) $</span>
+<span class="lineno">   93 </span><span class="spaces">    </span><span class="istickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">   94 </span><span class="spaces">      </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">   95 </span><span class="spaces">        </span><span class="istickedoff">$(VideoCapture * videoCapturePtr)-&gt;release();</span>
+<span class="lineno">   96 </span><span class="spaces">      </span><span class="istickedoff">|]</span></span>
+<span class="lineno">   97 </span>
+<span class="lineno">   98 </span>videoCaptureIsOpened :: VideoCapture -&gt; IO Bool
+<span class="lineno">   99 </span><span class="decl"><span class="nottickedoff">videoCaptureIsOpened videoCapture =</span>
+<span class="lineno">  100 </span><span class="spaces">    </span><span class="nottickedoff">fmap toBool $</span>
+<span class="lineno">  101 </span><span class="spaces">    </span><span class="nottickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  102 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| bool {</span>
+<span class="lineno">  103 </span><span class="spaces">        </span><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;isOpened()</span>
+<span class="lineno">  104 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span></span>
+<span class="lineno">  105 </span>
+<span class="lineno">  106 </span>videoCaptureGrab :: VideoCapture -&gt; IO Bool
+<span class="lineno">  107 </span><span class="decl"><span class="istickedoff">videoCaptureGrab videoCapture =</span>
+<span class="lineno">  108 </span><span class="spaces">    </span><span class="istickedoff">fmap toBool $</span>
+<span class="lineno">  109 </span><span class="spaces">    </span><span class="istickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  110 </span><span class="spaces">      </span><span class="istickedoff">[C.exp| bool {</span>
+<span class="lineno">  111 </span><span class="spaces">        </span><span class="istickedoff">$(VideoCapture * videoCapturePtr)-&gt;grab()</span>
+<span class="lineno">  112 </span><span class="spaces">      </span><span class="istickedoff">}|]</span></span>
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>videoCaptureRetrieve :: VideoCapture -&gt; IO (Maybe (Mat ('S ['D, 'D]) 'D 'D))
+<span class="lineno">  115 </span><span class="decl"><span class="istickedoff">videoCaptureRetrieve videoCapture = do</span>
+<span class="lineno">  116 </span><span class="spaces">    </span><span class="istickedoff">frame &lt;- newEmptyMat</span>
+<span class="lineno">  117 </span><span class="spaces">    </span><span class="istickedoff">ok &lt;- withPtr frame $ \framePtr -&gt;</span>
+<span class="lineno">  118 </span><span class="spaces">      </span><span class="istickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  119 </span><span class="spaces">        </span><span class="istickedoff">[C.exp| bool {</span>
+<span class="lineno">  120 </span><span class="spaces">          </span><span class="istickedoff">$(VideoCapture * videoCapturePtr)-&gt;retrieve(*$(Mat * framePtr), 0)</span>
+<span class="lineno">  121 </span><span class="spaces">        </span><span class="istickedoff">}|]</span>
+<span class="lineno">  122 </span><span class="spaces">    </span><span class="istickedoff">pure $ case toBool ok of</span>
+<span class="lineno">  123 </span><span class="spaces">      </span><span class="istickedoff">False -&gt; <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  124 </span><span class="spaces">      </span><span class="istickedoff">True  -&gt; Just $ unsafeCoerceMat frame</span></span>
+<span class="lineno">  125 </span>
+<span class="lineno">  126 </span>videoCaptureGetD :: VideoCapture -&gt; VideoCaptureProperties -&gt; IO Double
+<span class="lineno">  127 </span><span class="decl"><span class="nottickedoff">videoCaptureGetD videoCapture prop =</span>
+<span class="lineno">  128 </span><span class="spaces">    </span><span class="nottickedoff">fmap realToFrac $</span>
+<span class="lineno">  129 </span><span class="spaces">    </span><span class="nottickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  130 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| double {</span>
+<span class="lineno">  131 </span><span class="spaces">        </span><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;get( $(int32_t c'prop) )</span>
+<span class="lineno">  132 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  133 </span><span class="spaces">   </span><span class="nottickedoff">where</span>
+<span class="lineno">  134 </span><span class="spaces">     </span><span class="nottickedoff">c'prop = marshalCaptureProperties prop</span></span>
+<span class="lineno">  135 </span>
+<span class="lineno">  136 </span>videoCaptureGetI :: VideoCapture -&gt; VideoCaptureProperties -&gt; IO Int32
+<span class="lineno">  137 </span><span class="decl"><span class="nottickedoff">videoCaptureGetI videoCapture prop =</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="nottickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  139 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| int32_t {</span>
+<span class="lineno">  140 </span><span class="spaces">        </span><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;get( $(int32_t c'prop) )</span>
+<span class="lineno">  141 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  142 </span><span class="spaces">   </span><span class="nottickedoff">where</span>
+<span class="lineno">  143 </span><span class="spaces">     </span><span class="nottickedoff">c'prop = marshalCaptureProperties prop</span></span>
+<span class="lineno">  144 </span>
+<span class="lineno">  145 </span>videoCaptureSetD :: VideoCapture -&gt; VideoCaptureProperties -&gt; Double -&gt; IO Bool
+<span class="lineno">  146 </span><span class="decl"><span class="nottickedoff">videoCaptureSetD videoCapture prop val =</span>
+<span class="lineno">  147 </span><span class="spaces">    </span><span class="nottickedoff">fmap toBool $</span>
+<span class="lineno">  148 </span><span class="spaces">    </span><span class="nottickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| bool {</span>
+<span class="lineno">  150 </span><span class="spaces">        </span><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;set( $(int32_t c'prop)</span>
+<span class="lineno">  151 </span><span class="spaces">                                              </span><span class="nottickedoff">, $(double c'val)</span>
+<span class="lineno">  152 </span><span class="spaces">                                              </span><span class="nottickedoff">)</span>
+<span class="lineno">  153 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  154 </span><span class="spaces">   </span><span class="nottickedoff">where</span>
+<span class="lineno">  155 </span><span class="spaces">     </span><span class="nottickedoff">c'prop = marshalCaptureProperties prop</span>
+<span class="lineno">  156 </span><span class="spaces">     </span><span class="nottickedoff">c'val = realToFrac val</span></span>
+<span class="lineno">  157 </span>
+<span class="lineno">  158 </span>
+<span class="lineno">  159 </span>videoCaptureSetI :: VideoCapture -&gt; VideoCaptureProperties -&gt; Int32 -&gt; IO Bool
+<span class="lineno">  160 </span><span class="decl"><span class="nottickedoff">videoCaptureSetI videoCapture prop val =</span>
+<span class="lineno">  161 </span><span class="spaces">    </span><span class="nottickedoff">fmap toBool $</span>
+<span class="lineno">  162 </span><span class="spaces">    </span><span class="nottickedoff">withPtr videoCapture $ \videoCapturePtr -&gt;</span>
+<span class="lineno">  163 </span><span class="spaces">      </span><span class="nottickedoff">[CU.exp| bool {</span>
+<span class="lineno">  164 </span><span class="spaces">        </span><span class="nottickedoff">$(VideoCapture * videoCapturePtr)-&gt;set( $(int32_t c'prop)</span>
+<span class="lineno">  165 </span><span class="spaces">                                              </span><span class="nottickedoff">, $(int32_t val)</span>
+<span class="lineno">  166 </span><span class="spaces">                                              </span><span class="nottickedoff">)</span>
+<span class="lineno">  167 </span><span class="spaces">      </span><span class="nottickedoff">}|]</span>
+<span class="lineno">  168 </span><span class="spaces">   </span><span class="nottickedoff">where</span>
+<span class="lineno">  169 </span><span class="spaces">     </span><span class="nottickedoff">c'prop = marshalCaptureProperties prop</span></span>
+
+</pre>
+</body>
+</html>

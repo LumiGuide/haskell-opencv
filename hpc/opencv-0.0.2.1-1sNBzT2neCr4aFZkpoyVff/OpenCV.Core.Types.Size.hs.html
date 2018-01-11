@@ -1,0 +1,53 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    2 </span>{-# language TemplateHaskell #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>{-# OPTIONS_GHC -fno-warn-orphans #-}
+<span class="lineno">    5 </span>
+<span class="lineno">    6 </span>module OpenCV.Core.Types.Size
+<span class="lineno">    7 </span>    ( Size
+<span class="lineno">    8 </span>    , IsSize(..)
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>    , Size2i, Size2f, Size2d
+<span class="lineno">   11 </span>    ) where
+<span class="lineno">   12 </span>
+<span class="lineno">   13 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   14 </span>import &quot;base&quot; Foreign.C.Types
+<span class="lineno">   15 </span>import qualified &quot;inline-c&quot;     Language.C.Inline as C
+<span class="lineno">   16 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C ( using )
+<span class="lineno">   17 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   18 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   19 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Size
+<span class="lineno">   20 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Size.TH
+<span class="lineno">   21 </span>
+<span class="lineno">   22 </span>--------------------------------------------------------------------------------
+<span class="lineno">   23 </span>
+<span class="lineno">   24 </span>C.context openCvCtx
+<span class="lineno">   25 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   26 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   27 </span>
+<span class="lineno">   28 </span><span class="istickedoff"><span class="nottickedoff"><span class="istickedoff"><span class="nottickedoff">mkSizeType &quot;Size2i&quot; ''Int32   &quot;int32_t&quot;</span></span></span></span>
+<span class="lineno">   29 </span><span class="istickedoff"><span class="nottickedoff"><span class="istickedoff"><span class="nottickedoff">mkSizeType &quot;Size2f&quot; ''CFloat  &quot;float&quot;</span></span></span></span>
+<span class="lineno">   30 </span><span class="nottickedoff">mkSizeType &quot;Size2d&quot; ''CDouble &quot;double&quot;</span>
+
+</pre>
+</body>
+</html>

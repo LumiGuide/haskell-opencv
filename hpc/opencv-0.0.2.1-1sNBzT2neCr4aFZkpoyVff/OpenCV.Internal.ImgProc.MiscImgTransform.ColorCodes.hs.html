@@ -1,0 +1,776 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# language CPP #-}
+<span class="lineno">    2 </span>{-# language MultiParamTypeClasses #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>#ifndef ENABLE_INTERNAL_DOCUMENTATION
+<span class="lineno">    5 </span>{-# OPTIONS_HADDOCK hide #-}
+<span class="lineno">    6 </span>#endif
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>#if __GLASGOW_HASKELL__ &gt;= 800
+<span class="lineno">    9 </span>{-# options_ghc -Wno-redundant-constraints #-}
+<span class="lineno">   10 </span>#endif
+<span class="lineno">   11 </span>
+<span class="lineno">   12 </span>module OpenCV.Internal.ImgProc.MiscImgTransform.ColorCodes where
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>import &quot;base&quot; Data.Int ( Int32 )
+<span class="lineno">   15 </span>import &quot;base&quot; Data.Proxy ( Proxy(..) )
+<span class="lineno">   16 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   17 </span>import &quot;base&quot; GHC.TypeLits
+<span class="lineno">   18 </span>import &quot;this&quot; OpenCV.Internal.ImgProc.MiscImgTransform
+<span class="lineno">   19 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   20 </span>
+<span class="lineno">   21 </span>--------------------------------------------------------------------------------
+<span class="lineno">   22 </span>
+<span class="lineno">   23 </span>{- | Valid color conversions described by the following graph:
+<span class="lineno">   24 </span>
+<span class="lineno">   25 </span>&lt;&lt;doc/color_conversions.png&gt;&gt;
+<span class="lineno">   26 </span>-}
+<span class="lineno">   27 </span>class ColorConversion (fromColor :: ColorCode) (toColor :: ColorCode) where
+<span class="lineno">   28 </span>    colorConversionCode :: Proxy fromColor -&gt; Proxy toColor -&gt; Int32
+<span class="lineno">   29 </span>
+<span class="lineno">   30 </span>-- | Names of color encodings
+<span class="lineno">   31 </span>data ColorCode
+<span class="lineno">   32 </span>    = BayerBG   -- ^ ('bayerBG') Bayer pattern with BG in the second row, second and third column
+<span class="lineno">   33 </span>    | BayerGB   -- ^ ('bayerGB') Bayer pattern with GB in the second row, second and third column
+<span class="lineno">   34 </span>    | BayerGR   -- ^ ('bayerGR') Bayer pattern with GR in the second row, second and third column
+<span class="lineno">   35 </span>    | BayerRG   -- ^ ('bayerRG') Bayer pattern with RG in the second row, second and third column
+<span class="lineno">   36 </span>
+<span class="lineno">   37 </span>    | BGR       -- ^ ('bgr') 24 bit RGB color space with channels: (B8:G8:R8)
+<span class="lineno">   38 </span>    | BGR555    -- ^ ('bgr555') 15 bit RGB color space
+<span class="lineno">   39 </span>    | BGR565    -- ^ ('bgr565') 16 bit RGB color space
+<span class="lineno">   40 </span>
+<span class="lineno">   41 </span>    | BGRA      -- ^ ('bgra') 32 bit RGBA color space with channels: (B8:G8:R8:A8)
+<span class="lineno">   42 </span>    | BGRA_I420 -- ^ ('bgra_I420')
+<span class="lineno">   43 </span>    | BGRA_IYUV -- ^ ('bgra_IYUV')
+<span class="lineno">   44 </span>    | BGRA_NV12 -- ^ ('bgra_NV12')
+<span class="lineno">   45 </span>    | BGRA_NV21 -- ^ ('bgra_NV21')
+<span class="lineno">   46 </span>    | BGRA_UYNV -- ^ ('bgra_UYNV')
+<span class="lineno">   47 </span>    | BGRA_UYVY -- ^ ('bgra_UYVY')
+<span class="lineno">   48 </span>    | BGRA_Y422 -- ^ ('bgra_Y422')
+<span class="lineno">   49 </span>    | BGRA_YUNV -- ^ ('bgra_YUNV')
+<span class="lineno">   50 </span>    | BGRA_YUY2 -- ^ ('bgra_YUY2')
+<span class="lineno">   51 </span>    | BGRA_YUYV -- ^ ('bgra_YUYV')
+<span class="lineno">   52 </span>    | BGRA_YV12 -- ^ ('bgra_YV12')
+<span class="lineno">   53 </span>    | BGRA_YVYU -- ^ ('bgra_YVYU')
+<span class="lineno">   54 </span>
+<span class="lineno">   55 </span>    | BGR_EA    -- ^ ('bgr_EA') Edge-Aware
+<span class="lineno">   56 </span>    | BGR_FULL  -- ^ ('bgr_FULL')
+<span class="lineno">   57 </span>    | BGR_I420  -- ^ ('bgr_I420')
+<span class="lineno">   58 </span>    | BGR_IYUV  -- ^ ('bgr_IYUV')
+<span class="lineno">   59 </span>    | BGR_NV12  -- ^ ('bgr_NV12')
+<span class="lineno">   60 </span>    | BGR_NV21  -- ^ ('bgr_NV21')
+<span class="lineno">   61 </span>    | BGR_UYNV  -- ^ ('bgr_UYNV')
+<span class="lineno">   62 </span>    | BGR_UYVY  -- ^ ('bgr_UYVY')
+<span class="lineno">   63 </span>    | BGR_VNG   -- ^ ('bgr_VNG')
+<span class="lineno">   64 </span>    | BGR_Y422  -- ^ ('bgr_Y422')
+<span class="lineno">   65 </span>    | BGR_YUNV  -- ^ ('bgr_YUNV')
+<span class="lineno">   66 </span>    | BGR_YUY2  -- ^ ('bgr_YUY2')
+<span class="lineno">   67 </span>    | BGR_YUYV  -- ^ ('bgr_YUYV')
+<span class="lineno">   68 </span>    | BGR_YV12  -- ^ ('bgr_YV12')
+<span class="lineno">   69 </span>    | BGR_YVYU  -- ^ ('bgr_YVYU')
+<span class="lineno">   70 </span>
+<span class="lineno">   71 </span>    | GRAY      -- ^ ('gray') 8 bit single channel color space
+<span class="lineno">   72 </span>    | GRAY_420  -- ^ ('gray_420')
+<span class="lineno">   73 </span>    | GRAY_I420 -- ^ ('gray_I420')
+<span class="lineno">   74 </span>    | GRAY_IYUV -- ^ ('gray_IYUV')
+<span class="lineno">   75 </span>    | GRAY_NV12 -- ^ ('gray_NV12')
+<span class="lineno">   76 </span>    | GRAY_NV21 -- ^ ('gray_NV21')
+<span class="lineno">   77 </span>    | GRAY_UYNV -- ^ ('gray_UYNV')
+<span class="lineno">   78 </span>    | GRAY_UYVY -- ^ ('gray_UYVY')
+<span class="lineno">   79 </span>    | GRAY_Y422 -- ^ ('gray_Y422')
+<span class="lineno">   80 </span>    | GRAY_YUNV -- ^ ('gray_YUNV')
+<span class="lineno">   81 </span>    | GRAY_YUY2 -- ^ ('gray_YUY2')
+<span class="lineno">   82 </span>    | GRAY_YUYV -- ^ ('gray_YUYV')
+<span class="lineno">   83 </span>    | GRAY_YV12 -- ^ ('gray_YV12')
+<span class="lineno">   84 </span>    | GRAY_YVYU -- ^ ('gray_YVYU')
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>    | HLS       -- ^ ('hls')
+<span class="lineno">   87 </span>    | HLS_FULL  -- ^ ('hls_FULL')
+<span class="lineno">   88 </span>    | HSV       -- ^ ('hsv')
+<span class="lineno">   89 </span>    | HSV_FULL  -- ^ ('hsv_FULL')
+<span class="lineno">   90 </span>    | Lab       -- ^ ('lab')
+<span class="lineno">   91 </span>    | LBGR      -- ^ ('lbgr')
+<span class="lineno">   92 </span>    | LRGB      -- ^ ('lrgb')
+<span class="lineno">   93 </span>    | Luv       -- ^ ('luv')
+<span class="lineno">   94 </span>    | MRGBA     -- ^ ('mrgba')
+<span class="lineno">   95 </span>    | RGB       -- ^ ('rgb') 24 bit RGB color space with channels: (R8:G8:B8)
+<span class="lineno">   96 </span>
+<span class="lineno">   97 </span>    | RGBA      -- ^ ('rgba')
+<span class="lineno">   98 </span>    | RGBA_I420 -- ^ ('rgba_I420')
+<span class="lineno">   99 </span>    | RGBA_IYUV -- ^ ('rgba_IYUV')
+<span class="lineno">  100 </span>    | RGBA_NV12 -- ^ ('rgba_NV12')
+<span class="lineno">  101 </span>    | RGBA_NV21 -- ^ ('rgba_NV21')
+<span class="lineno">  102 </span>    | RGBA_UYNV -- ^ ('rgba_UYNV')
+<span class="lineno">  103 </span>    | RGBA_UYVY -- ^ ('rgba_UYVY')
+<span class="lineno">  104 </span>    | RGBA_Y422 -- ^ ('rgba_Y422')
+<span class="lineno">  105 </span>    | RGBA_YUNV -- ^ ('rgba_YUNV')
+<span class="lineno">  106 </span>    | RGBA_YUY2 -- ^ ('rgba_YUY2')
+<span class="lineno">  107 </span>    | RGBA_YUYV -- ^ ('rgba_YUYV')
+<span class="lineno">  108 </span>    | RGBA_YV12 -- ^ ('rgba_YV12')
+<span class="lineno">  109 </span>    | RGBA_YVYU -- ^ ('rgba_YVYU')
+<span class="lineno">  110 </span>
+<span class="lineno">  111 </span>    | RGB_EA    -- ^ ('rgb_EA') Edge-Aware
+<span class="lineno">  112 </span>    | RGB_FULL  -- ^ ('rgb_FULL')
+<span class="lineno">  113 </span>    | RGB_I420  -- ^ ('rgb_I420')
+<span class="lineno">  114 </span>    | RGB_IYUV  -- ^ ('rgb_IYUV')
+<span class="lineno">  115 </span>    | RGB_NV12  -- ^ ('rgb_NV12')
+<span class="lineno">  116 </span>    | RGB_NV21  -- ^ ('rgb_NV21')
+<span class="lineno">  117 </span>    | RGB_UYNV  -- ^ ('rgb_UYNV')
+<span class="lineno">  118 </span>    | RGB_UYVY  -- ^ ('rgb_UYVY')
+<span class="lineno">  119 </span>    | RGB_VNG   -- ^ ('rgb_VNG')
+<span class="lineno">  120 </span>    | RGB_Y422  -- ^ ('rgb_Y422')
+<span class="lineno">  121 </span>    | RGB_YUNV  -- ^ ('rgb_YUNV')
+<span class="lineno">  122 </span>    | RGB_YUY2  -- ^ ('rgb_YUY2')
+<span class="lineno">  123 </span>    | RGB_YUYV  -- ^ ('rgb_YUYV')
+<span class="lineno">  124 </span>    | RGB_YV12  -- ^ ('rgb_YV12')
+<span class="lineno">  125 </span>    | RGB_YVYU  -- ^ ('rgb_YVYU')
+<span class="lineno">  126 </span>
+<span class="lineno">  127 </span>    | XYZ       -- ^ ('xyz')
+<span class="lineno">  128 </span>    | YCrCb     -- ^ ('yCrCb')
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>    | YUV       -- ^ ('yuv')
+<span class="lineno">  131 </span>    | YUV420p   -- ^ ('yuv420p')
+<span class="lineno">  132 </span>    | YUV420sp  -- ^ ('yuv420sp')
+<span class="lineno">  133 </span>    | YUV_I420  -- ^ ('yuv_I420')
+<span class="lineno">  134 </span>    | YUV_IYUV  -- ^ ('yuv_IYUV')
+<span class="lineno">  135 </span>    | YUV_YV12  -- ^ ('yuv_YV12')
+<span class="lineno">  136 </span>
+<span class="lineno">  137 </span>--------------------------------------------------------------------------------
+<span class="lineno">  138 </span>
+<span class="lineno">  139 </span>bayerBG    :: Proxy 'BayerBG  ; <span class="decl"><span class="nottickedoff">bayerBG    = Proxy</span></span>
+<span class="lineno">  140 </span>bayerGB    :: Proxy 'BayerGB  ; <span class="decl"><span class="nottickedoff">bayerGB    = Proxy</span></span>
+<span class="lineno">  141 </span>bayerGR    :: Proxy 'BayerGR  ; <span class="decl"><span class="nottickedoff">bayerGR    = Proxy</span></span>
+<span class="lineno">  142 </span>bayerRG    :: Proxy 'BayerRG  ; <span class="decl"><span class="nottickedoff">bayerRG    = Proxy</span></span>
+<span class="lineno">  143 </span>bgr        :: Proxy 'BGR      ; <span class="decl"><span class="nottickedoff">bgr        = Proxy</span></span>
+<span class="lineno">  144 </span>bgr555     :: Proxy 'BGR555   ; <span class="decl"><span class="nottickedoff">bgr555     = Proxy</span></span>
+<span class="lineno">  145 </span>bgr565     :: Proxy 'BGR565   ; <span class="decl"><span class="nottickedoff">bgr565     = Proxy</span></span>
+<span class="lineno">  146 </span>bgra       :: Proxy 'BGRA     ; <span class="decl"><span class="nottickedoff">bgra       = Proxy</span></span>
+<span class="lineno">  147 </span>bgra_I420  :: Proxy 'BGRA_I420; <span class="decl"><span class="nottickedoff">bgra_I420  = Proxy</span></span>
+<span class="lineno">  148 </span>bgra_IYUV  :: Proxy 'BGRA_IYUV; <span class="decl"><span class="nottickedoff">bgra_IYUV  = Proxy</span></span>
+<span class="lineno">  149 </span>bgra_NV12  :: Proxy 'BGRA_NV12; <span class="decl"><span class="nottickedoff">bgra_NV12  = Proxy</span></span>
+<span class="lineno">  150 </span>bgra_NV21  :: Proxy 'BGRA_NV21; <span class="decl"><span class="nottickedoff">bgra_NV21  = Proxy</span></span>
+<span class="lineno">  151 </span>bgra_UYNV  :: Proxy 'BGRA_UYNV; <span class="decl"><span class="nottickedoff">bgra_UYNV  = Proxy</span></span>
+<span class="lineno">  152 </span>bgra_UYVY  :: Proxy 'BGRA_UYVY; <span class="decl"><span class="nottickedoff">bgra_UYVY  = Proxy</span></span>
+<span class="lineno">  153 </span>bgra_Y422  :: Proxy 'BGRA_Y422; <span class="decl"><span class="nottickedoff">bgra_Y422  = Proxy</span></span>
+<span class="lineno">  154 </span>bgra_YUNV  :: Proxy 'BGRA_YUNV; <span class="decl"><span class="nottickedoff">bgra_YUNV  = Proxy</span></span>
+<span class="lineno">  155 </span>bgra_YUY2  :: Proxy 'BGRA_YUY2; <span class="decl"><span class="nottickedoff">bgra_YUY2  = Proxy</span></span>
+<span class="lineno">  156 </span>bgra_YUYV  :: Proxy 'BGRA_YUYV; <span class="decl"><span class="nottickedoff">bgra_YUYV  = Proxy</span></span>
+<span class="lineno">  157 </span>bgra_YV12  :: Proxy 'BGRA_YV12; <span class="decl"><span class="nottickedoff">bgra_YV12  = Proxy</span></span>
+<span class="lineno">  158 </span>bgra_YVYU  :: Proxy 'BGRA_YVYU; <span class="decl"><span class="nottickedoff">bgra_YVYU  = Proxy</span></span>
+<span class="lineno">  159 </span>bgr_EA     :: Proxy 'BGR_EA   ; <span class="decl"><span class="nottickedoff">bgr_EA     = Proxy</span></span>
+<span class="lineno">  160 </span>bgr_FULL   :: Proxy 'BGR_FULL ; <span class="decl"><span class="nottickedoff">bgr_FULL   = Proxy</span></span>
+<span class="lineno">  161 </span>bgr_I420   :: Proxy 'BGR_I420 ; <span class="decl"><span class="nottickedoff">bgr_I420   = Proxy</span></span>
+<span class="lineno">  162 </span>bgr_IYUV   :: Proxy 'BGR_IYUV ; <span class="decl"><span class="nottickedoff">bgr_IYUV   = Proxy</span></span>
+<span class="lineno">  163 </span>bgr_NV12   :: Proxy 'BGR_NV12 ; <span class="decl"><span class="nottickedoff">bgr_NV12   = Proxy</span></span>
+<span class="lineno">  164 </span>bgr_NV21   :: Proxy 'BGR_NV21 ; <span class="decl"><span class="nottickedoff">bgr_NV21   = Proxy</span></span>
+<span class="lineno">  165 </span>bgr_UYNV   :: Proxy 'BGR_UYNV ; <span class="decl"><span class="nottickedoff">bgr_UYNV   = Proxy</span></span>
+<span class="lineno">  166 </span>bgr_UYVY   :: Proxy 'BGR_UYVY ; <span class="decl"><span class="nottickedoff">bgr_UYVY   = Proxy</span></span>
+<span class="lineno">  167 </span>bgr_VNG    :: Proxy 'BGR_VNG  ; <span class="decl"><span class="nottickedoff">bgr_VNG    = Proxy</span></span>
+<span class="lineno">  168 </span>bgr_Y422   :: Proxy 'BGR_Y422 ; <span class="decl"><span class="nottickedoff">bgr_Y422   = Proxy</span></span>
+<span class="lineno">  169 </span>bgr_YUNV   :: Proxy 'BGR_YUNV ; <span class="decl"><span class="nottickedoff">bgr_YUNV   = Proxy</span></span>
+<span class="lineno">  170 </span>bgr_YUY2   :: Proxy 'BGR_YUY2 ; <span class="decl"><span class="nottickedoff">bgr_YUY2   = Proxy</span></span>
+<span class="lineno">  171 </span>bgr_YUYV   :: Proxy 'BGR_YUYV ; <span class="decl"><span class="nottickedoff">bgr_YUYV   = Proxy</span></span>
+<span class="lineno">  172 </span>bgr_YV12   :: Proxy 'BGR_YV12 ; <span class="decl"><span class="nottickedoff">bgr_YV12   = Proxy</span></span>
+<span class="lineno">  173 </span>bgr_YVYU   :: Proxy 'BGR_YVYU ; <span class="decl"><span class="nottickedoff">bgr_YVYU   = Proxy</span></span>
+<span class="lineno">  174 </span>gray       :: Proxy 'GRAY     ; <span class="decl"><span class="nottickedoff">gray       = Proxy</span></span>
+<span class="lineno">  175 </span>gray_420   :: Proxy 'GRAY_420 ; <span class="decl"><span class="nottickedoff">gray_420   = Proxy</span></span>
+<span class="lineno">  176 </span>gray_I420  :: Proxy 'GRAY_I420; <span class="decl"><span class="nottickedoff">gray_I420  = Proxy</span></span>
+<span class="lineno">  177 </span>gray_IYUV  :: Proxy 'GRAY_IYUV; <span class="decl"><span class="nottickedoff">gray_IYUV  = Proxy</span></span>
+<span class="lineno">  178 </span>gray_NV12  :: Proxy 'GRAY_NV12; <span class="decl"><span class="nottickedoff">gray_NV12  = Proxy</span></span>
+<span class="lineno">  179 </span>gray_NV21  :: Proxy 'GRAY_NV21; <span class="decl"><span class="nottickedoff">gray_NV21  = Proxy</span></span>
+<span class="lineno">  180 </span>gray_UYNV  :: Proxy 'GRAY_UYNV; <span class="decl"><span class="nottickedoff">gray_UYNV  = Proxy</span></span>
+<span class="lineno">  181 </span>gray_UYVY  :: Proxy 'GRAY_UYVY; <span class="decl"><span class="nottickedoff">gray_UYVY  = Proxy</span></span>
+<span class="lineno">  182 </span>gray_Y422  :: Proxy 'GRAY_Y422; <span class="decl"><span class="nottickedoff">gray_Y422  = Proxy</span></span>
+<span class="lineno">  183 </span>gray_YUNV  :: Proxy 'GRAY_YUNV; <span class="decl"><span class="nottickedoff">gray_YUNV  = Proxy</span></span>
+<span class="lineno">  184 </span>gray_YUY2  :: Proxy 'GRAY_YUY2; <span class="decl"><span class="nottickedoff">gray_YUY2  = Proxy</span></span>
+<span class="lineno">  185 </span>gray_YUYV  :: Proxy 'GRAY_YUYV; <span class="decl"><span class="nottickedoff">gray_YUYV  = Proxy</span></span>
+<span class="lineno">  186 </span>gray_YV12  :: Proxy 'GRAY_YV12; <span class="decl"><span class="nottickedoff">gray_YV12  = Proxy</span></span>
+<span class="lineno">  187 </span>gray_YVYU  :: Proxy 'GRAY_YVYU; <span class="decl"><span class="nottickedoff">gray_YVYU  = Proxy</span></span>
+<span class="lineno">  188 </span>hls        :: Proxy 'HLS      ; <span class="decl"><span class="nottickedoff">hls        = Proxy</span></span>
+<span class="lineno">  189 </span>hls_FULL   :: Proxy 'HLS_FULL ; <span class="decl"><span class="nottickedoff">hls_FULL   = Proxy</span></span>
+<span class="lineno">  190 </span>hsv        :: Proxy 'HSV      ; <span class="decl"><span class="nottickedoff">hsv        = Proxy</span></span>
+<span class="lineno">  191 </span>hsv_FULL   :: Proxy 'HSV_FULL ; <span class="decl"><span class="nottickedoff">hsv_FULL   = Proxy</span></span>
+<span class="lineno">  192 </span>lab        :: Proxy 'Lab      ; <span class="decl"><span class="nottickedoff">lab        = Proxy</span></span>
+<span class="lineno">  193 </span>lbgr       :: Proxy 'LBGR     ; <span class="decl"><span class="nottickedoff">lbgr       = Proxy</span></span>
+<span class="lineno">  194 </span>lrgb       :: Proxy 'LRGB     ; <span class="decl"><span class="nottickedoff">lrgb       = Proxy</span></span>
+<span class="lineno">  195 </span>luv        :: Proxy 'Luv      ; <span class="decl"><span class="nottickedoff">luv        = Proxy</span></span>
+<span class="lineno">  196 </span>mrgba      :: Proxy 'MRGBA    ; <span class="decl"><span class="nottickedoff">mrgba      = Proxy</span></span>
+<span class="lineno">  197 </span>rgb        :: Proxy 'RGB      ; <span class="decl"><span class="nottickedoff">rgb        = Proxy</span></span>
+<span class="lineno">  198 </span>rgba       :: Proxy 'RGBA     ; <span class="decl"><span class="nottickedoff">rgba       = Proxy</span></span>
+<span class="lineno">  199 </span>rgba_I420  :: Proxy 'RGBA_I420; <span class="decl"><span class="nottickedoff">rgba_I420  = Proxy</span></span>
+<span class="lineno">  200 </span>rgba_IYUV  :: Proxy 'RGBA_IYUV; <span class="decl"><span class="nottickedoff">rgba_IYUV  = Proxy</span></span>
+<span class="lineno">  201 </span>rgba_NV12  :: Proxy 'RGBA_NV12; <span class="decl"><span class="nottickedoff">rgba_NV12  = Proxy</span></span>
+<span class="lineno">  202 </span>rgba_NV21  :: Proxy 'RGBA_NV21; <span class="decl"><span class="nottickedoff">rgba_NV21  = Proxy</span></span>
+<span class="lineno">  203 </span>rgba_UYNV  :: Proxy 'RGBA_UYNV; <span class="decl"><span class="nottickedoff">rgba_UYNV  = Proxy</span></span>
+<span class="lineno">  204 </span>rgba_UYVY  :: Proxy 'RGBA_UYVY; <span class="decl"><span class="nottickedoff">rgba_UYVY  = Proxy</span></span>
+<span class="lineno">  205 </span>rgba_Y422  :: Proxy 'RGBA_Y422; <span class="decl"><span class="nottickedoff">rgba_Y422  = Proxy</span></span>
+<span class="lineno">  206 </span>rgba_YUNV  :: Proxy 'RGBA_YUNV; <span class="decl"><span class="nottickedoff">rgba_YUNV  = Proxy</span></span>
+<span class="lineno">  207 </span>rgba_YUY2  :: Proxy 'RGBA_YUY2; <span class="decl"><span class="nottickedoff">rgba_YUY2  = Proxy</span></span>
+<span class="lineno">  208 </span>rgba_YUYV  :: Proxy 'RGBA_YUYV; <span class="decl"><span class="nottickedoff">rgba_YUYV  = Proxy</span></span>
+<span class="lineno">  209 </span>rgba_YV12  :: Proxy 'RGBA_YV12; <span class="decl"><span class="nottickedoff">rgba_YV12  = Proxy</span></span>
+<span class="lineno">  210 </span>rgba_YVYU  :: Proxy 'RGBA_YVYU; <span class="decl"><span class="nottickedoff">rgba_YVYU  = Proxy</span></span>
+<span class="lineno">  211 </span>rgb_EA     :: Proxy 'RGB_EA   ; <span class="decl"><span class="nottickedoff">rgb_EA     = Proxy</span></span>
+<span class="lineno">  212 </span>rgb_FULL   :: Proxy 'RGB_FULL ; <span class="decl"><span class="nottickedoff">rgb_FULL   = Proxy</span></span>
+<span class="lineno">  213 </span>rgb_I420   :: Proxy 'RGB_I420 ; <span class="decl"><span class="nottickedoff">rgb_I420   = Proxy</span></span>
+<span class="lineno">  214 </span>rgb_IYUV   :: Proxy 'RGB_IYUV ; <span class="decl"><span class="nottickedoff">rgb_IYUV   = Proxy</span></span>
+<span class="lineno">  215 </span>rgb_NV12   :: Proxy 'RGB_NV12 ; <span class="decl"><span class="nottickedoff">rgb_NV12   = Proxy</span></span>
+<span class="lineno">  216 </span>rgb_NV21   :: Proxy 'RGB_NV21 ; <span class="decl"><span class="nottickedoff">rgb_NV21   = Proxy</span></span>
+<span class="lineno">  217 </span>rgb_UYNV   :: Proxy 'RGB_UYNV ; <span class="decl"><span class="nottickedoff">rgb_UYNV   = Proxy</span></span>
+<span class="lineno">  218 </span>rgb_UYVY   :: Proxy 'RGB_UYVY ; <span class="decl"><span class="nottickedoff">rgb_UYVY   = Proxy</span></span>
+<span class="lineno">  219 </span>rgb_VNG    :: Proxy 'RGB_VNG  ; <span class="decl"><span class="nottickedoff">rgb_VNG    = Proxy</span></span>
+<span class="lineno">  220 </span>rgb_Y422   :: Proxy 'RGB_Y422 ; <span class="decl"><span class="nottickedoff">rgb_Y422   = Proxy</span></span>
+<span class="lineno">  221 </span>rgb_YUNV   :: Proxy 'RGB_YUNV ; <span class="decl"><span class="nottickedoff">rgb_YUNV   = Proxy</span></span>
+<span class="lineno">  222 </span>rgb_YUY2   :: Proxy 'RGB_YUY2 ; <span class="decl"><span class="nottickedoff">rgb_YUY2   = Proxy</span></span>
+<span class="lineno">  223 </span>rgb_YUYV   :: Proxy 'RGB_YUYV ; <span class="decl"><span class="nottickedoff">rgb_YUYV   = Proxy</span></span>
+<span class="lineno">  224 </span>rgb_YV12   :: Proxy 'RGB_YV12 ; <span class="decl"><span class="nottickedoff">rgb_YV12   = Proxy</span></span>
+<span class="lineno">  225 </span>rgb_YVYU   :: Proxy 'RGB_YVYU ; <span class="decl"><span class="nottickedoff">rgb_YVYU   = Proxy</span></span>
+<span class="lineno">  226 </span>xyz        :: Proxy 'XYZ      ; <span class="decl"><span class="nottickedoff">xyz        = Proxy</span></span>
+<span class="lineno">  227 </span>yCrCb      :: Proxy 'YCrCb    ; <span class="decl"><span class="nottickedoff">yCrCb      = Proxy</span></span>
+<span class="lineno">  228 </span>yuv        :: Proxy 'YUV      ; <span class="decl"><span class="nottickedoff">yuv        = Proxy</span></span>
+<span class="lineno">  229 </span>yuv420p    :: Proxy 'YUV420p  ; <span class="decl"><span class="nottickedoff">yuv420p    = Proxy</span></span>
+<span class="lineno">  230 </span>yuv420sp   :: Proxy 'YUV420sp ; <span class="decl"><span class="nottickedoff">yuv420sp   = Proxy</span></span>
+<span class="lineno">  231 </span>yuv_I420   :: Proxy 'YUV_I420 ; <span class="decl"><span class="nottickedoff">yuv_I420   = Proxy</span></span>
+<span class="lineno">  232 </span>yuv_IYUV   :: Proxy 'YUV_IYUV ; <span class="decl"><span class="nottickedoff">yuv_IYUV   = Proxy</span></span>
+<span class="lineno">  233 </span>yuv_YV12   :: Proxy 'YUV_YV12 ; <span class="decl"><span class="nottickedoff">yuv_YV12   = Proxy</span></span>
+<span class="lineno">  234 </span>
+<span class="lineno">  235 </span>--------------------------------------------------------------------------------
+<span class="lineno">  236 </span>
+<span class="lineno">  237 </span>instance ColorConversion 'BGR      'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2BGRA</span></span>
+<span class="lineno">  238 </span>instance ColorConversion 'RGB      'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2RGBA</span></span>
+<span class="lineno">  239 </span>instance ColorConversion 'BGRA     'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2BGR</span></span>
+<span class="lineno">  240 </span>instance ColorConversion 'RGBA     'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2RGB</span></span>
+<span class="lineno">  241 </span>instance ColorConversion 'BGR      'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2RGBA</span></span>
+<span class="lineno">  242 </span>instance ColorConversion 'RGB      'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2BGRA</span></span>
+<span class="lineno">  243 </span>instance ColorConversion 'RGBA     'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2BGR</span></span>
+<span class="lineno">  244 </span>instance ColorConversion 'BGRA     'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2RGB</span></span>
+<span class="lineno">  245 </span>instance ColorConversion 'BGR      'RGB       where <span class="decl"><span class="istickedoff">colorConversionCode _ _ = c'COLOR_BGR2RGB</span></span>
+<span class="lineno">  246 </span>instance ColorConversion 'RGB      'BGR       where <span class="decl"><span class="istickedoff">colorConversionCode _ _ = c'COLOR_RGB2BGR</span></span>
+<span class="lineno">  247 </span>instance ColorConversion 'BGRA     'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2RGBA</span></span>
+<span class="lineno">  248 </span>instance ColorConversion 'RGBA     'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2BGRA</span></span>
+<span class="lineno">  249 </span>instance ColorConversion 'BGR      'GRAY      where <span class="decl"><span class="istickedoff">colorConversionCode _ _ = c'COLOR_BGR2GRAY</span></span>
+<span class="lineno">  250 </span>instance ColorConversion 'RGB      'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2GRAY</span></span>
+<span class="lineno">  251 </span>instance ColorConversion 'GRAY     'BGR       where <span class="decl"><span class="istickedoff">colorConversionCode _ _ = c'COLOR_GRAY2BGR</span></span>
+<span class="lineno">  252 </span>instance ColorConversion 'GRAY     'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_GRAY2RGB</span></span>
+<span class="lineno">  253 </span>instance ColorConversion 'GRAY     'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_GRAY2BGRA</span></span>
+<span class="lineno">  254 </span>instance ColorConversion 'GRAY     'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_GRAY2RGBA</span></span>
+<span class="lineno">  255 </span>instance ColorConversion 'BGRA     'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2GRAY</span></span>
+<span class="lineno">  256 </span>instance ColorConversion 'RGBA     'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2GRAY</span></span>
+<span class="lineno">  257 </span>instance ColorConversion 'BGR      'BGR565    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2BGR565</span></span>
+<span class="lineno">  258 </span>instance ColorConversion 'RGB      'BGR565    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2BGR565</span></span>
+<span class="lineno">  259 </span>instance ColorConversion 'BGR565   'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5652BGR</span></span>
+<span class="lineno">  260 </span>instance ColorConversion 'BGR565   'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5652RGB</span></span>
+<span class="lineno">  261 </span>instance ColorConversion 'BGRA     'BGR565    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2BGR565</span></span>
+<span class="lineno">  262 </span>instance ColorConversion 'RGBA     'BGR565    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2BGR565</span></span>
+<span class="lineno">  263 </span>instance ColorConversion 'BGR565   'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5652BGRA</span></span>
+<span class="lineno">  264 </span>instance ColorConversion 'BGR565   'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5652RGBA</span></span>
+<span class="lineno">  265 </span>instance ColorConversion 'GRAY     'BGR565    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_GRAY2BGR565</span></span>
+<span class="lineno">  266 </span>instance ColorConversion 'BGR565   'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5652GRAY</span></span>
+<span class="lineno">  267 </span>instance ColorConversion 'BGR      'BGR555    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2BGR555</span></span>
+<span class="lineno">  268 </span>instance ColorConversion 'RGB      'BGR555    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2BGR555</span></span>
+<span class="lineno">  269 </span>instance ColorConversion 'BGR555   'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5552BGR</span></span>
+<span class="lineno">  270 </span>instance ColorConversion 'BGR555   'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5552RGB</span></span>
+<span class="lineno">  271 </span>instance ColorConversion 'BGRA     'BGR555    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2BGR555</span></span>
+<span class="lineno">  272 </span>instance ColorConversion 'RGBA     'BGR555    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2BGR555</span></span>
+<span class="lineno">  273 </span>instance ColorConversion 'BGR555   'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5552BGRA</span></span>
+<span class="lineno">  274 </span>instance ColorConversion 'BGR555   'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5552RGBA</span></span>
+<span class="lineno">  275 </span>instance ColorConversion 'GRAY     'BGR555    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_GRAY2BGR555</span></span>
+<span class="lineno">  276 </span>instance ColorConversion 'BGR555   'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR5552GRAY</span></span>
+<span class="lineno">  277 </span>instance ColorConversion 'BGR      'XYZ       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2XYZ</span></span>
+<span class="lineno">  278 </span>instance ColorConversion 'RGB      'XYZ       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2XYZ</span></span>
+<span class="lineno">  279 </span>instance ColorConversion 'XYZ      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_XYZ2BGR</span></span>
+<span class="lineno">  280 </span>instance ColorConversion 'XYZ      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_XYZ2RGB</span></span>
+<span class="lineno">  281 </span>instance ColorConversion 'BGR      'YCrCb     where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2YCrCb</span></span>
+<span class="lineno">  282 </span>instance ColorConversion 'RGB      'YCrCb     where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2YCrCb</span></span>
+<span class="lineno">  283 </span>instance ColorConversion 'YCrCb    'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YCrCb2BGR</span></span>
+<span class="lineno">  284 </span>instance ColorConversion 'YCrCb    'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YCrCb2RGB</span></span>
+<span class="lineno">  285 </span>instance ColorConversion 'BGR      'HSV       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2HSV</span></span>
+<span class="lineno">  286 </span>instance ColorConversion 'RGB      'HSV       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2HSV</span></span>
+<span class="lineno">  287 </span>instance ColorConversion 'BGR      'Lab       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2Lab</span></span>
+<span class="lineno">  288 </span>instance ColorConversion 'RGB      'Lab       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2Lab</span></span>
+<span class="lineno">  289 </span>instance ColorConversion 'BGR      'Luv       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2Luv</span></span>
+<span class="lineno">  290 </span>instance ColorConversion 'RGB      'Luv       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2Luv</span></span>
+<span class="lineno">  291 </span>instance ColorConversion 'BGR      'HLS       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2HLS</span></span>
+<span class="lineno">  292 </span>instance ColorConversion 'RGB      'HLS       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2HLS</span></span>
+<span class="lineno">  293 </span>instance ColorConversion 'HSV      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HSV2BGR</span></span>
+<span class="lineno">  294 </span>instance ColorConversion 'HSV      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HSV2RGB</span></span>
+<span class="lineno">  295 </span>instance ColorConversion 'Lab      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Lab2BGR</span></span>
+<span class="lineno">  296 </span>instance ColorConversion 'Lab      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Lab2RGB</span></span>
+<span class="lineno">  297 </span>instance ColorConversion 'Luv      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Luv2BGR</span></span>
+<span class="lineno">  298 </span>instance ColorConversion 'Luv      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Luv2RGB</span></span>
+<span class="lineno">  299 </span>instance ColorConversion 'HLS      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HLS2BGR</span></span>
+<span class="lineno">  300 </span>instance ColorConversion 'HLS      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HLS2RGB</span></span>
+<span class="lineno">  301 </span>instance ColorConversion 'BGR      'HSV_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2HSV_FULL</span></span>
+<span class="lineno">  302 </span>instance ColorConversion 'RGB      'HSV_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2HSV_FULL</span></span>
+<span class="lineno">  303 </span>instance ColorConversion 'BGR      'HLS_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2HLS_FULL</span></span>
+<span class="lineno">  304 </span>instance ColorConversion 'RGB      'HLS_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2HLS_FULL</span></span>
+<span class="lineno">  305 </span>instance ColorConversion 'HSV      'BGR_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HSV2BGR_FULL</span></span>
+<span class="lineno">  306 </span>instance ColorConversion 'HSV      'RGB_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HSV2RGB_FULL</span></span>
+<span class="lineno">  307 </span>instance ColorConversion 'HLS      'BGR_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HLS2BGR_FULL</span></span>
+<span class="lineno">  308 </span>instance ColorConversion 'HLS      'RGB_FULL  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_HLS2RGB_FULL</span></span>
+<span class="lineno">  309 </span>instance ColorConversion 'LBGR     'Lab       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_LBGR2Lab</span></span>
+<span class="lineno">  310 </span>instance ColorConversion 'LRGB     'Lab       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_LRGB2Lab</span></span>
+<span class="lineno">  311 </span>instance ColorConversion 'LBGR     'Luv       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_LBGR2Luv</span></span>
+<span class="lineno">  312 </span>instance ColorConversion 'LRGB     'Luv       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_LRGB2Luv</span></span>
+<span class="lineno">  313 </span>instance ColorConversion 'Lab      'LBGR      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Lab2LBGR</span></span>
+<span class="lineno">  314 </span>instance ColorConversion 'Lab      'LRGB      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Lab2LRGB</span></span>
+<span class="lineno">  315 </span>instance ColorConversion 'Luv      'LBGR      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Luv2LBGR</span></span>
+<span class="lineno">  316 </span>instance ColorConversion 'Luv      'LRGB      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_Luv2LRGB</span></span>
+<span class="lineno">  317 </span>instance ColorConversion 'BGR      'YUV       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2YUV</span></span>
+<span class="lineno">  318 </span>instance ColorConversion 'RGB      'YUV       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2YUV</span></span>
+<span class="lineno">  319 </span>instance ColorConversion 'YUV      'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR</span></span>
+<span class="lineno">  320 </span>instance ColorConversion 'YUV      'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB</span></span>
+<span class="lineno">  321 </span>instance ColorConversion 'YUV      'RGB_NV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_NV12</span></span>
+<span class="lineno">  322 </span>instance ColorConversion 'YUV      'BGR_NV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_NV12</span></span>
+<span class="lineno">  323 </span>instance ColorConversion 'YUV      'RGB_NV21  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_NV21</span></span>
+<span class="lineno">  324 </span>instance ColorConversion 'YUV      'BGR_NV21  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_NV21</span></span>
+<span class="lineno">  325 </span>instance ColorConversion 'YUV420sp 'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420sp2RGB</span></span>
+<span class="lineno">  326 </span>instance ColorConversion 'YUV420sp 'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420sp2BGR</span></span>
+<span class="lineno">  327 </span>instance ColorConversion 'YUV      'RGBA_NV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_NV12</span></span>
+<span class="lineno">  328 </span>instance ColorConversion 'YUV      'BGRA_NV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_NV12</span></span>
+<span class="lineno">  329 </span>instance ColorConversion 'YUV      'RGBA_NV21 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_NV21</span></span>
+<span class="lineno">  330 </span>instance ColorConversion 'YUV      'BGRA_NV21 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_NV21</span></span>
+<span class="lineno">  331 </span>instance ColorConversion 'YUV420sp 'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420sp2RGBA</span></span>
+<span class="lineno">  332 </span>instance ColorConversion 'YUV420sp 'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420sp2BGRA</span></span>
+<span class="lineno">  333 </span>instance ColorConversion 'YUV      'RGB_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_YV12</span></span>
+<span class="lineno">  334 </span>instance ColorConversion 'YUV      'BGR_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_YV12</span></span>
+<span class="lineno">  335 </span>instance ColorConversion 'YUV      'RGB_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_IYUV</span></span>
+<span class="lineno">  336 </span>instance ColorConversion 'YUV      'BGR_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_IYUV</span></span>
+<span class="lineno">  337 </span>instance ColorConversion 'YUV      'RGB_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_I420</span></span>
+<span class="lineno">  338 </span>instance ColorConversion 'YUV      'BGR_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_I420</span></span>
+<span class="lineno">  339 </span>instance ColorConversion 'YUV420p  'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420p2RGB</span></span>
+<span class="lineno">  340 </span>instance ColorConversion 'YUV420p  'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420p2BGR</span></span>
+<span class="lineno">  341 </span>instance ColorConversion 'YUV      'RGBA_YV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_YV12</span></span>
+<span class="lineno">  342 </span>instance ColorConversion 'YUV      'BGRA_YV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_YV12</span></span>
+<span class="lineno">  343 </span>instance ColorConversion 'YUV      'RGBA_IYUV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_IYUV</span></span>
+<span class="lineno">  344 </span>instance ColorConversion 'YUV      'BGRA_IYUV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_IYUV</span></span>
+<span class="lineno">  345 </span>instance ColorConversion 'YUV      'RGBA_I420 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_I420</span></span>
+<span class="lineno">  346 </span>instance ColorConversion 'YUV      'BGRA_I420 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_I420</span></span>
+<span class="lineno">  347 </span>instance ColorConversion 'YUV420p  'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420p2RGBA</span></span>
+<span class="lineno">  348 </span>instance ColorConversion 'YUV420p  'BGRA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420p2BGRA</span></span>
+<span class="lineno">  349 </span>instance ColorConversion 'YUV      'GRAY_420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_420</span></span>
+<span class="lineno">  350 </span>instance ColorConversion 'YUV      'GRAY_NV21 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_NV21</span></span>
+<span class="lineno">  351 </span>instance ColorConversion 'YUV      'GRAY_NV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_NV12</span></span>
+<span class="lineno">  352 </span>instance ColorConversion 'YUV      'GRAY_YV12 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_YV12</span></span>
+<span class="lineno">  353 </span>instance ColorConversion 'YUV      'GRAY_IYUV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_IYUV</span></span>
+<span class="lineno">  354 </span>instance ColorConversion 'YUV      'GRAY_I420 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_I420</span></span>
+<span class="lineno">  355 </span>instance ColorConversion 'YUV420sp 'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420sp2GRAY</span></span>
+<span class="lineno">  356 </span>instance ColorConversion 'YUV420p  'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV420p2GRAY</span></span>
+<span class="lineno">  357 </span>instance ColorConversion 'YUV      'RGB_UYVY  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_UYVY</span></span>
+<span class="lineno">  358 </span>instance ColorConversion 'YUV      'BGR_UYVY  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_UYVY</span></span>
+<span class="lineno">  359 </span>instance ColorConversion 'YUV      'RGB_Y422  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_Y422</span></span>
+<span class="lineno">  360 </span>instance ColorConversion 'YUV      'BGR_Y422  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_Y422</span></span>
+<span class="lineno">  361 </span>instance ColorConversion 'YUV      'RGB_UYNV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_UYNV</span></span>
+<span class="lineno">  362 </span>instance ColorConversion 'YUV      'BGR_UYNV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_UYNV</span></span>
+<span class="lineno">  363 </span>instance ColorConversion 'YUV      'RGBA_UYVY where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_UYVY</span></span>
+<span class="lineno">  364 </span>instance ColorConversion 'YUV      'BGRA_UYVY where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_UYVY</span></span>
+<span class="lineno">  365 </span>instance ColorConversion 'YUV      'RGBA_Y422 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_Y422</span></span>
+<span class="lineno">  366 </span>instance ColorConversion 'YUV      'BGRA_Y422 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_Y422</span></span>
+<span class="lineno">  367 </span>instance ColorConversion 'YUV      'RGBA_UYNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_UYNV</span></span>
+<span class="lineno">  368 </span>instance ColorConversion 'YUV      'BGRA_UYNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_UYNV</span></span>
+<span class="lineno">  369 </span>instance ColorConversion 'YUV      'RGB_YUY2  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_YUY2</span></span>
+<span class="lineno">  370 </span>instance ColorConversion 'YUV      'BGR_YUY2  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_YUY2</span></span>
+<span class="lineno">  371 </span>instance ColorConversion 'YUV      'RGB_YVYU  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_YVYU</span></span>
+<span class="lineno">  372 </span>instance ColorConversion 'YUV      'BGR_YVYU  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_YVYU</span></span>
+<span class="lineno">  373 </span>instance ColorConversion 'YUV      'RGB_YUYV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_YUYV</span></span>
+<span class="lineno">  374 </span>instance ColorConversion 'YUV      'BGR_YUYV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_YUYV</span></span>
+<span class="lineno">  375 </span>instance ColorConversion 'YUV      'RGB_YUNV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGB_YUNV</span></span>
+<span class="lineno">  376 </span>instance ColorConversion 'YUV      'BGR_YUNV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGR_YUNV</span></span>
+<span class="lineno">  377 </span>instance ColorConversion 'YUV      'RGBA_YUY2 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_YUY2</span></span>
+<span class="lineno">  378 </span>instance ColorConversion 'YUV      'BGRA_YUY2 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_YUY2</span></span>
+<span class="lineno">  379 </span>instance ColorConversion 'YUV      'RGBA_YVYU where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_YVYU</span></span>
+<span class="lineno">  380 </span>instance ColorConversion 'YUV      'BGRA_YVYU where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_YVYU</span></span>
+<span class="lineno">  381 </span>instance ColorConversion 'YUV      'RGBA_YUYV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_YUYV</span></span>
+<span class="lineno">  382 </span>instance ColorConversion 'YUV      'BGRA_YUYV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_YUYV</span></span>
+<span class="lineno">  383 </span>instance ColorConversion 'YUV      'RGBA_YUNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2RGBA_YUNV</span></span>
+<span class="lineno">  384 </span>instance ColorConversion 'YUV      'BGRA_YUNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2BGRA_YUNV</span></span>
+<span class="lineno">  385 </span>instance ColorConversion 'YUV      'GRAY_UYVY where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_UYVY</span></span>
+<span class="lineno">  386 </span>instance ColorConversion 'YUV      'GRAY_YUY2 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_YUY2</span></span>
+<span class="lineno">  387 </span>instance ColorConversion 'YUV      'GRAY_Y422 where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_Y422</span></span>
+<span class="lineno">  388 </span>instance ColorConversion 'YUV      'GRAY_UYNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_UYNV</span></span>
+<span class="lineno">  389 </span>instance ColorConversion 'YUV      'GRAY_YVYU where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_YVYU</span></span>
+<span class="lineno">  390 </span>instance ColorConversion 'YUV      'GRAY_YUYV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_YUYV</span></span>
+<span class="lineno">  391 </span>instance ColorConversion 'YUV      'GRAY_YUNV where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_YUV2GRAY_YUNV</span></span>
+<span class="lineno">  392 </span>instance ColorConversion 'RGBA     'MRGBA     where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2mRGBA</span></span>
+<span class="lineno">  393 </span>instance ColorConversion 'MRGBA    'RGBA      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_mRGBA2RGBA</span></span>
+<span class="lineno">  394 </span>instance ColorConversion 'RGB      'YUV_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2YUV_I420</span></span>
+<span class="lineno">  395 </span>instance ColorConversion 'BGR      'YUV_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2YUV_I420</span></span>
+<span class="lineno">  396 </span>instance ColorConversion 'RGB      'YUV_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2YUV_IYUV</span></span>
+<span class="lineno">  397 </span>instance ColorConversion 'BGR      'YUV_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2YUV_IYUV</span></span>
+<span class="lineno">  398 </span>instance ColorConversion 'RGBA     'YUV_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2YUV_I420</span></span>
+<span class="lineno">  399 </span>instance ColorConversion 'BGRA     'YUV_I420  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2YUV_I420</span></span>
+<span class="lineno">  400 </span>instance ColorConversion 'RGBA     'YUV_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2YUV_IYUV</span></span>
+<span class="lineno">  401 </span>instance ColorConversion 'BGRA     'YUV_IYUV  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2YUV_IYUV</span></span>
+<span class="lineno">  402 </span>instance ColorConversion 'RGB      'YUV_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGB2YUV_YV12</span></span>
+<span class="lineno">  403 </span>instance ColorConversion 'BGR      'YUV_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGR2YUV_YV12</span></span>
+<span class="lineno">  404 </span>instance ColorConversion 'RGBA     'YUV_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_RGBA2YUV_YV12</span></span>
+<span class="lineno">  405 </span>instance ColorConversion 'BGRA     'YUV_YV12  where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BGRA2YUV_YV12</span></span>
+<span class="lineno">  406 </span>instance ColorConversion 'BayerBG  'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2BGR</span></span>
+<span class="lineno">  407 </span>instance ColorConversion 'BayerGB  'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2BGR</span></span>
+<span class="lineno">  408 </span>instance ColorConversion 'BayerRG  'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2BGR</span></span>
+<span class="lineno">  409 </span>instance ColorConversion 'BayerGR  'BGR       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2BGR</span></span>
+<span class="lineno">  410 </span>instance ColorConversion 'BayerBG  'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2RGB</span></span>
+<span class="lineno">  411 </span>instance ColorConversion 'BayerGB  'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2RGB</span></span>
+<span class="lineno">  412 </span>instance ColorConversion 'BayerRG  'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2RGB</span></span>
+<span class="lineno">  413 </span>instance ColorConversion 'BayerGR  'RGB       where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2RGB</span></span>
+<span class="lineno">  414 </span>instance ColorConversion 'BayerBG  'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2GRAY</span></span>
+<span class="lineno">  415 </span>instance ColorConversion 'BayerGB  'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2GRAY</span></span>
+<span class="lineno">  416 </span>instance ColorConversion 'BayerRG  'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2GRAY</span></span>
+<span class="lineno">  417 </span>instance ColorConversion 'BayerGR  'GRAY      where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2GRAY</span></span>
+<span class="lineno">  418 </span>instance ColorConversion 'BayerBG  'BGR_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2BGR_VNG</span></span>
+<span class="lineno">  419 </span>instance ColorConversion 'BayerGB  'BGR_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2BGR_VNG</span></span>
+<span class="lineno">  420 </span>instance ColorConversion 'BayerRG  'BGR_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2BGR_VNG</span></span>
+<span class="lineno">  421 </span>instance ColorConversion 'BayerGR  'BGR_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2BGR_VNG</span></span>
+<span class="lineno">  422 </span>instance ColorConversion 'BayerBG  'RGB_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2RGB_VNG</span></span>
+<span class="lineno">  423 </span>instance ColorConversion 'BayerGB  'RGB_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2RGB_VNG</span></span>
+<span class="lineno">  424 </span>instance ColorConversion 'BayerRG  'RGB_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2RGB_VNG</span></span>
+<span class="lineno">  425 </span>instance ColorConversion 'BayerGR  'RGB_VNG   where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2RGB_VNG</span></span>
+<span class="lineno">  426 </span>instance ColorConversion 'BayerBG  'BGR_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2BGR_EA</span></span>
+<span class="lineno">  427 </span>instance ColorConversion 'BayerGB  'BGR_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2BGR_EA</span></span>
+<span class="lineno">  428 </span>instance ColorConversion 'BayerRG  'BGR_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2BGR_EA</span></span>
+<span class="lineno">  429 </span>instance ColorConversion 'BayerGR  'BGR_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2BGR_EA</span></span>
+<span class="lineno">  430 </span>instance ColorConversion 'BayerBG  'RGB_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerBG2RGB_EA</span></span>
+<span class="lineno">  431 </span>instance ColorConversion 'BayerGB  'RGB_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGB2RGB_EA</span></span>
+<span class="lineno">  432 </span>instance ColorConversion 'BayerRG  'RGB_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerRG2RGB_EA</span></span>
+<span class="lineno">  433 </span>instance ColorConversion 'BayerGR  'RGB_EA    where <span class="decl"><span class="nottickedoff">colorConversionCode _ _ = c'COLOR_BayerGR2RGB_EA</span></span>
+<span class="lineno">  434 </span>
+<span class="lineno">  435 </span>-- | Gives the number of channels associated with a particular color encoding
+<span class="lineno">  436 </span>type family ColorCodeChannels (cc :: ColorCode) :: Nat where
+<span class="lineno">  437 </span>  ColorCodeChannels 'BayerBG   = 1
+<span class="lineno">  438 </span>  ColorCodeChannels 'BayerGB   = 1
+<span class="lineno">  439 </span>  ColorCodeChannels 'BayerGR   = 1
+<span class="lineno">  440 </span>  ColorCodeChannels 'BayerRG   = 1
+<span class="lineno">  441 </span>  ColorCodeChannels 'BGR       = 3
+<span class="lineno">  442 </span>  ColorCodeChannels 'BGR555    = 2
+<span class="lineno">  443 </span>  ColorCodeChannels 'BGR565    = 2
+<span class="lineno">  444 </span>  ColorCodeChannels 'BGRA      = 4
+<span class="lineno">  445 </span>  ColorCodeChannels 'BGRA_I420 = 4
+<span class="lineno">  446 </span>  ColorCodeChannels 'BGRA_IYUV = 4
+<span class="lineno">  447 </span>  ColorCodeChannels 'BGRA_NV12 = 4
+<span class="lineno">  448 </span>  ColorCodeChannels 'BGRA_NV21 = 4
+<span class="lineno">  449 </span>  ColorCodeChannels 'BGRA_UYNV = 4
+<span class="lineno">  450 </span>  ColorCodeChannels 'BGRA_UYVY = 4
+<span class="lineno">  451 </span>  ColorCodeChannels 'BGRA_Y422 = 4
+<span class="lineno">  452 </span>  ColorCodeChannels 'BGRA_YUNV = 4
+<span class="lineno">  453 </span>  ColorCodeChannels 'BGRA_YUY2 = 4
+<span class="lineno">  454 </span>  ColorCodeChannels 'BGRA_YUYV = 4
+<span class="lineno">  455 </span>  ColorCodeChannels 'BGRA_YV12 = 4
+<span class="lineno">  456 </span>  ColorCodeChannels 'BGRA_YVYU = 4
+<span class="lineno">  457 </span>  ColorCodeChannels 'BGR_EA    = 3
+<span class="lineno">  458 </span>  ColorCodeChannels 'BGR_FULL  = 3
+<span class="lineno">  459 </span>  ColorCodeChannels 'BGR_I420  = 3
+<span class="lineno">  460 </span>  ColorCodeChannels 'BGR_IYUV  = 3
+<span class="lineno">  461 </span>  ColorCodeChannels 'BGR_NV12  = 3
+<span class="lineno">  462 </span>  ColorCodeChannels 'BGR_NV21  = 3
+<span class="lineno">  463 </span>  ColorCodeChannels 'BGR_UYNV  = 3
+<span class="lineno">  464 </span>  ColorCodeChannels 'BGR_UYVY  = 3
+<span class="lineno">  465 </span>  ColorCodeChannels 'BGR_VNG   = 3
+<span class="lineno">  466 </span>  ColorCodeChannels 'BGR_Y422  = 3
+<span class="lineno">  467 </span>  ColorCodeChannels 'BGR_YUNV  = 3
+<span class="lineno">  468 </span>  ColorCodeChannels 'BGR_YUY2  = 3
+<span class="lineno">  469 </span>  ColorCodeChannels 'BGR_YUYV  = 3
+<span class="lineno">  470 </span>  ColorCodeChannels 'BGR_YV12  = 3
+<span class="lineno">  471 </span>  ColorCodeChannels 'BGR_YVYU  = 3
+<span class="lineno">  472 </span>  ColorCodeChannels 'GRAY      = 1
+<span class="lineno">  473 </span>  ColorCodeChannels 'GRAY_420  = 1
+<span class="lineno">  474 </span>  ColorCodeChannels 'GRAY_I420 = 1
+<span class="lineno">  475 </span>  ColorCodeChannels 'GRAY_IYUV = 1
+<span class="lineno">  476 </span>  ColorCodeChannels 'GRAY_NV12 = 1
+<span class="lineno">  477 </span>  ColorCodeChannels 'GRAY_NV21 = 1
+<span class="lineno">  478 </span>  ColorCodeChannels 'GRAY_UYNV = 1
+<span class="lineno">  479 </span>  ColorCodeChannels 'GRAY_UYVY = 1
+<span class="lineno">  480 </span>  ColorCodeChannels 'GRAY_Y422 = 1
+<span class="lineno">  481 </span>  ColorCodeChannels 'GRAY_YUNV = 1
+<span class="lineno">  482 </span>  ColorCodeChannels 'GRAY_YUY2 = 1
+<span class="lineno">  483 </span>  ColorCodeChannels 'GRAY_YUYV = 1
+<span class="lineno">  484 </span>  ColorCodeChannels 'GRAY_YV12 = 1
+<span class="lineno">  485 </span>  ColorCodeChannels 'GRAY_YVYU = 1
+<span class="lineno">  486 </span>  ColorCodeChannels 'HLS       = 3
+<span class="lineno">  487 </span>  ColorCodeChannels 'HLS_FULL  = 3
+<span class="lineno">  488 </span>  ColorCodeChannels 'HSV       = 3
+<span class="lineno">  489 </span>  ColorCodeChannels 'HSV_FULL  = 3
+<span class="lineno">  490 </span>  ColorCodeChannels 'Lab       = 3
+<span class="lineno">  491 </span>  ColorCodeChannels 'LBGR      = 3
+<span class="lineno">  492 </span>  ColorCodeChannels 'LRGB      = 3
+<span class="lineno">  493 </span>  ColorCodeChannels 'Luv       = 3
+<span class="lineno">  494 </span>  ColorCodeChannels 'MRGBA     = 4
+<span class="lineno">  495 </span>  ColorCodeChannels 'RGB       = 3
+<span class="lineno">  496 </span>  ColorCodeChannels 'RGBA      = 4
+<span class="lineno">  497 </span>  ColorCodeChannels 'RGBA_I420 = 4
+<span class="lineno">  498 </span>  ColorCodeChannels 'RGBA_IYUV = 4
+<span class="lineno">  499 </span>  ColorCodeChannels 'RGBA_NV12 = 4
+<span class="lineno">  500 </span>  ColorCodeChannels 'RGBA_NV21 = 4
+<span class="lineno">  501 </span>  ColorCodeChannels 'RGBA_UYNV = 4
+<span class="lineno">  502 </span>  ColorCodeChannels 'RGBA_UYVY = 4
+<span class="lineno">  503 </span>  ColorCodeChannels 'RGBA_Y422 = 4
+<span class="lineno">  504 </span>  ColorCodeChannels 'RGBA_YUNV = 4
+<span class="lineno">  505 </span>  ColorCodeChannels 'RGBA_YUY2 = 4
+<span class="lineno">  506 </span>  ColorCodeChannels 'RGBA_YUYV = 4
+<span class="lineno">  507 </span>  ColorCodeChannels 'RGBA_YV12 = 4
+<span class="lineno">  508 </span>  ColorCodeChannels 'RGBA_YVYU = 4
+<span class="lineno">  509 </span>  ColorCodeChannels 'RGB_EA    = 3
+<span class="lineno">  510 </span>  ColorCodeChannels 'RGB_FULL  = 3
+<span class="lineno">  511 </span>  ColorCodeChannels 'RGB_I420  = 3
+<span class="lineno">  512 </span>  ColorCodeChannels 'RGB_IYUV  = 3
+<span class="lineno">  513 </span>  ColorCodeChannels 'RGB_NV12  = 3
+<span class="lineno">  514 </span>  ColorCodeChannels 'RGB_NV21  = 3
+<span class="lineno">  515 </span>  ColorCodeChannels 'RGB_UYNV  = 3
+<span class="lineno">  516 </span>  ColorCodeChannels 'RGB_UYVY  = 3
+<span class="lineno">  517 </span>  ColorCodeChannels 'RGB_VNG   = 3
+<span class="lineno">  518 </span>  ColorCodeChannels 'RGB_Y422  = 3
+<span class="lineno">  519 </span>  ColorCodeChannels 'RGB_YUNV  = 3
+<span class="lineno">  520 </span>  ColorCodeChannels 'RGB_YUY2  = 3
+<span class="lineno">  521 </span>  ColorCodeChannels 'RGB_YUYV  = 3
+<span class="lineno">  522 </span>  ColorCodeChannels 'RGB_YV12  = 3
+<span class="lineno">  523 </span>  ColorCodeChannels 'RGB_YVYU  = 3
+<span class="lineno">  524 </span>  ColorCodeChannels 'XYZ       = 3
+<span class="lineno">  525 </span>  ColorCodeChannels 'YCrCb     = 3
+<span class="lineno">  526 </span>  ColorCodeChannels 'YUV       = 3
+<span class="lineno">  527 </span>  ColorCodeChannels 'YUV420p   = 3
+<span class="lineno">  528 </span>  ColorCodeChannels 'YUV420sp  = 3
+<span class="lineno">  529 </span>  ColorCodeChannels 'YUV_I420  = 1
+<span class="lineno">  530 </span>  ColorCodeChannels 'YUV_IYUV  = 1
+<span class="lineno">  531 </span>  ColorCodeChannels 'YUV_YV12  = 1
+<span class="lineno">  532 </span>
+<span class="lineno">  533 </span>class ColorCodeMatchesChannels (code :: ColorCode) (channels :: DS Nat)
+<span class="lineno">  534 </span>
+<span class="lineno">  535 </span>instance ColorCodeMatchesChannels code 'D
+<span class="lineno">  536 </span>instance (ColorCodeChannels code ~ channels) =&gt; ColorCodeMatchesChannels code ('S channels)
+<span class="lineno">  537 </span>
+<span class="lineno">  538 </span>type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDepth :: DS *) :: DS * where
+<span class="lineno">  539 </span>  ColorCodeDepth 'BGR     'BGRA       ('S depth)  = 'S depth
+<span class="lineno">  540 </span>  ColorCodeDepth 'RGB     'BGRA       ('S depth)  = 'S depth
+<span class="lineno">  541 </span>  ColorCodeDepth 'BGRA    'BGR        ('S depth)  = 'S depth
+<span class="lineno">  542 </span>  ColorCodeDepth 'RGBA    'BGR        ('S depth)  = 'S depth
+<span class="lineno">  543 </span>  ColorCodeDepth 'RGB     'BGR        ('S depth)  = 'S depth
+<span class="lineno">  544 </span>  ColorCodeDepth 'BGR     'RGB        ('S depth)  = 'S depth
+<span class="lineno">  545 </span>  ColorCodeDepth 'BGRA    'RGBA       ('S depth)  = 'S depth
+<span class="lineno">  546 </span>  ColorCodeDepth 'BGRA    'RGB        ('S depth)  = 'S depth
+<span class="lineno">  547 </span>
+<span class="lineno">  548 </span>  ColorCodeDepth 'BGR     'BGR565     ('S Word8)  = 'S Word8
+<span class="lineno">  549 </span>  ColorCodeDepth 'BGR     'BGR555     ('S Word8)  = 'S Word8
+<span class="lineno">  550 </span>  ColorCodeDepth 'RGB     'BGR565     ('S Word8)  = 'S Word8
+<span class="lineno">  551 </span>  ColorCodeDepth 'RGB     'BGR555     ('S Word8)  = 'S Word8
+<span class="lineno">  552 </span>  ColorCodeDepth 'BGRA    'BGR565     ('S Word8)  = 'S Word8
+<span class="lineno">  553 </span>  ColorCodeDepth 'BGRA    'BGR555     ('S Word8)  = 'S Word8
+<span class="lineno">  554 </span>  ColorCodeDepth 'RGBA    'BGR565     ('S Word8)  = 'S Word8
+<span class="lineno">  555 </span>  ColorCodeDepth 'RGBA    'BGR555     ('S Word8)  = 'S Word8
+<span class="lineno">  556 </span>
+<span class="lineno">  557 </span>  ColorCodeDepth 'BGR565  'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  558 </span>  ColorCodeDepth 'BGR555  'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  559 </span>  ColorCodeDepth 'BGR565  'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  560 </span>  ColorCodeDepth 'BGR555  'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  561 </span>  ColorCodeDepth 'BGR565  'BGRA       ('S Word8)  = 'S Word8
+<span class="lineno">  562 </span>  ColorCodeDepth 'BGR555  'BGRA       ('S Word8)  = 'S Word8
+<span class="lineno">  563 </span>  ColorCodeDepth 'BGR565  'RGBA       ('S Word8)  = 'S Word8
+<span class="lineno">  564 </span>  ColorCodeDepth 'BGR555  'RGBA       ('S Word8)  = 'S Word8
+<span class="lineno">  565 </span>
+<span class="lineno">  566 </span>  ColorCodeDepth 'BGR     'GRAY       ('S depth)  = 'S depth
+<span class="lineno">  567 </span>  ColorCodeDepth 'BGRA    'GRAY       ('S depth)  = 'S depth
+<span class="lineno">  568 </span>  ColorCodeDepth 'RGB     'GRAY       ('S depth)  = 'S depth
+<span class="lineno">  569 </span>  ColorCodeDepth 'RGBA    'GRAY       ('S depth)  = 'S depth
+<span class="lineno">  570 </span>
+<span class="lineno">  571 </span>  ColorCodeDepth 'BGR565  'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  572 </span>  ColorCodeDepth 'BGR555  'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  573 </span>
+<span class="lineno">  574 </span>  ColorCodeDepth 'GRAY    'RGB        ('S depth)  = 'S depth
+<span class="lineno">  575 </span>  ColorCodeDepth 'GRAY    'BGR        ('S depth)  = 'S depth
+<span class="lineno">  576 </span>  ColorCodeDepth 'GRAY    'BGRA       ('S depth)  = 'S depth
+<span class="lineno">  577 </span>
+<span class="lineno">  578 </span>  ColorCodeDepth 'GRAY    'BGR565     ('S Word8)  = 'S Word8
+<span class="lineno">  579 </span>  ColorCodeDepth 'GRAY    'BGR555     ('S Word8)  = 'S Word8
+<span class="lineno">  580 </span>
+<span class="lineno">  581 </span>  ColorCodeDepth 'BGR     'YCrCb      ('S depth)  = 'S depth
+<span class="lineno">  582 </span>  ColorCodeDepth 'BGR     'YUV        ('S depth)  = 'S depth
+<span class="lineno">  583 </span>  ColorCodeDepth 'RGB     'YCrCb      ('S depth)  = 'S depth
+<span class="lineno">  584 </span>  ColorCodeDepth 'RGB     'YUV        ('S depth)  = 'S depth
+<span class="lineno">  585 </span>
+<span class="lineno">  586 </span>  ColorCodeDepth 'YCrCb   'BGR        ('S depth)  = 'S depth
+<span class="lineno">  587 </span>  ColorCodeDepth 'YCrCb   'RGB        ('S depth)  = 'S depth
+<span class="lineno">  588 </span>  ColorCodeDepth 'YUV     'BGR        ('S depth)  = 'S depth
+<span class="lineno">  589 </span>  ColorCodeDepth 'YUV     'RGB        ('S depth)  = 'S depth
+<span class="lineno">  590 </span>
+<span class="lineno">  591 </span>  ColorCodeDepth 'BGR     'XYZ        ('S depth)  = 'S depth
+<span class="lineno">  592 </span>  ColorCodeDepth 'RGB     'XYZ        ('S depth)  = 'S depth
+<span class="lineno">  593 </span>
+<span class="lineno">  594 </span>  ColorCodeDepth 'XYZ     'BGR        ('S depth)  = 'S depth
+<span class="lineno">  595 </span>  ColorCodeDepth 'XYZ     'RGB        ('S depth)  = 'S depth
+<span class="lineno">  596 </span>
+<span class="lineno">  597 </span>  ColorCodeDepth 'BGR     'HSV        ('S Word8)  = 'S Word8
+<span class="lineno">  598 </span>  ColorCodeDepth 'RGB     'HSV        ('S Word8)  = 'S Word8
+<span class="lineno">  599 </span>  ColorCodeDepth 'BGR     'HSV_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  600 </span>  ColorCodeDepth 'RGB     'HSV_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  601 </span>  ColorCodeDepth 'BGR     'HLS        ('S Word8)  = 'S Word8
+<span class="lineno">  602 </span>  ColorCodeDepth 'RGB     'HLS        ('S Word8)  = 'S Word8
+<span class="lineno">  603 </span>  ColorCodeDepth 'BGR     'HLS_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  604 </span>  ColorCodeDepth 'RGB     'HLS_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  605 </span>
+<span class="lineno">  606 </span>  ColorCodeDepth 'BGR     'HSV        ('S Float)  = 'S Float
+<span class="lineno">  607 </span>  ColorCodeDepth 'RGB     'HSV        ('S Float)  = 'S Float
+<span class="lineno">  608 </span>  ColorCodeDepth 'BGR     'HSV_FULL   ('S Float)  = 'S Float
+<span class="lineno">  609 </span>  ColorCodeDepth 'RGB     'HSV_FULL   ('S Float)  = 'S Float
+<span class="lineno">  610 </span>  ColorCodeDepth 'BGR     'HLS        ('S Float)  = 'S Float
+<span class="lineno">  611 </span>  ColorCodeDepth 'RGB     'HLS        ('S Float)  = 'S Float
+<span class="lineno">  612 </span>  ColorCodeDepth 'BGR     'HLS_FULL   ('S Float)  = 'S Float
+<span class="lineno">  613 </span>  ColorCodeDepth 'RGB     'HLS_FULL   ('S Float)  = 'S Float
+<span class="lineno">  614 </span>
+<span class="lineno">  615 </span>  ColorCodeDepth 'HSV     'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  616 </span>  ColorCodeDepth 'HSV     'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  617 </span>  ColorCodeDepth 'HSV     'BGR_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  618 </span>  ColorCodeDepth 'HSV     'RGB_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  619 </span>  ColorCodeDepth 'HLS     'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  620 </span>  ColorCodeDepth 'HLS     'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  621 </span>  ColorCodeDepth 'HLS     'BGR_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  622 </span>  ColorCodeDepth 'HLS     'RGB_FULL   ('S Word8)  = 'S Word8
+<span class="lineno">  623 </span>
+<span class="lineno">  624 </span>  ColorCodeDepth 'HSV     'BGR        ('S Float)  = 'S Float
+<span class="lineno">  625 </span>  ColorCodeDepth 'HSV     'RGB        ('S Float)  = 'S Float
+<span class="lineno">  626 </span>  ColorCodeDepth 'HSV     'BGR_FULL   ('S Float)  = 'S Float
+<span class="lineno">  627 </span>  ColorCodeDepth 'HSV     'RGB_FULL   ('S Float)  = 'S Float
+<span class="lineno">  628 </span>  ColorCodeDepth 'HLS     'BGR        ('S Float)  = 'S Float
+<span class="lineno">  629 </span>  ColorCodeDepth 'HLS     'RGB        ('S Float)  = 'S Float
+<span class="lineno">  630 </span>  ColorCodeDepth 'HLS     'BGR_FULL   ('S Float)  = 'S Float
+<span class="lineno">  631 </span>  ColorCodeDepth 'HLS     'RGB_FULL   ('S Float)  = 'S Float
+<span class="lineno">  632 </span>
+<span class="lineno">  633 </span>  ColorCodeDepth 'BGR     'Lab        ('S Word8)  = 'S Word8
+<span class="lineno">  634 </span>  ColorCodeDepth 'RGB     'Lab        ('S Word8)  = 'S Word8
+<span class="lineno">  635 </span>  ColorCodeDepth 'LBGR    'Lab        ('S Word8)  = 'S Word8
+<span class="lineno">  636 </span>  ColorCodeDepth 'LRGB    'Lab        ('S Word8)  = 'S Word8
+<span class="lineno">  637 </span>  ColorCodeDepth 'BGR     'Luv        ('S Word8)  = 'S Word8
+<span class="lineno">  638 </span>  ColorCodeDepth 'RGB     'Luv        ('S Word8)  = 'S Word8
+<span class="lineno">  639 </span>  ColorCodeDepth 'LBGR    'Luv        ('S Word8)  = 'S Word8
+<span class="lineno">  640 </span>  ColorCodeDepth 'LRGB    'Luv        ('S Word8)  = 'S Word8
+<span class="lineno">  641 </span>
+<span class="lineno">  642 </span>  ColorCodeDepth 'BGR     'Lab        ('S Float)  = 'S Float
+<span class="lineno">  643 </span>  ColorCodeDepth 'RGB     'Lab        ('S Float)  = 'S Float
+<span class="lineno">  644 </span>  ColorCodeDepth 'LBGR    'Lab        ('S Float)  = 'S Float
+<span class="lineno">  645 </span>  ColorCodeDepth 'LRGB    'Lab        ('S Float)  = 'S Float
+<span class="lineno">  646 </span>  ColorCodeDepth 'BGR     'Luv        ('S Float)  = 'S Float
+<span class="lineno">  647 </span>  ColorCodeDepth 'RGB     'Luv        ('S Float)  = 'S Float
+<span class="lineno">  648 </span>  ColorCodeDepth 'LBGR    'Luv        ('S Float)  = 'S Float
+<span class="lineno">  649 </span>  ColorCodeDepth 'LRGB    'Luv        ('S Float)  = 'S Float
+<span class="lineno">  650 </span>
+<span class="lineno">  651 </span>  ColorCodeDepth 'Lab     'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  652 </span>  ColorCodeDepth 'Lab     'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  653 </span>  ColorCodeDepth 'Lab     'LBGR       ('S Word8)  = 'S Word8
+<span class="lineno">  654 </span>  ColorCodeDepth 'Lab     'LRGB       ('S Word8)  = 'S Word8
+<span class="lineno">  655 </span>  ColorCodeDepth 'Luv     'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  656 </span>  ColorCodeDepth 'Luv     'RGB        ('S Word8)  = 'S Word8
+<span class="lineno">  657 </span>  ColorCodeDepth 'Luv     'LBGR       ('S Word8)  = 'S Word8
+<span class="lineno">  658 </span>  ColorCodeDepth 'Luv     'LRGB       ('S Word8)  = 'S Word8
+<span class="lineno">  659 </span>
+<span class="lineno">  660 </span>  ColorCodeDepth 'Lab     'BGR        ('S Float)  = 'S Float
+<span class="lineno">  661 </span>  ColorCodeDepth 'Lab     'RGB        ('S Float)  = 'S Float
+<span class="lineno">  662 </span>  ColorCodeDepth 'Lab     'LBGR       ('S Float)  = 'S Float
+<span class="lineno">  663 </span>  ColorCodeDepth 'Lab     'LRGB       ('S Float)  = 'S Float
+<span class="lineno">  664 </span>  ColorCodeDepth 'Luv     'BGR        ('S Float)  = 'S Float
+<span class="lineno">  665 </span>  ColorCodeDepth 'Luv     'RGB        ('S Float)  = 'S Float
+<span class="lineno">  666 </span>  ColorCodeDepth 'Luv     'LBGR       ('S Float)  = 'S Float
+<span class="lineno">  667 </span>  ColorCodeDepth 'Luv     'LRGB       ('S Float)  = 'S Float
+<span class="lineno">  668 </span>
+<span class="lineno">  669 </span>  ColorCodeDepth 'BayerBG 'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  670 </span>  ColorCodeDepth 'BayerBG 'GRAY       ('S Word16) = 'S Word16
+<span class="lineno">  671 </span>  ColorCodeDepth 'BayerGB 'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  672 </span>  ColorCodeDepth 'BayerGB 'GRAY       ('S Word16) = 'S Word16
+<span class="lineno">  673 </span>  ColorCodeDepth 'BayerGR 'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  674 </span>  ColorCodeDepth 'BayerGR 'GRAY       ('S Word16) = 'S Word16
+<span class="lineno">  675 </span>  ColorCodeDepth 'BayerRG 'GRAY       ('S Word8)  = 'S Word8
+<span class="lineno">  676 </span>  ColorCodeDepth 'BayerRG 'GRAY       ('S Word16) = 'S Word16
+<span class="lineno">  677 </span>
+<span class="lineno">  678 </span>  ColorCodeDepth 'BayerBG 'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  679 </span>  ColorCodeDepth 'BayerBG 'BGR        ('S Word16) = 'S Word16
+<span class="lineno">  680 </span>  ColorCodeDepth 'BayerGB 'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  681 </span>  ColorCodeDepth 'BayerGB 'BGR        ('S Word16) = 'S Word16
+<span class="lineno">  682 </span>  ColorCodeDepth 'BayerGR 'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  683 </span>  ColorCodeDepth 'BayerGR 'BGR        ('S Word16) = 'S Word16
+<span class="lineno">  684 </span>  ColorCodeDepth 'BayerRG 'BGR        ('S Word8)  = 'S Word8
+<span class="lineno">  685 </span>  ColorCodeDepth 'BayerRG 'BGR        ('S Word16) = 'S Word16
+<span class="lineno">  686 </span>
+<span class="lineno">  687 </span>  ColorCodeDepth 'BayerBG 'BGR_VNG    ('S Word8)  = 'S Word8
+<span class="lineno">  688 </span>  ColorCodeDepth 'BayerBG 'BGR_VNG    ('S Word16) = 'S Word16
+<span class="lineno">  689 </span>  ColorCodeDepth 'BayerGB 'BGR_VNG    ('S Word8)  = 'S Word8
+<span class="lineno">  690 </span>  ColorCodeDepth 'BayerGB 'BGR_VNG    ('S Word16) = 'S Word16
+<span class="lineno">  691 </span>  ColorCodeDepth 'BayerGR 'BGR_VNG    ('S Word8)  = 'S Word8
+<span class="lineno">  692 </span>  ColorCodeDepth 'BayerGR 'BGR_VNG    ('S Word16) = 'S Word16
+<span class="lineno">  693 </span>  ColorCodeDepth 'BayerRG 'BGR_VNG    ('S Word8)  = 'S Word8
+<span class="lineno">  694 </span>  ColorCodeDepth 'BayerRG 'BGR_VNG    ('S Word16) = 'S Word16
+<span class="lineno">  695 </span>
+<span class="lineno">  696 </span>  ColorCodeDepth 'BayerBG 'BGR_EA     ('S Word8)  = 'S Word8
+<span class="lineno">  697 </span>  ColorCodeDepth 'BayerBG 'BGR_EA     ('S Word16) = 'S Word16
+<span class="lineno">  698 </span>  ColorCodeDepth 'BayerGB 'BGR_EA     ('S Word8)  = 'S Word8
+<span class="lineno">  699 </span>  ColorCodeDepth 'BayerGB 'BGR_EA     ('S Word16) = 'S Word16
+<span class="lineno">  700 </span>  ColorCodeDepth 'BayerGR 'BGR_EA     ('S Word8)  = 'S Word8
+<span class="lineno">  701 </span>  ColorCodeDepth 'BayerGR 'BGR_EA     ('S Word16) = 'S Word16
+<span class="lineno">  702 </span>  ColorCodeDepth 'BayerRG 'BGR_EA     ('S Word8)  = 'S Word8
+<span class="lineno">  703 </span>  ColorCodeDepth 'BayerRG 'BGR_EA     ('S Word16) = 'S Word16
+<span class="lineno">  704 </span>
+<span class="lineno">  705 </span>  ColorCodeDepth 'YUV     'BGR_NV21   ('S Word8)  = 'S Word8
+<span class="lineno">  706 </span>  ColorCodeDepth 'YUV     'RGB_NV21   ('S Word8)  = 'S Word8
+<span class="lineno">  707 </span>  ColorCodeDepth 'YUV     'BGR_NV12   ('S Word8)  = 'S Word8
+<span class="lineno">  708 </span>  ColorCodeDepth 'YUV     'RGB_NV12   ('S Word8)  = 'S Word8
+<span class="lineno">  709 </span>  ColorCodeDepth 'YUV     'BGRA_NV21  ('S Word8)  = 'S Word8
+<span class="lineno">  710 </span>  ColorCodeDepth 'YUV     'RGBA_NV21  ('S Word8)  = 'S Word8
+<span class="lineno">  711 </span>  ColorCodeDepth 'YUV     'BGRA_NV12  ('S Word8)  = 'S Word8
+<span class="lineno">  712 </span>  ColorCodeDepth 'YUV     'RGBA_NV12  ('S Word8)  = 'S Word8
+<span class="lineno">  713 </span>
+<span class="lineno">  714 </span>  ColorCodeDepth 'YUV     'BGR_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  715 </span>  ColorCodeDepth 'YUV     'RGB_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  716 </span>  ColorCodeDepth 'YUV     'BGRA_YV12  ('S Word8)  = 'S Word8
+<span class="lineno">  717 </span>  ColorCodeDepth 'YUV     'RGBA_YV12  ('S Word8)  = 'S Word8
+<span class="lineno">  718 </span>  ColorCodeDepth 'YUV     'BGR_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  719 </span>  ColorCodeDepth 'YUV     'RGB_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  720 </span>  ColorCodeDepth 'YUV     'BGRA_IYUV  ('S Word8)  = 'S Word8
+<span class="lineno">  721 </span>  ColorCodeDepth 'YUV     'RGBA_IYUV  ('S Word8)  = 'S Word8
+<span class="lineno">  722 </span>
+<span class="lineno">  723 </span>  ColorCodeDepth 'YUV     'GRAY_420   ('S Word8)  = 'S Word8
+<span class="lineno">  724 </span>
+<span class="lineno">  725 </span>  ColorCodeDepth 'RGB     'YUV_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  726 </span>  ColorCodeDepth 'BGR     'YUV_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  727 </span>  ColorCodeDepth 'RGBA    'YUV_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  728 </span>  ColorCodeDepth 'BGRA    'YUV_YV12   ('S Word8)  = 'S Word8
+<span class="lineno">  729 </span>  ColorCodeDepth 'RGB     'YUV_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  730 </span>  ColorCodeDepth 'BGR     'YUV_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  731 </span>  ColorCodeDepth 'RGBA    'YUV_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  732 </span>  ColorCodeDepth 'BGRA    'YUV_IYUV   ('S Word8)  = 'S Word8
+<span class="lineno">  733 </span>
+<span class="lineno">  734 </span>  ColorCodeDepth 'YUV     'RGB_UYVY   ('S Word8)  = 'S Word8
+<span class="lineno">  735 </span>  ColorCodeDepth 'YUV     'BGR_UYVY   ('S Word8)  = 'S Word8
+<span class="lineno">  736 </span>  ColorCodeDepth 'YUV     'RGBA_UYVY  ('S Word8)  = 'S Word8
+<span class="lineno">  737 </span>  ColorCodeDepth 'YUV     'BGRA_UYVY  ('S Word8)  = 'S Word8
+<span class="lineno">  738 </span>  ColorCodeDepth 'YUV     'RGB_YUY2   ('S Word8)  = 'S Word8
+<span class="lineno">  739 </span>  ColorCodeDepth 'YUV     'BGR_YUY2   ('S Word8)  = 'S Word8
+<span class="lineno">  740 </span>  ColorCodeDepth 'YUV     'RGB_YVYU   ('S Word8)  = 'S Word8
+<span class="lineno">  741 </span>  ColorCodeDepth 'YUV     'BGR_YVYU   ('S Word8)  = 'S Word8
+<span class="lineno">  742 </span>  ColorCodeDepth 'YUV     'RGBA_YUY2  ('S Word8)  = 'S Word8
+<span class="lineno">  743 </span>  ColorCodeDepth 'YUV     'BGRA_YUY2  ('S Word8)  = 'S Word8
+<span class="lineno">  744 </span>  ColorCodeDepth 'YUV     'RGBA_YVYU  ('S Word8)  = 'S Word8
+<span class="lineno">  745 </span>  ColorCodeDepth 'YUV     'BGRA_YVYU  ('S Word8)  = 'S Word8
+<span class="lineno">  746 </span>
+<span class="lineno">  747 </span>  ColorCodeDepth 'YUV     'GRAY_UYVY  ('S Word8)  = 'S Word8
+<span class="lineno">  748 </span>  ColorCodeDepth 'YUV     'GRAY_YUY2  ('S Word8)  = 'S Word8
+<span class="lineno">  749 </span>
+<span class="lineno">  750 </span>  ColorCodeDepth 'RGBA    'MRGBA      ('S Word8)  = 'S Word8
+<span class="lineno">  751 </span>  ColorCodeDepth 'MRGBA   'RGBA       ('S Word8)  = 'S Word8
+<span class="lineno">  752 </span>
+<span class="lineno">  753 </span>  ColorCodeDepth srcCode  dstCode      'D         = 'D
+
+</pre>
+</body>
+</html>

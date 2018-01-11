@@ -1,0 +1,510 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE QuasiQuotes #-}
+<span class="lineno">    2 </span>{-# LANGUAGE TemplateHaskell #-}
+<span class="lineno">    3 </span>
+<span class="lineno">    4 </span>module OpenCV.Calib3d
+<span class="lineno">    5 </span>    ( FundamentalMatMethod(..)
+<span class="lineno">    6 </span>    , FindHomographyMethod(..)
+<span class="lineno">    7 </span>    , FindHomographyParams(..)
+<span class="lineno">    8 </span>    , WhichImage(..)
+<span class="lineno">    9 </span>    -- , calibrateCamera
+<span class="lineno">   10 </span>    , findFundamentalMat
+<span class="lineno">   11 </span>    , findHomography
+<span class="lineno">   12 </span>    , computeCorrespondEpilines
+<span class="lineno">   13 </span>
+<span class="lineno">   14 </span>    , SolvePnPMethod(..)
+<span class="lineno">   15 </span>    , solvePnP
+<span class="lineno">   16 </span>    ) where
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import &quot;base&quot; Data.Int
+<span class="lineno">   19 </span>import &quot;base&quot; Data.Word
+<span class="lineno">   20 </span>import &quot;base&quot; Foreign.C.Types
+<span class="lineno">   21 </span>import &quot;base&quot; Foreign.Marshal.Utils ( fromBool )
+<span class="lineno">   22 </span>import qualified &quot;inline-c&quot; Language.C.Inline as C
+<span class="lineno">   23 </span>import qualified &quot;inline-c-cpp&quot; Language.C.Inline.Cpp as C
+<span class="lineno">   24 </span>import &quot;data-default&quot; Data.Default
+<span class="lineno">   25 </span>import &quot;this&quot; OpenCV.Internal.C.Inline ( openCvCtx )
+<span class="lineno">   26 </span>import &quot;this&quot; OpenCV.Internal.C.Types
+<span class="lineno">   27 </span>import &quot;this&quot; OpenCV.Internal.Calib3d.Constants
+<span class="lineno">   28 </span>import &quot;this&quot; OpenCV.Core.Types
+<span class="lineno">   29 </span>import &quot;this&quot; OpenCV.Internal.Core.Types
+<span class="lineno">   30 </span>import &quot;this&quot; OpenCV.Internal.Core.Types.Mat
+<span class="lineno">   31 </span>import &quot;this&quot; OpenCV.Internal.Exception
+<span class="lineno">   32 </span>import &quot;this&quot; OpenCV.TypeLevel
+<span class="lineno">   33 </span>import &quot;transformers&quot; Control.Monad.Trans.Except
+<span class="lineno">   34 </span>import qualified &quot;vector&quot; Data.Vector as V
+<span class="lineno">   35 </span>
+<span class="lineno">   36 </span>--------------------------------------------------------------------------------
+<span class="lineno">   37 </span>
+<span class="lineno">   38 </span>C.context openCvCtx
+<span class="lineno">   39 </span>
+<span class="lineno">   40 </span>C.include &quot;opencv2/core.hpp&quot;
+<span class="lineno">   41 </span>C.include &quot;opencv2/calib3d.hpp&quot;
+<span class="lineno">   42 </span>C.using &quot;namespace cv&quot;
+<span class="lineno">   43 </span>
+<span class="lineno">   44 </span>--------------------------------------------------------------------------------
+<span class="lineno">   45 </span>-- Types
+<span class="lineno">   46 </span>
+<span class="lineno">   47 </span>data FundamentalMatMethod
+<span class="lineno">   48 </span>   = FM_7Point
+<span class="lineno">   49 </span>   | FM_8Point
+<span class="lineno">   50 </span>   | FM_Ransac !(Maybe Double) !(Maybe Double)
+<span class="lineno">   51 </span>   | FM_Lmeds  !(Maybe Double)
+<span class="lineno">   52 </span>     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   53 </span>
+<span class="lineno">   54 </span>marshalFundamentalMatMethod :: FundamentalMatMethod -&gt; (Int32, CDouble, CDouble)
+<span class="lineno">   55 </span><span class="decl"><span class="istickedoff">marshalFundamentalMatMethod = \case</span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">FM_7Point       -&gt; <span class="nottickedoff">(c'CV_FM_7POINT, 0, 0)</span></span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">FM_8Point       -&gt; <span class="nottickedoff">(c'CV_FM_8POINT, 0, 0)</span></span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">FM_Ransac p1 p2 -&gt; (c'CV_FM_RANSAC, maybe 3 <span class="nottickedoff">realToFrac</span> p1, maybe 0.99 <span class="nottickedoff">realToFrac</span> p2)</span>
+<span class="lineno">   59 </span><span class="spaces">    </span><span class="istickedoff">FM_Lmeds     p2 -&gt; <span class="nottickedoff">(c'CV_FM_LMEDS, 0, maybe 0.99 realToFrac p2)</span></span></span>
+<span class="lineno">   60 </span>
+<span class="lineno">   61 </span>data WhichImage = Image1 | Image2 deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>)
+<span class="lineno">   62 </span>
+<span class="lineno">   63 </span>marshalWhichImage :: WhichImage -&gt; Int32
+<span class="lineno">   64 </span><span class="decl"><span class="istickedoff">marshalWhichImage = \case</span>
+<span class="lineno">   65 </span><span class="spaces">    </span><span class="istickedoff">Image1 -&gt; 1</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">Image2 -&gt; 2</span></span>
+<span class="lineno">   67 </span>
+<span class="lineno">   68 </span>data FindHomographyMethod
+<span class="lineno">   69 </span>   = FindHomographyMethod_0
+<span class="lineno">   70 </span>     -- ^ A regular method using all the points.
+<span class="lineno">   71 </span>   | FindHomographyMethod_RANSAC
+<span class="lineno">   72 </span>     -- ^ RANSAC-based robust method.
+<span class="lineno">   73 </span>   | FindHomographyMethod_LMEDS
+<span class="lineno">   74 </span>     -- ^ Least-Median robust method.
+<span class="lineno">   75 </span>   | FindHomographyMethod_RHO
+<span class="lineno">   76 </span>     -- ^ PROSAC-based robust method.
+<span class="lineno">   77 </span>     deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">   78 </span>
+<span class="lineno">   79 </span>marshalFindHomographyMethod :: FindHomographyMethod -&gt; Int32
+<span class="lineno">   80 </span><span class="decl"><span class="nottickedoff">marshalFindHomographyMethod = \case</span>
+<span class="lineno">   81 </span><span class="spaces">    </span><span class="nottickedoff">FindHomographyMethod_0      -&gt; 0</span>
+<span class="lineno">   82 </span><span class="spaces">    </span><span class="nottickedoff">FindHomographyMethod_RANSAC -&gt; c'RANSAC</span>
+<span class="lineno">   83 </span><span class="spaces">    </span><span class="nottickedoff">FindHomographyMethod_LMEDS  -&gt; c'LMEDS</span>
+<span class="lineno">   84 </span><span class="spaces">    </span><span class="nottickedoff">FindHomographyMethod_RHO    -&gt; c'RHO</span></span>
+<span class="lineno">   85 </span>
+<span class="lineno">   86 </span>--------------------------------------------------------------------------------
+<span class="lineno">   87 </span>
+<span class="lineno">   88 </span>-- {- |
+<span class="lineno">   89 </span>-- &lt;http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#calibratecamera OpenCV Sphinx doc&gt;
+<span class="lineno">   90 </span>-- -}
+<span class="lineno">   91 </span>-- calibrateCamera
+<span class="lineno">   92 </span>--     :: ( ToSize2i imageSize
+<span class="lineno">   93 </span>--        , camMat ~ Mat (ShapeT [3, 3]) ('S 1) ('S Double)
+<span class="lineno">   94 </span>--        )
+<span class="lineno">   95 </span>--      . V.Vector () -- combine objectPoints and imagePoints
+<span class="lineno">   96 </span>--     -&gt; imageSize
+<span class="lineno">   97 </span>--     -&gt; camMat
+<span class="lineno">   98 </span>--     -&gt; flags
+<span class="lineno">   99 </span>--     -&gt; criteria
+<span class="lineno">  100 </span>--     -&gt; (camMat, distCoeffs, rvecs, tvecs)
+<span class="lineno">  101 </span>-- calibrateCamera = _todo
+<span class="lineno">  102 </span>
+<span class="lineno">  103 </span>{- | Calculates a fundamental matrix from the corresponding points in two images
+<span class="lineno">  104 </span>
+<span class="lineno">  105 </span>The minimum number of points required depends on the 'FundamentalMatMethod'.
+<span class="lineno">  106 </span>
+<span class="lineno">  107 </span> * 'FM_7Point': @N == 7@
+<span class="lineno">  108 </span> * 'FM_8Point': @N &gt;= 8@
+<span class="lineno">  109 </span> * 'FM_Ransac': @N &gt;= 15@
+<span class="lineno">  110 </span> * 'FM_Lmeds': @N &gt;= 8@
+<span class="lineno">  111 </span>
+<span class="lineno">  112 </span>With 7 points the 'FM_7Point' method is used, despite the given method.
+<span class="lineno">  113 </span>
+<span class="lineno">  114 </span>With more than 7 points the 'FM_7Point' method will be replaced by the
+<span class="lineno">  115 </span>'FM_8Point' method.
+<span class="lineno">  116 </span>
+<span class="lineno">  117 </span>Between 7 and 15 points the 'FM_Ransac' method will be replaced by the
+<span class="lineno">  118 </span>'FM_Lmeds' method.
+<span class="lineno">  119 </span>
+<span class="lineno">  120 </span>With the 'FM_7Point' method and with 7 points the result can contain up to 3
+<span class="lineno">  121 </span>matrices, resulting in either 3, 6 or 9 rows. This is why the number of
+<span class="lineno">  122 </span>resulting rows in tagged as 'D'ynamic. For all other methods the result always
+<span class="lineno">  123 </span>contains 3 rows.
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc&gt;
+<span class="lineno">  126 </span>-}
+<span class="lineno">  127 </span>findFundamentalMat
+<span class="lineno">  128 </span>    :: (IsPoint2 point2 CDouble)
+<span class="lineno">  129 </span>    =&gt; V.Vector (point2 CDouble) -- ^ Points from the first image.
+<span class="lineno">  130 </span>    -&gt; V.Vector (point2 CDouble) -- ^ Points from the second image.
+<span class="lineno">  131 </span>    -&gt; FundamentalMatMethod
+<span class="lineno">  132 </span>    -&gt; CvExcept ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
+<span class="lineno">  133 </span>                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
+<span class="lineno">  134 </span>                        )
+<span class="lineno">  135 </span>                )
+<span class="lineno">  136 </span><span class="decl"><span class="istickedoff">findFundamentalMat pts1 pts2 method = do</span>
+<span class="lineno">  137 </span><span class="spaces">    </span><span class="istickedoff">(fm, pointMask) &lt;- c'findFundamentalMat</span>
+<span class="lineno">  138 </span><span class="spaces">    </span><span class="istickedoff">-- If the c++ function can't find a fundamental matrix it will</span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">-- return an empty matrix. We check for this case by trying to</span>
+<span class="lineno">  140 </span><span class="spaces">    </span><span class="istickedoff">-- coerce the result to the desired type.</span>
+<span class="lineno">  141 </span><span class="spaces">    </span><span class="istickedoff">catchE (Just . (, unsafeCoerceMat pointMask) &lt;$&gt; coerceMat fm)</span>
+<span class="lineno">  142 </span><span class="spaces">           </span><span class="istickedoff">(\case CoerceMatError _msgs -&gt; pure Nothing</span>
+<span class="lineno">  143 </span><span class="spaces">                  </span><span class="istickedoff">otherError -&gt; <span class="nottickedoff">throwE otherError</span></span>
+<span class="lineno">  144 </span><span class="spaces">           </span><span class="istickedoff">)</span>
+<span class="lineno">  145 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  146 </span><span class="spaces">    </span><span class="istickedoff">c'findFundamentalMat = unsafeWrapException $ do</span>
+<span class="lineno">  147 </span><span class="spaces">      </span><span class="istickedoff">fm        &lt;- newEmptyMat</span>
+<span class="lineno">  148 </span><span class="spaces">      </span><span class="istickedoff">pointMask &lt;- newEmptyMat</span>
+<span class="lineno">  149 </span><span class="spaces">      </span><span class="istickedoff">handleCvException (pure (fm, pointMask)) $</span>
+<span class="lineno">  150 </span><span class="spaces">        </span><span class="istickedoff">withPtr fm $ \fmPtr -&gt;</span>
+<span class="lineno">  151 </span><span class="spaces">        </span><span class="istickedoff">withPtr pointMask $ \pointMaskPtr -&gt;</span>
+<span class="lineno">  152 </span><span class="spaces">        </span><span class="istickedoff">withArrayPtr (V.map toPoint pts1) $ \pts1Ptr -&gt;</span>
+<span class="lineno">  153 </span><span class="spaces">        </span><span class="istickedoff">withArrayPtr (V.map toPoint pts2) $ \pts2Ptr -&gt;</span>
+<span class="lineno">  154 </span><span class="spaces">          </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  155 </span><span class="spaces">            </span><span class="istickedoff">cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));</span>
+<span class="lineno">  156 </span><span class="spaces">            </span><span class="istickedoff">cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));</span>
+<span class="lineno">  157 </span><span class="spaces">            </span><span class="istickedoff">*$(Mat * fmPtr) =</span>
+<span class="lineno">  158 </span><span class="spaces">              </span><span class="istickedoff">cv::findFundamentalMat</span>
+<span class="lineno">  159 </span><span class="spaces">              </span><span class="istickedoff">( pts1</span>
+<span class="lineno">  160 </span><span class="spaces">              </span><span class="istickedoff">, pts2</span>
+<span class="lineno">  161 </span><span class="spaces">              </span><span class="istickedoff">, $(int32_t c'method)</span>
+<span class="lineno">  162 </span><span class="spaces">              </span><span class="istickedoff">, $(double c'p1)</span>
+<span class="lineno">  163 </span><span class="spaces">              </span><span class="istickedoff">, $(double c'p2)</span>
+<span class="lineno">  164 </span><span class="spaces">              </span><span class="istickedoff">, *$(Mat * pointMaskPtr)</span>
+<span class="lineno">  165 </span><span class="spaces">              </span><span class="istickedoff">);</span>
+<span class="lineno">  166 </span><span class="spaces">          </span><span class="istickedoff">|]</span>
+<span class="lineno">  167 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">c'numPts1 = fromIntegral $ V.length pts1</span>
+<span class="lineno">  169 </span><span class="spaces">    </span><span class="istickedoff">c'numPts2 = fromIntegral $ V.length pts2</span>
+<span class="lineno">  170 </span><span class="spaces">    </span><span class="istickedoff">(c'method, c'p1, c'p2) = marshalFundamentalMatMethod method</span></span>
+<span class="lineno">  171 </span>
+<span class="lineno">  172 </span>data FindHomographyParams
+<span class="lineno">  173 </span>   = FindHomographyParams
+<span class="lineno">  174 </span>     { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fhpMethod</span></span></span>                :: !FindHomographyMethod
+<span class="lineno">  175 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fhpRansacReprojThreshold</span></span></span> :: !Double
+<span class="lineno">  176 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fhpMaxIters</span></span></span>              :: !Int
+<span class="lineno">  177 </span>     , <span class="nottickedoff"><span class="decl"><span class="nottickedoff">fhpConfidence</span></span></span>            :: !Double
+<span class="lineno">  178 </span>     } deriving (<span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Show</span></span></span></span>)
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>instance Default FindHomographyParams where
+<span class="lineno">  181 </span>    <span class="decl"><span class="nottickedoff">def = FindHomographyParams</span>
+<span class="lineno">  182 </span><span class="spaces">          </span><span class="nottickedoff">{ fhpMethod                = FindHomographyMethod_0</span>
+<span class="lineno">  183 </span><span class="spaces">          </span><span class="nottickedoff">, fhpRansacReprojThreshold = 3</span>
+<span class="lineno">  184 </span><span class="spaces">          </span><span class="nottickedoff">, fhpMaxIters              = 2000</span>
+<span class="lineno">  185 </span><span class="spaces">          </span><span class="nottickedoff">, fhpConfidence            = 0.995</span>
+<span class="lineno">  186 </span><span class="spaces">          </span><span class="nottickedoff">}</span></span>
+<span class="lineno">  187 </span>
+<span class="lineno">  188 </span>findHomography
+<span class="lineno">  189 </span>    :: (IsPoint2 point2 CDouble)
+<span class="lineno">  190 </span>    =&gt; V.Vector (point2 CDouble) -- ^ Points from the first image.
+<span class="lineno">  191 </span>    -&gt; V.Vector (point2 CDouble) -- ^ Points from the second image.
+<span class="lineno">  192 </span>    -&gt; FindHomographyParams
+<span class="lineno">  193 </span>    -&gt; CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
+<span class="lineno">  194 </span>                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
+<span class="lineno">  195 </span>                        )
+<span class="lineno">  196 </span>                )
+<span class="lineno">  197 </span><span class="decl"><span class="nottickedoff">findHomography srcPoints dstPoints fhp = do</span>
+<span class="lineno">  198 </span><span class="spaces">    </span><span class="nottickedoff">(fm, pointMask) &lt;- c'findHomography</span>
+<span class="lineno">  199 </span><span class="spaces">    </span><span class="nottickedoff">-- If the c++ function can't find a fundamental matrix it will</span>
+<span class="lineno">  200 </span><span class="spaces">    </span><span class="nottickedoff">-- return an empty matrix. We check for this case by trying to</span>
+<span class="lineno">  201 </span><span class="spaces">    </span><span class="nottickedoff">-- coerce the result to the desired type.</span>
+<span class="lineno">  202 </span><span class="spaces">    </span><span class="nottickedoff">catchE (Just . (, unsafeCoerceMat pointMask) &lt;$&gt; coerceMat fm)</span>
+<span class="lineno">  203 </span><span class="spaces">           </span><span class="nottickedoff">(\case CoerceMatError _msgs -&gt; pure Nothing</span>
+<span class="lineno">  204 </span><span class="spaces">                  </span><span class="nottickedoff">otherError           -&gt; throwE otherError</span>
+<span class="lineno">  205 </span><span class="spaces">           </span><span class="nottickedoff">)</span>
+<span class="lineno">  206 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  207 </span><span class="spaces">    </span><span class="nottickedoff">c'findHomography = unsafeWrapException $ do</span>
+<span class="lineno">  208 </span><span class="spaces">      </span><span class="nottickedoff">fm        &lt;- newEmptyMat</span>
+<span class="lineno">  209 </span><span class="spaces">      </span><span class="nottickedoff">pointMask &lt;- newEmptyMat</span>
+<span class="lineno">  210 </span><span class="spaces">      </span><span class="nottickedoff">handleCvException (pure (fm, pointMask)) $</span>
+<span class="lineno">  211 </span><span class="spaces">        </span><span class="nottickedoff">withPtr fm $ \fmPtr -&gt;</span>
+<span class="lineno">  212 </span><span class="spaces">        </span><span class="nottickedoff">withPtr pointMask $ \pointMaskPtr -&gt;</span>
+<span class="lineno">  213 </span><span class="spaces">        </span><span class="nottickedoff">withArrayPtr (V.map toPoint srcPoints) $ \srcPtr -&gt;</span>
+<span class="lineno">  214 </span><span class="spaces">        </span><span class="nottickedoff">withArrayPtr (V.map toPoint dstPoints) $ \dstPtr -&gt;</span>
+<span class="lineno">  215 </span><span class="spaces">          </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  216 </span><span class="spaces">            </span><span class="nottickedoff">cv::_InputArray srcPts = cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));</span>
+<span class="lineno">  217 </span><span class="spaces">            </span><span class="nottickedoff">cv::_InputArray dstPts = cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));</span>
+<span class="lineno">  218 </span><span class="spaces">            </span><span class="nottickedoff">*$(Mat * fmPtr) =</span>
+<span class="lineno">  219 </span><span class="spaces">              </span><span class="nottickedoff">cv::findHomography</span>
+<span class="lineno">  220 </span><span class="spaces">                  </span><span class="nottickedoff">( srcPts</span>
+<span class="lineno">  221 </span><span class="spaces">                  </span><span class="nottickedoff">, dstPts</span>
+<span class="lineno">  222 </span><span class="spaces">                  </span><span class="nottickedoff">, $(int32_t c'method)</span>
+<span class="lineno">  223 </span><span class="spaces">                  </span><span class="nottickedoff">, $(double c'ransacReprojThreshold)</span>
+<span class="lineno">  224 </span><span class="spaces">                  </span><span class="nottickedoff">, *$(Mat * pointMaskPtr)</span>
+<span class="lineno">  225 </span><span class="spaces">                  </span><span class="nottickedoff">, $(int32_t c'maxIters)</span>
+<span class="lineno">  226 </span><span class="spaces">                  </span><span class="nottickedoff">, $(double c'confidence)</span>
+<span class="lineno">  227 </span><span class="spaces">                  </span><span class="nottickedoff">);</span>
+<span class="lineno">  228 </span><span class="spaces">          </span><span class="nottickedoff">|]</span>
+<span class="lineno">  229 </span><span class="spaces">    </span><span class="nottickedoff">c'numSrcPts = fromIntegral $ V.length srcPoints</span>
+<span class="lineno">  230 </span><span class="spaces">    </span><span class="nottickedoff">c'numDstPts = fromIntegral $ V.length dstPoints</span>
+<span class="lineno">  231 </span><span class="spaces">    </span><span class="nottickedoff">c'method = marshalFindHomographyMethod $ fhpMethod fhp</span>
+<span class="lineno">  232 </span><span class="spaces">    </span><span class="nottickedoff">c'ransacReprojThreshold = realToFrac $ fhpRansacReprojThreshold fhp</span>
+<span class="lineno">  233 </span><span class="spaces">    </span><span class="nottickedoff">c'maxIters = fromIntegral $ fhpMaxIters fhp</span>
+<span class="lineno">  234 </span><span class="spaces">    </span><span class="nottickedoff">c'confidence = realToFrac $ fhpConfidence fhp</span></span>
+<span class="lineno">  235 </span>
+<span class="lineno">  236 </span>{- | For points in an image of a stereo pair, computes the corresponding epilines in the other image
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>&lt;http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc&gt;
+<span class="lineno">  239 </span>-}
+<span class="lineno">  240 </span>computeCorrespondEpilines
+<span class="lineno">  241 </span>    :: (IsPoint2 point2 CDouble)
+<span class="lineno">  242 </span>    =&gt; V.Vector (point2 CDouble) -- ^ Points.
+<span class="lineno">  243 </span>    -&gt; WhichImage -- ^ Image which contains the points.
+<span class="lineno">  244 </span>    -&gt; Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
+<span class="lineno">  245 </span>    -&gt; CvExcept (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
+<span class="lineno">  246 </span><span class="decl"><span class="istickedoff">computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do</span>
+<span class="lineno">  247 </span><span class="spaces">    </span><span class="istickedoff">epilines &lt;- newEmptyMat</span>
+<span class="lineno">  248 </span><span class="spaces">    </span><span class="istickedoff">handleCvException (pure $ unsafeCoerceMat epilines) $</span>
+<span class="lineno">  249 </span><span class="spaces">      </span><span class="istickedoff">withArrayPtr (V.map toPoint points) $ \pointsPtr -&gt;</span>
+<span class="lineno">  250 </span><span class="spaces">      </span><span class="istickedoff">withPtr fm       $ \fmPtr       -&gt;</span>
+<span class="lineno">  251 </span><span class="spaces">      </span><span class="istickedoff">withPtr epilines $ \epilinesPtr -&gt; do</span>
+<span class="lineno">  252 </span><span class="spaces">        </span><span class="istickedoff">-- Destroy type information about the pointsPtr. We wan't to generate</span>
+<span class="lineno">  253 </span><span class="spaces">        </span><span class="istickedoff">-- C++ code that works for any type of point. Specifically Point2f and</span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="istickedoff">-- Point2d.</span>
+<span class="lineno">  255 </span><span class="spaces">        </span><span class="istickedoff">[cvExcept|</span>
+<span class="lineno">  256 </span><span class="spaces">          </span><span class="istickedoff">cv::_InputArray points =</span>
+<span class="lineno">  257 </span><span class="spaces">            </span><span class="istickedoff">cv::_InputArray( $(Point2d * pointsPtr)</span>
+<span class="lineno">  258 </span><span class="spaces">                           </span><span class="istickedoff">, $(int32_t c'numPoints)</span>
+<span class="lineno">  259 </span><span class="spaces">                           </span><span class="istickedoff">);</span>
+<span class="lineno">  260 </span><span class="spaces">          </span><span class="istickedoff">cv::computeCorrespondEpilines</span>
+<span class="lineno">  261 </span><span class="spaces">          </span><span class="istickedoff">( points</span>
+<span class="lineno">  262 </span><span class="spaces">          </span><span class="istickedoff">, $(int32_t c'whichImage)</span>
+<span class="lineno">  263 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * fmPtr)</span>
+<span class="lineno">  264 </span><span class="spaces">          </span><span class="istickedoff">, *$(Mat * epilinesPtr)</span>
+<span class="lineno">  265 </span><span class="spaces">          </span><span class="istickedoff">);</span>
+<span class="lineno">  266 </span><span class="spaces">        </span><span class="istickedoff">|]</span>
+<span class="lineno">  267 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  268 </span><span class="spaces">    </span><span class="istickedoff">c'numPoints = fromIntegral $ V.length points</span>
+<span class="lineno">  269 </span><span class="spaces">    </span><span class="istickedoff">c'whichImage = marshalWhichImage whichImage</span></span>
+<span class="lineno">  270 </span>
+<span class="lineno">  271 </span>data SolvePnPMethod
+<span class="lineno">  272 </span>   = SolvePnP_Iterative !Bool
+<span class="lineno">  273 </span>   | SolvePnP_P3P
+<span class="lineno">  274 </span>   | SolvePnP_AP3P
+<span class="lineno">  275 </span>   | SolvePnP_EPNP
+<span class="lineno">  276 </span>   | SolvePnP_DLS
+<span class="lineno">  277 </span>   | SolvePnP_UPNP
+<span class="lineno">  278 </span>
+<span class="lineno">  279 </span>marshalSolvePnPMethod :: SolvePnPMethod -&gt; (Int32, Int32)
+<span class="lineno">  280 </span><span class="decl"><span class="nottickedoff">marshalSolvePnPMethod = \case</span>
+<span class="lineno">  281 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_Iterative useExtrinsicGuess</span>
+<span class="lineno">  282 </span><span class="spaces">                  </span><span class="nottickedoff">-&gt; (c'SOLVEPNP_ITERATIVE, fromBool useExtrinsicGuess)</span>
+<span class="lineno">  283 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_P3P  -&gt; (c'SOLVEPNP_P3P , fromBool False)</span>
+<span class="lineno">  284 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_AP3P -&gt; (c'SOLVEPNP_AP3P, fromBool False)</span>
+<span class="lineno">  285 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_EPNP -&gt; (c'SOLVEPNP_EPNP, fromBool False)</span>
+<span class="lineno">  286 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_DLS  -&gt; (c'SOLVEPNP_DLS , fromBool False)</span>
+<span class="lineno">  287 </span><span class="spaces">    </span><span class="nottickedoff">SolvePnP_UPNP -&gt; (c'SOLVEPNP_UPNP, fromBool False)</span></span>
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>{- | Finds an object pose from 3D-2D point correspondences.
+<span class="lineno">  290 </span>
+<span class="lineno">  291 </span>Parameters:
+<span class="lineno">  292 </span>
+<span class="lineno">  293 </span>  [@objectImageMatches@]: Correspondences between object coordinate space (3D)
+<span class="lineno">  294 </span>    and image points (2D).
+<span class="lineno">  295 </span>
+<span class="lineno">  296 </span>  [@cameraMatrix@]: Input camera matrix
+<span class="lineno">  297 </span>    \[
+<span class="lineno">  298 </span>    A =
+<span class="lineno">  299 </span>    \begin{bmatrix}
+<span class="lineno">  300 </span>    f_x &amp; 0   &amp; c_x \\
+<span class="lineno">  301 </span>    0   &amp; f_y &amp; c_y \\
+<span class="lineno">  302 </span>    0   &amp; 0   &amp; 1
+<span class="lineno">  303 </span>    \end{bmatrix}
+<span class="lineno">  304 </span>    \]
+<span class="lineno">  305 </span>
+<span class="lineno">  306 </span>  [@distCoeffs@]: Input distortion coefficients
+<span class="lineno">  307 </span>    \( \left ( k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6 [, s_1, s_2, s_3, s_4[, \tau_x, \tau_y ] ] ] ] \right ) \)
+<span class="lineno">  308 </span>    of 4, 5, 8, 12 or 14 elements. If not given, the zero distortion
+<span class="lineno">  309 </span>    coefficients are assumed.
+<span class="lineno">  310 </span>
+<span class="lineno">  311 </span>In case of success the algorithm outputs 3 values:
+<span class="lineno">  312 </span>
+<span class="lineno">  313 </span>  [@rvec@]: Output rotation vector that, together with __tvec__, brings points
+<span class="lineno">  314 </span>    from the model coordinate system to the camera coordinate system.
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>  [@tvec@]: Output translation vector.
+<span class="lineno">  317 </span>
+<span class="lineno">  318 </span>  [@cameraMatrix@]: Output camera matrix. In most cases a copy of the input
+<span class="lineno">  319 </span>    camera matrix.  With the 'SolvePnP_UPNP' method the \(f_x\) and \(f_y\)
+<span class="lineno">  320 </span>    parameters will be estimated.
+<span class="lineno">  321 </span>
+<span class="lineno">  322 </span>The function estimates the object pose given a set of object points, their
+<span class="lineno">  323 </span>corresponding image projections, as well as the camera matrix and the distortion
+<span class="lineno">  324 </span>coefficients, see the figure below (more precisely, the X-axis of the camera
+<span class="lineno">  325 </span>frame is pointing to the right, the Y-axis downward and the Z-axis forward).
+<span class="lineno">  326 </span>
+<span class="lineno">  327 </span>&lt;&lt;data/solvepnp.jpg solvepnp explanatory figure&gt;&gt;
+<span class="lineno">  328 </span>
+<span class="lineno">  329 </span>Points expressed in the world frame \(\bf{X_w}\) are projected into the image
+<span class="lineno">  330 </span>plane \([u,v]\) using the perspective projection model \(\bf{\Pi}\) and the
+<span class="lineno">  331 </span>camera intrinsic parameters matrix \(\bf{A}\):
+<span class="lineno">  332 </span>
+<span class="lineno">  333 </span>\[
+<span class="lineno">  334 </span>  \begin{align*}
+<span class="lineno">  335 </span>  \begin{bmatrix}
+<span class="lineno">  336 </span>  u \\
+<span class="lineno">  337 </span>  v \\
+<span class="lineno">  338 </span>  1
+<span class="lineno">  339 </span>  \end{bmatrix} &amp;=
+<span class="lineno">  340 </span>  \bf{A} \hspace{0.1em} \Pi \hspace{0.2em} ^{c}\bf{M}_w
+<span class="lineno">  341 </span>  \begin{bmatrix}
+<span class="lineno">  342 </span>  X_{w} \\
+<span class="lineno">  343 </span>  Y_{w} \\
+<span class="lineno">  344 </span>  Z_{w} \\
+<span class="lineno">  345 </span>  1
+<span class="lineno">  346 </span>  \end{bmatrix} \\
+<span class="lineno">  347 </span>  \begin{bmatrix}
+<span class="lineno">  348 </span>  u \\
+<span class="lineno">  349 </span>  v \\
+<span class="lineno">  350 </span>  1
+<span class="lineno">  351 </span>  \end{bmatrix} &amp;=
+<span class="lineno">  352 </span>  \begin{bmatrix}
+<span class="lineno">  353 </span>  f_x &amp; 0   &amp; c_x \\
+<span class="lineno">  354 </span>  0   &amp; f_y &amp; c_y \\
+<span class="lineno">  355 </span>  0   &amp; 0   &amp; 1
+<span class="lineno">  356 </span>  \end{bmatrix}
+<span class="lineno">  357 </span>  \begin{bmatrix}
+<span class="lineno">  358 </span>  1 &amp; 0 &amp; 0 &amp; 0 \\
+<span class="lineno">  359 </span>  0 &amp; 1 &amp; 0 &amp; 0 \\
+<span class="lineno">  360 </span>  0 &amp; 0 &amp; 1 &amp; 0
+<span class="lineno">  361 </span>  \end{bmatrix}
+<span class="lineno">  362 </span>  \begin{bmatrix}
+<span class="lineno">  363 </span>  r_{11} &amp; r_{12} &amp; r_{13} &amp; t_x \\
+<span class="lineno">  364 </span>  r_{21} &amp; r_{22} &amp; r_{23} &amp; t_y \\
+<span class="lineno">  365 </span>  r_{31} &amp; r_{32} &amp; r_{33} &amp; t_z \\
+<span class="lineno">  366 </span>  0 &amp; 0 &amp; 0 &amp; 1
+<span class="lineno">  367 </span>  \end{bmatrix}
+<span class="lineno">  368 </span>  \begin{bmatrix}
+<span class="lineno">  369 </span>  X_{w} \\
+<span class="lineno">  370 </span>  Y_{w} \\
+<span class="lineno">  371 </span>  Z_{w} \\
+<span class="lineno">  372 </span>  1
+<span class="lineno">  373 </span>  \end{bmatrix}
+<span class="lineno">  374 </span>  \end{align*}
+<span class="lineno">  375 </span>\]
+<span class="lineno">  376 </span>
+<span class="lineno">  377 </span>The estimated pose is thus the rotation (__rvec__) and the translation
+<span class="lineno">  378 </span>(__tvec__) vectors that allow to transform a 3D point expressed in the world
+<span class="lineno">  379 </span>frame into the camera frame:
+<span class="lineno">  380 </span>
+<span class="lineno">  381 </span>\[
+<span class="lineno">  382 </span>  \begin{align*}
+<span class="lineno">  383 </span>  \begin{bmatrix}
+<span class="lineno">  384 </span>  X_c \\
+<span class="lineno">  385 </span>  Y_c \\
+<span class="lineno">  386 </span>  Z_c \\
+<span class="lineno">  387 </span>  1
+<span class="lineno">  388 </span>  \end{bmatrix} &amp;=
+<span class="lineno">  389 </span>  \hspace{0.2em} ^{c}\bf{M}_w
+<span class="lineno">  390 </span>  \begin{bmatrix}
+<span class="lineno">  391 </span>  X_{w} \\
+<span class="lineno">  392 </span>  Y_{w} \\
+<span class="lineno">  393 </span>  Z_{w} \\
+<span class="lineno">  394 </span>  1
+<span class="lineno">  395 </span>  \end{bmatrix} \\
+<span class="lineno">  396 </span>  \begin{bmatrix}
+<span class="lineno">  397 </span>  X_c \\
+<span class="lineno">  398 </span>  Y_c \\
+<span class="lineno">  399 </span>  Z_c \\
+<span class="lineno">  400 </span>  1
+<span class="lineno">  401 </span>  \end{bmatrix} &amp;=
+<span class="lineno">  402 </span>  \begin{bmatrix}
+<span class="lineno">  403 </span>  r_{11} &amp; r_{12} &amp; r_{13} &amp; t_x \\
+<span class="lineno">  404 </span>  r_{21} &amp; r_{22} &amp; r_{23} &amp; t_y \\
+<span class="lineno">  405 </span>  r_{31} &amp; r_{32} &amp; r_{33} &amp; t_z \\
+<span class="lineno">  406 </span>  0      &amp; 0      &amp; 0      &amp; 1
+<span class="lineno">  407 </span>  \end{bmatrix}
+<span class="lineno">  408 </span>  \begin{bmatrix}
+<span class="lineno">  409 </span>  X_{w} \\
+<span class="lineno">  410 </span>  Y_{w} \\
+<span class="lineno">  411 </span>  Z_{w} \\
+<span class="lineno">  412 </span>  1
+<span class="lineno">  413 </span>  \end{bmatrix}
+<span class="lineno">  414 </span>  \end{align*}
+<span class="lineno">  415 </span>\]
+<span class="lineno">  416 </span>
+<span class="lineno">  417 </span>-}
+<span class="lineno">  418 </span>solvePnP
+<span class="lineno">  419 </span>    :: forall point3 point2 distCoeffs
+<span class="lineno">  420 </span>     . ( IsPoint3 point3 CDouble
+<span class="lineno">  421 </span>       , IsPoint2 point2 CDouble
+<span class="lineno">  422 </span>       , ToMat distCoeffs
+<span class="lineno">  423 </span>       , MatShape distCoeffs `In` '[ 'S '[ 'S  4, 'S 1 ]
+<span class="lineno">  424 </span>                                   , 'S '[ 'S  5, 'S 1 ]
+<span class="lineno">  425 </span>                                   , 'S '[ 'S  8, 'S 1 ]
+<span class="lineno">  426 </span>                                   , 'S '[ 'S 12, 'S 1 ]
+<span class="lineno">  427 </span>                                   , 'S '[ 'S 14, 'S 1 ]
+<span class="lineno">  428 </span>                                   ]
+<span class="lineno">  429 </span>       )
+<span class="lineno">  430 </span>    =&gt; V.Vector (point3 CDouble, point2 CDouble) -- ^ 3D-2D point correspondences.
+<span class="lineno">  431 </span>    -&gt; Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- ^ Camera matrix.
+<span class="lineno">  432 </span>    -&gt; Maybe distCoeffs -- ^ Distortion coefficients.
+<span class="lineno">  433 </span>    -&gt; SolvePnPMethod
+<span class="lineno">  434 </span>    -&gt; CvExcept
+<span class="lineno">  435 </span>       ( Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- rotation vector
+<span class="lineno">  436 </span>       , Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- translation vector
+<span class="lineno">  437 </span>       , Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- output camera matrix
+<span class="lineno">  438 </span>       )
+<span class="lineno">  439 </span><span class="decl"><span class="nottickedoff">solvePnP objectImageMatches cameraMatrix mbDistCoeffs method = unsafeWrapException $ do</span>
+<span class="lineno">  440 </span><span class="spaces">    </span><span class="nottickedoff">rvec &lt;- newEmptyMat</span>
+<span class="lineno">  441 </span><span class="spaces">    </span><span class="nottickedoff">tvec &lt;- newEmptyMat</span>
+<span class="lineno">  442 </span><span class="spaces">    </span><span class="nottickedoff">let cameraMatrixOut = cloneMat cameraMatrix</span>
+<span class="lineno">  443 </span><span class="spaces">    </span><span class="nottickedoff">handleCvException (pure ( unsafeCoerceMat rvec</span>
+<span class="lineno">  444 </span><span class="spaces">                            </span><span class="nottickedoff">, unsafeCoerceMat tvec</span>
+<span class="lineno">  445 </span><span class="spaces">                            </span><span class="nottickedoff">, cameraMatrixOut</span>
+<span class="lineno">  446 </span><span class="spaces">                            </span><span class="nottickedoff">)) $</span>
+<span class="lineno">  447 </span><span class="spaces">      </span><span class="nottickedoff">withArrayPtr objectPoints $ \objectPoinstPtr -&gt;</span>
+<span class="lineno">  448 </span><span class="spaces">      </span><span class="nottickedoff">withArrayPtr imagePoints $ \imagePointsPtr -&gt;</span>
+<span class="lineno">  449 </span><span class="spaces">      </span><span class="nottickedoff">withPtr cameraMatrixOut $ \cameraMatrixOutPtr -&gt;</span>
+<span class="lineno">  450 </span><span class="spaces">      </span><span class="nottickedoff">withPtr (toMat &lt;$&gt; mbDistCoeffs) $ \distCoeffsPtr -&gt;</span>
+<span class="lineno">  451 </span><span class="spaces">      </span><span class="nottickedoff">withPtr rvec $ \rvecPtr -&gt;</span>
+<span class="lineno">  452 </span><span class="spaces">      </span><span class="nottickedoff">withPtr tvec $ \tvecPtr -&gt;</span>
+<span class="lineno">  453 </span><span class="spaces">        </span><span class="nottickedoff">[cvExcept|</span>
+<span class="lineno">  454 </span><span class="spaces">          </span><span class="nottickedoff">cv::_InputArray objectPoints =</span>
+<span class="lineno">  455 </span><span class="spaces">            </span><span class="nottickedoff">cv::_InputArray( $(Point3d * objectPoinstPtr)</span>
+<span class="lineno">  456 </span><span class="spaces">                           </span><span class="nottickedoff">, $(int32_t c'numPoints)</span>
+<span class="lineno">  457 </span><span class="spaces">                           </span><span class="nottickedoff">);</span>
+<span class="lineno">  458 </span><span class="spaces">          </span><span class="nottickedoff">cv::_InputArray imagePoints =</span>
+<span class="lineno">  459 </span><span class="spaces">            </span><span class="nottickedoff">cv::_InputArray( $(Point2d * imagePointsPtr)</span>
+<span class="lineno">  460 </span><span class="spaces">                           </span><span class="nottickedoff">, $(int32_t c'numPoints)</span>
+<span class="lineno">  461 </span><span class="spaces">                           </span><span class="nottickedoff">);</span>
+<span class="lineno">  462 </span><span class="spaces">          </span><span class="nottickedoff">cv::Mat * distCoeffsPtr = $(Mat * distCoeffsPtr);</span>
+<span class="lineno">  463 </span><span class="spaces">          </span><span class="nottickedoff">bool retval =</span>
+<span class="lineno">  464 </span><span class="spaces">            </span><span class="nottickedoff">cv::solvePnP</span>
+<span class="lineno">  465 </span><span class="spaces">            </span><span class="nottickedoff">( objectPoints</span>
+<span class="lineno">  466 </span><span class="spaces">            </span><span class="nottickedoff">, imagePoints</span>
+<span class="lineno">  467 </span><span class="spaces">            </span><span class="nottickedoff">, *$(Mat * cameraMatrixOutPtr)</span>
+<span class="lineno">  468 </span><span class="spaces">            </span><span class="nottickedoff">, distCoeffsPtr</span>
+<span class="lineno">  469 </span><span class="spaces">              </span><span class="nottickedoff">? cv::_InputArray(*distCoeffsPtr)</span>
+<span class="lineno">  470 </span><span class="spaces">              </span><span class="nottickedoff">: cv::_InputArray(cv::noArray())</span>
+<span class="lineno">  471 </span><span class="spaces">            </span><span class="nottickedoff">, *$(Mat * rvecPtr)</span>
+<span class="lineno">  472 </span><span class="spaces">            </span><span class="nottickedoff">, *$(Mat * tvecPtr)</span>
+<span class="lineno">  473 </span><span class="spaces">            </span><span class="nottickedoff">, $(int32_t useExtrinsicGuess)</span>
+<span class="lineno">  474 </span><span class="spaces">            </span><span class="nottickedoff">, $(int32_t methodFlag)</span>
+<span class="lineno">  475 </span><span class="spaces">            </span><span class="nottickedoff">);</span>
+<span class="lineno">  476 </span><span class="spaces">        </span><span class="nottickedoff">|]</span>
+<span class="lineno">  477 </span><span class="spaces">  </span><span class="nottickedoff">where</span>
+<span class="lineno">  478 </span><span class="spaces">    </span><span class="nottickedoff">(methodFlag, useExtrinsicGuess) = marshalSolvePnPMethod method</span>
+<span class="lineno">  479 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  480 </span><span class="spaces">    </span><span class="nottickedoff">c'numPoints :: Int32</span>
+<span class="lineno">  481 </span><span class="spaces">    </span><span class="nottickedoff">c'numPoints = fromIntegral $ V.length objectImageMatches</span>
+<span class="lineno">  482 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  483 </span><span class="spaces">    </span><span class="nottickedoff">objectPoints :: V.Vector Point3d</span>
+<span class="lineno">  484 </span><span class="spaces">    </span><span class="nottickedoff">objectPoints = V.map (toPoint . fst) objectImageMatches</span>
+<span class="lineno">  485 </span><span class="spaces"></span><span class="nottickedoff"></span>
+<span class="lineno">  486 </span><span class="spaces">    </span><span class="nottickedoff">imagePoints :: V.Vector Point2d</span>
+<span class="lineno">  487 </span><span class="spaces">    </span><span class="nottickedoff">imagePoints = V.map (toPoint . snd) objectImageMatches</span></span>
+
+</pre>
+</body>
+</html>
