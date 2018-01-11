@@ -47,6 +47,10 @@ instance ToDepth (proxy Double) where toDepth _proxy = Depth_64F
 -- TODO (BvD): instance ToDepth ? where toDepth = const Depth_USRTYPE1
 -- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
 
+-- | Strip away 'S'.
+instance (ToDepth (Proxy depth)) => ToDepth (proxy ('S depth)) where
+    toDepth _proxy = toDepth (Proxy :: Proxy depth)
+
 --------------------------------------------------------------------------------
 
 class ToDepthDS a where
@@ -66,9 +70,11 @@ instance ToDepthDS (proxy ('S Double)) where toDepthDS _proxy = S $ toDepth (Pro
 --------------------------------------------------------------------------------
 
 type family DepthT a :: DS * where
-    DepthT Depth     = 'D
-    DepthT (proxy d) = 'S d
+    DepthT Depth                = 'D
+    DepthT (proxy (d :: *))     = 'S d
+    DepthT (proxy (ds :: DS *)) = ds
 
 type family StaticDepthT a :: * where
-    StaticDepthT (proxy d) = d
-    StaticDepthT d         = d
+    StaticDepthT (proxy ('S (d :: *))) = d
+    StaticDepthT (proxy     (d :: *))  = d
+    StaticDepthT            (d :: *)   = d

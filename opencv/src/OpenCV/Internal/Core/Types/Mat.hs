@@ -523,6 +523,8 @@ type family ShapeT (a :: ka) :: DS [DS Nat] where
     ShapeT (V.Vector Int32) = 'D
     ShapeT (x ::: xs)       = 'S (DSNats (x ::: xs))
     ShapeT (xs :: [Nat])    = 'S (DSNats xs)
+    ShapeT (xs :: [DS Nat]) = 'S (DSNats xs)
+    ShapeT ('S a)           = ShapeT a
     ShapeT (Proxy a)        = ShapeT a
 
 type ChannelsT a = DSNat a
@@ -559,6 +561,10 @@ instance ToShape Z where
 -- | fold over ':::'
 instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
     toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
+
+-- | strip away 'S'
+instance (ToShape (Proxy a)) => ToShape (Proxy ('S a)) where
+    toShape _proxy = toShape (Proxy :: Proxy a)
 
 --------------------------------------------------------------------------------
 

@@ -86,6 +86,10 @@ instance ToInt32 Int32 where
 instance (KnownNat n) => ToInt32 (proxy n) where
     toInt32 = fromInteger . natVal
 
+-- | strip away 'S'
+instance (ToInt32 (Proxy n)) => ToInt32 (proxy ('S n)) where
+    toInt32 _proxy = toInt32 (Proxy :: Proxy n)
+
 --------------------------------------------------------------------------------
 
 -- | Type level to value level conversion of numbers that are either
@@ -133,17 +137,19 @@ type family Elem (e :: a) (xs :: [a]) :: Bool where
 type In e xs = Elem e xs ~ 'True
 
 type family DSNat (a :: ka) :: DS Nat where
-    DSNat Integer    = 'D
-    DSNat Int32      = 'D
-    DSNat (Proxy n)  = 'S n
-    DSNat (n :: Nat) = 'S n
+    DSNat Integer         = 'D
+    DSNat Int32           = 'D
+    DSNat 'D              = 'D
+    DSNat (n :: Nat)      = 'S n
+    DSNat ('S (n :: Nat)) = 'S n
+    DSNat (Proxy n)       = DSNat n
 
 type family DSNats (a :: ka) :: [DS Nat] where
     DSNats Z          = '[]
     DSNats (x ::: xs) = DSNat x ': DSNats xs
 
-    DSNats ('[] :: [Nat]) = '[]
-    DSNats (x ': xs)      = DSNat x ': DSNats xs
+    DSNats '[]        = '[]
+    DSNats (x ': xs)  = DSNat x ': DSNats xs
 
 type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
     Relax x      'D     = 'True
