@@ -413,7 +413,6 @@ fillConvexPoly img points color lineType shift =
     c'numPoints = fromIntegral $ V.length points
     c'lineType  = marshalLineType lineType
 
-
 {- | Fills the area bounded by one or more polygons.
 
 Example:
@@ -762,15 +761,15 @@ rectangle img rect color thickness lineType shift =
 
 
 data ContourDrawMode
-  = OutlineContour LineType
-                   Int32 -- ^ Thickness of lines the contours are drawn with.
-  | FillContours -- ^ Draw the contour, filling in the area.
+   = OutlineContour LineType
+                    Int32 -- ^ Thickness of lines the contours are drawn with.
+   | FillContours -- ^ Draw the contour, filling in the area.
 
 marshalContourDrawMode
-  :: ContourDrawMode -> (Int32, Int32)
+    :: ContourDrawMode -> (Int32, Int32)
 marshalContourDrawMode = \case
-  OutlineContour lineType thickness -> (marshalLineType lineType, thickness)
-  FillContours -> (marshalLineType LineType_4, -1)
+    OutlineContour lineType thickness -> (marshalLineType lineType, thickness)
+    FillContours -> (marshalLineType LineType_4, -1)
 
 {-|
 
@@ -806,35 +805,35 @@ drawContours :: (ToScalar color, PrimMonad m)
              -> Mut (Mat ('S [h, w]) channels depth) (PrimState m) -- ^ Image.
              -> m ()
 drawContours contours color drawMode img = unsafePrimToPrim $
-  withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
-  withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
-  withPtr (toScalar color) $ \colorPtr ->
-  withPtr img $ \dstPtr ->
-    [C.exp|void {
-      int32_t *contourLengths = $(int32_t * contourLengthsPtr);
-      Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
-      std::vector< std::vector<cv::Point> > contours;
-      int32_t numContours = $(int32_t numContours);
+    withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
+    withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
+    withPtr (toScalar color) $ \colorPtr ->
+    withPtr img $ \dstPtr ->
+      [C.exp|void {
+        int32_t *contourLengths = $(int32_t * contourLengthsPtr);
+        Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
+        std::vector< std::vector<cv::Point> > contours;
+        int32_t numContours = $(int32_t numContours);
 
-      int k = 0;
-      for(int i = 0; i < numContours; i++) {
-        std::vector<cv::Point> contour;
-        for(int j = 0; j < contourLengths[i]; j++) {
-          contour.push_back( contoursPtr[k] );
-          k++;
+        int k = 0;
+        for(int i = 0; i < numContours; i++) {
+          std::vector<cv::Point> contour;
+          for(int j = 0; j < contourLengths[i]; j++) {
+            contour.push_back( contoursPtr[k] );
+            k++;
+          }
+          contours.push_back(contour);
         }
-        contours.push_back(contour);
-      }
 
-      cv::drawContours(
-        *$(Mat * dstPtr),
-        contours,
-        -1,
-        *$(Scalar * colorPtr),
-        $(int32_t c'thickness),
-        $(int32_t c'lineType)
-      );
-    }|]
+        cv::drawContours(
+          *$(Mat * dstPtr),
+          contours,
+          -1,
+          *$(Scalar * colorPtr),
+          $(int32_t c'thickness),
+          $(int32_t c'lineType)
+        );
+      }|]
   where
     numContours = fromIntegral (V.length contours)
     (c'lineType, c'thickness) = marshalContourDrawMode drawMode
@@ -867,12 +866,12 @@ marker
     -- ^ Line color.
   -> m ()
 marker img center color =
-  unsafePrimToPrim $
-  withPtr img $ \matPtr ->
-  withPtr (toPoint center) $ \centerPtr ->
-  withPtr (toScalar color) $ \colorPtr  ->
-    [C.exp|void {
-      cv::drawMarker( *$(Mat * matPtr)
-                    , *$(Point2i * centerPtr)
-                    , *$(Scalar * colorPtr))
-    }|]
+    unsafePrimToPrim $
+    withPtr img $ \matPtr ->
+    withPtr (toPoint center) $ \centerPtr ->
+    withPtr (toScalar color) $ \colorPtr  ->
+      [C.exp|void {
+        cv::drawMarker( *$(Mat * matPtr)
+                      , *$(Point2i * centerPtr)
+                      , *$(Scalar * colorPtr))
+      }|]
