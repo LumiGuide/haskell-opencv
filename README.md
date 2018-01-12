@@ -42,8 +42,8 @@ doing something wrong. In such a case please file a bug.
 The interface of Internal modules does not follow the PVP and may
 break between minor releases, so be careful.
 
-Development
------------
+Development using nix
+---------------------
 
 To get into an environment that contains all the needed dependencies we use Nix. 
 The following commands work both on Linux and OS X:
@@ -53,6 +53,19 @@ The following commands work both on Linux and OS X:
     nix-shell
 
 Then you should be able to use `cabal` as normal.
+
+Development using Stack's Docker integration
+---------------------
+
+Ensure you have followed
+[Stack's prerequisites for Docker integration](https://docs.haskellstack.org/en/stable/docker_integration/#prerequisites).
+
+Build the image using:
+
+    docker build -t stack-build:lts-10.1-opencv -f Dockerfile.stack-opencv .
+
+Uncomment the `docker:` section in `stack.yaml`, and you should be able
+to use `stack` as normal.
 
 Contributing
 ------------
