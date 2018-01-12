@@ -21,10 +21,14 @@ in  {
   opencv3 = previous.opencv3.override {
     enableIpp       = true;
     enableContrib   = true;
-    enableGtk2      = true;
+    enableGtk3      = true;
     enableFfmpeg    = !osx;
     enableGStreamer = true;
-    enableEigen     = true;
     enableDocs      = true;
+    enableUnfree    = false;
+    enableTesseract = true;
+    enableOvis      = false; # Currently causes the error: "Missing C library: opencv_ovis"
+    enableGPhoto2   = true;
+    enableDC1394    = false; # Currently causes the warning: libdc1394 error: Failed to initialize libdc1394
   };
 }
