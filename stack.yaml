@@ -9,3 +9,12 @@ allow-newer: true
 
 extra-deps:
 - repa-3.4.1.3
+
+extra-lib-dirs:
+- /usr/local/lib
+
+# Uncomment if you wish to use Docker integration
+# See README.md for further information.
+#docker:
+#  image: stack-build:lts-10.2-opencv
+#  stack-exe: image
