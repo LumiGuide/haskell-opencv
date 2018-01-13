@@ -56,6 +56,23 @@ library
         xfeatures/surf.hpp
         aruco-namespace.hpp
 
+    if impl(ghc < 8.2)
+      build-depends:
+          inline-c     >= 0.5.5.5
+        , inline-c-cpp >= 0.1
+
+      c-sources:
+          src/OpenCV/Extra/ArUco.cpp
+          src/OpenCV/Extra/Bgsegm.cpp
+          src/OpenCV/Extra/Tracking.cpp
+          src/OpenCV/Extra/XPhoto.cpp
+          src/OpenCV/Extra/XPhoto/WhiteBalancer.cpp
+          src/OpenCV/Extra/XFeatures2d.cpp
+    else
+      build-depends:
+          inline-c     >= 0.6
+        , inline-c-cpp >= 0.2.1
+
     cc-options: -Wall -std=c++11
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
     if flag(internal-documentation)
@@ -66,8 +83,6 @@ library
       , bindings-DSL      >= 1.0.23
       , bytestring        >= 0.10.6
       , containers        >= 0.5.6.2
-      , inline-c          >= 0.6
-      , inline-c-cpp      >= 0.2
       , linear            >= 1.20.4
       , opencv            >= 0.0.0.0
       , primitive         >= 0.6.1
