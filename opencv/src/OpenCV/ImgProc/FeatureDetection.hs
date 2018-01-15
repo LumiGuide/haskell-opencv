@@ -170,33 +170,33 @@ goodFeaturesToTrackTraces = exceptError $ do
 <<doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces>>
 -}
 goodFeaturesToTrack
-  :: (depth `In` ['S Word8, 'S Float, 'D])
-  => Mat ('S [h, w]) ('S 1) depth
-  -- ^ Input 8-bit or floating-point 32-bit, single-channel image.
-  -> Int32
-  -- ^ Maximum number of corners to return. If there are more corners than are
-  -- found, the strongest of them is returned.
-  -> Double
-  -- ^ Parameter characterizing the minimal accepted quality of image corners.
-  -- The parameter value is multiplied by the best corner quality measure,
-  -- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris
-  -- function response (see cornerHarris ). The corners with the quality measure
-  -- less than the product are rejected. For example, if the best corner has the
-  -- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with
-  -- the quality measure less than 15 are rejected.
-  -> Double
-  -- ^ Minimum possible Euclidean distance between the returned corners.
-  -> Maybe (Mat ('S [h, w]) ('S 1) ('S Word8))
-  -- ^ Optional region of interest. If the image is not empty (it needs to have
-  -- the type CV_8UC1 and the same size as image ), it specifies the region in which
-  -- the corners are detected.
-  -> Maybe Int32
-  -- ^ Size of an average block for computing a derivative covariation matrix
-  -- over each pixel neighborhood. See cornerEigenValsAndVecs.
-  -> GoodFeaturesToTrackDetectionMethod
-  -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
-  -- or cornerMinEigenVal.
-  -> V.Vector (V2 Float)
+    :: (depth `In` ['S Word8, 'S Float, 'D])
+    => Mat ('S [h, w]) ('S 1) depth
+    -- ^ Input 8-bit or floating-point 32-bit, single-channel image.
+    -> Int32
+    -- ^ Maximum number of corners to return. If there are more corners than are
+    -- found, the strongest of them is returned.
+    -> Double
+    -- ^ Parameter characterizing the minimal accepted quality of image corners.
+    -- The parameter value is multiplied by the best corner quality measure,
+    -- which is the minimal eigenvalue (see cornerMinEigenVal ) or the Harris
+    -- function response (see cornerHarris ). The corners with the quality measure
+    -- less than the product are rejected. For example, if the best corner has the
+    -- quality measure = 1500, and the qualityLevel=0.01 , then all the corners with
+    -- the quality measure less than 15 are rejected.
+    -> Double
+    -- ^ Minimum possible Euclidean distance between the returned corners.
+    -> Maybe (Mat ('S [h, w]) ('S 1) ('S Word8))
+    -- ^ Optional region of interest. If the image is not empty (it needs to have
+    -- the type CV_8UC1 and the same size as image ), it specifies the region in which
+    -- the corners are detected.
+    -> Maybe Int32
+    -- ^ Size of an average block for computing a derivative covariation matrix
+    -- over each pixel neighborhood. See cornerEigenValsAndVecs.
+    -> GoodFeaturesToTrackDetectionMethod
+    -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
+    -- or cornerMinEigenVal.
+    -> V.Vector (V2 Float)
 goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafePerformIO $ do
   withPtr src  $ \srcPtr ->
     withPtr mbMask $ \mskPtr ->
@@ -286,72 +286,76 @@ houghCircleTraces = exceptError $ do
 <<doc/generated/examples/houghCircleTraces.png houghCircleTraces>>
 -}
 houghCircles
-  :: Double
-     -- ^ Inverse ratio of the accumulator resolution to the image resolution.
-     -- For example, if @dp=1@, the accumulator has the same resolution as the
-     -- input image. If @dp=2@, the accumulator has half as big width and height.
-  -> Double
-     -- ^ Minimum distance between the centers of the detected circles. If the
-     -- parameter is too small, multiple neighbor circles may be falsely
-     -- detected in addition to a true one. If it is too large, some circles may
-     -- be missed.
-  -> Maybe Double
-     -- ^ The higher threshold of the two passed to the 'canny' edge detector
-     -- (the lower one is twice smaller). Default is 100.
-  -> Maybe Double
-     -- ^ The accumulator threshold for the circle centers at the detection
-     -- stage. The smaller it is, the more false circles may be detected.
-     -- Circles, corresponding to the larger accumulator values, will be returned
-     -- first. Default is 100.
-  -> Maybe Int32
-     -- ^ Minimum circle radius.
-  -> Maybe Int32
-     -- ^ Maximum circle radius.
-  -> Mat ('S [h, w]) ('S 1) ('S Word8)
-  -> CvExcept (V.Vector Circle)
+    :: Double
+       -- ^ Inverse ratio of the accumulator resolution to the image resolution.
+       -- For example, if @dp=1@, the accumulator has the same resolution as the
+       -- input image. If @dp=2@, the accumulator has half as big width and height.
+    -> Double
+       -- ^ Minimum distance between the centers of the detected circles. If the
+       -- parameter is too small, multiple neighbor circles may be falsely
+       -- detected in addition to a true one. If it is too large, some circles may
+       -- be missed.
+    -> Maybe Double
+       -- ^ The higher threshold of the two passed to the 'canny' edge detector
+       -- (the lower one is twice smaller). Default is 100.
+    -> Maybe Double
+       -- ^ The accumulator threshold for the circle centers at the detection
+       -- stage. The smaller it is, the more false circles may be detected.
+       -- Circles, corresponding to the larger accumulator values, will be returned
+       -- first. Default is 100.
+    -> Maybe Int32
+       -- ^ Minimum circle radius.
+    -> Maybe Int32
+       -- ^ Maximum circle radius.
+    -> Mat ('S [h, w]) ('S 1) ('S Word8)
+    -> CvExcept (V.Vector Circle)
 houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapException $
-  withPtr src $ \srcPtr ->
-  alloca $ \(circleLengthsPtr :: Ptr Int32) ->
-  alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) ->
-  handleCvException
-    ( do numCircles <- fromIntegral <$> peek circleLengthsPtr
-         circlesPtr <- peek circlesPtrPtr
-         (circles :: [V3 Float]) <-
-             peekArray numCircles circlesPtr >>=
-             mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
-         [CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]
-         pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
-    ) $
-    [cvExcept|
-      std::vector<cv::Vec3f> circles;
-      cv::HoughCircles(
-        *$(Mat * srcPtr),
-        circles,
-        CV_HOUGH_GRADIENT,
-        $(double c'dp),
-        $(double c'minDist),
-        $(double c'param1),
-        $(double c'param2),
-        $(int32_t c'minRadius),
-        $(int32_t c'maxRadius)
-      );
+    withPtr src $ \srcPtr ->
+    alloca $ \(circleLengthsPtr :: Ptr Int32) ->
+    alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) ->
+    handleCvException
+      ( do numCircles <- fromIntegral <$> peek circleLengthsPtr
+           circlesPtr <- peek circlesPtrPtr
+           (circles :: [V3 Float]) <-
+               peekArray numCircles circlesPtr >>=
+               mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
+           -- We assume that only cv::HoughCircles will throw a
+           -- cv::Exception. The circlesPtrPtr is constructed after the
+           -- call to cv::HoughCircles.
+           [CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]
+           pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
+      ) $
+      [cvExcept|
+        std::vector<cv::Vec3f> circles;
+        cv::HoughCircles(
+          *$(Mat * srcPtr),
+          circles,
+          CV_HOUGH_GRADIENT,
+          $(double c'dp),
+          $(double c'minDist),
+          $(double c'param1),
+          $(double c'param2),
+          $(int32_t c'minRadius),
+          $(int32_t c'maxRadius)
+        );
 
-      cv::Vec3f * * * circlesPtrPtr = $(Vec3f * * * circlesPtrPtr);
-      cv::Vec3f * * circlesPtr = new cv::Vec3f * [circles.size()];
-      *circlesPtrPtr = circlesPtr;
+        cv::Vec3f * * * circlesPtrPtr = $(Vec3f * * * circlesPtrPtr);
+        cv::Vec3f * * circlesPtr = new cv::Vec3f * [circles.size()];
+        *circlesPtrPtr = circlesPtr;
 
-      *$(int32_t * circleLengthsPtr) = circles.size();
+        *$(int32_t * circleLengthsPtr) = circles.size();
 
-      for (std::vector<cv::Vec3f>::size_type i = 0; i != circles.size(); i++) {
-        circlesPtr[i] = new cv::Vec3f( circles[i] );
-      }
-    |]
-  where c'dp = realToFrac dp
-        c'minDist = realToFrac minDist
-        c'param1 = realToFrac (fromMaybe 100 param1)
-        c'param2 = realToFrac (fromMaybe 100 param2)
-        c'minRadius = fromIntegral (fromMaybe 0 minRadius)
-        c'maxRadius = fromIntegral (fromMaybe 0 maxRadius)
+        for (std::vector<cv::Vec3f>::size_type i = 0; i != circles.size(); i++) {
+          circlesPtr[i] = new cv::Vec3f( circles[i] );
+        }
+      |]
+  where
+    c'dp = realToFrac dp
+    c'minDist = realToFrac minDist
+    c'param1 = realToFrac (fromMaybe 100 param1)
+    c'param2 = realToFrac (fromMaybe 100 param2)
+    c'minRadius = fromIntegral (fromMaybe 0 minRadius)
+    c'maxRadius = fromIntegral (fromMaybe 0 maxRadius)
 
 data LineSegment depth
    = LineSegment
