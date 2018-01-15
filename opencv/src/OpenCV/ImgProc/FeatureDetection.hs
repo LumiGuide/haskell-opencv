@@ -272,7 +272,7 @@ houghCircleTraces
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 houghCircleTraces = exceptError $ do
   imgG <- cvtColor bgr gray circles_1000x625
-  let circles = houghCircles 1 10 Nothing Nothing Nothing Nothing imgG
+  circles <- houghCircles 1 10 Nothing Nothing Nothing Nothing imgG
   withMatM (Proxy :: Proxy [height, width])
            (Proxy :: Proxy channels)
            (Proxy :: Proxy depth)
@@ -307,12 +307,21 @@ houghCircles
   -> Maybe Int32
      -- ^ Maximum circle radius.
   -> Mat ('S [h, w]) ('S 1) ('S Word8)
-  -> V.Vector Circle
-houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO $
+  -> CvExcept (V.Vector Circle)
+houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapException $
   withPtr src $ \srcPtr ->
   alloca $ \(circleLengthsPtr :: Ptr Int32) ->
-  alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) -> mask_ $ do
-    _ <- [cvExcept|
+  alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) ->
+  handleCvException
+    ( do numCircles <- fromIntegral <$> peek circleLengthsPtr
+         circlesPtr <- peek circlesPtrPtr
+         (circles :: [V3 Float]) <-
+             peekArray numCircles circlesPtr >>=
+             mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
+         [CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]
+         pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
+    ) $
+    [cvExcept|
       std::vector<cv::Vec3f> circles;
       cv::HoughCircles(
         *$(Mat * srcPtr),
@@ -336,13 +345,6 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafePerformIO 
         circlesPtr[i] = new cv::Vec3f( circles[i] );
       }
     |]
-    numCircles <- fromIntegral <$> peek circleLengthsPtr
-    circlesPtr <- peek circlesPtrPtr
-    (circles :: [V3 Float]) <-
-        peekArray numCircles circlesPtr >>=
-        mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
-    [CU.block| void { delete [] *$(Vec3f * * * circlesPtrPtr); }|]
-    pure (V.fromList (map (\(V3 x y r) -> Circle (V2 x y) r) circles))
   where c'dp = realToFrac dp
         c'minDist = realToFrac minDist
         c'param1 = realToFrac (fromMaybe 100 param1)
