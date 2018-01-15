@@ -354,7 +354,7 @@ testHoughLinesP = do
         building' = exceptError $ coerceMat building
     let edgeImg = exceptError $ canny 50 200 Nothing CannyNormL1 building'
     edgeImgM <- thaw edgeImg
-    lineSegments <- houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
+    lineSegments <- exceptErrorIO $ houghLinesP 1 (pi / 180) 100 Nothing Nothing edgeImgM
     assertBool "no lines found" (V.length lineSegments > 0)
 
 testNewCascadeClassifierAlgorithm :: HU.Assertion

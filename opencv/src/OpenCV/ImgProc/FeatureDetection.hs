@@ -45,6 +45,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
+import "transformers" Control.Monad.Trans.Except ( ExceptT(..) )
 #if MIN_VERSION_base(4,9,0)
 import "base" Data.Foldable ( Foldable )
 import "base" Data.Traversable ( Traversable )
@@ -403,67 +404,68 @@ houghLinesPTraces = exceptError $ do
 <<doc/generated/examples/houghLinesPTraces.png houghLinesPTraces>>
 -}
 houghLinesP
-  :: (PrimMonad m)
-  => Double
-     -- ^ Distance resolution of the accumulator in pixels.
-  -> Double
-     -- ^ Angle resolution of the accumulator in radians.
-  -> Int32
-     -- ^ Accumulator threshold parameter. Only those lines are returned that
-     -- get enough votes (> threshold).
-  -> Maybe Double
-     -- ^ Minimum line length. Line segments shorter than that are rejected.
-  -> Maybe Double
-     -- ^ Maximum allowed gap between points on the same line to link them.
-  -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
-     -- ^ Source image. May be modified by the function.
-  -> m (V.Vector (LineSegment Int32))
-houghLinesP rho theta threshold minLineLength maxLineGap src = unsafePrimToPrim $
+    :: (PrimMonad m)
+    => Double
+       -- ^ Distance resolution of the accumulator in pixels.
+    -> Double
+       -- ^ Angle resolution of the accumulator in radians.
+    -> Int32
+       -- ^ Accumulator threshold parameter. Only those lines are returned that
+       -- get enough votes (> threshold).
+    -> Maybe Double
+       -- ^ Minimum line length. Line segments shorter than that are rejected.
+    -> Maybe Double
+       -- ^ Maximum allowed gap between points on the same line to link them.
+    -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
+       -- ^ Source image. May be modified by the function.
+    -> CvExceptT m (V.Vector (LineSegment Int32))
+houghLinesP rho theta threshold minLineLength maxLineGap src = ExceptT $ unsafePrimToPrim $
     withPtr src $ \srcPtr ->
     -- Pointer to number of lines.
     alloca $ \(numLinesPtr :: Ptr Int32) ->
     -- Pointer to array of Vec4i pointers. The array is allocated in
     -- C++. Each element of the array points to a Vec4i that is also
     -- allocated in C++.
-    alloca $ \(linesPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) -> mask_ $ do
-      [C.block| void {
-        std::vector<cv::Vec4i> lines = std::vector<cv::Vec4i>();
-        cv::HoughLinesP
-          ( *$(Mat * srcPtr)
-          , lines
-          , $(double  c'rho)
-          , $(double  c'theta)
-          , $(int32_t threshold)
-          , $(double  c'minLineLength)
-          , $(double  c'maxLineGap)
-          );
+    alloca $ \(linesPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
+      handleCvException
+        ( do numLines <- fromIntegral <$> peek numLinesPtr
+             linesPtr <- peek linesPtrPtr
+             lineSegments  <- mapM (fmap fromVec . fromPtr . pure) =<< peekArray numLines linesPtr
 
-        *$(int32_t * numLinesPtr) = lines.size();
+             -- Free the array of Vec4i pointers. This does not free the
+             -- Vec4i's pointed to by the elements of the array. That is the
+             -- responsibility of Haskell's Vec4i finalizer.
+             [CU.block| void {
+               delete [] *$(Vec4i * * * linesPtrPtr);
+             }|]
 
-        cv::Vec4i * * * linesPtrPtr = $(Vec4i * * * linesPtrPtr);
-        cv::Vec4i * * linesPtr = new cv::Vec4i * [lines.size()];
-        *linesPtrPtr = linesPtr;
+             pure $ V.fromList lineSegments
+        ) $
+        [cvExcept|
+          std::vector<cv::Vec4i> lines = std::vector<cv::Vec4i>();
+          cv::HoughLinesP
+            ( *$(Mat * srcPtr)
+            , lines
+            , $(double  c'rho)
+            , $(double  c'theta)
+            , $(int32_t threshold)
+            , $(double  c'minLineLength)
+            , $(double  c'maxLineGap)
+            );
 
-        for (std::vector<cv::Vec4i>::size_type ix = 0; ix != lines.size(); ix++)
-        {
-          cv::Vec4i & org = lines[ix];
-          cv::Vec4i * newLine = new cv::Vec4i(org[0], org[1], org[2], org[3]);
-          linesPtr[ix] = newLine;
-        }
-      }|]
+          *$(int32_t * numLinesPtr) = lines.size();
 
-      numLines <- fromIntegral <$> peek numLinesPtr
-      linesPtr <- peek linesPtrPtr
-      lineSegments  <- mapM (fmap fromVec . fromPtr . pure) =<< peekArray numLines linesPtr
+          cv::Vec4i * * * linesPtrPtr = $(Vec4i * * * linesPtrPtr);
+          cv::Vec4i * * linesPtr = new cv::Vec4i * [lines.size()];
+          *linesPtrPtr = linesPtr;
 
-      -- Free the array of Vec4i pointers. This does not free the
-      -- Vec4i's pointed to by the elements of the array. That is the
-      -- responsibility of Haskell's Vec4i finalizer.
-      [CU.block| void {
-        delete [] *$(Vec4i * * * linesPtrPtr);
-      }|]
-
-      pure $ V.fromList lineSegments
+          for (std::vector<cv::Vec4i>::size_type ix = 0; ix != lines.size(); ix++)
+          {
+            cv::Vec4i & org = lines[ix];
+            cv::Vec4i * newLine = new cv::Vec4i(org[0], org[1], org[2], org[3]);
+            linesPtr[ix] = newLine;
+          }
+        |]
   where
     c'rho           = realToFrac rho
     c'theta         = realToFrac theta
