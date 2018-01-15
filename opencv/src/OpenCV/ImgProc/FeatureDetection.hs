@@ -22,7 +22,6 @@ module OpenCV.ImgProc.FeatureDetection
     , LineSegment(..)
     ) where
 
-import "base" Control.Exception ( mask_ )
 import "base" Data.Int
 import "base" Data.Maybe
 import qualified "vector" Data.Vector as V
@@ -33,7 +32,6 @@ import "base" Foreign.Marshal.Utils ( fromBool )
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( peek )
 import "base" Prelude hiding ( lines )
-import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -157,7 +155,7 @@ goodFeaturesToTrackTraces
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 goodFeaturesToTrackTraces = exceptError $ do
   imgG <- cvtColor bgr gray frog
-  let features = goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
+  features <- goodFeaturesToTrack imgG 20 0.01 0.5 Nothing Nothing CornerMinEigenVal
   withMatM (Proxy :: Proxy [height, width])
            (Proxy :: Proxy channels)
            (Proxy :: Proxy depth)
@@ -196,46 +194,51 @@ goodFeaturesToTrack
     -> GoodFeaturesToTrackDetectionMethod
     -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
     -- or cornerMinEigenVal.
-    -> V.Vector (V2 Float)
-goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafePerformIO $ do
-  withPtr src  $ \srcPtr ->
+    -> CvExcept (V.Vector (V2 Float))
+goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafeWrapException $
+    withPtr src  $ \srcPtr ->
     withPtr mbMask $ \mskPtr ->
     alloca $ \(cornersLengthsPtr :: Ptr Int32) ->
-    alloca $ \(cornersPtrPtr :: Ptr (Ptr (Ptr C'Point2f))) -> mask_ $ do
-    [C.block| void {
-      std::vector<cv::Point2f> corners;
-      Mat * mskPtr = $(Mat * mskPtr);
-      cv::goodFeaturesToTrack
-      ( *$(Mat * srcPtr)
-      , corners
-      , $(int32_t maxCorners)
-      , $(double c'qualityLevel)
-      , $(double c'minDistance)
-      , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
-      , $(int32_t c'blockSize)
-      , $(bool c'useHarrisDetector)
-      , $(double c'harrisK)
-      );
+    alloca $ \(cornersPtrPtr :: Ptr (Ptr (Ptr C'Point2f))) ->
+    handleCvException
+      ( do numCorners <- fromIntegral <$> peek cornersLengthsPtr
+           cornersPtr <- peek cornersPtrPtr
+           (corners :: [V2 Float]) <-
+               peekArray numCorners cornersPtr >>=
+               mapM (fmap (fmap fromCFloat . fromPoint) . fromPtr . pure)
+           -- We assume that only cv::goodFeaturesToTrack will throw a
+           -- cv::Exception. The cornersPtrPtr is constructed after
+           -- the call to cv::goodFeaturesToTrack.
+           [CU.block| void {
+             delete [] *$(Point2f * * * cornersPtrPtr);
+           }|]
+           pure (V.fromList  corners)
+      ) $
+      [cvExcept|
+        std::vector<cv::Point2f> corners;
+        Mat * mskPtr = $(Mat * mskPtr);
+        cv::goodFeaturesToTrack
+        ( *$(Mat * srcPtr)
+        , corners
+        , $(int32_t maxCorners)
+        , $(double c'qualityLevel)
+        , $(double c'minDistance)
+        , mskPtr ? _InputArray(*mskPtr) : _InputArray(cv::noArray())
+        , $(int32_t c'blockSize)
+        , $(bool c'useHarrisDetector)
+        , $(double c'harrisK)
+        );
 
-      cv::Point2f * * * cornersPtrPtr = $(Point2f * * * cornersPtrPtr);
-      cv::Point2f * * cornersPtr = new cv::Point2f * [corners.size()];
-      *cornersPtrPtr = cornersPtr;
+        cv::Point2f * * * cornersPtrPtr = $(Point2f * * * cornersPtrPtr);
+        cv::Point2f * * cornersPtr = new cv::Point2f * [corners.size()];
+        *cornersPtrPtr = cornersPtr;
 
-      *$(int32_t * cornersLengthsPtr) = corners.size();
+        *$(int32_t * cornersLengthsPtr) = corners.size();
 
-      for (std::vector<cv::Point2f>::size_type i = 0; i != corners.size(); i++) {
-        cornersPtr[i] = new cv::Point2f( corners[i] );
-      }
-    }|]
-    numCorners <- fromIntegral <$> peek cornersLengthsPtr
-    cornersPtr <- peek cornersPtrPtr
-    (corners :: [V2 Float]) <-
-        peekArray numCorners cornersPtr >>=
-        mapM (fmap (fmap fromCFloat . fromPoint) . fromPtr . pure)
-    [CU.block| void {
-      delete [] *$(Point2f * * * cornersPtrPtr);
-    }|]
-    pure (V.fromList  corners)
+        for (std::vector<cv::Point2f>::size_type i = 0; i != corners.size(); i++) {
+          cornersPtr[i] = new cv::Point2f( corners[i] );
+        }
+      |]
   where
     c'qualityLevel = realToFrac qualityLevel
     c'minDistance  = realToFrac minDistance
