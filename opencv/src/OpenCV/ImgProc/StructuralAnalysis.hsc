@@ -402,23 +402,27 @@ minAreaRect points =
   where
     c'numPoints = fromIntegral $ V.length points
 
-{- |  Tests a contour convexity.
+{- | Tests a contour convexity.
 
-The function tests whether the input contour is convex or not.
-The contour must be simple, that is, without self-intersections.
-Otherwise, the function output is undefined.
+The function tests whether the input contour is convex or not. The contour must
+be simple, that is, without self-intersections. Otherwise, the function output
+is undefined.
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#iscontourconvex OpenCV Sphinx doc>
 -}
+-- TODO (RvD): support Int32 points
 isContourConvex
     :: (IsPoint2 point2 CFloat)
     => V.Vector (point2 CFloat)
-    -> Bool
-isContourConvex contour = toBool $ unsafePerformIO $
+    -> CvExcept Bool
+isContourConvex contour = unsafeWrapException $
+    alloca $ \c'resultPtr ->
+    handleCvException (toBool <$> peek c'resultPtr) $
     withArrayPtr (V.map toPoint contour) $ \contourPtr ->
-        [CU.exp| bool {
-            cv::isContourConvex(cv::_InputArray( $(Point2f * contourPtr)
-                                               , $(int32_t c'numPoints)))
-        }|]
+      [cvExcept|
+        *$(bool * c'resultPtr) =
+          cv::isContourConvex
+          (cv::_InputArray($(Point2f * contourPtr), $(int32_t c'numPoints)));
+      |]
   where
     c'numPoints = fromIntegral $ V.length contour
