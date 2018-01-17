@@ -39,9 +39,11 @@ module OpenCV.Internal.Exception
     ) where
 
 import "base" Control.Monad.ST ( ST, runST )
-import "base" Control.Exception ( Exception, mask_, throw, throwIO )
+import "base" Control.Exception ( Exception(displayException), mask_, throw, throwIO )
 import "base" Control.Monad ( (<=<) )
 import "base" Data.Functor.Identity
+import "base" Data.List ( intercalate )
+import qualified "base" Data.List.NonEmpty as NE
 import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
@@ -71,7 +73,10 @@ C.using "namespace cv"
 
 data CvException
    = BindingException !CvCppException
-   | CoerceMatError ![CoerceMatError]
+     -- ^ An exception was thrown by the underlying opencv c++ library.
+   | CoerceMatError !(NE.NonEmpty CoerceMatError)
+     -- ^ A 'Mat' couldn't be coerced to a different type because that
+     -- type does not match the actual shape of the matrix.
      deriving Show
 
 data CoerceMatError
@@ -87,7 +92,49 @@ data ExpectationError a
      , actualValue   :: !a
      } deriving (Show, Functor)
 
-instance Exception CvException
+instance Exception CvException where
+    displayException = \case
+      BindingException cppException ->
+        "Exception thrown by opencv c++ library:\n" ++ show cppException
+      CoerceMatError coerceMatErrors ->
+        "A matrix can't be converted to the desired type:\n  - " ++
+          intercalate "\n  - " (map displayCoerceMatError (NE.toList coerceMatErrors))
+
+displayCoerceMatError :: CoerceMatError -> String
+displayCoerceMatError = \case
+    ShapeError expErr ->
+        "Expected a "
+           ++ show (expectedValue expErr)
+           ++ "-D shape but got a "
+           ++ show (actualValue expErr) ++ "-D shape"
+    SizeError dimIx expErr ->
+        "Expected dimension "
+           ++ show dimIx ++ " to be of size "
+           ++ show (expectedValue expErr)
+           ++ " but got " ++ show (actualValue expErr)
+    ChannelError expErr ->
+        "Expected "
+           ++ show (expectedValue expErr)
+           ++ " channels but got "
+           ++ show (actualValue expErr) ++ " channels"
+    DepthError expErr ->
+        "Expected depth "
+           ++ displayDepth (expectedValue expErr)
+           ++ " but got depth "
+           ++ displayDepth (actualValue expErr)
+
+displayDepth :: Depth -> String
+displayDepth depth = show depth ++ " (" ++ haskellDepth ++ ")"
+  where
+    haskellDepth = case depth of
+        Depth_8U  -> "Word8"
+        Depth_8S  -> "Int8"
+        Depth_16U -> "Word16"
+        Depth_16S -> "Int16"
+        Depth_32S -> "Int32"
+        Depth_32F -> "Float"
+        Depth_64F -> "Double"
+        Depth_USRTYPE1 -> "not supported in Haskell"
 
 newtype CvCppException = CvCppException { unCvCppException :: ForeignPtr (C CvCppException) }
 

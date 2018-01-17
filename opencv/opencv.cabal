@@ -112,7 +112,7 @@ library
 
     build-depends:
         aeson             >= 0.9.0.1
-      , base              >= 4.8     && <5
+      , base              >= 4.9     && < 5
       , base64-bytestring >= 1.0.0.1
       , bindings-DSL      >= 1.0.23
       , bytestring        >= 0.10.6

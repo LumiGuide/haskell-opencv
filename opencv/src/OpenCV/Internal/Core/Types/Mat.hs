@@ -72,6 +72,7 @@ module OpenCV.Internal.Core.Types.Mat
 import "base" Control.Exception ( throwIO )
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
+import qualified "base" Data.List.NonEmpty as NE
 import "base" Data.Maybe
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
@@ -239,8 +240,10 @@ coerceMat
        )
     => Mat shapeIn channelsIn depthIn -- ^
     -> CvExcept (Mat shapeOut channelsOut depthOut)
-coerceMat matIn | null errors = pure matOut
-                | otherwise   = throwE $ CoerceMatError errors
+coerceMat matIn =
+    case NE.nonEmpty errors of
+      Nothing -> pure matOut
+      Just neErrors -> throwE $ CoerceMatError neErrors
   where
     matOut = unsafeCoerceMat matIn
     errors = typeCheckMat matOut
