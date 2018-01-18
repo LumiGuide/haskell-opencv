@@ -11,6 +11,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , arcLength
     , boundingRect
     , contourArea
+    , convexHull
     , findContours
     , isContourConvex
     , minAreaRect
@@ -275,12 +276,79 @@ contourArea contour areaOriented = unsafeWrapException $
     c'numPoints = fromIntegral $ V.length contour
     c'oriented = fromBool oriented
 
+{- | Finds the convex hull of a point set.
+
+Finds the convex hull of a 2D point set using the Sklansky's algorithm
+that has \( O(n \log n) \) complexity in the current implementation.
+-}
+-- TODO (RvD): support Int32 points
+convexHull
+    :: forall point2 depth
+     . ( depth ~ CFloat
+       , IsPoint2 point2 depth
+       )
+    => V.Vector (point2 depth)
+       -- ^ Input 2D point set.
+    -> Bool
+       -- ^ Orientation flag. If it is true, the output convex hull is oriented
+       -- clockwise. Otherwise, it is oriented counter-clockwise. The assumed
+       -- coordinate system has its X axis pointing to the right, and its Y axis
+       -- pointing upwards.
+    -> CvExcept (V.Vector (Point 2 depth))
+       -- ^ Output convex hull.
+convexHull points clockwise = unsafeWrapException $
+    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
+    alloca $ \(hullPointsPtrPtr :: Ptr (Ptr (Ptr (C'Point 2 depth)))) ->
+    alloca $ \(numHullPointsPtr :: Ptr Int32) ->
+    handleCvException
+      ( do numHullPoints <- fromIntegral <$> peek numHullPointsPtr
+           hullPointsPtr :: Ptr (Ptr (C'Point 2 depth)) <- peek hullPointsPtrPtr
+           hullPointsList :: [Ptr (C'Point 2 depth)] <- peekArray numHullPoints hullPointsPtr
+           hullPointsVec :: V.Vector (Point 2 depth) <- V.fromList <$> mapM (fromPtr . pure) hullPointsList
+           [CU.block| void {
+             delete [] *$(Point2f * * * hullPointsPtrPtr);
+           }|]
+           pure hullPointsVec
+      ) $
+      [cvExcept|
+        cv::_InputArray points =
+          cv::_InputArray( $(Point2f * pointsPtr)
+                         , $(int32_t c'numPoints)
+                         );
+        std::vector<cv::Point2f> hull;
+        cv::convexHull
+          ( points
+          , hull
+          , $(bool c'clockwise)
+          , true
+          );
+
+        *$(int32_t * numHullPointsPtr) = hull.size();
+
+        cv::Point2f * * * hullPointsPtrPtr = $(Point2f * * * hullPointsPtrPtr);
+        cv::Point2f * * hullPointsPtr = new cv::Point2f * [hull.size()];
+        *hullPointsPtrPtr = hullPointsPtr;
+
+        for (std::vector<cv::Point2i>::size_type i = 0; i < hull.size(); i++)
+        {
+          cv::Point2f & hullPt = hull[i];
+          cv::Point2f * newHullPt = new cv::Point2f(hullPt.x, hullPt.y);
+          hullPointsPtr[i] = newHullPt;
+        }
+      |]
+  where
+    c'numPoints :: Int32
+    c'numPoints = fromIntegral $ V.length points
+
+    c'clockwise :: CInt
+    c'clockwise = fromBool clockwise
+
 findContours
-  :: (PrimMonad m)
-  => ContourRetrievalMode
-  -> ContourApproximationMethod
-  -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
-  -> m (V.Vector Contour)
+    :: (PrimMonad m)
+    => ContourRetrievalMode
+    -> ContourApproximationMethod
+    -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
+    -> m (V.Vector Contour)
 findContours mode method src = unsafePrimToPrim $
     withPtr src $ \srcPtr ->
     alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
