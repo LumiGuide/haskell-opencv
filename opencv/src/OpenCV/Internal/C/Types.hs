@@ -218,13 +218,17 @@ class FromPtr a where
 --------------------------------------------------------------------------------
 
 toCFloat :: Float -> CFloat
-toCFloat = realToFrac
+{-# INLINE toCFloat #-}
+toCFloat = CFloat
 
 fromCFloat :: CFloat -> Float
-fromCFloat = realToFrac
+{-# INLINE fromCFloat #-}
+fromCFloat (CFloat x) = x
 
 toCDouble :: Double -> CDouble
-toCDouble = realToFrac
+{-# INLINE toCDouble #-}
+toCDouble = CDouble
 
 fromCDouble :: CDouble -> Double
-fromCDouble = realToFrac
+{-# INLINE fromCDouble #-}
+fromCDouble (CDouble x) = x
