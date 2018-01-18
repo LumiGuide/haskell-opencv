@@ -9,6 +9,7 @@ module OpenCV.ImgProc.StructuralAnalysis
 
     , approxPolyDP
     , arcLength
+    , boundingRect
     , contourArea
     , findContours
     , isContourConvex
@@ -38,6 +39,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.Core.Types ( Mut )
 import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Rect ( HRect(..), Rect2i, toRectIO )
 import "this" OpenCV.Core.Types.Vec ( fromVec )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
@@ -209,6 +211,33 @@ arcLength curve isClosed = unsafeWrapException $
     where
       c'isClosed = fromBool isClosed
       c'numPoints = fromIntegral $ V.length curve
+
+{- | Calculates the up-right bounding rectangle of a point set.
+
+The function calculates and returns the minimal up-right bounding
+rectangle for the specified point set.
+-}
+-- TODO (RvD): non empty set of points, or check if V.length points >=
+-- 1 in haskell.
+-- TODO (RvD): support Int32 points
+boundingRect
+    :: (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat)
+    -> CvExcept Rect2i
+boundingRect points = unsafeWrapException $ do
+    result <- toRectIO $ HRect 0 0
+    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
+      withPtr result $ \resultPtr ->
+      handleCvException (pure result) $
+        [cvExcept|
+          cv::_InputArray points =
+            cv::_InputArray( $(Point2f * pointsPtr)
+                           , $(int32_t c'numPoints)
+                           );
+          *$(Rect2i * resultPtr) = cv::boundingRect(points);
+        |]
+  where
+    c'numPoints = fromIntegral $ V.length points
 
 {- | Calculates a contour area.
 
