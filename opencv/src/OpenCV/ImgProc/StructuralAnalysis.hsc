@@ -11,6 +11,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , arcLength
     , boundingRect
     , contourArea
+    , ConvexHull
     , convexHull
     , findContours
     , isContourConvex
@@ -46,7 +47,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
-import "this" OpenCV.Internal.ImgProc.StructuralAnalysis ( convexHull )
+import "this" OpenCV.Internal.ImgProc.StructuralAnalysis ( ConvexHull, convexHull )
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
