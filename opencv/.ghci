@@ -1,1 +1,1 @@
---ghc-options='-fobject-code -O0'
+:set -fobject-code -O0
