@@ -12,6 +12,7 @@ module OpenCV.ImgProc.StructuralAnalysis
     , boundingRect, BoundingRect
     , contourArea
     , convexHull, ConvexHull
+    , convexHullIndices, ConvexHullIndices
     , convexityDefects
     , findContours
     , isContourConvex
