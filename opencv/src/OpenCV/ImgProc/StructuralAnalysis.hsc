@@ -7,12 +7,11 @@ module OpenCV.ImgProc.StructuralAnalysis
     , ContourRetrievalMode(..)
     , ContourApproximationMethod(..)
 
-    , approxPolyDP
+    , approxPolyDP, ApproxPolyDP
     , arcLength
     , boundingRect
     , contourArea
-    , ConvexHull
-    , convexHull
+    , convexHull, ConvexHull
     , findContours
     , isContourConvex
     , minAreaRect
@@ -47,7 +46,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
-import "this" OpenCV.Internal.ImgProc.StructuralAnalysis ( ConvexHull, convexHull )
+import "this" OpenCV.Internal.ImgProc.StructuralAnalysis
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
 
@@ -133,65 +132,6 @@ data Contour
      , contourChildren :: !(V.Vector Contour)
      } deriving Show
 
-{- | Approximates a polygonal curve(s) with the specified precision.
-
-The functions approxPolyDP approximate a curve or a polygon with another
-curve/polygon with less vertices so that the distance between them is less or
-equal to the specified precision. It uses the
-<http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm Douglas-Peucker algorithm>
-
-<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#approxpolydp>
--}
-approxPolyDP
-    :: (IsPoint2 point2 Int32)
-    => V.Vector (point2 Int32)
-    -> Double -- ^ epsilon
-    -> Bool   -- ^ is closed
-    -> V.Vector Point2i -- vector of points
-approxPolyDP curve epsilon isClosed = unsafePerformIO $
-    withArrayPtr (V.map toPoint curve) $ \curvePtr ->
-    alloca $ \(pointsResPtrPtr ::Ptr (Ptr (Ptr C'Point2i))) ->
-    alloca $ \(numPointsResPtr :: Ptr Int32) -> mask_ $ do
-      [C.block| void {
-        std::vector<cv::Point> points_res;
-        cv::_InputArray curve = cv::_InputArray ($(Point2i * curvePtr), $(int32_t c'numPoints));
-        cv::approxPolyDP
-        (  curve
-        ,  points_res
-        ,  $(double c'epsilon)
-        ,  $(bool c'isClosed)
-        );
-
-        *$(int32_t * numPointsResPtr) = points_res.size();
-
-        cv::Point * * * pointsResPtrPtr = $(Point2i * * * pointsResPtrPtr);
-        cv::Point * * pointsResPtr = new cv::Point * [points_res.size()];
-        *pointsResPtrPtr = pointsResPtr;
-
-        for (std::vector<cv::Point>::size_type i = 0; i < points_res.size(); i++) {
-            cv::Point & ptAddress = points_res[i];
-            cv::Point * newPt = new cv::Point(ptAddress.x, ptAddress.y);
-            pointsResPtr[i] = newPt;
-        }
-      }|]
-
-      numPoints <- fromIntegral <$> peek numPointsResPtr
-
-      pointsResPtr <- peek pointsResPtrPtr
-      (pointsResList :: [Point2i]) <- peekArray numPoints pointsResPtr >>= mapM (fromPtr . pure) --CHECK THIS
-      let pointsRes :: V.Vector (Point2i)
-          pointsRes = V.fromList pointsResList
-
-      [CU.block| void {
-        delete [] *$(Point2i * * * pointsResPtrPtr);
-      } |]
-
-      return pointsRes
-  where
-    c'numPoints = fromIntegral $ V.length curve
-    c'isClosed  = fromBool isClosed
-    c'epsilon   = realToFrac epsilon
-
 arcLength
     :: (IsPoint2 point2 Int32)
     => V.Vector (point2 Int32)
@@ -204,16 +144,16 @@ arcLength curve isClosed = unsafeWrapException $
         [cvExcept|
             cv::_InputArray curve =
               cv::_InputArray ( $(Point2i * curvePtr)
-                              , $(int32_t c'numPoints)
+                              , $(int32_t c'numCurvePoints)
                               );
             *$(double * c'resultPtr) =
                cv::arcLength( curve
-                              , $(bool c'isClosed)
+                            , $(bool c'isClosed)
                             );
         |]
     where
       c'isClosed = fromBool isClosed
-      c'numPoints = fromIntegral $ V.length curve
+      c'numCurvePoints = fromIntegral $ V.length curve
 
 {- | Calculates the up-right bounding rectangle of a point set.
 
