@@ -9,6 +9,8 @@
 module OpenCV.Internal.ImgProc.StructuralAnalysis
   ( approxPolyDP
   , ApproxPolyDP(..)
+  , boundingRect
+  , BoundingRect(..)
   , convexHull
   , ConvexHull(..)
   ) where
@@ -24,6 +26,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "this" OpenCV.Core.Types.Point
+import "this" OpenCV.Core.Types.Rect ( HRect(..), Rect2i, toRectIO )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew ( PlacementNew )
 import "this" OpenCV.Internal.C.Types
@@ -161,6 +164,62 @@ instance ApproxPolyDP CFloat where
 
     approxPolyDP_deletePtrArray approxPtrPtr =
         [CU.block| void { delete [] *$(Point2f * * * approxPtrPtr); } |]
+
+--------------------------------------------------------------------------------
+
+{- | Calculates the up-right bounding rectangle of a point set.
+
+The function calculates and returns the minimal up-right bounding
+rectangle for the specified point set.
+-}
+-- TODO (RvD): non empty set of points, or check if V.length points >=
+-- 1 in haskell.
+boundingRect
+    :: forall point2 depth
+     . ( IsPoint2 point2 depth
+       , BoundingRect depth
+       )
+    => V.Vector (point2 depth)
+    -> CvExcept Rect2i
+boundingRect points = unsafeWrapException $ do
+    result <- toRectIO $ HRect 0 0
+    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
+      withPtr result $ \resultPtr ->
+      handleCvException (pure result) $
+        boundingRect_internal
+          (fromIntegral $ V.length points)
+          pointsPtr
+          resultPtr
+
+-- | Internal class used to overload the 'boundingRect' depth.
+class ( CSizeOf      (C'Point 2 depth)
+      , PlacementNew (C'Point 2 depth)
+      ) => BoundingRect depth where
+    boundingRect_internal
+        :: Int32 -- ^ Number of input points.
+        -> Ptr (C (Point 2 depth)) -- ^ Input points array.
+        -> Ptr (C Rect2i) -- ^ Output rectangle.
+        -> IO (Ptr (C CvCppException))
+
+instance BoundingRect Int32 where
+    boundingRect_internal pointsSize pointsPtr resultPtr =
+        [cvExcept|
+          cv::_InputArray points =
+            cv::_InputArray( $(Point2i * pointsPtr)
+                           , $(int32_t pointsSize)
+                           );
+          *$(Rect2i * resultPtr) = cv::boundingRect(points);
+        |]
+
+instance BoundingRect CFloat where
+    boundingRect_internal pointsSize pointsPtr resultPtr =
+        [cvExcept|
+          cv::_InputArray points =
+            cv::_InputArray( $(Point2f * pointsPtr)
+                           , $(int32_t pointsSize)
+                           );
+          *$(Rect2i * resultPtr) = cv::boundingRect(points);
+        |]
 
 --------------------------------------------------------------------------------
 
