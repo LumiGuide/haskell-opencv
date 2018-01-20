@@ -7,16 +7,19 @@
 #endif
 
 module OpenCV.Internal.ImgProc.StructuralAnalysis
-  ( approxPolyDP
-  , ApproxPolyDP(..)
-  , boundingRect
-  , BoundingRect(..)
-  , convexHull
-  , ConvexHull(..)
-  ) where
+    ( approxPolyDP
+    , ApproxPolyDP(..)
+    , boundingRect
+    , BoundingRect(..)
+    , convexHull
+    , ConvexHull(..)
+    , convexHullIndices
+    , ConvexHullIndices(..)
+    ) where
 
 import "base" Data.Int
 import "base" Foreign.C.Types
+import "base" Foreign.Concurrent ( newForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
@@ -33,6 +36,7 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Exception
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
 
 --------------------------------------------------------------------------------
 
@@ -124,7 +128,8 @@ instance ApproxPolyDP Int32 where
         cv::Point2i * * approxPtr = new cv::Point2i * [approx.size()];
         *approxPtrPtr = approxPtr;
 
-        for (std::vector<cv::Point2i>::size_type i = 0; i < approx.size(); i++) {
+        for (std::vector<cv::Point2i>::size_type i = 0; i < approx.size(); i++)
+        {
             cv::Point2i & ptAddress = approx[i];
             cv::Point2i * newPt = new cv::Point2i(ptAddress.x, ptAddress.y);
             approxPtr[i] = newPt;
@@ -155,7 +160,8 @@ instance ApproxPolyDP CFloat where
         cv::Point2f * * approxPtr = new cv::Point2f * [approx.size()];
         *approxPtrPtr = approxPtr;
 
-        for (std::vector<cv::Point2f>::size_type i = 0; i < approx.size(); i++) {
+        for (std::vector<cv::Point2f>::size_type i = 0; i < approx.size(); i++)
+        {
             cv::Point2f & ptAddress = approx[i];
             cv::Point2f * newPt = new cv::Point2f(ptAddress.x, ptAddress.y);
             approxPtr[i] = newPt;
@@ -261,7 +267,7 @@ convexHull points clockwise = unsafeWrapException $
         hullPointsPtrPtr
         hullSizePtr
 
--- | Internal class used to overload the 'convexHull' depth.
+-- | Internal class used to overload 'convexHull' depth.
 class ( FromPtr      (Point   2 depth)
       , CSizeOf      (C'Point 2 depth)
       , PlacementNew (C'Point 2 depth)
@@ -338,3 +344,92 @@ instance ConvexHull CFloat where
 
     convexHull_deletePtrArray hullPointsPtrPtr =
         [CU.block| void { delete [] *$(Point2f * * * hullPointsPtrPtr); }|]
+
+--------------------------------------------------------------------------------
+
+{- | Finds the convex hull of a point set.
+
+Finds the convex hull of a 2D point set using the Sklansky's algorithm
+that has \( O(n \log n) \) complexity in the current implementation.
+-}
+convexHullIndices
+    :: forall point2 depth
+     . ( IsPoint2 point2 depth
+       , ConvexHullIndices depth
+       )
+    => V.Vector (point2 depth)
+       -- ^ Input 2D point set.
+    -> Bool
+       -- ^ Orientation flag. If it is true, the output convex hull is oriented
+       -- clockwise. Otherwise, it is oriented counter-clockwise. The assumed
+       -- coordinate system has its X axis pointing to the right, and its Y axis
+       -- pointing upwards.
+    -> CvExcept (VS.Vector Int32)
+       -- ^ Indices of those points in the input set that are part of the convex hull.
+convexHullIndices points clockwise = unsafeWrapException $
+    withArrayPtr (V.map toPoint points) $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
+    alloca $ \(hullIndicesPtrPtr :: Ptr (Ptr Int32)) ->
+    alloca $ \(hullSizePtr :: Ptr Int32) ->
+    handleCvException
+      ( do hullSize <- fromIntegral <$> peek hullSizePtr
+           -- The hullIndicesPtr points to memory allocated on the C++ heap. We
+           -- are responsible for eventually freeing this memory.
+           hullIndicesPtr :: Ptr Int32 <- peek hullIndicesPtrPtr
+           let freeHullIndices =
+                   [CU.block| void { delete [] $(int32_t * hullIndicesPtr); }|]
+           hullIndicesForeignPtr <- newForeignPtr hullIndicesPtr freeHullIndices
+           pure $ VS.unsafeFromForeignPtr0 hullIndicesForeignPtr hullSize
+      ) $
+      convexHullIndices_internal
+        (fromIntegral $ V.length points)
+        pointsPtr
+        (fromBool clockwise)
+        hullIndicesPtrPtr
+        hullSizePtr
+
+-- | Internal class used to overload 'convexHullIndices' depth.
+class ( FromPtr      (Point   2 depth)
+      , CSizeOf      (C'Point 2 depth)
+      , PlacementNew (C'Point 2 depth)
+      ) => ConvexHullIndices depth where
+    convexHullIndices_internal
+        :: Int32 -- ^ Number of input points.
+        -> Ptr (C (Point 2 depth)) -- ^ Input points array.
+        -> CInt -- ^ Orientation flag.
+        -> Ptr (Ptr Int32) -- ^ Array of convex hull indices.
+        -> Ptr Int32 -- ^ Size of convex hull indices.
+        -> IO (Ptr (C CvCppException))
+
+instance ConvexHullIndices Int32 where
+    convexHullIndices_internal numPoints pointsPtr clockwise hullIndicesPtrPtr hullSizePtr =
+        [cvExcept|
+          cv::_InputArray points =
+            cv::_InputArray( $(Point2i * pointsPtr)
+                           , $(int32_t numPoints)
+                           );
+          std::vector<int32_t> hullIndices;
+
+          cv::convexHull(points, hullIndices, $(bool clockwise), false);
+
+          *$(int32_t * hullSizePtr) = hullIndices.size();
+          int32_t * hullIndicesArr = new int32_t [hullIndices.size()];
+          std::copy(hullIndices.begin(), hullIndices.end(), hullIndicesArr);
+          *$(int32_t * * hullIndicesPtrPtr) = hullIndicesArr;
+        |]
+
+instance ConvexHullIndices CFloat where
+    convexHullIndices_internal numPoints pointsPtr clockwise hullIndicesPtrPtr hullSizePtr =
+        [cvExcept|
+          cv::_InputArray points =
+            cv::_InputArray( $(Point2f * pointsPtr)
+                           , $(int32_t numPoints)
+                           );
+          std::vector<int32_t> hullIndices;
+
+          cv::convexHull(points, hullIndices, $(bool clockwise), false);
+
+          *$(int32_t * hullSizePtr) = hullIndices.size();
+          int32_t * hullIndicesArr = new int32_t [hullIndices.size()];
+          std::copy(hullIndices.begin(), hullIndices.end(), hullIndicesArr);
+          *$(int32_t * * hullIndicesPtrPtr) = hullIndicesArr;
+        |]

@@ -12,6 +12,8 @@ module OpenCV.ImgProc.StructuralAnalysis
     , boundingRect, BoundingRect
     , contourArea
     , convexHull, ConvexHull
+    , convexHullIndices, ConvexHullIndices
+    , convexityDefects
     , findContours
     , isContourConvex
     , minAreaRect
@@ -39,7 +41,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.Core.Types ( Mut )
 import "this" OpenCV.Core.Types.Point
-import "this" OpenCV.Core.Types.Vec ( fromVec )
+import "this" OpenCV.Core.Types.Vec ( fromVec, Vec4i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types
@@ -48,6 +50,7 @@ import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.ImgProc.StructuralAnalysis
 import "this" OpenCV.TypeLevel
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
 
 --------------------------------------------------------------------------------
 
@@ -189,6 +192,63 @@ contourArea contour areaOriented = unsafeWrapException $
         ContourAreaAbsoluteValue -> False
     c'numPoints = fromIntegral $ V.length contour
     c'oriented = fromBool oriented
+
+{- | Finds the convexity defects of a contour.
+-}
+convexityDefects
+    :: (IsPoint2 point2 Int32)
+    => V.Vector (point2 Int32) -- ^ Input contour
+    -> VS.Vector Int32
+       -- ^ Indices (0 based) of those points in the input contour
+       -- that form a convex hull.
+    -> CvExcept (V.Vector Vec4i)
+       -- ^ The output vector of convexity defects.
+convexityDefects contour hull = unsafeWrapException $
+    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
+    alloca $ \(defectsPtrPtr :: Ptr (Ptr (Ptr (C Vec4i)))) ->
+    alloca $ \(defectsSizePtr :: Ptr Int32) ->
+    handleCvException
+      ( do defectsSize <- fromIntegral <$> peek defectsSizePtr
+           defectsPtr :: Ptr (Ptr (C Vec4i)) <- peek defectsPtrPtr
+           defectsList :: [Ptr (C Vec4i)] <- peekArray defectsSize defectsPtr
+           defectsVec <- V.fromList <$> mapM (fromPtr . pure) defectsList
+           [CU.block| void { delete [] *$(Vec4i * * * defectsPtrPtr); } |]
+           pure defectsVec
+      ) $
+      [cvExcept|
+        cv::_InputArray contour =
+          cv::_InputArray( $(Point2i * contourPtr)
+                         , $(int32_t contourSize)
+                         );
+        cv::_InputArray hull =
+          cv::_InputArray( $vec-ptr:(int32_t * hull)
+                         , $vec-len:hull
+                         );
+        std::vector<cv::Vec4i> defects;
+
+        convexityDefects(contour, hull, defects);
+
+        *$(int32_t * defectsSizePtr) = defects.size();
+
+        cv::Vec4i * * * defectsPtrPtr = $(Vec4i * * * defectsPtrPtr);
+        cv::Vec4i * * defectsPtr = new cv::Vec4i * [defects.size()];
+        *defectsPtrPtr = defectsPtr;
+
+        for (std::vector<cv::Vec4i>::size_type i = 0; i < defects.size(); i++)
+        {
+            cv::Vec4i & defectRef = defects[i];
+            cv::Vec4i * newDefect =
+              new cv::Vec4i( defectRef[0]
+                           , defectRef[1]
+                           , defectRef[2]
+                           , defectRef[3]
+                           );
+            defectsPtr[i] = newDefect;
+        }
+      |]
+  where
+    contourSize :: Int32
+    contourSize = fromIntegral $ V.length contour
 
 findContours
     :: (PrimMonad m)
