@@ -49,6 +49,8 @@ module OpenCV.ImgProc.GeometricImgTransform
     , warpAffine
     , warpPerspective
     , invertAffineTransform
+    , linearPolar
+    , logPolar
     , getPerspectiveTransform
     , getRotationMatrix2D
     , remap
@@ -241,7 +243,7 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
         withPtr src $ \srcPtr ->
         withPtr dst $ \dstPtr ->
         withPtr transform   $ \transformPtr   ->
-        withPtr    borderValue $ \borderValuePtr ->
+        withPtr borderValue $ \borderValuePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpPerspective
@@ -274,6 +276,163 @@ invertAffineTransform matIn = unsafeWrapException $ do
         [cvExcept|
            cv::invertAffineTransform(*$(Mat * matInPtr), *$(Mat * matOutPtr));
         |]
+
+{- | Remaps an image to polar coordinate space.
+
+Transform the source image using the following transformation:
+
+\[
+\begin{array}{l}
+  dst( \rho , \phi ) = src(x,y) \\
+  dst.size() \leftarrow src.size()
+\end{array}
+\]
+
+where
+
+\[
+\begin{array}{l}
+  I = (dx,dy) = (x - center.x,y - center.y) \\
+  \rho = Kx \cdot \texttt{magnitude} (I) ,\\
+  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg}
+\end{array}
+\]
+
+and
+
+\[
+\begin{array}{l}
+  Kx = src.cols / maxRadius \\
+  Ky = src.rows / 360
+\end{array}
+\]
+
+Example:
+
+@
+linearPolarImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
+    => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
+linearPolarImg = exceptError $
+    linearPolar compass (V2 250 248) 250 InterCubic False True
+@
+
+<<data/compass.jpg Untransformed image of a compass>>
+<<doc/generated/examples/linearPolarImg.png linearPolarImg>>
+-}
+linearPolar
+    :: (IsPoint2 point2 CFloat)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> point2 CFloat -- ^ Center.
+    -> Double -- ^ Max radius.
+    -> InterpolationMethod -- ^ Interpolation algorithm.
+    -> Bool -- ^ Inverse mapping.
+    -> Bool -- ^ Fill outliers.
+    -> CvExcept (Mat ('S [height, width]) channels depth)
+linearPolar src center maxRadius interpolationMethod inverse fillOutliers =
+    unsafeWrapException $ do
+      dst <- newEmptyMat
+      handleCvException (pure $ unsafeCoerceMat dst) $
+        withPtr src $ \srcPtr ->
+        withPtr dst $ \dstPtr ->
+        withPtr (toPoint center) $ \centerPtr ->
+          [cvExcept|
+            cv::linearPolar
+              ( *$(Mat * srcPtr)
+              , *$(Mat * dstPtr)
+              , *$(Point2f * centerPtr)
+              , $(double c'maxRadius)
+              , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
+              );
+          |]
+  where
+    c'maxRadius = toCDouble maxRadius
+    c'interpolationMethod = marshalInterpolationMethod interpolationMethod
+    c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
+    c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
+
+{- | Remaps an image to semilog-polar coordinates space.
+
+Transform the source image using the following transformation:
+
+\[
+\begin{array}{l}
+  dst( \rho , \phi ) = src(x,y) \\
+  dst.size() \leftarrow src.size()
+\end{array}
+\]
+
+where
+
+\[
+\begin{array}{l}
+  I = (dx,dy) = (x - center.x,y - center.y) \\
+  \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
+  \phi = Ky \cdot \texttt{angle} (I)_{0..360 deg} \\
+\end{array}
+\]
+
+and
+
+\[
+\begin{array}{l}
+  M = src.cols / log_e(maxRadius) \\
+  Ky = src.rows / 360 \\
+\end{array}
+\]
+
+Example:
+
+@
+logPolarImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
+    => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
+logPolarImg = exceptError $
+    logPolar compass (V2 250 248) (500 / log 250) InterCubic False True
+@
+
+<<data/compass.jpg Untransformed image of a compass>>
+<<doc/generated/examples/logPolarImg.png logPolarImg>>
+-}
+logPolar
+    :: (IsPoint2 point2 CFloat)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> point2 CFloat -- ^ Center.
+    -> Double -- ^ Magnitude scale.
+    -> InterpolationMethod -- ^ Interpolation algorithm.
+    -> Bool -- ^ Inverse mapping.
+    -> Bool -- ^ Fill outliers.
+    -> CvExcept (Mat ('S [height, width]) channels depth)
+logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
+    unsafeWrapException $ do
+      dst <- newEmptyMat
+      handleCvException (pure $ unsafeCoerceMat dst) $
+        withPtr src $ \srcPtr ->
+        withPtr dst $ \dstPtr ->
+        withPtr (toPoint center) $ \centerPtr ->
+          [cvExcept|
+            cv::logPolar
+              ( *$(Mat * srcPtr)
+              , *$(Mat * dstPtr)
+              , *$(Point2f * centerPtr)
+              , $(double c'magnitudeScale)
+              , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
+              );
+          |]
+  where
+    c'magnitudeScale = toCDouble magnitudeScale
+    c'interpolationMethod = marshalInterpolationMethod interpolationMethod
+    c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
+    c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
+
 
 {- | Calculates a perspective transformation matrix for 2D perspective transform
 

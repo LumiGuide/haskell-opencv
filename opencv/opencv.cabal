@@ -32,7 +32,7 @@ extra-source-files:
     data/*.xml
 
 extra-doc-files:
-    data/solvepnp.jpg
+    data/*.jpg
     doc/generated/*.png
     doc/generated/examples/*.png
     doc/generated/examples/*.gif

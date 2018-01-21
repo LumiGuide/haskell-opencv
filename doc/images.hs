@@ -59,6 +59,7 @@ type Lenna_512x512    = Mat (ShapeT [ 512,  512]) ('S 3) ('S Word8)
 type Arnold           = Mat (ShapeT [3504, 2336]) ('S 3) ('S Word8)
 type Arnold_small     = Mat (ShapeT [ 900,  600]) ('S 3) ('S Word8)
 type Hand             = Mat (ShapeT [ 543,  400]) ('S 3) ('S Word8)
+type Compass          = Mat (ShapeT [ 497,  500]) ('S 3) ('S Word8)
 
 birds_768x512 :: Kodak_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -152,6 +153,11 @@ hand :: Hand
 hand =
     exceptError $ coerceMat $ unsafePerformIO $
       imdecode ImreadUnchanged <$> B.readFile "data/hand.jpg"
+
+compass :: Compass
+compass =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/compass.jpg"
 
 --------------------------------------------------------------------------------
 
