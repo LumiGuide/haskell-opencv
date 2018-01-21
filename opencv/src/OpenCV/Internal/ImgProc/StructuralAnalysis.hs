@@ -56,7 +56,31 @@ curve/polygon with less vertices so that the distance between them is less or
 equal to the specified precision. It uses the
 <http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm Douglas-Peucker algorithm>
 
-<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#approxpolydp>
+Example:
+
+@
+approxHandContourImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
+    => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
+approxHandContourImg = do
+    handContour <- mkHandContour
+    let approx1 = exceptError $ approxPolyDP handContour 10 True
+        approx2 = exceptError $ approxPolyDP handContour 25 True
+    pure $ exceptError $
+      withMatM (Proxy :: Proxy [height, width])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               transparent $ \\imgM -> do
+        polylines imgM (V.singleton handContour) True blue  1 LineType_AA 0
+        polylines imgM (V.singleton approx1)     True red   1 LineType_AA 0
+        polylines imgM (V.singleton approx2)     True green 1 LineType_AA 0
+@
+
+<<doc/generated/examples/approxHandContourImg.png approxHandContourImg>>
 -}
 approxPolyDP
     :: forall point2 depth
@@ -233,6 +257,32 @@ instance BoundingRect CFloat where
 
 Finds the convex hull of a 2D point set using the Sklansky's algorithm
 that has \( O(n \log n) \) complexity in the current implementation.
+
+Example:
+
+@
+handConvexHullImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
+    => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
+handConvexHullImg = do
+    handContour <- mkHandContour
+    let handHull = exceptError $ convexHull handContour True
+    pure $ exceptError $
+      withMatM (Proxy :: Proxy [height, width])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               transparent $ \\imgM -> do
+        -- Draw contour.
+        polylines imgM (V.singleton handContour) True blue 2 LineType_AA 0
+        -- Draw convex hull of contour.
+        polylines imgM (V.singleton handHull) True red 2 LineType_AA 0
+@
+
+<<doc/generated/examples/handConvexHull.png handConvexHullImg>>
 -}
 convexHull
     :: forall point2 depth

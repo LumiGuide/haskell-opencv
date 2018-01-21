@@ -194,6 +194,49 @@ contourArea contour areaOriented = unsafeWrapException $
     c'oriented = fromBool oriented
 
 {- | Finds the convexity defects of a contour.
+
+Example:
+
+@
+handDefectsImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
+    => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
+handDefectsImg = do
+    handContour <- mkHandContour
+    let -- Indices of points in \'handContour\' that are part of the convex hull.
+        handHullIndices :: VS.Vector Int32
+        handHullIndices = exceptError $ convexHullIndices handContour True
+
+        handHullIndices' :: V.Vector Int
+        handHullIndices' = V.map fromIntegral $ V.convert handHullIndices
+
+        handHull :: V.Vector Point2i
+        handHull = V.backpermute handContour handHullIndices'
+
+        handDefects :: V.Vector Vec4i
+        handDefects = exceptError $ convexityDefects handContour handHullIndices
+
+    pure $ exceptError $
+      withMatM (Proxy :: Proxy [height, width])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               transparent $ \\imgM -> do
+        -- Draw contour.
+        polylines imgM (V.singleton handContour) True blue 2 LineType_AA 0
+        -- Draw convex hull of contour.
+        polylines imgM (V.singleton handHull) True red 2 LineType_AA 0
+        -- Draw defects.
+        forM_ handDefects $ \defect -> do
+          let V4 _start_index _end_index farthest_pt_index _fixpt_depth = fromVec defect
+          let farthest_pt = handContour V.! (fromIntegral farthest_pt_index)
+          circle imgM farthest_pt 7 green (-1) LineType_AA 0
+@
+
+<<doc/generated/examples/handDefectsImg.png handDefectsImg>>
 -}
 convexityDefects
     :: (IsPoint2 point2 Int32)
@@ -250,11 +293,54 @@ convexityDefects contour hull = unsafeWrapException $
     contourSize :: Int32
     contourSize = fromIntegral $ V.length contour
 
+{- | Finds contours in a binary image.
+
+Example:
+
+@
+handContourImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *  )
+     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
+    => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
+handContourImg = do
+    handContour <- mkHandContour
+    pure $ exceptError $
+      withMatM (Proxy :: Proxy [height, width])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               white $ \\imgM -> do
+        -- Original colour image.
+        void $ matCopyToM imgM (V2 0 0) hand Nothing
+        -- Draw contour.
+        polylines imgM (V.singleton handContour) True blue 2 LineType_AA 0
+
+mkHandContour :: IO (V.Vector Point2i)
+mkHandContour = do
+    handBinaryM <- thaw handBinary
+    contours <- findContours ContourRetrievalExternal ContourApproximationTC89L1 handBinaryM
+    -- Assume there is at least 1 contour.
+    pure $ contourPoints $ contours V.! 0
+  where
+    handBinary :: Mat ('S ['S 543, 'S 400]) ('S 1) ('S Word8)
+    handBinary = exceptError $ do
+        handGray <- cvtColor bgr gray hand
+        -- The hand is surrounded by white pixels. We convert all white pixels
+        -- (> 234) to black and all other pixels (the hand itself) to white.
+        fst \<$> threshold (ThreshVal_Abs 234) (Thresh_BinaryInv 255) handGray
+@
+
+<<doc/generated/examples/handContour.png handContourImg>>
+-}
 findContours
     :: (PrimMonad m)
-    => ContourRetrievalMode
-    -> ContourApproximationMethod
+    => ContourRetrievalMode -- ^ Contour retrieval mode.
+    -> ContourApproximationMethod -- ^ Contour approximation method.
     -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
+       -- ^ Source. Non-zero pixels are treated as 1's. Zero pixels remain 0's,
+       -- so the image is treated as binary.
     -> m (V.Vector Contour)
 findContours mode method src = unsafePrimToPrim $
     withPtr src $ \srcPtr ->
@@ -265,13 +351,13 @@ findContours mode method src = unsafePrimToPrim $
       [C.block| void {
         std::vector< std::vector<cv::Point> > contours;
         std::vector<cv::Vec4i> hierarchy;
-        cv::findContours(
-          *$(Mat * srcPtr),
-          contours,
-          hierarchy,
-          $(int32_t c'mode),
-          $(int32_t c'method)
-        );
+        cv::findContours
+          ( *$(Mat * srcPtr)
+          , contours
+          , hierarchy
+          , $(int32_t c'mode)
+          , $(int32_t c'method)
+          );
 
         *$(int32_t * numContoursPtr) = contours.size();
 
@@ -287,26 +373,28 @@ findContours mode method src = unsafePrimToPrim $
         int32_t * contourLengthsPtr = new int32_t [contours.size()];
         *contourLengthsPtrPtr = contourLengthsPtr;
 
-        for (std::vector< std::vector<cv::Point> >::size_type i = 0; i < contours.size(); i++) {
+        for (std::vector< std::vector<cv::Point> >::size_type i = 0; i < contours.size(); i++)
+        {
           std::vector<cv::Point> & contourPoints = contours[i];
           cv::Vec4i hierarchyInfo = hierarchy[i];
 
           contourLengthsPtr[i] = contourPoints.size();
 
           cv::Point * * newContourPoints = new cv::Point * [contourPoints.size()];
-          for (std::vector<cv::Point>::size_type j = 0; j < contourPoints.size(); j++) {
+          for (std::vector<cv::Point>::size_type j = 0; j < contourPoints.size(); j++)
+          {
             cv::Point & orig = contourPoints[j];
             cv::Point * newPt = new cv::Point(orig.x, orig.y);
             newContourPoints[j] = newPt;
           }
           contoursPtr[i] = newContourPoints;
 
-          hierarchyPtr[i] = new cv::Vec4i(
-            hierarchyInfo[0],
-            hierarchyInfo[1],
-            hierarchyInfo[2],
-            hierarchyInfo[3]
-          );
+          hierarchyPtr[i] =
+            new cv::Vec4i( hierarchyInfo[0]
+                         , hierarchyInfo[1]
+                         , hierarchyInfo[2]
+                         , hierarchyInfo[3]
+                         );
         }
       }|]
 

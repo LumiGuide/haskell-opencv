@@ -33,6 +33,7 @@ import "opencv-extra" OpenCV.Extra
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import qualified "text" Data.Text as T
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
 import "transformers" Control.Monad.Trans.Class ( lift )
 
 import "this" ExampleExtractor
@@ -57,6 +58,7 @@ type DamageMask       = Mat (ShapeT [ 341,  512]) ('S 1) ('S Word8)
 type Lenna_512x512    = Mat (ShapeT [ 512,  512]) ('S 3) ('S Word8)
 type Arnold           = Mat (ShapeT [3504, 2336]) ('S 3) ('S Word8)
 type Arnold_small     = Mat (ShapeT [ 900,  600]) ('S 3) ('S Word8)
+type Hand             = Mat (ShapeT [ 543,  400]) ('S 3) ('S Word8)
 
 birds_768x512 :: Kodak_768x512
 birds_768x512 = exceptError $ coerceMat $ unsafePerformIO $
@@ -145,6 +147,11 @@ arnold_small =
       resize (ResizeAbs $ toSize (V2 600 900 :: V2 Int32))
              InterArea
              arnold
+
+hand :: Hand
+hand =
+    exceptError $ coerceMat $ unsafePerformIO $
+      imdecode ImreadUnchanged <$> B.readFile "data/hand.jpg"
 
 --------------------------------------------------------------------------------
 
