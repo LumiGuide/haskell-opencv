@@ -74,7 +74,7 @@ library
         , inline-c-cpp >= 0.2.1
 
     cc-options: -Wall -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -optc-std=c++11
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
