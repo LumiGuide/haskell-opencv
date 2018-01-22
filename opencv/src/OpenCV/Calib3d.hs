@@ -2,13 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Calib3d
-    ( FundamentalMatMethod(..)
+    ( EstimateAffine2DMethod(..)
+    , estimateAffine2D
+    , estimateAffinePartial2D
+    , FundamentalMatMethod(..)
+    , findFundamentalMat
     , FindHomographyMethod(..)
     , FindHomographyParams(..)
-    , WhichImage(..)
-    -- , calibrateCamera
-    , findFundamentalMat
     , findHomography
+    , WhichImage(..)
     , computeCorrespondEpilines
 
     , SolvePnPMethod(..)
@@ -55,8 +57,8 @@ marshalFundamentalMatMethod :: FundamentalMatMethod -> (Int32, CDouble, CDouble)
 marshalFundamentalMatMethod = \case
     FM_7Point       -> (c'CV_FM_7POINT, 0, 0)
     FM_8Point       -> (c'CV_FM_8POINT, 0, 0)
-    FM_Ransac p1 p2 -> (c'CV_FM_RANSAC, maybe 3 realToFrac p1, maybe 0.99 realToFrac p2)
-    FM_Lmeds     p2 -> (c'CV_FM_LMEDS, 0, maybe 0.99 realToFrac p2)
+    FM_Ransac p1 p2 -> (c'CV_FM_RANSAC, maybe 3 toCDouble p1, maybe 0.99 toCDouble p2)
+    FM_Lmeds     p2 -> (c'CV_FM_LMEDS, 0, maybe 0.99 toCDouble p2)
 
 data WhichImage = Image1 | Image2 deriving (Show, Eq)
 
@@ -84,6 +86,220 @@ marshalFindHomographyMethod = \case
     FindHomographyMethod_RHO    -> c'RHO
 
 --------------------------------------------------------------------------------
+
+data EstimateAffine2DMethod
+   = EstimateAffine2D_RANSAC !Double
+     -- ^ RANSAC-based (random sample consensus) robust method.  Takes the
+     -- maximum reprojection error as an argument. Used as a threshold to
+     -- distinguish inliers from outliers.
+   | EstimateAffine2D_LMEDS
+     -- ^ Least-Median robust method. Only works correctly if there are more
+     -- than 50% inliers.
+
+marshalEstimateAffine2DMethod :: EstimateAffine2DMethod -> (Int32, CDouble)
+marshalEstimateAffine2DMethod = \case
+    EstimateAffine2D_RANSAC x -> (c'RANSAC, toCDouble x)
+    EstimateAffine2D_LMEDS    -> (c'LMEDS, 0)
+
+{- | Computes an optimal affine transformation between two 2D point sets.
+
+It computes
+
+\[
+\begin{bmatrix}
+x\\
+y\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+a_{11} & a_{12}\\
+a_{21} & a_{22}\\
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y\\
+\end{bmatrix}
++
+\begin{bmatrix}
+b_1\\
+b_2\\
+\end{bmatrix}
+\]
+
+Returns 'Just' a 2D affine transformation matrix \(2 \times 3\) or 'Nothing' if
+transformation could not be estimated. The returned matrix has the following
+form:
+
+\[
+\begin{bmatrix}
+a_{11} & a_{12} & b_1\\
+a_{21} & a_{22} & b_2\\
+\end{bmatrix}
+\]
+
+The function estimates an optimal 2D affine transformation between two 2D point sets using the
+selected robust algorithm.
+
+The computed transformation is then refined further (using only inliers) with the
+Levenberg-Marquardt method to reduce the re-projection error even more.
+-}
+estimateAffine2D
+    :: forall point2. (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat)
+    -> V.Vector (point2 CFloat)
+    -> EstimateAffine2DMethod
+    -> Maybe Word64 -- ^ Maximum number of robust method iterations.
+    -> Maybe Double
+       -- ^ Confidence level, between 0 and 1, for the estimated
+       -- transformation. Anything between 0.95 and 0.99 is usually good
+       -- enough. Values too close to 1 can slow down the estimation
+       -- significantly. Values lower than 0.8-0.9 can result in an incorrectly
+       -- estimated transformation.
+    -> Maybe Word64
+       -- ^ Maximum number of iterations of refining algorithm
+       -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
+       -- matrix will be output of robust method.
+    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
+                        , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
+                        )
+                )
+estimateAffine2D fromPts toPts method maxIters confidence refineIters = do
+    (h, inliers) <- c'estimateAffine2D
+    -- If the c++ function can't find an affine transform it will return an
+    -- empty matrix. We check for this case by trying to coerce the result to
+    -- the desired type.
+    catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+           (\case CoerceMatError _msgs -> pure Nothing
+                  otherError -> throwE otherError
+           )
+  where
+    c'estimateAffine2D = unsafeWrapException $ do
+        h       <- newEmptyMat
+        inliers <- newEmptyMat
+        handleCvException (pure (h, inliers)) $
+          withPtr h $ \hPtr ->
+          withPtr inliers $ \inliersPtr ->
+          withArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
+          withArrayPtr (V.map toPoint toPts  ) $ \toPtsPtr   ->
+            [cvExcept|
+              cv::_InputArray fromPts =
+                cv::_InputArray( $(Point2f * fromPtsPtr)
+                               , $(int32_t c'numFromPts)
+                               );
+              cv::_InputArray toPts =
+                cv::_InputArray( $(Point2f * toPtsPtr)
+                               , $(int32_t c'numToPts)
+                               );
+              *$(Mat * hPtr) =
+                cv::estimateAffine2D
+                ( fromPts
+                , toPts
+                , *$(Mat * inliersPtr)
+                , $(int32_t c'method)
+                , $(double ransacReprojThreshold)
+                , $(size_t c'maxIters)
+                , $(double c'confidence)
+                , $(size_t c'refineIters)
+                );
+            |]
+
+    c'numFromPts = fromIntegral $ V.length fromPts
+    c'numToPts   = fromIntegral $ V.length toPts
+    (c'method, ransacReprojThreshold) = marshalEstimateAffine2DMethod method
+    c'maxIters    = maybe 2000 fromIntegral maxIters
+    c'confidence  = maybe 0.99 toCDouble    confidence
+    c'refineIters = maybe 10   fromIntegral refineIters
+
+{- | Computes an optimal limited affine transformation with 4 degrees of freedom
+between two 2D point sets.
+
+Returns 'Just' a 2D affine transformation (4 degrees of freedom) matrix \(2 \times 3\)
+or 'Nothing' if transformation could not be estimated.
+
+The function estimates an optimal 2D affine transformation with 4 degrees of
+freedom limited to combinations of translation, rotation, and uniform
+scaling. Uses the selected algorithm for robust estimation.
+
+The computed transformation is then refined further (using only inliers) with
+the Levenberg-Marquardt method to reduce the re-projection error even more.
+
+Estimated transformation matrix is:
+
+\[
+\begin{bmatrix} \cos(\theta) \cdot s & -\sin(\theta) \cdot s & t_x \\
+                \sin(\theta) \cdot s & \cos(\theta) \cdot s & t_y
+\end{bmatrix}
+\]
+
+Where \( \theta \) is the rotation angle, \( s \) the scaling factor
+and \( t_x, t_y \) are translations in \( x, y \) axes respectively.
+-}
+estimateAffinePartial2D
+    :: forall point2. (IsPoint2 point2 CFloat)
+    => V.Vector (point2 CFloat)
+    -> V.Vector (point2 CFloat)
+    -> EstimateAffine2DMethod
+    -> Maybe Word64 -- ^ Maximum number of robust method iterations.
+    -> Maybe Double
+       -- ^ Confidence level, between 0 and 1, for the estimated
+       -- transformation. Anything between 0.95 and 0.99 is usually good
+       -- enough. Values too close to 1 can slow down the estimation
+       -- significantly. Values lower than 0.8-0.9 can result in an incorrectly
+       -- estimated transformation.
+    -> Maybe Word64
+       -- ^ Maximum number of iterations of refining algorithm
+       -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
+       -- matrix will be output of robust method.
+    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
+                        , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
+                        )
+                )
+estimateAffinePartial2D fromPts toPts method maxIters confidence refineIters = do
+    (h, inliers) <- c'estimateAffine2D
+    -- If the c++ function can't find an affine transform it will return an
+    -- empty matrix. We check for this case by trying to coerce the result to
+    -- the desired type.
+    catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+           (\case CoerceMatError _msgs -> pure Nothing
+                  otherError -> throwE otherError
+           )
+  where
+    c'estimateAffine2D = unsafeWrapException $ do
+        h       <- newEmptyMat
+        inliers <- newEmptyMat
+        handleCvException (pure (h, inliers)) $
+          withPtr h $ \hPtr ->
+          withPtr inliers $ \inliersPtr ->
+          withArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
+          withArrayPtr (V.map toPoint toPts  ) $ \toPtsPtr   ->
+            [cvExcept|
+              cv::_InputArray fromPts =
+                cv::_InputArray( $(Point2f * fromPtsPtr)
+                               , $(int32_t c'numFromPts)
+                               );
+              cv::_InputArray toPts =
+                cv::_InputArray( $(Point2f * toPtsPtr)
+                               , $(int32_t c'numToPts)
+                               );
+              *$(Mat * hPtr) =
+                cv::estimateAffinePartial2D
+                ( fromPts
+                , toPts
+                , *$(Mat * inliersPtr)
+                , $(int32_t c'method)
+                , $(double ransacReprojThreshold)
+                , $(size_t c'maxIters)
+                , $(double c'confidence)
+                , $(size_t c'refineIters)
+                );
+            |]
+
+    c'numFromPts = fromIntegral $ V.length fromPts
+    c'numToPts   = fromIntegral $ V.length toPts
+    (c'method, ransacReprojThreshold) = marshalEstimateAffine2DMethod method
+    c'maxIters    = maybe 2000 fromIntegral maxIters
+    c'confidence  = maybe 0.99 toCDouble    confidence
+    c'refineIters = maybe 10   fromIntegral refineIters
 
 -- {- |
 -- <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#calibratecamera OpenCV Sphinx doc>
@@ -135,35 +351,35 @@ findFundamentalMat
                 )
 findFundamentalMat pts1 pts2 method = do
     (fm, pointMask) <- c'findFundamentalMat
-    -- If the c++ function can't find a fundamental matrix it will
-    -- return an empty matrix. We check for this case by trying to
-    -- coerce the result to the desired type.
+    -- If the c++ function can't find a fundamental matrix it will return an
+    -- empty matrix. We check for this case by trying to coerce the result to
+    -- the desired type.
     catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
            (\case CoerceMatError _msgs -> pure Nothing
                   otherError -> throwE otherError
            )
   where
     c'findFundamentalMat = unsafeWrapException $ do
-      fm        <- newEmptyMat
-      pointMask <- newEmptyMat
-      handleCvException (pure (fm, pointMask)) $
-        withPtr fm $ \fmPtr ->
-        withPtr pointMask $ \pointMaskPtr ->
-        withArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
-        withArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
-          [cvExcept|
-            cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
-            cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
-            *$(Mat * fmPtr) =
-              cv::findFundamentalMat
-              ( pts1
-              , pts2
-              , $(int32_t c'method)
-              , $(double c'p1)
-              , $(double c'p2)
-              , *$(Mat * pointMaskPtr)
-              );
-          |]
+        fm        <- newEmptyMat
+        pointMask <- newEmptyMat
+        handleCvException (pure (fm, pointMask)) $
+          withPtr fm $ \fmPtr ->
+          withPtr pointMask $ \pointMaskPtr ->
+          withArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
+          withArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
+            [cvExcept|
+              cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
+              cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
+              *$(Mat * fmPtr) =
+                cv::findFundamentalMat
+                ( pts1
+                , pts2
+                , $(int32_t c'method)
+                , $(double c'p1)
+                , $(double c'p2)
+                , *$(Mat * pointMaskPtr)
+                );
+            |]
 
     c'numPts1 = fromIntegral $ V.length pts1
     c'numPts2 = fromIntegral $ V.length pts2
@@ -205,27 +421,27 @@ findHomography srcPoints dstPoints fhp = do
            )
   where
     c'findHomography = unsafeWrapException $ do
-      fm        <- newEmptyMat
-      pointMask <- newEmptyMat
-      handleCvException (pure (fm, pointMask)) $
-        withPtr fm $ \fmPtr ->
-        withPtr pointMask $ \pointMaskPtr ->
-        withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
-        withArrayPtr (V.map toPoint dstPoints) $ \dstPtr ->
-          [cvExcept|
-            cv::_InputArray srcPts = cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));
-            cv::_InputArray dstPts = cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));
-            *$(Mat * fmPtr) =
-              cv::findHomography
-                  ( srcPts
-                  , dstPts
-                  , $(int32_t c'method)
-                  , $(double c'ransacReprojThreshold)
-                  , *$(Mat * pointMaskPtr)
-                  , $(int32_t c'maxIters)
-                  , $(double c'confidence)
-                  );
-          |]
+        fm        <- newEmptyMat
+        pointMask <- newEmptyMat
+        handleCvException (pure (fm, pointMask)) $
+          withPtr fm $ \fmPtr ->
+          withPtr pointMask $ \pointMaskPtr ->
+          withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
+          withArrayPtr (V.map toPoint dstPoints) $ \dstPtr ->
+            [cvExcept|
+              cv::_InputArray srcPts = cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));
+              cv::_InputArray dstPts = cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));
+              *$(Mat * fmPtr) =
+                cv::findHomography
+                    ( srcPts
+                    , dstPts
+                    , $(int32_t c'method)
+                    , $(double c'ransacReprojThreshold)
+                    , *$(Mat * pointMaskPtr)
+                    , $(int32_t c'maxIters)
+                    , $(double c'confidence)
+                    );
+            |]
     c'numSrcPts = fromIntegral $ V.length srcPoints
     c'numDstPts = fromIntegral $ V.length dstPoints
     c'method = marshalFindHomographyMethod $ fhpMethod fhp
