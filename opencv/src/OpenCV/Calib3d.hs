@@ -2,7 +2,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Calib3d
-    ( EstimateAffine2DMethod(..)
+    ( CameraCharacteristics(..)
+    , calibrationMatrixValues
+    , EstimateAffine2DMethod(..)
     , estimateAffine2D
     , estimateAffinePartial2D
     , FundamentalMatMethod(..)
@@ -20,10 +22,14 @@ module OpenCV.Calib3d
 import "base" Data.Int
 import "base" Data.Word
 import "base" Foreign.C.Types
+import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool )
+import "base" Foreign.Storable ( peek )
+import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "data-default" Data.Default
+import "linear" Linear ( V2 )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Calib3d.Constants
@@ -86,6 +92,80 @@ marshalFindHomographyMethod = \case
     FindHomographyMethod_RHO    -> c'RHO
 
 --------------------------------------------------------------------------------
+
+{- | Useful camera characteristics.
+
+Extracted from a camera matrix.
+
+Do keep in mind that 'mm' stands for whatever unit of measure one
+chooses for the camera calibration model. If the camera matrix is
+based on chessboard patterns the unit will be equal to the unit of the
+chessboard pitch.
+-}
+data CameraCharacteristics
+   = CameraCharacteristics
+     { cameraCharacteristicFovX :: !Double
+       -- ^ Field of view in degrees along the horizontal sensor axis.
+     , cameraCharacteristicFovY :: !Double
+       -- ^ Field of view in degrees along the vertical sensor axis.
+     , cameraCharacteristicFocalLength :: !Double
+       -- ^ Focal length of the lens in mm.
+     , cameraCharacteristicPrincipalPoint :: !Point2d
+       -- ^ Principal point in mm.
+     , cameraCharacteristicAspectRatio :: !Double
+       -- ^ \(f_x / f_y\)
+     } deriving (Show)
+
+{- | Computes useful camera characteristics from the camera matrix.
+
+The function computes various useful camera characteristics from the
+previously estimated camera matrix.
+-}
+calibrationMatrixValues
+    :: (IsSize size Int32)
+    => Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double) -- ^ Camera matrix.
+    -> size Int32 -- ^ Image size.
+    -> Double -- ^ Aperture width.
+    -> Double -- ^ Aperture height.
+    -> CameraCharacteristics
+calibrationMatrixValues cameraMatrix imageSize apertureWidth apertureHeight =
+    unsafePerformIO $ do
+      principalPoint <- toPointIO (0 :: V2 CDouble)
+      withPtr cameraMatrix $ \cameraMatrixPtr ->
+        withPtr (toSize imageSize) $ \imageSizePtr ->
+        alloca $ \fovxPtr ->
+        alloca $ \fovyPtr ->
+        alloca $ \focalLengthPtr ->
+        withPtr principalPoint $ \principalPointPtr ->
+        alloca $ \aspectRatioPtr -> do
+          [C.block| void {
+            cv::calibrationMatrixValues
+              ( *$(Mat * cameraMatrixPtr)
+              , *$(Size2i * imageSizePtr)
+              , $(double c'apertureWidth)
+              , $(double c'apertureHeight)
+              , *$(double * fovxPtr)
+              , *$(double * fovyPtr)
+              , *$(double * focalLengthPtr)
+              , *$(Point2d * principalPointPtr)
+              , *$(double * aspectRatioPtr)
+              );
+          } |]
+          fovx        <- fromCDouble <$> peek fovxPtr
+          fovy        <- fromCDouble <$> peek fovyPtr
+          focalLength <- fromCDouble <$> peek focalLengthPtr
+          aspectRatio <- fromCDouble <$> peek aspectRatioPtr
+          pure CameraCharacteristics
+               { cameraCharacteristicFovX           = fovx
+               , cameraCharacteristicFovY           = fovy
+               , cameraCharacteristicFocalLength    = focalLength
+               , cameraCharacteristicPrincipalPoint = principalPoint
+               , cameraCharacteristicAspectRatio    = aspectRatio
+               }
+
+  where
+    c'apertureWidth  = toCDouble apertureWidth
+    c'apertureHeight = toCDouble apertureHeight
 
 data EstimateAffine2DMethod
    = EstimateAffine2D_RANSAC !Double

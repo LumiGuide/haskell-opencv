@@ -6,6 +6,8 @@
 
 module Main where
 
+import "base" Control.Exception ( evaluate )
+import "base" Data.Functor ( ($>) )
 import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
@@ -36,7 +38,8 @@ import qualified "vector" Data.Vector as V
 main :: IO ()
 main = defaultMain $ testGroup "opencv"
     [ testGroup "Calib3d"
-      [ HU.testCase "findFundamentalMat - no points" testFindFundamentalMat_noPoints
+      [ HU.testCase "calibrationMatrixValues identity" testCalibrationMatrixValues_identity
+      , HU.testCase "findFundamentalMat - no points" testFindFundamentalMat_noPoints
       , HU.testCase "findFundamentalMat" testFindFundamentalMat
       , HU.testCase "computeCorrespondEpilines" testComputeCorrespondEpilines
       ]
@@ -167,6 +170,11 @@ testArrayBinOpArgDiff arrayOp =
 
     black :: Scalar
     black = toScalar (0 :: V4 Double)
+
+testCalibrationMatrixValues_identity :: HU.Assertion
+testCalibrationMatrixValues_identity = evaluate x $> ()
+  where
+    x = calibrationMatrixValues (toMat eye_m33) (V2 1920 1080) 15 10
 
 testFindFundamentalMat_noPoints :: HU.Assertion
 testFindFundamentalMat_noPoints =
