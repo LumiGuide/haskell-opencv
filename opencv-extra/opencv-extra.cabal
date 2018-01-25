@@ -96,6 +96,7 @@ library
         OpenCV.Extra.Bgsegm
         OpenCV.Extra.XFeatures2d
         OpenCV.Extra.Tracking
+        OpenCV.Extra.XImgProc
         OpenCV.Extra.XPhoto
         OpenCV.Extra.XPhoto.WhiteBalancer
 
