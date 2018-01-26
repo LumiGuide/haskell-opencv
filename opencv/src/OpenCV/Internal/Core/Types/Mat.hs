@@ -1,7 +1,8 @@
-{-# language CPP #-}
-{-# language RankNTypes #-}
-{-# language QuasiQuotes #-}
 {-# language ConstraintKinds #-}
+{-# language CPP #-}
+{-# language ForeignFunctionInterface #-}
+{-# language QuasiQuotes #-}
+{-# language RankNTypes #-}
 {-# language TemplateHaskell #-}
 {-# language UndecidableInstances #-}
 
@@ -69,7 +70,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
-import "base" Control.Exception ( throwIO )
+import "base" Control.Exception ( throwIO, mask_ )
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
 import qualified "base" Data.List.NonEmpty as NE
@@ -81,7 +82,8 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr, FunPtr )
+import "base" Foreign.ForeignPtr ( newForeignPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -90,7 +92,6 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" OpenCV.Internal
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.C.PlacementNew.TH
@@ -128,8 +129,22 @@ instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
 instance FromPtr (Mat shape channels depth) where
-    fromPtr = objFromPtr Mat $ \ptr ->
-                [CU.exp| void { delete $(Mat * ptr) }|]
+    fromPtr mkMatPtr = mask_ $ do
+      matPtr <- mkMatPtr
+      Mat <$> newForeignPtr deleteMat matPtr
+
+foreign import ccall "&delete_mat" deleteMat
+    :: FunPtr (Ptr (C (Mat shape channels depth)) -> IO ())
+
+C.verbatim "\
+extern \"C\"\
+{\
+  void delete_mat(cv::Mat * mat)\
+  {\
+    delete mat;\
+  }\
+}\
+"
 
 instance FreezeThaw (Mat shape channels depth) where
     freeze = cloneMatM . unMut
