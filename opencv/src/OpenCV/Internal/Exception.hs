@@ -53,7 +53,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat.Depth
@@ -150,7 +150,7 @@ instance Show CvCppException where
 instance WithPtr CvCppException where
     withPtr = withForeignPtr . unCvCppException
 
-mkFinalizer "deleteException" "cv::Exception" ''C'CvCppException
+mkFinalizer DeletePtr "deleteException" "cv::Exception" ''C'CvCppException
 
 instance FromPtr CvCppException where
     fromPtr = objFromPtr2 CvCppException deleteException

@@ -19,7 +19,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..), V3(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Point
@@ -42,7 +42,7 @@ mkPointType pTypeNameStr dim cTemplateStr depthTypeName cProxyTypeName cDepthTyp
         , isPointOpenCVInstanceDs
         , isPointHaskellInstanceDs
         , mkPlacementNewInstance pTypeName
-        , mkFinalizer finalizerNameStr cPointTypeStr cProxyTypeName
+        , mkFinalizer DeletePtr finalizerNameStr cPointTypeStr cProxyTypeName
         ]
   where
     pTypeName :: Name

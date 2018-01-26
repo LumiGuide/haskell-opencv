@@ -46,7 +46,7 @@ import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, castForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Foreign.Ptr ( Ptr, nullPtr, FunPtr )
+import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import "data-default" Data.Default
@@ -57,7 +57,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Features2d.Constants
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
@@ -95,18 +95,7 @@ type instance C Orb = C'Ptr_ORB
 instance WithPtr Orb where
     withPtr = withForeignPtr . unOrb
 
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteOrb(cv::Ptr<cv::ORB> * obj)\
-\  {\
-\    obj->release();\
-\    delete obj;\
-\  }\
-\} "
-
-foreign import ccall "&deleteOrb" deleteOrb
-    :: FunPtr (Ptr C'Ptr_ORB -> IO ())
+mkFinalizer ReleaseDeletePtr "deleteOrb" "cv::Ptr<cv::ORB>" ''C'Ptr_ORB
 
 instance FromPtr Orb where fromPtr = objFromPtr2 Orb deleteOrb
 
@@ -328,18 +317,10 @@ type instance C SimpleBlobDetector = C'Ptr_SimpleBlobDetector
 instance WithPtr SimpleBlobDetector where
     withPtr = withForeignPtr . unSimpleBlobDetector
 
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteSimpleBlobDetector(cv::Ptr<cv::SimpleBlobDetector> * obj)\
-\  {\
-\    obj->release();\
-\    delete obj;\
-\  }\
-\} "
-
-foreign import ccall "&deleteSimpleBlobDetector" deleteSimpleBlobDetector
-    :: FunPtr (Ptr C'Ptr_SimpleBlobDetector -> IO ())
+mkFinalizer ReleaseDeletePtr
+            "deleteSimpleBlobDetector"
+            "cv::Ptr<cv::SimpleBlobDetector>"
+            ''C'Ptr_SimpleBlobDetector
 
 instance FromPtr SimpleBlobDetector where
     fromPtr = objFromPtr2 SimpleBlobDetector deleteSimpleBlobDetector
@@ -721,7 +702,7 @@ type instance C BFMatcher = C'BFMatcher
 instance WithPtr BFMatcher where
     withPtr = withForeignPtr . unBFMatcher
 
-mkFinalizer "deleteBFMatcher" "cv::BFMatcher" ''C'BFMatcher
+mkFinalizer DeletePtr "deleteBFMatcher" "cv::BFMatcher" ''C'BFMatcher
 
 instance FromPtr BFMatcher where
     fromPtr = objFromPtr2 BFMatcher deleteBFMatcher
@@ -840,7 +821,7 @@ type instance C FlannBasedMatcher = C'FlannBasedMatcher
 instance WithPtr FlannBasedMatcher where
     withPtr = withForeignPtr . unFlannBasedMatcher
 
-mkFinalizer "deleteFlannBasedMatcher" "cv::FlannBasedMatcher" ''C'FlannBasedMatcher
+mkFinalizer DeletePtr "deleteFlannBasedMatcher" "cv::FlannBasedMatcher" ''C'FlannBasedMatcher
 
 instance FromPtr FlannBasedMatcher where
     fromPtr = objFromPtr2 FlannBasedMatcher deleteFlannBasedMatcher

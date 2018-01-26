@@ -27,7 +27,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Exception
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
@@ -51,7 +51,7 @@ type instance C VideoCapture = C'VideoCapture
 
 instance WithPtr VideoCapture where withPtr = withForeignPtr . unVideoCapture
 
-mkFinalizer "deleteVideoCapture" "cv::VideoCapture" ''C'VideoCapture
+mkFinalizer DeletePtr "deleteVideoCapture" "cv::VideoCapture" ''C'VideoCapture
 
 instance FromPtr VideoCapture where
     fromPtr = objFromPtr2 VideoCapture deleteVideoCapture

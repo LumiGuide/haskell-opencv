@@ -92,7 +92,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Internal ( objFromPtr2 )
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.C.PlacementNew.TH
@@ -129,7 +129,7 @@ type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
-mkFinalizer "deleteMat" "cv::Mat" ''C'Mat
+mkFinalizer DeletePtr "deleteMat" "cv::Mat" ''C'Mat
 
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr2 Mat deleteMat

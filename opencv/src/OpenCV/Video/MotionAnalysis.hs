@@ -18,7 +18,6 @@ import "base" Data.Word
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool, toBool )
-import "base" Foreign.Ptr ( Ptr, FunPtr )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -26,6 +25,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.C.Types
@@ -111,34 +111,18 @@ instance WithPtr (BackgroundSubtractorKNN s) where
 instance WithPtr (BackgroundSubtractorMOG2 s) where
     withPtr = withForeignPtr . unBackgroundSubtractorMOG2
 
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteBackgroundSubtractorKNN(cv::Ptr<cv::BackgroundSubtractorKNN> * obj)\
-\  {\
-\    obj->release();\
-\    delete obj;\
-\  }\
-\} "
-
-foreign import ccall "&deleteBackgroundSubtractorKNN" deleteBackgroundSubtractorKNN
-    :: FunPtr (Ptr C'Ptr_BackgroundSubtractorKNN -> IO ())
+mkFinalizer ReleaseDeletePtr
+            "deleteBackgroundSubtractorKNN"
+            "cv::Ptr<cv::BackgroundSubtractorKNN>"
+            ''C'Ptr_BackgroundSubtractorKNN
 
 instance FromPtr (BackgroundSubtractorKNN s) where
     fromPtr = objFromPtr2 BackgroundSubtractorKNN deleteBackgroundSubtractorKNN
 
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteBackgroundSubtractorMOG2(cv::Ptr<cv::BackgroundSubtractorMOG2> * obj)\
-\  {\
-\    obj->release();\
-\    delete obj;\
-\  }\
-\} "
-
-foreign import ccall "&deleteBackgroundSubtractorMOG2" deleteBackgroundSubtractorMOG2
-    :: FunPtr (Ptr C'Ptr_BackgroundSubtractorMOG2 -> IO ())
+mkFinalizer ReleaseDeletePtr
+            "deleteBackgroundSubtractorMOG2"
+            "cv::Ptr<cv::BackgroundSubtractorMOG2>"
+            ''C'Ptr_BackgroundSubtractorMOG2
 
 instance FromPtr (BackgroundSubtractorMOG2 s) where
     fromPtr = objFromPtr2 BackgroundSubtractorMOG2 deleteBackgroundSubtractorMOG2

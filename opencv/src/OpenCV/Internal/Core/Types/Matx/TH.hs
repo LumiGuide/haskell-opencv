@@ -17,7 +17,7 @@ import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Core.Types.Matx
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 
@@ -44,7 +44,7 @@ mkMatxType mTypeNameStr dimR dimC depthTypeName cProxyTypeName cDepthTypeStr
           then newMatxDs
           else pure []
         , mkPlacementNewInstance mTypeName
-        , mkFinalizer finalizerNameStr cMatxTypeStr cProxyTypeName
+        , mkFinalizer DeletePtr finalizerNameStr cMatxTypeStr cProxyTypeName
         ]
   where
     mTypeName :: Name

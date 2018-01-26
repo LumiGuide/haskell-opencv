@@ -80,7 +80,7 @@ import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
@@ -201,7 +201,7 @@ mkPlacementNewInstance ''KeyPoint
 
 instance WithPtr KeyPoint where withPtr = withForeignPtr . unKeyPoint
 
-mkFinalizer "deleteKeyPoint" "cv::KeyPoint" ''C'KeyPoint
+mkFinalizer DeletePtr "deleteKeyPoint" "cv::KeyPoint" ''C'KeyPoint
 
 instance FromPtr KeyPoint where fromPtr = objFromPtr2 KeyPoint deleteKeyPoint
 
@@ -296,7 +296,7 @@ mkPlacementNewInstance ''DMatch
 
 instance WithPtr DMatch where withPtr = withForeignPtr . unDMatch
 
-mkFinalizer "deleteDMatch" "cv::DMatch" ''C'DMatch
+mkFinalizer DeletePtr "deleteDMatch" "cv::DMatch" ''C'DMatch
 
 instance FromPtr DMatch where fromPtr = objFromPtr2 DMatch deleteDMatch
 

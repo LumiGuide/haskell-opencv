@@ -21,7 +21,7 @@ import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Rect
@@ -43,7 +43,7 @@ mkRectType rTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr cPointTypeStr
       , isRectOpenCVInstanceDs
       , isRectHaskellInstanceDs
       , mkPlacementNewInstance rTypeName
-      , mkFinalizer finalizerNameStr cRectTypeStr cProxyTypeName
+      , mkFinalizer DeletePtr finalizerNameStr cRectTypeStr cProxyTypeName
       ]
   where
     rTypeName :: Name

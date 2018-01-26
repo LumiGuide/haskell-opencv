@@ -50,7 +50,7 @@ import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Core.Types.Constants
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
 import "this" OpenCV.Internal.C.PlacementNew.TH
@@ -291,10 +291,10 @@ mkPlacementNewInstance ''Scalar
 
 --------------------------------------------------------------------------------
 
-mkFinalizer "deleteScalar"       "cv::Scalar"       ''C'Scalar
-mkFinalizer "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
-mkFinalizer "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
-mkFinalizer "deleteRange"        "cv::Range"        ''C'Range
+mkFinalizer DeletePtr "deleteScalar"       "cv::Scalar"       ''C'Scalar
+mkFinalizer DeletePtr "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
+mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
+mkFinalizer DeletePtr "deleteRange"        "cv::Range"        ''C'Range
 
 instance FromPtr Scalar where
     fromPtr = objFromPtr2 Scalar deleteScalar

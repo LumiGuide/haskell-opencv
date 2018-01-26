@@ -25,7 +25,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "vector" Data.Vector as V
 import "linear" Linear (V2(..))
 import "this" OpenCV.Core.Types
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal
@@ -48,7 +48,7 @@ type instance C CascadeClassifier = C'CascadeClassifier
 instance WithPtr CascadeClassifier where
     withPtr = withForeignPtr . unCascadeClassifier
 
-mkFinalizer "deleteCascadeClassifier" "cv::CascadeClassifier" ''C'CascadeClassifier
+mkFinalizer DeletePtr "deleteCascadeClassifier" "cv::CascadeClassifier" ''C'CascadeClassifier
 
 instance FromPtr CascadeClassifier where
     fromPtr = objFromPtr2 CascadeClassifier deleteCascadeClassifier

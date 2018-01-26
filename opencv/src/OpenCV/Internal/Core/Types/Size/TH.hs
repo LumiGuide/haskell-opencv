@@ -19,7 +19,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
-import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Size
@@ -38,7 +38,7 @@ mkSizeType sTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr =
         , isSizeOpenCVInstanceDs
         , isSizeHaskellInstanceDs
         , mkPlacementNewInstance sTypeName
-        , mkFinalizer finalizerNameStr cSizeTypeStr cProxyTypeName
+        , mkFinalizer DeletePtr finalizerNameStr cSizeTypeStr cProxyTypeName
         ]
   where
     sTypeName :: Name
