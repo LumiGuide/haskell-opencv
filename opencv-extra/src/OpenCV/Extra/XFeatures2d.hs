@@ -27,8 +27,9 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "opencv" OpenCV.Core.Types
 import "opencv" OpenCV.Internal
-import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.Internal.C.FinalizerTH
 import "opencv" OpenCV.Internal.C.Types
+import "opencv" OpenCV.Internal.Core.Types.Mat
 import "opencv" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException )
 import "opencv" OpenCV.TypeLevel
 import "this"   OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
@@ -58,13 +59,12 @@ type instance C Surf = C'Ptr_SURF
 instance WithPtr Surf where
     withPtr = withForeignPtr . unSurf
 
-instance FromPtr Surf where
-    fromPtr = objFromPtr Surf $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::xfeatures2d::SURF> * surf_ptr_ptr = $(Ptr_SURF * ptr);
-                  surf_ptr_ptr->release();
-                  delete surf_ptr_ptr;
-                }|]
+mkFinalizer ReleaseDeletePtr
+            "deleteSurf"
+            "cv::Ptr<cv::xfeatures2d::SURF>"
+            ''C'Ptr_SURF
+
+instance FromPtr Surf where fromPtr = objFromPtr2 Surf deleteSurf
 
 --------------------------------------------------------------------------------
 

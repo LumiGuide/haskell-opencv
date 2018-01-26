@@ -26,8 +26,9 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "opencv" OpenCV.Core.Types
 import "opencv" OpenCV.Internal
-import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.Internal.C.FinalizerTH
 import "opencv" OpenCV.Internal.C.Types
+import "opencv" OpenCV.Internal.Core.Types.Mat
 import "opencv" OpenCV.Video.MotionAnalysis ( BackgroundSubtractor(..) )
 import "primitive" Control.Monad.Primitive
 import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
@@ -63,23 +64,21 @@ instance WithPtr (BackgroundSubtractorGMG s) where
 instance WithPtr (BackgroundSubtractorMOG s) where
     withPtr = withForeignPtr . unBackgroundSubtractorMOG
 
+mkFinalizer ReleaseDeletePtr
+            "deleteBackgroundSubtractorGMG"
+            "cv::Ptr<cv::bgsegm::BackgroundSubtractorGMG>"
+            ''C'Ptr_BackgroundSubtractorGMG
+
 instance FromPtr (BackgroundSubtractorGMG s) where
-    fromPtr = objFromPtr BackgroundSubtractorGMG $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::bgsegm::BackgroundSubtractorGMG> * knn_ptr_ptr =
-                    $(Ptr_BackgroundSubtractorGMG * ptr);
-                  knn_ptr_ptr->release();
-                  delete knn_ptr_ptr;
-                }|]
+    fromPtr = objFromPtr2 BackgroundSubtractorGMG deleteBackgroundSubtractorGMG
+
+mkFinalizer ReleaseDeletePtr
+            "deleteBackgroundSubtractorMOG"
+            "cv::Ptr<cv::bgsegm::BackgroundSubtractorMOG>"
+            ''C'Ptr_BackgroundSubtractorMOG
 
 instance FromPtr (BackgroundSubtractorMOG s) where
-    fromPtr = objFromPtr BackgroundSubtractorMOG $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::bgsegm::BackgroundSubtractorMOG> * mog2_ptr_ptr =
-                    $(Ptr_BackgroundSubtractorMOG * ptr);
-                  mog2_ptr_ptr->release();
-                  delete mog2_ptr_ptr;
-                }|]
+    fromPtr = objFromPtr2 BackgroundSubtractorMOG deleteBackgroundSubtractorMOG
 
 --------------------------------------------------------------------------------
 
