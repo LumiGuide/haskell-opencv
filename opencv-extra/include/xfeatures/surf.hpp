@@ -1,5 +1,5 @@
-#ifndef __THEA_XFEATURES_SURF_H__
-#define __THEA_XFEATURES_SURF_H__
+#ifndef __OPENCV_XFEATURES_SURF_H__
+#define __OPENCV_XFEATURES_SURF_H__
 
 #include "opencv2/xfeatures2d.hpp"
 
@@ -18,4 +18,4 @@ inline-c.
 
 typedef cv::Ptr<cv::xfeatures2d::SURF> Ptr_SURF;
 
-#endif /* __THEA_XFEATURES_SURF_H__ */
+#endif /* __OPENCV_XFEATURES_SURF_H__ */

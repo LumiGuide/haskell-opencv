@@ -1,5 +1,5 @@
-#ifndef __THEA_ORB_H__
-#define __THEA_ORB_H__
+#ifndef __OPENCV_ORB_H__
+#define __OPENCV_ORB_H__
 
 /*
 This file defines some ORB related names that are used in
@@ -16,4 +16,4 @@ inline-c.
 
 typedef cv::Ptr<cv::ORB> Ptr_ORB;
 
-#endif /* __THEA_ORB_H__ */
+#endif /* __OPENCV_ORB_H__ */

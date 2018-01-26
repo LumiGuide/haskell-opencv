@@ -1,5 +1,5 @@
-#ifndef __THEA_NAMESPACE_H__
-#define __THEA_NAMESPACE_H__
+#ifndef __OPENCV_NAMESPACE_H__
+#define __OPENCV_NAMESPACE_H__
 
 /*
 Various .hsc files in this library need to refer to symbols in the cv namespace.
@@ -17,4 +17,4 @@ header file which brings the cv namespace into scope.
 
 using namespace cv;
 
-#endif /* __THEA_NAMESPACE_H__ */
+#endif /* __OPENCV_NAMESPACE_H__ */
