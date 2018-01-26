@@ -203,7 +203,7 @@ instance WithPtr KeyPoint where withPtr = withForeignPtr . unKeyPoint
 
 mkFinalizer DeletePtr "deleteKeyPoint" "cv::KeyPoint" ''C'KeyPoint
 
-instance FromPtr KeyPoint where fromPtr = objFromPtr2 KeyPoint deleteKeyPoint
+instance FromPtr KeyPoint where fromPtr = objFromPtr KeyPoint deleteKeyPoint
 
 instance CSizeOf C'KeyPoint where
     cSizeOf _proxy = c'sizeof_KeyPoint
@@ -298,7 +298,7 @@ instance WithPtr DMatch where withPtr = withForeignPtr . unDMatch
 
 mkFinalizer DeletePtr "deleteDMatch" "cv::DMatch" ''C'DMatch
 
-instance FromPtr DMatch where fromPtr = objFromPtr2 DMatch deleteDMatch
+instance FromPtr DMatch where fromPtr = objFromPtr DMatch deleteDMatch
 
 instance CSizeOf C'DMatch where
     cSizeOf _proxy = c'sizeof_DMatch

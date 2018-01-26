@@ -70,7 +70,7 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_BackgroundSubtractorGMG
 
 instance FromPtr (BackgroundSubtractorGMG s) where
-    fromPtr = objFromPtr2 BackgroundSubtractorGMG deleteBackgroundSubtractorGMG
+    fromPtr = objFromPtr BackgroundSubtractorGMG deleteBackgroundSubtractorGMG
 
 mkFinalizer ReleaseDeletePtr
             "deleteBackgroundSubtractorMOG"
@@ -78,7 +78,7 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_BackgroundSubtractorMOG
 
 instance FromPtr (BackgroundSubtractorMOG s) where
-    fromPtr = objFromPtr2 BackgroundSubtractorMOG deleteBackgroundSubtractorMOG
+    fromPtr = objFromPtr BackgroundSubtractorMOG deleteBackgroundSubtractorMOG
 
 --------------------------------------------------------------------------------
 

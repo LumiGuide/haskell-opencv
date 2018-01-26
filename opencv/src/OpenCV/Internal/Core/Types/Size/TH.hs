@@ -72,7 +72,7 @@ mkSizeType sTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr =
     fromPtrDs =
         [d|
         instance FromPtr $(sTypeQ) where
-          fromPtr = objFromPtr2 Size $(varE finalizerName)
+          fromPtr = objFromPtr Size $(varE finalizerName)
         |]
 
     isSizeOpenCVInstanceDs :: Q [Dec]

@@ -79,7 +79,7 @@ mkMatxType mTypeNameStr dimR dimC depthTypeName cProxyTypeName cDepthTypeStr
     fromPtrDs =
         [d|
         instance FromPtr $(mTypeQ) where
-          fromPtr = objFromPtr2 Matx $(varE finalizerName)
+          fromPtr = objFromPtr Matx $(varE finalizerName)
         |]
 
     isMatxOpenCVInstanceDs :: Q [Dec]

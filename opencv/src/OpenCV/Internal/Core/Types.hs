@@ -297,13 +297,13 @@ mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
 mkFinalizer DeletePtr "deleteRange"        "cv::Range"        ''C'Range
 
 instance FromPtr Scalar where
-    fromPtr = objFromPtr2 Scalar deleteScalar
+    fromPtr = objFromPtr Scalar deleteScalar
 
 instance FromPtr RotatedRect where
-    fromPtr = objFromPtr2 RotatedRect deleteRotatedRect
+    fromPtr = objFromPtr RotatedRect deleteRotatedRect
 
 instance FromPtr TermCriteria where
-    fromPtr = objFromPtr2 TermCriteria deleteTermCriteria
+    fromPtr = objFromPtr TermCriteria deleteTermCriteria
 
 instance FromPtr Range where
-    fromPtr = objFromPtr2 Range deleteRange
+    fromPtr = objFromPtr Range deleteRange

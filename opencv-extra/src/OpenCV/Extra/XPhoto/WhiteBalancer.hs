@@ -93,13 +93,13 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_SimpleWB
 
 instance FromPtr (GrayworldWB s) where
-    fromPtr = objFromPtr2 GrayworldWB deleteGrayworldWB
+    fromPtr = objFromPtr GrayworldWB deleteGrayworldWB
 
 instance FromPtr (LearningBasedWB s) where
-    fromPtr = objFromPtr2 LearningBasedWB deleteLearningBasedWB
+    fromPtr = objFromPtr LearningBasedWB deleteLearningBasedWB
 
 instance FromPtr (SimpleWB s) where
-    fromPtr = objFromPtr2 SimpleWB deleteSimpleWB
+    fromPtr = objFromPtr SimpleWB deleteSimpleWB
 
 --------------------------------------------------------------------------------
 

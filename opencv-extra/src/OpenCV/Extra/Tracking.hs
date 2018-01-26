@@ -79,7 +79,7 @@ instance WithPtr (Tracker s) where withPtr = withForeignPtr . unTracker
 
 mkFinalizer ReleaseDeletePtr "deleteTracker" "cv::Ptr<cv::Tracker>" ''C'Ptr_Tracker
 
-instance FromPtr (Tracker s) where fromPtr = objFromPtr2 Tracker deleteTracker
+instance FromPtr (Tracker s) where fromPtr = objFromPtr Tracker deleteTracker
 
 newTracker
     :: (PrimMonad m)
@@ -158,13 +158,13 @@ instance WithPtr (MultiTrackerAlt s) where
     withPtr = withForeignPtr . unMultiTrackerAlt
 
 instance FromPtr (TrackerFeature s) where
-    fromPtr = objFromPtr2 TrackerFeature deleteTrackerFeature
+    fromPtr = objFromPtr TrackerFeature deleteTrackerFeature
 
 instance FromPtr (MultiTracker s) where
-    fromPtr = objFromPtr2 MultiTracker deleteMultiTracker
+    fromPtr = objFromPtr MultiTracker deleteMultiTracker
 
 instance FromPtr (MultiTrackerAlt s) where
-    fromPtr = objFromPtr2 MultiTrackerAlt deleteMultiTrackerAlt
+    fromPtr = objFromPtr MultiTrackerAlt deleteMultiTrackerAlt
 
 --------------------------------------------------------------------------------
 

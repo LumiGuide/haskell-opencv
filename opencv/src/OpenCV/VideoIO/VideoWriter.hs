@@ -50,7 +50,7 @@ instance WithPtr VideoWriter where
 mkFinalizer DeletePtr "deleteVideoWriter" "cv::VideoWriter" ''C'VideoWriter
 
 instance FromPtr VideoWriter where
-    fromPtr = objFromPtr2 VideoWriter deleteVideoWriter
+    fromPtr = objFromPtr VideoWriter deleteVideoWriter
 
 data VideoWriterSink
    = VideoFileSink' !VideoFileSink

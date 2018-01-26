@@ -51,7 +51,7 @@ instance WithPtr CascadeClassifier where
 mkFinalizer DeletePtr "deleteCascadeClassifier" "cv::CascadeClassifier" ''C'CascadeClassifier
 
 instance FromPtr CascadeClassifier where
-    fromPtr = objFromPtr2 CascadeClassifier deleteCascadeClassifier
+    fromPtr = objFromPtr CascadeClassifier deleteCascadeClassifier
 
 -- | Create a new cascade classifier. Returns 'Nothing' if the classifier
 -- is empty after initialization. This usually means that the file could

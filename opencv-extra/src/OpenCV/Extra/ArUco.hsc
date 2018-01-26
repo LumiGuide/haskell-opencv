@@ -89,7 +89,7 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_Dictionary
 
 instance FromPtr Dictionary where
-    fromPtr = objFromPtr2 Dictionary deleteDictionary
+    fromPtr = objFromPtr Dictionary deleteDictionary
 
 instance WithPtr Dictionary where
     withPtr = withForeignPtr . unDictionary
@@ -109,7 +109,7 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_CharucoBoard
 
 instance FromPtr CharucoBoard where
-    fromPtr = objFromPtr2 CharucoBoard deleteCharucoBoard
+    fromPtr = objFromPtr CharucoBoard deleteCharucoBoard
 
 instance WithPtr CharucoBoard where
     withPtr = withForeignPtr . unCharucoBoard
@@ -122,7 +122,7 @@ type instance C Vector_Int = C'Vector_Int
 mkFinalizer DeletePtr "delete_Vector_Int" "std::vector<int>" ''C'Vector_Int
 
 instance FromPtr Vector_Int where
-    fromPtr = objFromPtr2 Vector_Int delete_Vector_Int
+    fromPtr = objFromPtr Vector_Int delete_Vector_Int
 
 instance WithPtr Vector_Int where
     withPtr = withForeignPtr . unVectorInt
@@ -140,7 +140,7 @@ mkFinalizer DeletePtr
             ''C'Vector_Vector_Point2f
 
 instance FromPtr Vector_Vector_Point2f where
-    fromPtr = objFromPtr2 Vector_Vector_Point2f delete_Vector_Vector_Point2f
+    fromPtr = objFromPtr Vector_Vector_Point2f delete_Vector_Vector_Point2f
 
 instance WithPtr Vector_Vector_Point2f where
     withPtr = withForeignPtr . unVectorVectorPoint2f

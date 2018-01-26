@@ -54,7 +54,7 @@ instance WithPtr VideoCapture where withPtr = withForeignPtr . unVideoCapture
 mkFinalizer DeletePtr "deleteVideoCapture" "cv::VideoCapture" ''C'VideoCapture
 
 instance FromPtr VideoCapture where
-    fromPtr = objFromPtr2 VideoCapture deleteVideoCapture
+    fromPtr = objFromPtr VideoCapture deleteVideoCapture
 
 data VideoCaptureSource
    = VideoFileSource   !FilePath !(Maybe VideoCaptureAPI)

@@ -75,7 +75,7 @@ mkVecType vTypeNameStr dim depthTypeName cProxyTypeName cDepthTypeStr
     fromPtrDs =
         [d|
         instance FromPtr $(vTypeQ) where
-          fromPtr = objFromPtr2 Vec $(varE finalizerName)
+          fromPtr = objFromPtr Vec $(varE finalizerName)
         |]
 
     isVecOpenCVInstanceDs :: Q [Dec]

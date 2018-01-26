@@ -72,7 +72,7 @@ mkRectType rTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr cPointTypeStr
     fromPtrDs =
         [d|
         instance FromPtr $(rTypeQ) where
-          fromPtr = objFromPtr2 Rect $(varE finalizerName)
+          fromPtr = objFromPtr Rect $(varE finalizerName)
         |]
 
     isRectOpenCVInstanceDs :: Q [Dec]

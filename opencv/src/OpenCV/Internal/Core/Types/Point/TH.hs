@@ -70,7 +70,7 @@ mkPointType pTypeNameStr dim cTemplateStr depthTypeName cProxyTypeName cDepthTyp
     fromPtrDs =
         [d|
         instance FromPtr $(pTypeQ) where
-          fromPtr = objFromPtr2 Point $(varE finalizerName)
+          fromPtr = objFromPtr Point $(varE finalizerName)
         |]
 
     finalizerNameStr :: String

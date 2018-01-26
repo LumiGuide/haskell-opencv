@@ -64,7 +64,7 @@ mkFinalizer ReleaseDeletePtr
             "cv::Ptr<cv::xfeatures2d::SURF>"
             ''C'Ptr_SURF
 
-instance FromPtr Surf where fromPtr = objFromPtr2 Surf deleteSurf
+instance FromPtr Surf where fromPtr = objFromPtr Surf deleteSurf
 
 --------------------------------------------------------------------------------
 

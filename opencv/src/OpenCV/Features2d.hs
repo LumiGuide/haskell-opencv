@@ -97,7 +97,7 @@ instance WithPtr Orb where
 
 mkFinalizer ReleaseDeletePtr "deleteOrb" "cv::Ptr<cv::ORB>" ''C'Ptr_ORB
 
-instance FromPtr Orb where fromPtr = objFromPtr2 Orb deleteOrb
+instance FromPtr Orb where fromPtr = objFromPtr Orb deleteOrb
 
 --------------------------------------------------------------------------------
 
@@ -323,7 +323,7 @@ mkFinalizer ReleaseDeletePtr
             ''C'Ptr_SimpleBlobDetector
 
 instance FromPtr SimpleBlobDetector where
-    fromPtr = objFromPtr2 SimpleBlobDetector deleteSimpleBlobDetector
+    fromPtr = objFromPtr SimpleBlobDetector deleteSimpleBlobDetector
 
 data BlobFilterByArea
      = BlobFilterByArea
@@ -705,7 +705,7 @@ instance WithPtr BFMatcher where
 mkFinalizer DeletePtr "deleteBFMatcher" "cv::BFMatcher" ''C'BFMatcher
 
 instance FromPtr BFMatcher where
-    fromPtr = objFromPtr2 BFMatcher deleteBFMatcher
+    fromPtr = objFromPtr BFMatcher deleteBFMatcher
 
 --------------------------------------------------------------------------------
 
@@ -824,7 +824,7 @@ instance WithPtr FlannBasedMatcher where
 mkFinalizer DeletePtr "deleteFlannBasedMatcher" "cv::FlannBasedMatcher" ''C'FlannBasedMatcher
 
 instance FromPtr FlannBasedMatcher where
-    fromPtr = objFromPtr2 FlannBasedMatcher deleteFlannBasedMatcher
+    fromPtr = objFromPtr FlannBasedMatcher deleteFlannBasedMatcher
 
 --------------------------------------------------------------------------------
 

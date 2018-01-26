@@ -57,7 +57,7 @@ import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat.Depth
-import "this" OpenCV.Internal ( objFromPtr2 )
+import "this" OpenCV.Internal ( objFromPtr )
 import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ instance WithPtr CvCppException where
 mkFinalizer DeletePtr "deleteException" "cv::Exception" ''C'CvCppException
 
 instance FromPtr CvCppException where
-    fromPtr = objFromPtr2 CvCppException deleteException
+    fromPtr = objFromPtr CvCppException deleteException
 
 handleCvException
     :: IO a
