@@ -32,9 +32,9 @@ data C'TrackerFeatureSet
 data C'Ptr_TrackerSamplerAlgorithm
 
 
-data C'Ptr'Dictionary
-data C'Ptr'CharucoBoard
+data C'Ptr_Dictionary
+data C'Ptr_CharucoBoard
 
-data C'Vector'Int
+data C'Vector_Int
 
-data C'Vector'Vector'Point2f
+data C'Vector_Vector_Point2f

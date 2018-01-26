@@ -21,13 +21,13 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "opencv" OpenCV.Core.Types
 import "opencv" OpenCV.Internal
-import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.Internal.C.FinalizerTH
 import "opencv" OpenCV.Internal.C.Types
--- import "opencv" OpenCV.Video.MotionAnalysis ( BackgroundSubtractor(..) )
+import "opencv" OpenCV.Internal.Core.Types.Mat
+import "opencv" OpenCV.TypeLevel
 import "primitive" Control.Monad.Primitive
 import "this" OpenCV.Extra.Internal.C.Inline ( openCvExtraCtx )
 import "this" OpenCV.Extra.Internal.C.Types
-import "opencv" OpenCV.TypeLevel
 
 C.context openCvExtraCtx
 
@@ -49,64 +49,60 @@ class WhiteBalancer a where
         -> m (Mat ('S [h, w]) channels depth) -- ^ The output image.
 
 --------------------------------------------------------------------------------
--- Background subtractors
+-- White balancers
 --------------------------------------------------------------------------------
 
 newtype GrayworldWB s
       = GrayworldWB
         { unGrayworldWB :: ForeignPtr C'Ptr_GrayworldWB }
 
-type instance C (GrayworldWB  s) = C'Ptr_GrayworldWB
-
-instance WithPtr (GrayworldWB s) where
-    withPtr = withForeignPtr . unGrayworldWB
-
-instance FromPtr (GrayworldWB s) where
-    fromPtr = objFromPtr GrayworldWB $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::xphoto::GrayworldWB> * knn_ptr_ptr =
-                    $(Ptr_GrayworldWB * ptr);
-                  knn_ptr_ptr->release();
-                  delete knn_ptr_ptr;
-                }|]
-
 newtype LearningBasedWB s
       = LearningBasedWB
         { unLearningBasedWB :: ForeignPtr C'Ptr_LearningBasedWB }
-
-type instance C (LearningBasedWB  s) = C'Ptr_LearningBasedWB
-
-instance WithPtr (LearningBasedWB s) where
-    withPtr = withForeignPtr . unLearningBasedWB
-
-instance FromPtr (LearningBasedWB s) where
-    fromPtr = objFromPtr LearningBasedWB $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::xphoto::LearningBasedWB> * knn_ptr_ptr =
-                    $(Ptr_LearningBasedWB * ptr);
-                  knn_ptr_ptr->release();
-                  delete knn_ptr_ptr;
-                }|]
 
 newtype SimpleWB s
       = SimpleWB
         { unSimpleWB :: ForeignPtr C'Ptr_SimpleWB }
 
-type instance C (SimpleWB  s) = C'Ptr_SimpleWB
+type instance C (GrayworldWB     s) = C'Ptr_GrayworldWB
+type instance C (LearningBasedWB s) = C'Ptr_LearningBasedWB
+type instance C (SimpleWB        s) = C'Ptr_SimpleWB
+
+instance WithPtr (GrayworldWB s) where
+    withPtr = withForeignPtr . unGrayworldWB
+
+instance WithPtr (LearningBasedWB s) where
+    withPtr = withForeignPtr . unLearningBasedWB
 
 instance WithPtr (SimpleWB s) where
     withPtr = withForeignPtr . unSimpleWB
 
-instance FromPtr (SimpleWB s) where
-    fromPtr = objFromPtr SimpleWB $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::xphoto::SimpleWB> * knn_ptr_ptr =
-                    $(Ptr_SimpleWB * ptr);
-                  knn_ptr_ptr->release();
-                  delete knn_ptr_ptr;
-                }|]
+mkFinalizer ReleaseDeletePtr
+            "deleteGrayworldWB"
+            "cv::Ptr<cv::xphoto::GrayworldWB>"
+            ''C'Ptr_GrayworldWB
 
----
+mkFinalizer ReleaseDeletePtr
+            "deleteLearningBasedWB"
+            "cv::Ptr<cv::xphoto::LearningBasedWB>"
+            ''C'Ptr_LearningBasedWB
+
+mkFinalizer ReleaseDeletePtr
+            "deleteSimpleWB"
+            "cv::Ptr<cv::xphoto::SimpleWB>"
+            ''C'Ptr_SimpleWB
+
+instance FromPtr (GrayworldWB s) where
+    fromPtr = objFromPtr2 GrayworldWB deleteGrayworldWB
+
+instance FromPtr (LearningBasedWB s) where
+    fromPtr = objFromPtr2 LearningBasedWB deleteLearningBasedWB
+
+instance FromPtr (SimpleWB s) where
+    fromPtr = objFromPtr2 SimpleWB deleteSimpleWB
+
+--------------------------------------------------------------------------------
+
 instance Algorithm GrayworldWB where
     algorithmClearState knn = unsafePrimToPrim $
         withPtr knn $ \knnPtr ->
@@ -157,7 +153,8 @@ instance Algorithm SimpleWB where
               *$(bool * emptyPtr) = knn->empty();
           }|]
           toBool <$> peek emptyPtr
----
+
+--------------------------------------------------------------------------------
 
 instance WhiteBalancer GrayworldWB where
     balanceWhite wbAlg imgIn = unsafePrimToPrim $ do
@@ -203,7 +200,8 @@ instance WhiteBalancer SimpleWB where
               );
             }|]
             pure $ unsafeCoerceMat imgOut
----
+
+--------------------------------------------------------------------------------
 
 {-| Perform GrayworldWB a simple grayworld white balance algorithm.
 
@@ -240,9 +238,7 @@ grayworldWBImg = do
 @
 
 <<doc/generated/examples/grayworldWBImg.png grayworldWBImg>>
-
 -}
-
 newGrayworldWB
     :: (PrimMonad m)
     => Maybe Double
@@ -253,7 +249,7 @@ newGrayworldWB
 newGrayworldWB mbVarThreshold = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_GrayworldWB * {
       cv::Ptr<cv::xphoto::GrayworldWB> wbAlg = cv::xphoto::createGrayworldWB ();
-      wbAlg->setSaturationThreshold($(double  c'varThreshold ));
+      wbAlg->setSaturationThreshold($(double c'varThreshold ));
       return new cv::Ptr<cv::xphoto::GrayworldWB>(wbAlg);
     }|]
   where
@@ -276,13 +272,13 @@ newLearningBasedWB mbVarHistBinNum mbRangeMaxVal mbVarSaturationThreshold
   = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_LearningBasedWB * {
       cv::Ptr<cv::xphoto::LearningBasedWB> wbAlg = cv::xphoto::createLearningBasedWB ();
-      wbAlg->setHistBinNum($(int  c'varHistBinNum ));
-      wbAlg->setRangeMaxVal($(int  c'varRangeMaxVal ));
-      wbAlg->setSaturationThreshold($(double  c'varSaturationThreshold ));
+      wbAlg->setHistBinNum($(int c'varHistBinNum ));
+      wbAlg->setRangeMaxVal($(int c'varRangeMaxVal ));
+      wbAlg->setSaturationThreshold($(double c'varSaturationThreshold ));
       return new cv::Ptr<cv::xphoto::LearningBasedWB>(wbAlg);
     }|]
   where
-    c'varHistBinNum          = maybe 64   fromIntegral mbVarHistBinNum
+    c'varHistBinNum          = maybe  64  fromIntegral mbVarHistBinNum
     c'varRangeMaxVal         = maybe 255  fromIntegral mbRangeMaxVal
     c'varSaturationThreshold = maybe 0.98 realToFrac   mbVarSaturationThreshold
 
@@ -297,16 +293,16 @@ newSimpleWB
 newSimpleWB mbIMin mbIMax mbOMin mbOMax mbP = unsafePrimToPrim $ fromPtr
     [CU.block|Ptr_SimpleWB * {
       cv::Ptr<cv::xphoto::SimpleWB> wbAlg = cv::xphoto::createSimpleWB ();
-      wbAlg->setInputMin( $(double  c'varIMin  ));
-      wbAlg->setInputMax( $(double  c'varIMax  ));
-      wbAlg->setOutputMin($(double  c'varOMin  ));
-      wbAlg->setOutputMax($(double  c'varOMax  ));
-      wbAlg->setP($(double  c'varP     ));
+      wbAlg->setInputMin( $(double c'varIMin));
+      wbAlg->setInputMax( $(double c'varIMax));
+      wbAlg->setOutputMin($(double c'varOMin));
+      wbAlg->setOutputMax($(double c'varOMax));
+      wbAlg->setP($(double c'varP));
       return new cv::Ptr<cv::xphoto::SimpleWB>(wbAlg);
     }|]
   where
-    c'varIMin  = maybe 0   realToFrac mbIMin
+    c'varIMin  = maybe   0 realToFrac mbIMin
     c'varIMax  = maybe 255 realToFrac mbIMax
-    c'varOMin  = maybe 0   realToFrac mbOMin
+    c'varOMin  = maybe   0 realToFrac mbOMin
     c'varOMax  = maybe 255 realToFrac mbOMax
-    c'varP     = maybe 2   realToFrac mbP
+    c'varP     = maybe   2 realToFrac mbP
