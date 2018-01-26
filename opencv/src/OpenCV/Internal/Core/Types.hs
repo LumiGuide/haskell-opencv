@@ -1,4 +1,5 @@
 {-# language CPP #-}
+{-# language ForeignFunctionInterface #-}
 {-# language MultiParamTypeClasses #-}
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
@@ -38,7 +39,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr, FunPtr )
 import "base" Foreign.Storable ( sizeOf, peek, poke )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -103,17 +104,17 @@ newtype Range = Range {unRange :: ForeignPtr (C Range)}
 -- Conversions
 --------------------------------------------------------------------------------
 
-class ToScalar  a where toScalar  :: a -> Scalar
+class ToScalar a where toScalar :: a -> Scalar
 
-instance ToScalar  Scalar  where toScalar  = id
+instance ToScalar Scalar where toScalar = id
 
-instance ToScalar  (V4 CDouble) where toScalar  = unsafePerformIO . newScalar
+instance ToScalar (V4 CDouble) where toScalar = unsafePerformIO . newScalar
 
-instance ToScalar  (V4 Double ) where toScalar  = toScalar  . fmap (realToFrac :: Double -> CDouble)
+instance ToScalar (V4 Double ) where toScalar = toScalar . fmap (realToFrac :: Double -> CDouble)
 
-class FromScalar  a where fromScalar  :: Scalar  -> a
+class FromScalar a where fromScalar :: Scalar -> a
 
-instance FromScalar  Scalar  where fromScalar  = id
+instance FromScalar Scalar where fromScalar = id
 
 instance FromScalar (V4 CDouble) where
     fromScalar s = unsafePerformIO $
@@ -289,9 +290,20 @@ mkPlacementNewInstance ''Scalar
 
 --------------------------------------------------------------------------------
 
-instance FromPtr Scalar where
-    fromPtr = objFromPtr Scalar $ \ptr ->
-                [CU.exp| void { delete $(Scalar * ptr) }|]
+instance FromPtr Scalar where fromPtr = objFromPtr2 Scalar deleteScalar
+
+foreign import ccall "&deleteScalar" deleteScalar
+    :: FunPtr (Ptr (C Scalar) -> IO ())
+
+C.verbatim "\
+extern \"C\"\
+{\
+  void deleteScalar(cv::Scalar * scalar)\
+  {\
+    delete scalar;\
+  }\
+}\
+"
 
 instance FromPtr RotatedRect where
     fromPtr = objFromPtr RotatedRect $ \ptr ->

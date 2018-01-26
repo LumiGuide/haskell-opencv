@@ -1,3 +1,4 @@
+{-# language ForeignFunctionInterface #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -63,6 +64,7 @@ import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
+import "base" Foreign.Ptr ( Ptr, FunPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -93,11 +95,6 @@ C.context openCvCtx
 
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
-
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-
-#include "namespace.hpp"
 
 --------------------------------------------------------------------------------
 --  RotatedRect
@@ -202,12 +199,21 @@ type instance C KeyPoint = C'KeyPoint
 
 mkPlacementNewInstance ''KeyPoint
 
-instance WithPtr KeyPoint where
-    withPtr = withForeignPtr . unKeyPoint
+instance WithPtr KeyPoint where withPtr = withForeignPtr . unKeyPoint
 
-instance FromPtr KeyPoint where
-    fromPtr = objFromPtr KeyPoint $ \ptr ->
-                [CU.exp| void { delete $(KeyPoint * ptr) }|]
+instance FromPtr KeyPoint where fromPtr = objFromPtr2 KeyPoint deleteKeyPoint
+
+foreign import ccall "&deleteKeyPoint" deleteKeyPoint
+    :: FunPtr (Ptr (C KeyPoint) -> IO ())
+
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteKeyPoint(cv::KeyPoint * keyPoint)\
+\  {\
+\    delete keyPoint;\
+\  }\
+\}"
 
 instance CSizeOf C'KeyPoint where
     cSizeOf _proxy = c'sizeof_KeyPoint
@@ -298,12 +304,21 @@ type instance C DMatch = C'DMatch
 
 mkPlacementNewInstance ''DMatch
 
-instance WithPtr DMatch where
-    withPtr = withForeignPtr . unDMatch
+instance WithPtr DMatch where withPtr = withForeignPtr . unDMatch
 
-instance FromPtr DMatch where
-    fromPtr = objFromPtr DMatch $ \ptr ->
-                [CU.exp| void { delete $(DMatch * ptr) }|]
+instance FromPtr DMatch where fromPtr = objFromPtr2 DMatch deleteDMatch
+
+foreign import ccall "&deleteDMatch" deleteDMatch
+    :: FunPtr (Ptr (C DMatch) -> IO ())
+
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteDMatch(cv::DMatch * dmatch)\
+\  {\
+\    delete dmatch;\
+\  }\
+\}"
 
 instance CSizeOf C'DMatch where
     cSizeOf _proxy = c'sizeof_DMatch
