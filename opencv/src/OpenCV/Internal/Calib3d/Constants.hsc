@@ -22,8 +22,10 @@ module OpenCV.Internal.Calib3d.Constants where
 #num RHO
 
 #num SOLVEPNP_ITERATIVE
-#num SOLVEPNP_P3P
-#num SOLVEPNP_AP3P
 #num SOLVEPNP_EPNP
+#num SOLVEPNP_P3P
 #num SOLVEPNP_DLS
 #num SOLVEPNP_UPNP
+#if defined(MIN_VERSION_OPENCV_3_3_0)
+#num SOLVEPNP_AP3P
+#endif

@@ -195,48 +195,49 @@ contourArea contour areaOriented = unsafeWrapException $
 
 {- | Finds the convexity defects of a contour.
 
-Example:
+-- -- TODO (BvD): only use the following when defined(MIN_VERSION_OPENCV_3_3_0)
+-- Example:
 
-@
-handDefectsImg
-    :: forall (width    :: Nat)
-              (height   :: Nat)
-              (channels :: Nat)
-              (depth    :: *  )
-     . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
-    => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
-handDefectsImg = do
-    handContour <- mkHandContour
-    let -- Indices of points in \'handContour\' that are part of the convex hull.
-        handHullIndices :: VS.Vector Int32
-        handHullIndices = exceptError $ convexHullIndices handContour True
+-- @
+-- handDefectsImg
+--     :: forall (width    :: Nat)
+--               (height   :: Nat)
+--               (channels :: Nat)
+--               (depth    :: *  )
+--      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
+--     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
+-- handDefectsImg = do
+--     handContour <- mkHandContour
+--     let -- Indices of points in \'handContour\' that are part of the convex hull.
+--         handHullIndices :: VS.Vector Int32
+--         handHullIndices = exceptError $ convexHullIndices handContour True
 
-        handHullIndices' :: V.Vector Int
-        handHullIndices' = V.map fromIntegral $ V.convert handHullIndices
+--         handHullIndices' :: V.Vector Int
+--         handHullIndices' = V.map fromIntegral $ V.convert handHullIndices
 
-        handHull :: V.Vector Point2i
-        handHull = V.backpermute handContour handHullIndices'
+--         handHull :: V.Vector Point2i
+--         handHull = V.backpermute handContour handHullIndices'
 
-        handDefects :: V.Vector Vec4i
-        handDefects = exceptError $ convexityDefects handContour handHullIndices
+--         handDefects :: V.Vector Vec4i
+--         handDefects = exceptError $ convexityDefects handContour handHullIndices
 
-    pure $ exceptError $
-      withMatM (Proxy :: Proxy [height, width])
-               (Proxy :: Proxy channels)
-               (Proxy :: Proxy depth)
-               transparent $ \\imgM -> do
-        -- Draw contour.
-        polylines imgM (V.singleton handContour) True blue 2 LineType_AA 0
-        -- Draw convex hull of contour.
-        polylines imgM (V.singleton handHull) True red 2 LineType_AA 0
-        -- Draw defects.
-        forM_ handDefects $ \defect -> do
-          let V4 _start_index _end_index farthest_pt_index _fixpt_depth = fromVec defect
-          let farthest_pt = handContour V.! (fromIntegral farthest_pt_index)
-          circle imgM farthest_pt 7 green (-1) LineType_AA 0
-@
+--     pure $ exceptError $
+--       withMatM (Proxy :: Proxy [height, width])
+--                (Proxy :: Proxy channels)
+--                (Proxy :: Proxy depth)
+--                transparent $ \\imgM -> do
+--         -- Draw contour.
+--         polylines imgM (V.singleton handContour) True blue 2 LineType_AA 0
+--         -- Draw convex hull of contour.
+--         polylines imgM (V.singleton handHull) True red 2 LineType_AA 0
+--         -- Draw defects.
+--         forM_ handDefects $ \defect -> do
+--           let V4 _start_index _end_index farthest_pt_index _fixpt_depth = fromVec defect
+--           let farthest_pt = handContour V.! (fromIntegral farthest_pt_index)
+--           circle imgM farthest_pt 7 green (-1) LineType_AA 0
+-- @
 
-<<doc/generated/examples/handDefectsImg.png handDefectsImg>>
+-- <<doc/generated/examples/handDefectsImg.png handDefectsImg>>
 -}
 convexityDefects
     :: (IsPoint2 point2 Int32)

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -566,21 +567,25 @@ computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
 
 data SolvePnPMethod
    = SolvePnP_Iterative !Bool
-   | SolvePnP_P3P
-   | SolvePnP_AP3P
    | SolvePnP_EPNP
+   | SolvePnP_P3P
    | SolvePnP_DLS
    | SolvePnP_UPNP
+#if defined(MIN_VERSION_OPENCV_3_3_0)
+   | SolvePnP_AP3P
+#endif
 
 marshalSolvePnPMethod :: SolvePnPMethod -> (Int32, Int32)
 marshalSolvePnPMethod = \case
     SolvePnP_Iterative useExtrinsicGuess
                   -> (c'SOLVEPNP_ITERATIVE, fromBool useExtrinsicGuess)
-    SolvePnP_P3P  -> (c'SOLVEPNP_P3P , fromBool False)
-    SolvePnP_AP3P -> (c'SOLVEPNP_AP3P, fromBool False)
     SolvePnP_EPNP -> (c'SOLVEPNP_EPNP, fromBool False)
+    SolvePnP_P3P  -> (c'SOLVEPNP_P3P , fromBool False)
     SolvePnP_DLS  -> (c'SOLVEPNP_DLS , fromBool False)
     SolvePnP_UPNP -> (c'SOLVEPNP_UPNP, fromBool False)
+#if defined(MIN_VERSION_OPENCV_3_3_0)
+    SolvePnP_AP3P -> (c'SOLVEPNP_AP3P, fromBool False)
+#endif
 
 {- | Finds an object pose from 3D-2D point correspondences.
 

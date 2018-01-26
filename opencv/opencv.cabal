@@ -48,6 +48,10 @@ flag internal-documentation
     default: False
     manual: True
 
+flag opencv_ge_3_3_0
+     description: Use the C++ lib opencv >= 3.3.0
+     default: True
+
 custom-setup
     setup-depends: base, Cabal >= 1.23
 
@@ -219,9 +223,15 @@ library
         TypeFamilies
         TypeOperators
 
-    default-language:   Haskell2010
-    pkgconfig-depends:  opencv >= 3.0.0
-    extra-libraries:    stdc++
+    default-language: Haskell2010
+
+    extra-libraries: stdc++
+
+    if flag(opencv_ge_3_3_0)
+      pkgconfig-depends: opencv >= 3.3.0
+      cpp-options: -DMIN_VERSION_OPENCV_3_3_0
+    else
+      pkgconfig-depends: opencv < 3.3.0
 
 test-suite doc-images-opencv
     type: exitcode-stdio-1.0
