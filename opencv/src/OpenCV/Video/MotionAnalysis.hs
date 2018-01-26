@@ -18,6 +18,7 @@ import "base" Data.Word
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Utils ( fromBool, toBool )
+import "base" Foreign.Ptr ( Ptr, FunPtr )
 import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
