@@ -19,6 +19,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..), V3(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Point
@@ -29,9 +30,10 @@ mkPointType
     -> Integer -- ^ Point dimension
     -> String  -- ^ Point template name in C
     -> Name    -- ^ Depth type name in Haskell
+    -> Name    -- ^ Point C proxy type name
     -> String  -- ^ Depth type name in C
     -> Q [Dec]
-mkPointType pTypeNameStr dim cTemplateStr depthTypeName cDepthTypeStr
+mkPointType pTypeNameStr dim cTemplateStr depthTypeName cProxyTypeName cDepthTypeStr
     | dim < 2 || dim > 3 = fail $ "mkPointType: Unsupported dimension: " <> show dim
     | otherwise =
       fmap concat . sequence $
@@ -40,6 +42,7 @@ mkPointType pTypeNameStr dim cTemplateStr depthTypeName cDepthTypeStr
         , isPointOpenCVInstanceDs
         , isPointHaskellInstanceDs
         , mkPlacementNewInstance pTypeName
+        , mkFinalizer finalizerNameStr cPointTypeStr cProxyTypeName
         ]
   where
     pTypeName :: Name
@@ -67,15 +70,14 @@ mkPointType pTypeNameStr dim cTemplateStr depthTypeName cDepthTypeStr
     fromPtrDs =
         [d|
         instance FromPtr $(pTypeQ) where
-          fromPtr = objFromPtr Point $ $(finalizerExpQ)
+          fromPtr = objFromPtr2 Point $(varE finalizerName)
         |]
-      where
-        finalizerExpQ :: Q Exp
-        finalizerExpQ = do
-          ptr <- newName "ptr"
-          lamE [varP ptr] $
-            quoteExp CU.exp $
-              "void { delete $(" <> cPointTypeStr <> " * " <> nameBase ptr <> ") }"
+
+    finalizerNameStr :: String
+    finalizerNameStr = "delete" <> pTypeNameStr
+
+    finalizerName :: Name
+    finalizerName = mkName finalizerNameStr
 
     isPointOpenCVInstanceDs :: Q [Dec]
     isPointOpenCVInstanceDs =

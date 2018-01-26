@@ -25,6 +25,6 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-mkSizeType "Size2i" ''Int32   "int32_t"
-mkSizeType "Size2f" ''CFloat  "float"
-mkSizeType "Size2d" ''CDouble "double"
+mkSizeType "Size2i" ''Int32   ''C'Size2i "int32_t"
+mkSizeType "Size2f" ''CFloat  ''C'Size2f "float"
+mkSizeType "Size2d" ''CDouble ''C'Size2d "double"

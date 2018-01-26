@@ -21,26 +21,29 @@ import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal
-import "this" OpenCV.Internal.Core.Types.Rect
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Core.Types.Rect
 
 --------------------------------------------------------------------------------
 
 mkRectType
     :: String -- ^ Rectangle type name, for both Haskell and C
     -> Name   -- ^ Depth type name in Haskell
+    -> Name   -- ^ Rectangle C proxy type name
     -> String -- ^ Depth type name in C
     -> String -- ^ Point type name in C
     -> String -- ^ Size type name in C
     -> Q [Dec]
-mkRectType rTypeNameStr depthTypeName cDepthTypeStr cPointTypeStr cSizeTypeStr =
+mkRectType rTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr cPointTypeStr cSizeTypeStr =
     fmap concat . sequence $
       [ (:[]) <$> rectTySynD
       , fromPtrDs
       , isRectOpenCVInstanceDs
       , isRectHaskellInstanceDs
       , mkPlacementNewInstance rTypeName
+      , mkFinalizer finalizerNameStr cRectTypeStr cProxyTypeName
       ]
   where
     rTypeName :: Name
@@ -59,19 +62,18 @@ mkRectType rTypeNameStr depthTypeName cDepthTypeStr cPointTypeStr cSizeTypeStr =
     rectTySynD =
         tySynD rTypeName [] ([t|Rect|] `appT` depthTypeQ)
 
+    finalizerNameStr :: String
+    finalizerNameStr = "delete" <> rTypeNameStr
+
+    finalizerName :: Name
+    finalizerName = mkName finalizerNameStr
+
     fromPtrDs :: Q [Dec]
     fromPtrDs =
         [d|
         instance FromPtr $(rTypeQ) where
-          fromPtr = objFromPtr Rect $ $(finalizerExpQ)
+          fromPtr = objFromPtr2 Rect $(varE finalizerName)
         |]
-      where
-        finalizerExpQ :: Q Exp
-        finalizerExpQ = do
-          ptr <- newName "ptr"
-          lamE [varP ptr] $
-            quoteExp CU.exp $
-              "void { delete $(" <> cRectTypeStr <> " * " <> nameBase ptr <> ") }"
 
     isRectOpenCVInstanceDs :: Q [Dec]
     isRectOpenCVInstanceDs =

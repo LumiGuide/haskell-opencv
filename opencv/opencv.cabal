@@ -168,6 +168,7 @@ library
 
         OpenCV.Internal
         OpenCV.Internal.Mutable
+        OpenCV.Internal.C.FinalizerTH
         OpenCV.Internal.C.Inline
         OpenCV.Internal.C.PlacementNew
         OpenCV.Internal.C.PlacementNew.TH
@@ -192,6 +193,7 @@ library
         OpenCV.Internal.Core.Types.Vec
         OpenCV.Internal.Core.Types.Vec.TH
         OpenCV.Internal.Exception
+        OpenCV.Internal.Features2d.Constants
         OpenCV.Internal.ImgCodecs
         OpenCV.Internal.ImgProc.MiscImgTransform
         OpenCV.Internal.ImgProc.MiscImgTransform.TypeLevel

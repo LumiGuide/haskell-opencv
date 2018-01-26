@@ -24,6 +24,7 @@ import "this" OpenCV.Core.Types
 import "this" OpenCV.VideoIO.Types
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Exception
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
@@ -46,9 +47,10 @@ type instance C VideoWriter = C'VideoWriter
 instance WithPtr VideoWriter where
     withPtr = withForeignPtr . unVideoWriter
 
+mkFinalizer "deleteVideoWriter" "cv::VideoWriter" ''C'VideoWriter
+
 instance FromPtr VideoWriter where
-    fromPtr = objFromPtr VideoWriter $ \ptr ->
-                [CU.exp| void { delete $(VideoWriter * ptr) }|]
+    fromPtr = objFromPtr2 VideoWriter deleteVideoWriter
 
 data VideoWriterSink
    = VideoFileSink' !VideoFileSink

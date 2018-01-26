@@ -40,13 +40,6 @@ C.include "video_motion_analysis.hpp"
 
 C.using "namespace cv"
 
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-#include "opencv2/video.hpp"
-
-#include "namespace.hpp"
-#include "video_motion_analysis.hpp"
-
 --------------------------------------------------------------------------------
 -- BackgroundSubtractor
 --------------------------------------------------------------------------------
@@ -117,23 +110,37 @@ instance WithPtr (BackgroundSubtractorKNN s) where
 instance WithPtr (BackgroundSubtractorMOG2 s) where
     withPtr = withForeignPtr . unBackgroundSubtractorMOG2
 
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteBackgroundSubtractorKNN(cv::Ptr<cv::BackgroundSubtractorKNN> * obj)\
+\  {\
+\    obj->release();\
+\    delete obj;\
+\  }\
+\} "
+
+foreign import ccall "&deleteBackgroundSubtractorKNN" deleteBackgroundSubtractorKNN
+    :: FunPtr (Ptr C'Ptr_BackgroundSubtractorKNN -> IO ())
+
 instance FromPtr (BackgroundSubtractorKNN s) where
-    fromPtr = objFromPtr BackgroundSubtractorKNN $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::BackgroundSubtractorKNN> * knn_ptr_ptr =
-                    $(Ptr_BackgroundSubtractorKNN * ptr);
-                  knn_ptr_ptr->release();
-                  delete knn_ptr_ptr;
-                }|]
+    fromPtr = objFromPtr2 BackgroundSubtractorKNN deleteBackgroundSubtractorKNN
+
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteBackgroundSubtractorMOG2(cv::Ptr<cv::BackgroundSubtractorMOG2> * obj)\
+\  {\
+\    obj->release();\
+\    delete obj;\
+\  }\
+\} "
+
+foreign import ccall "&deleteBackgroundSubtractorMOG2" deleteBackgroundSubtractorMOG2
+    :: FunPtr (Ptr C'Ptr_BackgroundSubtractorMOG2 -> IO ())
 
 instance FromPtr (BackgroundSubtractorMOG2 s) where
-    fromPtr = objFromPtr BackgroundSubtractorMOG2 $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::BackgroundSubtractorMOG2> * mog2_ptr_ptr =
-                    $(Ptr_BackgroundSubtractorMOG2 * ptr);
-                  mog2_ptr_ptr->release();
-                  delete mog2_ptr_ptr;
-                }|]
+    fromPtr = objFromPtr2 BackgroundSubtractorMOG2 deleteBackgroundSubtractorMOG2
 
 --------------------------------------------------------------------------------
 

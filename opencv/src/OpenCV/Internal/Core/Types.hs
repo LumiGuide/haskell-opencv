@@ -39,7 +39,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca, allocaBytes )
 import "base" Foreign.Marshal.Array ( allocaArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr, FunPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( sizeOf, peek, poke )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -49,8 +49,9 @@ import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Internal
-import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.Core.Types.Constants
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
+import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
 import "this" OpenCV.Internal.C.PlacementNew.TH
 import "this" OpenCV.Internal.C.Types
@@ -290,29 +291,19 @@ mkPlacementNewInstance ''Scalar
 
 --------------------------------------------------------------------------------
 
-instance FromPtr Scalar where fromPtr = objFromPtr2 Scalar deleteScalar
+mkFinalizer "deleteScalar"       "cv::Scalar"       ''C'Scalar
+mkFinalizer "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
+mkFinalizer "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
+mkFinalizer "deleteRange"        "cv::Range"        ''C'Range
 
-foreign import ccall "&deleteScalar" deleteScalar
-    :: FunPtr (Ptr (C Scalar) -> IO ())
-
-C.verbatim "\
-extern \"C\"\
-{\
-  void deleteScalar(cv::Scalar * scalar)\
-  {\
-    delete scalar;\
-  }\
-}\
-"
+instance FromPtr Scalar where
+    fromPtr = objFromPtr2 Scalar deleteScalar
 
 instance FromPtr RotatedRect where
-    fromPtr = objFromPtr RotatedRect $ \ptr ->
-                [CU.exp| void { delete $(RotatedRect * ptr) }|]
+    fromPtr = objFromPtr2 RotatedRect deleteRotatedRect
 
 instance FromPtr TermCriteria where
-    fromPtr = objFromPtr TermCriteria $ \ptr ->
-                [CU.exp| void { delete $(TermCriteria * ptr) }|]
+    fromPtr = objFromPtr2 TermCriteria deleteTermCriteria
 
 instance FromPtr Range where
-    fromPtr = objFromPtr Range $ \ptr ->
-                [CU.exp| void { delete $(Range * ptr) }|]
+    fromPtr = objFromPtr2 Range deleteRange

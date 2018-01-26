@@ -1,6 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# language TemplateHaskell #-}
+{-# language QuasiQuotes #-}
+{-# language RecordWildCards #-}
 
 module OpenCV.Features2d
     ( -- * ORB
@@ -46,7 +46,7 @@ import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, castForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( peekArray )
 import "base" Foreign.Marshal.Utils ( fromBool )
-import "base" Foreign.Ptr ( Ptr, nullPtr )
+import "base" Foreign.Ptr ( Ptr, nullPtr, FunPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import "data-default" Data.Default
@@ -56,6 +56,8 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
+import "this" OpenCV.Internal.Features2d.Constants
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
@@ -77,14 +79,6 @@ C.include "simple_blob_detector.hpp"
 C.using "namespace cv"
 C.using "namespace cv::flann"
 
-#include <bindings.dsl.h>
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-
-#include "namespace.hpp"
-#include "orb.hpp"
-#include "simple_blob_detector.hpp"
-
 infinity :: Float
 infinity = 1 / 0
 
@@ -101,13 +95,20 @@ type instance C Orb = C'Ptr_ORB
 instance WithPtr Orb where
     withPtr = withForeignPtr . unOrb
 
-instance FromPtr Orb where
-    fromPtr = objFromPtr Orb $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::ORB> * orb_ptr_ptr = $(Ptr_ORB * ptr);
-                  orb_ptr_ptr->release();
-                  delete orb_ptr_ptr;
-                }|]
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteOrb(cv::Ptr<cv::ORB> * obj)\
+\  {\
+\    obj->release();\
+\    delete obj;\
+\  }\
+\} "
+
+foreign import ccall "&deleteOrb" deleteOrb
+    :: FunPtr (Ptr C'Ptr_ORB -> IO ())
+
+instance FromPtr Orb where fromPtr = objFromPtr2 Orb deleteOrb
 
 --------------------------------------------------------------------------------
 
@@ -125,9 +126,6 @@ marshalWTA_K = \case
 data OrbScoreType
    = HarrisScore
    | FastScore
-
-#num HARRIS_SCORE
-#num FAST_SCORE
 
 marshalOrbScoreType :: OrbScoreType -> Int32
 marshalOrbScoreType = \case
@@ -320,20 +318,31 @@ orbDetectAndCompute orb img mbMask = unsafeWrapException $ do
 
 -- Internally, a SimpleBlobDetector is a pointer to a @cv::Ptr<cv::SimpleBlobDetector>@, which in turn points
 -- to an actual @cv::SimpleBlobDetector@ object.
-newtype SimpleBlobDetector = SimpleBlobDetector {unSimpleBlobDetector :: ForeignPtr C'Ptr_SimpleBlobDetector}
+newtype SimpleBlobDetector
+      = SimpleBlobDetector
+        { unSimpleBlobDetector :: ForeignPtr C'Ptr_SimpleBlobDetector
+        }
 
 type instance C SimpleBlobDetector = C'Ptr_SimpleBlobDetector
 
 instance WithPtr SimpleBlobDetector where
     withPtr = withForeignPtr . unSimpleBlobDetector
 
+C.verbatim "\
+\extern \"C\"\
+\{\
+\  void deleteSimpleBlobDetector(cv::Ptr<cv::SimpleBlobDetector> * obj)\
+\  {\
+\    obj->release();\
+\    delete obj;\
+\  }\
+\} "
+
+foreign import ccall "&deleteSimpleBlobDetector" deleteSimpleBlobDetector
+    :: FunPtr (Ptr C'Ptr_SimpleBlobDetector -> IO ())
+
 instance FromPtr SimpleBlobDetector where
-    fromPtr = objFromPtr SimpleBlobDetector $ \ptr ->
-                [CU.block| void {
-                  cv::Ptr<cv::SimpleBlobDetector> * simpleBlobDetector_ptr_ptr = $(Ptr_SimpleBlobDetector * ptr);
-                  simpleBlobDetector_ptr_ptr->release();
-                  delete simpleBlobDetector_ptr_ptr;
-                }|]
+    fromPtr = objFromPtr2 SimpleBlobDetector deleteSimpleBlobDetector
 
 data BlobFilterByArea
      = BlobFilterByArea
@@ -712,10 +721,10 @@ type instance C BFMatcher = C'BFMatcher
 instance WithPtr BFMatcher where
     withPtr = withForeignPtr . unBFMatcher
 
-instance FromPtr BFMatcher where
-    fromPtr = objFromPtr BFMatcher $ \ptr ->
-                [CU.exp| void { delete $(BFMatcher * ptr) }|]
+mkFinalizer "deleteBFMatcher" "cv::BFMatcher" ''C'BFMatcher
 
+instance FromPtr BFMatcher where
+    fromPtr = objFromPtr2 BFMatcher deleteBFMatcher
 
 --------------------------------------------------------------------------------
 
@@ -831,10 +840,10 @@ type instance C FlannBasedMatcher = C'FlannBasedMatcher
 instance WithPtr FlannBasedMatcher where
     withPtr = withForeignPtr . unFlannBasedMatcher
 
-instance FromPtr FlannBasedMatcher where
-    fromPtr = objFromPtr FlannBasedMatcher $ \ptr ->
-                [CU.exp| void { delete $(FlannBasedMatcher * ptr) }|]
+mkFinalizer "deleteFlannBasedMatcher" "cv::FlannBasedMatcher" ''C'FlannBasedMatcher
 
+instance FromPtr FlannBasedMatcher where
+    fromPtr = objFromPtr2 FlannBasedMatcher deleteFlannBasedMatcher
 
 --------------------------------------------------------------------------------
 

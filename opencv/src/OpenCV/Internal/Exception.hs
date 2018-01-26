@@ -53,10 +53,11 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat.Depth
-import "this" OpenCV.Internal ( objFromPtr )
+import "this" OpenCV.Internal ( objFromPtr2 )
 import "transformers" Control.Monad.Trans.Except
 
 --------------------------------------------------------------------------------
@@ -140,18 +141,19 @@ newtype CvCppException = CvCppException { unCvCppException :: ForeignPtr (C CvCp
 
 type instance C CvCppException = C'CvCppException
 
-instance WithPtr CvCppException where
-    withPtr = withForeignPtr . unCvCppException
-
-instance FromPtr CvCppException where
-    fromPtr = objFromPtr CvCppException $ \ptr ->
-                [CU.exp| void { delete $(Exception * ptr) }|]
-
 instance Show CvCppException where
     show cvException = unsafePerformIO $
         withPtr cvException $ \cvExceptionPtr -> do
           charPtr <- [CU.exp| const char * { $(Exception * cvExceptionPtr)->what() } |]
           peekCString charPtr
+
+instance WithPtr CvCppException where
+    withPtr = withForeignPtr . unCvCppException
+
+mkFinalizer "deleteException" "cv::Exception" ''C'CvCppException
+
+instance FromPtr CvCppException where
+    fromPtr = objFromPtr2 CvCppException deleteException
 
 handleCvException
     :: IO a

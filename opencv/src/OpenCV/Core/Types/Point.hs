@@ -29,10 +29,10 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-mkPointType "Point2i" 2 "Point_"  ''Int32   "int32_t"
-mkPointType "Point2f" 2 "Point_"  ''CFloat  "float"
-mkPointType "Point2d" 2 "Point_"  ''CDouble "double"
+mkPointType "Point2i" 2 "Point_"  ''Int32   ''C'Point2i "int32_t"
+mkPointType "Point2f" 2 "Point_"  ''CFloat  ''C'Point2f "float"
+mkPointType "Point2d" 2 "Point_"  ''CDouble ''C'Point2d "double"
 
-mkPointType "Point3i" 3 "Point3_" ''Int32   "int32_t"
-mkPointType "Point3f" 3 "Point3_" ''CFloat  "float"
-mkPointType "Point3d" 3 "Point3_" ''CDouble "double"
+mkPointType "Point3i" 3 "Point3_" ''Int32   ''C'Point3i "int32_t"
+mkPointType "Point3f" 3 "Point3_" ''CFloat  ''C'Point3f "float"
+mkPointType "Point3d" 3 "Point3_" ''CDouble ''C'Point3d "double"

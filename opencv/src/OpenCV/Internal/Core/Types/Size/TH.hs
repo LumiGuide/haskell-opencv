@@ -19,6 +19,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Size
@@ -27,51 +28,52 @@ import "this" OpenCV.Internal
 mkSizeType
     :: String  -- ^ Size type name, for both Haskell and C
     -> Name    -- ^ Depth type name in Haskell
+    -> Name    -- ^ Size C proxy type name
     -> String  -- ^ Depth type name in C
     -> Q [Dec]
-mkSizeType pTypeNameStr depthTypeName cDepthTypeStr =
+mkSizeType sTypeNameStr depthTypeName cProxyTypeName cDepthTypeStr =
       fmap concat . sequence $
         [ pure <$> sizeTySynD
         , fromPtrDs
         , isSizeOpenCVInstanceDs
         , isSizeHaskellInstanceDs
-        , mkPlacementNewInstance pTypeName
+        , mkPlacementNewInstance sTypeName
+        , mkFinalizer finalizerNameStr cSizeTypeStr cProxyTypeName
         ]
   where
-    pTypeName :: Name
-    pTypeName = mkName pTypeNameStr
+    sTypeName :: Name
+    sTypeName = mkName sTypeNameStr
 
     cSizeTypeStr :: String
-    cSizeTypeStr = pTypeNameStr
+    cSizeTypeStr = sTypeNameStr
 
     cTemplateStr :: String
     cTemplateStr = "Size_"
 
-    pTypeQ :: Q Type
-    pTypeQ = conT pTypeName
+    sTypeQ :: Q Type
+    sTypeQ = conT sTypeName
 
     depthTypeQ :: Q Type
     depthTypeQ = conT depthTypeName
 
     sizeTySynD :: Q Dec
     sizeTySynD =
-        tySynD pTypeName
+        tySynD sTypeName
                []
                ([t|Size|] `appT` depthTypeQ)
+
+    finalizerNameStr :: String
+    finalizerNameStr = "delete" <> sTypeNameStr
+
+    finalizerName :: Name
+    finalizerName = mkName finalizerNameStr
 
     fromPtrDs :: Q [Dec]
     fromPtrDs =
         [d|
-        instance FromPtr $(pTypeQ) where
-          fromPtr = objFromPtr Size $ $(finalizerExpQ)
+        instance FromPtr $(sTypeQ) where
+          fromPtr = objFromPtr2 Size $(varE finalizerName)
         |]
-      where
-        finalizerExpQ :: Q Exp
-        finalizerExpQ = do
-          ptr <- newName "ptr"
-          lamE [varP ptr] $
-            quoteExp CU.exp $
-              "void { delete $(" <> cSizeTypeStr <> " * " <> nameBase ptr <> ") }"
 
     isSizeOpenCVInstanceDs :: Q [Dec]
     isSizeOpenCVInstanceDs =

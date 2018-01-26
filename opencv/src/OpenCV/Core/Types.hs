@@ -64,7 +64,6 @@ import "base" Data.Int ( Int32 )
 import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
-import "base" Foreign.Ptr ( Ptr, FunPtr )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
@@ -81,6 +80,7 @@ import "this" OpenCV.Core.Types.Size
 import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
@@ -201,19 +201,9 @@ mkPlacementNewInstance ''KeyPoint
 
 instance WithPtr KeyPoint where withPtr = withForeignPtr . unKeyPoint
 
+mkFinalizer "deleteKeyPoint" "cv::KeyPoint" ''C'KeyPoint
+
 instance FromPtr KeyPoint where fromPtr = objFromPtr2 KeyPoint deleteKeyPoint
-
-foreign import ccall "&deleteKeyPoint" deleteKeyPoint
-    :: FunPtr (Ptr (C KeyPoint) -> IO ())
-
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteKeyPoint(cv::KeyPoint * keyPoint)\
-\  {\
-\    delete keyPoint;\
-\  }\
-\}"
 
 instance CSizeOf C'KeyPoint where
     cSizeOf _proxy = c'sizeof_KeyPoint
@@ -306,19 +296,9 @@ mkPlacementNewInstance ''DMatch
 
 instance WithPtr DMatch where withPtr = withForeignPtr . unDMatch
 
+mkFinalizer "deleteDMatch" "cv::DMatch" ''C'DMatch
+
 instance FromPtr DMatch where fromPtr = objFromPtr2 DMatch deleteDMatch
-
-foreign import ccall "&deleteDMatch" deleteDMatch
-    :: FunPtr (Ptr (C DMatch) -> IO ())
-
-C.verbatim "\
-\extern \"C\"\
-\{\
-\  void deleteDMatch(cv::DMatch * dmatch)\
-\  {\
-\    delete dmatch;\
-\  }\
-\}"
 
 instance CSizeOf C'DMatch where
     cSizeOf _proxy = c'sizeof_DMatch

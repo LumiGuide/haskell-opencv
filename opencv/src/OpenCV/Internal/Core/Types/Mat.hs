@@ -82,7 +82,7 @@ import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr, FunPtr )
+import "base" Foreign.Ptr ( Ptr, plusPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -92,6 +92,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Internal ( objFromPtr2 )
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.C.PlacementNew.TH
@@ -128,20 +129,10 @@ type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
+mkFinalizer "deleteMat" "cv::Mat" ''C'Mat
+
 instance FromPtr (Mat shape channels depth) where
     fromPtr = objFromPtr2 Mat deleteMat
-
-foreign import ccall "&deleteMat" deleteMat
-    :: FunPtr (Ptr (C (Mat shape channels depth)) -> IO ())
-
-C.verbatim "\
-extern \"C\"\
-{\
-  void deleteMat(cv::Mat * mat)\
-  {\
-    delete mat;\
-  }\
-}"
 
 instance FreezeThaw (Mat shape channels depth) where
     freeze = cloneMatM . unMut

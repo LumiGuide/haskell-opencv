@@ -29,14 +29,14 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-mkVecType "Vec2i" 2 ''Int32   "int32_t"
-mkVecType "Vec2f" 2 ''CFloat  "float"
-mkVecType "Vec2d" 2 ''CDouble "double"
+mkVecType "Vec2i" 2 ''Int32   ''C'Vec2i  "int32_t"
+mkVecType "Vec2f" 2 ''CFloat  ''C'Vec2f  "float"
+mkVecType "Vec2d" 2 ''CDouble ''C'Vec2d  "double"
 
-mkVecType "Vec3i" 3 ''Int32   "int32_t"
-mkVecType "Vec3f" 3 ''CFloat  "float"
-mkVecType "Vec3d" 3 ''CDouble "double"
+mkVecType "Vec3i" 3 ''Int32   ''C'Vec3i  "int32_t"
+mkVecType "Vec3f" 3 ''CFloat  ''C'Vec3f  "float"
+mkVecType "Vec3d" 3 ''CDouble ''C'Vec3d  "double"
 
-mkVecType "Vec4i" 4 ''Int32   "int32_t"
-mkVecType "Vec4f" 4 ''CFloat  "float"
-mkVecType "Vec4d" 4 ''CDouble "double"
+mkVecType "Vec4i" 4 ''Int32   ''C'Vec4i  "int32_t"
+mkVecType "Vec4f" 4 ''CFloat  ''C'Vec4f  "float"
+mkVecType "Vec4d" 4 ''CDouble ''C'Vec4d  "double"

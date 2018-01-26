@@ -17,6 +17,7 @@ import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Core.Types.Matx
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 
@@ -25,9 +26,10 @@ mkMatxType
     -> Integer -- ^ Row dimension
     -> Integer -- ^ Column dimension
     -> Name    -- ^ Depth type name in Haskell
+    -> Name    -- ^ Matx C proxy type name
     -> String  -- ^ Depth type name in C
     -> Q [Dec]
-mkMatxType mTypeNameStr dimR dimC depthTypeName cDepthTypeStr
+mkMatxType mTypeNameStr dimR dimC depthTypeName cProxyTypeName cDepthTypeStr
     | dimR < 1 || dimR > 6 || dimC < 1 || dimC > 6 =
         fail $ "mkMatxType: Unsupported dimension: " <> show dimR <> "x" <> show dimC
     | otherwise =
@@ -42,6 +44,7 @@ mkMatxType mTypeNameStr dimR dimC depthTypeName cDepthTypeStr
           then newMatxDs
           else pure []
         , mkPlacementNewInstance mTypeName
+        , mkFinalizer finalizerNameStr cMatxTypeStr cProxyTypeName
         ]
   where
     mTypeName :: Name
@@ -66,19 +69,18 @@ mkMatxType mTypeNameStr dimR dimC depthTypeName cDepthTypeStr
                []
                ([t|Matx|] `appT` dimRTypeQ `appT` dimCTypeQ `appT` depthTypeQ)
 
+    finalizerNameStr :: String
+    finalizerNameStr = "delete" <> mTypeNameStr
+
+    finalizerName :: Name
+    finalizerName = mkName finalizerNameStr
+
     fromPtrDs :: Q [Dec]
     fromPtrDs =
         [d|
         instance FromPtr $(mTypeQ) where
-          fromPtr = objFromPtr Matx $ $(finalizerExpQ)
+          fromPtr = objFromPtr2 Matx $(varE finalizerName)
         |]
-      where
-        finalizerExpQ :: Q Exp
-        finalizerExpQ = do
-          ptr <- newName "ptr"
-          lamE [varP ptr] $
-            quoteExp CU.exp $
-              "void { delete $(" <> cMatxTypeStr <> " * " <> nameBase ptr <> ") }"
 
     isMatxOpenCVInstanceDs :: Q [Dec]
     isMatxOpenCVInstanceDs =

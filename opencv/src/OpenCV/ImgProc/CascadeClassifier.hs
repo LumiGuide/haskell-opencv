@@ -1,6 +1,7 @@
 {-# language QuasiQuotes #-}
 {-# language TemplateHaskell #-}
 {-# language MultiParamTypeClasses #-}
+
 module OpenCV.ImgProc.CascadeClassifier
   ( CascadeClassifier
   , newCascadeClassifier
@@ -24,16 +25,21 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "vector" Data.Vector as V
 import "linear" Linear (V2(..))
 import "this" OpenCV.Core.Types
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal
 import "this" OpenCV.TypeLevel
+
+--------------------------------------------------------------------------------
 
 C.context openCvCtx
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/objdetect.hpp"
 C.using "namespace cv"
+
+--------------------------------------------------------------------------------
 
 newtype CascadeClassifier = CascadeClassifier {unCascadeClassifier :: ForeignPtr (C CascadeClassifier)}
 
@@ -42,9 +48,10 @@ type instance C CascadeClassifier = C'CascadeClassifier
 instance WithPtr CascadeClassifier where
     withPtr = withForeignPtr . unCascadeClassifier
 
+mkFinalizer "deleteCascadeClassifier" "cv::CascadeClassifier" ''C'CascadeClassifier
+
 instance FromPtr CascadeClassifier where
-    fromPtr = objFromPtr CascadeClassifier $ \ptr ->
-                [CU.exp| void { delete $(CascadeClassifier * ptr) }|]
+    fromPtr = objFromPtr2 CascadeClassifier deleteCascadeClassifier
 
 -- | Create a new cascade classifier. Returns 'Nothing' if the classifier
 -- is empty after initialization. This usually means that the file could

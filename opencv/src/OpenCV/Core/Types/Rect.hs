@@ -34,9 +34,9 @@ C.context openCvCtx
 C.include "opencv2/core.hpp"
 C.using "namespace cv"
 
-mkRectType "Rect2i" ''Int32   "int32_t" "Point2i" "Size2i"
-mkRectType "Rect2f" ''CFloat  "float"   "Point2f" "Size2f"
-mkRectType "Rect2d" ''CDouble "double"  "Point2d" "Size2d"
+mkRectType "Rect2i" ''Int32   ''C'Rect2i "int32_t" "Point2i" "Size2i"
+mkRectType "Rect2f" ''CFloat  ''C'Rect2f "float"   "Point2f" "Size2f"
+mkRectType "Rect2d" ''CDouble ''C'Rect2d "double"  "Point2d" "Size2d"
 
 fmapRect :: forall a b. (IsRect Rect a, IsRect HRect a, IsRect Rect b, IsRect HRect b)
    => (a -> b) -> Rect a -> Rect b

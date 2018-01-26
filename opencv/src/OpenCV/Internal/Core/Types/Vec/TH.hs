@@ -19,6 +19,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear ( V2(..), V3(..), V4(..) )
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )
+import "this" OpenCV.Internal.C.FinalizerTH ( mkFinalizer )
 import "this" OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Vec
@@ -28,9 +29,10 @@ mkVecType
     :: String  -- ^ Vec type name, for both Haskell and C
     -> Integer -- ^ Vec dimension
     -> Name    -- ^ Depth type name in Haskell
+    -> Name    -- ^ Vec C proxy type name
     -> String  -- ^ Depth type name in C
     -> Q [Dec]
-mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
+mkVecType vTypeNameStr dim depthTypeName cProxyTypeName cDepthTypeStr
     | dim < 2 || dim > 4 = fail $ "mkVecType: Unsupported dimension: " <> show dim
     | otherwise =
       fmap concat . sequence $
@@ -39,6 +41,7 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
         , isVecOpenCVInstanceDs
         , isVecHaskellInstanceDs
         , mkPlacementNewInstance vTypeName
+        , mkFinalizer finalizerNameStr cVecTypeStr cProxyTypeName
         ]
   where
     vTypeName :: Name
@@ -62,19 +65,18 @@ mkVecType vTypeNameStr dim depthTypeName cDepthTypeStr
                []
                ([t|Vec|] `appT` dimTypeQ `appT` depthTypeQ)
 
+    finalizerNameStr :: String
+    finalizerNameStr = "delete" <> vTypeNameStr
+
+    finalizerName :: Name
+    finalizerName = mkName finalizerNameStr
+
     fromPtrDs :: Q [Dec]
     fromPtrDs =
         [d|
         instance FromPtr $(vTypeQ) where
-          fromPtr = objFromPtr Vec $ $(finalizerExpQ)
+          fromPtr = objFromPtr2 Vec $(varE finalizerName)
         |]
-      where
-        finalizerExpQ :: Q Exp
-        finalizerExpQ = do
-          ptr <- newName "ptr"
-          lamE [varP ptr] $
-            quoteExp CU.exp $
-              "void { delete $(" <> cVecTypeStr <> " * " <> nameBase ptr <> ") }"
 
     isVecOpenCVInstanceDs :: Q [Dec]
     isVecOpenCVInstanceDs =
