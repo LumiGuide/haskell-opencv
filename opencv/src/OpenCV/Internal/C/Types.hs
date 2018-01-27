@@ -127,7 +127,6 @@ data C'Ptr_BackgroundSubtractorKNN
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::BackgroundSubtractorKNN>@ object
 data C'Ptr_BackgroundSubtractorMOG2
 
-
 -- | Haskell representation of an OpenCV @cv::VideoCapture@ object
 data C'VideoCapture
 
@@ -152,6 +151,8 @@ type C'TrackbarCallback
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 
+-- | Haskell representation of an OpenCV @cv::dnn::Net@ object
+data C'Net
 
 --------------------------------------------------------------------------------
 
