@@ -10,6 +10,8 @@ module OpenCV.Core.Types
       Mut
     , Mutable
     , FreezeThaw(..)
+      -- * String
+    , module OpenCV.Core.Types.String
       -- * Point
     , module OpenCV.Core.Types.Point
       -- * Size
@@ -77,6 +79,7 @@ import "this" OpenCV.Core.Types.Matx
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Rect
 import "this" OpenCV.Core.Types.Size
+import "this" OpenCV.Core.Types.String
 import "this" OpenCV.Core.Types.Vec
 import "this" OpenCV.Exception
 import "this" OpenCV.Internal

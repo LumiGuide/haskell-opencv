@@ -14,7 +14,6 @@ module OpenCV.Internal.Dnn.DictValue
 
 import "base" Data.Int ( Int32, Int64 )
 import "base" Data.Word ( Word32 )
-import "base" Foreign.C.String ( withCStringLen )
 import "base" Foreign.C.Types ( CInt )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -25,6 +24,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "primitive" Control.Monad.Primitive ( PrimMonad, unsafePrimToPrim )
+import "this" OpenCV.Core.Types.String ( toCvString )
 import "this" OpenCV.Internal ( objFromPtr )
 import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -62,6 +62,9 @@ instance FromPtr DictValue where fromPtr = objFromPtr DictValue deleteDictValue
 class ToDictValue a where
     toDictValue :: (PrimMonad m) => a -> m DictValue
 
+instance ToDictValue DictValue where
+    toDictValue = pure
+
 instance ToDictValue Double where
     toDictValue x = unsafePrimToPrim $ fromPtr
         [CU.exp| DictValue * { new cv::dnn::DictValue($(double c'x)) } |]
@@ -74,18 +77,9 @@ instance ToDictValue Int64 where
 
 instance ToDictValue String where
     toDictValue string = unsafePrimToPrim $ fromPtr $
-        withCStringLen string $ \(haskellString, stringLength) -> do
-          let c'stringLength = fromIntegral stringLength
-          [C.block| DictValue * {
-            int strLength = $(int c'stringLength);
-            // Point to string managed by Haskell runtime.
-            char * haskellString = $(char * haskellString);
-            // Assign memory on C++ heap for string managed by DictValue.
-            char * dictString = new char[strLength];
-            // Copy temporary Haskell string to C++ heap.
-            strncpy(dictString, haskellString, strLength);
-            // DictValue is responsible for freeing the string memory.
-            return new cv::dnn::DictValue(dictString);
+        withPtr (toCvString string) $ \stringPtr ->
+          [CU.exp| DictValue * {
+            new cv::dnn::DictValue(*$(String * stringPtr))
           } |]
 
 --------------------------------------------------------------------------------

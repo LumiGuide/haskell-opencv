@@ -84,8 +84,11 @@ type C'Rect2i = C'Rect Int32
 type C'Rect2f = C'Rect CFloat
 type C'Rect2d = C'Rect CDouble
 
+
 -- | Haskell representation of an OpenCV exception
 data C'CvCppException
+-- | Haskell representation of an OpenCV @cv::String@ object
+data C'CvString
 -- | Haskell representation of an OpenCV @cv::RotatedRect@ object
 data C'RotatedRect
 -- | Haskell representation of an OpenCV @cv::TermCriteria@ object

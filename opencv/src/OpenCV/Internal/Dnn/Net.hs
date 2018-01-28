@@ -2,7 +2,8 @@
 {-# language TemplateHaskell #-}
 
 module OpenCV.Internal.Dnn.Net
-    ( Net
+    ( LayerId
+    , Net
     , newNet
     , coerceNet
     , netIsEmpty
@@ -18,6 +19,7 @@ import "this" OpenCV.Internal ( objFromPtr )
 import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Dnn.DictValue ( DictValue )
 
 --------------------------------------------------------------------------------
 
@@ -29,6 +31,8 @@ C.using "namespace cv"
 C.using "namespace cv::dnn"
 
 --------------------------------------------------------------------------------
+
+type LayerId = DictValue
 
 {- | Artificial neural network.
 
@@ -43,8 +47,7 @@ newtype Net s = Net {unNet :: ForeignPtr (C (Net s))}
 
 type instance C (Net s) = C'Net
 
-instance WithPtr (Net s) where
-    withPtr = withForeignPtr . unNet
+instance WithPtr (Net s) where withPtr = withForeignPtr . unNet
 
 mkFinalizer DeletePtr "deleteNet" "cv::dnn::Net" ''C'Net
 

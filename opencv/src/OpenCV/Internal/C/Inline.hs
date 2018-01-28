@@ -37,6 +37,8 @@ openCvTypesTable = M.fromList
 
   , ( C.TypeName "Exception"   , [t| C'CvCppException |] )
 
+  , ( C.TypeName "String"      , [t| C'CvString    |] )
+
   , ( C.TypeName "Matx12f"     , [t| C'Matx12f     |] )
   , ( C.TypeName "Matx12d"     , [t| C'Matx12d     |] )
   , ( C.TypeName "Matx13f"     , [t| C'Matx13f     |] )

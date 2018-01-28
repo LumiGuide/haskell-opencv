@@ -140,6 +140,7 @@ library
         OpenCV.Core.Types.Point
         OpenCV.Core.Types.Rect
         OpenCV.Core.Types.Size
+        OpenCV.Core.Types.String
         OpenCV.Core.Types.Vec
         OpenCV.Dnn
         OpenCV.Exception

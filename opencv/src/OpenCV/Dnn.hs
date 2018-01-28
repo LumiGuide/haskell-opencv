@@ -3,7 +3,8 @@
 
 module OpenCV.Dnn
     ( -- * Net
-      Net
+      LayerId
+    , Net
 
     , readNetFromCaffe
     , readNetFromCaffeFile
