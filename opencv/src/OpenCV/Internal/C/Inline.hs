@@ -128,5 +128,6 @@ openCvTypesTable = M.fromList
   , ( C.TypeName "MouseCallback"   , [t| FunPtr C'MouseCallback    |] )
   , ( C.TypeName "TrackbarCallback", [t| FunPtr C'TrackbarCallback |] )
 
-  , ( C.TypeName "Net", [t| C'Net |] )
+  , ( C.TypeName "Net"      , [t| C'Net       |] )
+  , ( C.TypeName "DictValue", [t| C'DictValue |] )
   ]

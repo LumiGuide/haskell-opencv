@@ -151,8 +151,13 @@ type C'TrackbarCallback
    -> Ptr () -- ^ Optional pointer to user data.
    -> IO ()
 
+--------------------------------------------------------------------------------
+
 -- | Haskell representation of an OpenCV @cv::dnn::Net@ object
 data C'Net
+
+-- | Haskell representation of an OpenCV @cv::dnn::DictValue@ object
+data C'DictValue
 
 --------------------------------------------------------------------------------
 

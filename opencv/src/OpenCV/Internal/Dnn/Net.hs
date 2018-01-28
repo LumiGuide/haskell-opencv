@@ -5,9 +5,11 @@ module OpenCV.Internal.Dnn.Net
     ( Net
     , newNet
     , coerceNet
+    , netIsEmpty
     ) where
 
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Foreign.Marshal.Utils ( toBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -53,3 +55,9 @@ newNet = unsafePrimToPrim $ fromPtr [CU.exp| Net * { new cv::dnn::Net() } |]
 
 coerceNet :: Net s1 -> Net s2
 coerceNet (Net ptr) = Net ptr
+
+-- | Returns true if there are no layers in the network.
+netIsEmpty :: (PrimMonad m) => Net (PrimState m) -> m Bool
+netIsEmpty net = unsafePrimToPrim $
+    withPtr net $ \netPtr -> toBool <$>
+    [CU.exp| bool { $(Net * netPtr)->empty() } |]

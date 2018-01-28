@@ -193,6 +193,7 @@ library
         OpenCV.Internal.Core.Types.Size.TH
         OpenCV.Internal.Core.Types.Vec
         OpenCV.Internal.Core.Types.Vec.TH
+        OpenCV.Internal.Dnn.DictValue
         OpenCV.Internal.Dnn.Net
         OpenCV.Internal.Exception
         OpenCV.Internal.Features2d.Constants

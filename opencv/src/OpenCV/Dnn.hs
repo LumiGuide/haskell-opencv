@@ -2,9 +2,24 @@
 {-# language TemplateHaskell #-}
 
 module OpenCV.Dnn
-    ( Net
+    ( -- * Net
+      Net
+
     , readNetFromCaffe
     , readNetFromCaffeFile
+
+    , netIsEmpty
+
+      -- * DictValue
+    , DictValue
+    , ToDictValue
+    , toDictValue
+    , GetDictValue
+    , getDictValue
+    , dictValueIsInt
+    , dictValueIsString
+    , dictValueIsReal
+    , dictValueSize
     ) where
 
 import "base" Foreign.C.String ( withCString )
@@ -12,6 +27,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "bytestring" Data.ByteString as B
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
+import "this" OpenCV.Internal.Dnn.DictValue
 import "this" OpenCV.Internal.Dnn.Net
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types ( withPtr )
