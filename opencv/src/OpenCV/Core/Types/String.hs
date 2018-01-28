@@ -5,6 +5,7 @@ module OpenCV.Core.Types.String
     ( CvString
     , IsCvString(..)
     , cvStringIsEmpty
+    , cvStringEmpty
     ) where
 
 import "base" Foreign.C.String ( CStringLen, withCStringLen )
@@ -70,3 +71,7 @@ cvStringIsEmpty :: CvString -> Bool
 cvStringIsEmpty cvString = toBool $
     unsafePerformIO $ withPtr cvString $ \cvStringPtr ->
       [CU.exp| bool { $(String * cvStringPtr)->empty() } |]
+
+cvStringEmpty :: CvString
+cvStringEmpty = unsafePerformIO $ fromPtr
+    [CU.exp| String * { new cv::String() } |]
