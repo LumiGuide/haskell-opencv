@@ -19,6 +19,7 @@ module OpenCV
   , module OpenCV.ImgProc.GeometricImgTransform
   , module OpenCV.ImgProc.ImgFiltering
   , module OpenCV.ImgProc.MiscImgTransform
+  , module OpenCV.ImgProc.MotionAnalysis
   , module OpenCV.ImgProc.ObjectDetection
   , module OpenCV.ImgProc.StructuralAnalysis
   , module OpenCV.ImgProc.Types
@@ -49,6 +50,7 @@ import OpenCV.ImgProc.FeatureDetection
 import OpenCV.ImgProc.GeometricImgTransform
 import OpenCV.ImgProc.ImgFiltering
 import OpenCV.ImgProc.MiscImgTransform
+import OpenCV.ImgProc.MotionAnalysis
 import OpenCV.ImgProc.ObjectDetection
 import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types

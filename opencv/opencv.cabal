@@ -152,6 +152,7 @@ library
         OpenCV.ImgProc.ImgFiltering
         OpenCV.ImgProc.MiscImgTransform
         OpenCV.ImgProc.MiscImgTransform.ColorCodes
+        OpenCV.ImgProc.MotionAnalysis
         OpenCV.ImgProc.ObjectDetection
         OpenCV.ImgProc.StructuralAnalysis
         OpenCV.ImgProc.Types
