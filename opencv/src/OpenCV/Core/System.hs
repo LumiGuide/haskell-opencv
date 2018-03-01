@@ -3,7 +3,7 @@
 
 module OpenCV.Core.System
     ( getBuildInformation
-    , HardwareFeature(..)
+    , CpuFeature(..)
     , checkHardwareSupport
     , getNumberOfCPUs
     , getNumThreads
@@ -45,31 +45,61 @@ getBuildInformation =
 -- | Features which may are may not be supported by the host hardware.
 --
 -- Use 'checkHardwareSupport' to query which features are available.
-data HardwareFeature
-   = MMX      -- ^ MMX
-   | SSE      -- ^ SSE
-   | SSE2     -- ^ SSE 2
-   | SSE3     -- ^ SSE 3
-   | SSSE3    -- ^ SSSE 3
-   | SSE4_1   -- ^ SSE 4.1
-   | SSE4_2   -- ^ SSE 4.2
-   | POPCOUNT -- ^ POPCOUNT
-   | AVX      -- ^ AVX
-   | AVX2     -- ^ AVX2
+data CpuFeature
+   = Cpu_MMX
+   | Cpu_SSE
+   | Cpu_SSE2
+   | Cpu_SSE3
+   | Cpu_SSSE3
+   | Cpu_SSE4_1
+   | Cpu_SSE4_2
+   | Cpu_POPCNT
+   | Cpu_FP16
+   | Cpu_AVX
+   | Cpu_AVX2
+   | Cpu_FMA3
+   | Cpu_AVX_512F
+   | Cpu_AVX_512BW
+   | Cpu_AVX_512CD
+   | Cpu_AVX_512DQ
+   | Cpu_AVX_512ER
+--  | Cpu_AVX_512IFMA512
+--  | Cpu_AVX_512IFMA
+   | Cpu_AVX_512PF
+   | Cpu_AVX_512VBMI
+   | Cpu_AVX_512VL
+   | Cpu_NEON
+   | Cpu_VSX
+--  | Cpu_AVX512_SKX
 
-marshalHardwareFeature :: HardwareFeature -> Int32
-marshalHardwareFeature = \case
-    MMX      -> c'CV_CPU_MMX
-    SSE      -> c'CV_CPU_SSE
-    SSE2     -> c'CV_CPU_SSE2
-    SSE3     -> c'CV_CPU_SSE3
-    SSSE3    -> c'CV_CPU_SSSE3
-    SSE4_1   -> c'CV_CPU_SSE4_1
-    SSE4_2   -> c'CV_CPU_SSE4_2
-    POPCOUNT -> c'CV_CPU_POPCNT
-    AVX      -> c'CV_CPU_AVX
-    AVX2     -> c'CV_CPU_AVX2
 
+marshalCpuFeature :: CpuFeature -> Int32
+marshalCpuFeature = \case
+    Cpu_MMX            -> c'CV_CPU_MMX
+    Cpu_SSE            -> c'CV_CPU_SSE
+    Cpu_SSE2           -> c'CV_CPU_SSE2
+    Cpu_SSE3           -> c'CV_CPU_SSE3
+    Cpu_SSSE3          -> c'CV_CPU_SSSE3
+    Cpu_SSE4_1         -> c'CV_CPU_SSE4_1
+    Cpu_SSE4_2         -> c'CV_CPU_SSE4_2
+    Cpu_POPCNT         -> c'CV_CPU_POPCNT
+    Cpu_FP16           -> c'CV_CPU_FP16
+    Cpu_AVX            -> c'CV_CPU_AVX
+    Cpu_AVX2           -> c'CV_CPU_AVX2
+    Cpu_FMA3           -> c'CV_CPU_FMA3
+    Cpu_AVX_512F       -> c'CV_CPU_AVX_512F
+    Cpu_AVX_512BW      -> c'CV_CPU_AVX_512BW
+    Cpu_AVX_512CD      -> c'CV_CPU_AVX_512CD
+    Cpu_AVX_512DQ      -> c'CV_CPU_AVX_512DQ
+    Cpu_AVX_512ER      -> c'CV_CPU_AVX_512ER
+--  Cpu_AVX_512IFMA512 -> c'CV_CPU_AVX_512IFMA512
+--  Cpu_AVX_512IFMA    -> c'CV_CPU_AVX_512IFMA
+    Cpu_AVX_512PF      -> c'CV_CPU_AVX_512PF
+    Cpu_AVX_512VBMI    -> c'CV_CPU_AVX_512VBMI
+    Cpu_AVX_512VL      -> c'CV_CPU_AVX_512VL
+    Cpu_NEON           -> c'CV_CPU_NEON
+    Cpu_VSX            -> c'CV_CPU_VSX
+--  Cpu_AVX512_SKX     -> c'CV_CPU_AVX512_SKX
 
 -- | Returns @True@ if the specified feature is supported by the host hardware.
 --
@@ -78,11 +108,19 @@ marshalHardwareFeature = \case
 -- 'checkHardwareSupport' will return @False@ until @'setUseOptimized' True@ is
 -- called. This way user can dynamically switch on and off the optimized code in
 -- OpenCV.
-checkHardwareSupport :: HardwareFeature -> IO Bool
-checkHardwareSupport hardwareFeature = toBool <$>
-    [C.exp| bool { cv::checkHardwareSupport($(int32_t c'hardwareFeature)) }|]
+checkHardwareSupport :: CpuFeature -> IO Bool
+checkHardwareSupport cpuFeature = toBool <$>
+    [C.exp| bool { cv::checkHardwareSupport($(int32_t c'cpuFeature)) }|]
   where
-    c'hardwareFeature = marshalHardwareFeature hardwareFeature
+    c'cpuFeature = marshalCpuFeature cpuFeature
+
+-- TODO (RvD): needs cv::String type support (which is already written in the DNN branch).
+-- getHardwareFeatureName :: CpuFeature -> IO String
+-- getHardwareFeatureName cpuFeature =
+--     peekCString =<< [C.exp| const char * { cv::getHardwareFeatureName($(int32_t c'cpuFeature)) }|]
+--   where
+--     c'cpuFeature = marshalCpuFeature cpuFeature
+
 
 -- | Returns the number of logical CPUs available for the process.
 getNumberOfCPUs :: IO Int32
