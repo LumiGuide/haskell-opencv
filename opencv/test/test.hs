@@ -121,19 +121,19 @@ main = defaultMain $ testGroup "opencv"
       ]
     , testGroup "ImgCodecs"
       [ testGroup "imencode . imdecode"
-        [ HU.testCase "OutputBmp"      $ encodeDecode OutputBmp
--- !?!?!, HU.testCase "OutputExr"      $ encodeDecode OutputExr
-        , HU.testCase "OutputHdr"      $ encodeDecode (OutputHdr True)
--- !?!?!, HU.testCase "OutputJpeg"     $ encodeDecode (OutputJpeg defaultJpegParams)
-        , HU.testCase "OutputJpeg2000" $ encodeDecode OutputJpeg2000
-        , HU.testCase "OutputPng"      $ encodeDecode (OutputPng defaultPngParams)
-        , HU.testCase "OutputPnm"      $ encodeDecode (OutputPnm True)
-        , HU.testCase "OutputPbm"      $ encodeDecode (OutputPbm True)
-        , HU.testCase "OutputPgm"      $ encodeDecode (OutputPgm True)
-        , HU.testCase "OutputPpm"      $ encodeDecode (OutputPpm True)
-        , HU.testCase "OutputSunras"   $ encodeDecode OutputSunras
-        , HU.testCase "OutputTiff"     $ encodeDecode OutputTiff
--- !?!?!, HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)
+        [ HU.testCase "OutputBmp"      $ encodeDecode ImreadUnchanged OutputBmp
+-- !?!?!, HU.testCase "OutputExr"      $ encodeDecode ImreadUnchanged OutputExr
+        , HU.testCase "OutputHdr"      $ encodeDecode ImreadUnchanged (OutputHdr True)
+-- !?!?!, HU.testCase "OutputJpeg"     $ encodeDecode ImreadUnchanged (OutputJpeg defaultJpegParams)
+        , HU.testCase "OutputJpeg2000" $ encodeDecode ImreadUnchanged OutputJpeg2000
+        , HU.testCase "OutputPng"      $ encodeDecode ImreadUnchanged (OutputPng defaultPngParams)
+        , HU.testCase "OutputPnm"      $ encodeDecode ImreadUnchanged (OutputPnm True)
+        , HU.testCase "OutputPbm"      $ encodeDecode ImreadGrayscale (OutputPbm True)
+        , HU.testCase "OutputPgm"      $ encodeDecode ImreadGrayscale (OutputPgm True)
+        , HU.testCase "OutputPpm"      $ encodeDecode ImreadUnchanged (OutputPpm True)
+        , HU.testCase "OutputSunras"   $ encodeDecode ImreadUnchanged OutputSunras
+        , HU.testCase "OutputTiff"     $ encodeDecode ImreadUnchanged OutputTiff
+-- !?!?!, HU.testCase "OutputWebP"     $ encodeDecode ImreadUnchanged (OutputWebP 100)
         ]
       ]
     , testGroup "Features2d"
@@ -318,9 +318,9 @@ hmatElemSize fp expectedElemSize = do
   mat <- loadImg ImreadUnchanged fp
   assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
 
-encodeDecode :: OutputFormat -> HU.Assertion
-encodeDecode outputFormat = do
-    mat1 <- loadImg ImreadUnchanged "Lenna.png"
+encodeDecode :: ImreadMode -> OutputFormat -> HU.Assertion
+encodeDecode imreadMode outputFormat = do
+    mat1 <- loadImg imreadMode "Lenna.png"
 
     let bs2  = exceptError $ imencode outputFormat mat1
         mat2 = imdecode ImreadUnchanged bs2
