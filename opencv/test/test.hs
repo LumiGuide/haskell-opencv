@@ -127,7 +127,10 @@ main = defaultMain $ testGroup "opencv"
 -- !?!?!, HU.testCase "OutputJpeg"     $ encodeDecode (OutputJpeg defaultJpegParams)
         , HU.testCase "OutputJpeg2000" $ encodeDecode OutputJpeg2000
         , HU.testCase "OutputPng"      $ encodeDecode (OutputPng defaultPngParams)
-        , HU.testCase "OutputPxm"      $ encodeDecode (OutputPxm True)
+        , HU.testCase "OutputPnm"      $ encodeDecode (OutputPnm True)
+        , HU.testCase "OutputPbm"      $ encodeDecode (OutputPbm True)
+        , HU.testCase "OutputPgm"      $ encodeDecode (OutputPgm True)
+        , HU.testCase "OutputPpm"      $ encodeDecode (OutputPpm True)
         , HU.testCase "OutputSunras"   $ encodeDecode OutputSunras
         , HU.testCase "OutputTiff"     $ encodeDecode OutputTiff
 -- !?!?!, HU.testCase "OutputWebP"     $ encodeDecode (OutputWebP 100)

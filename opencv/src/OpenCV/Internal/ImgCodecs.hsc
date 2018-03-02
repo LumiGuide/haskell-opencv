@@ -152,7 +152,10 @@ data OutputFormat
    | OutputJpeg JpegParams
    | OutputJpeg2000
    | OutputPng PngParams
-   | OutputPxm Bool -- ^ Binary
+   | OutputPnm Bool -- ^ Binary
+   | OutputPbm Bool -- ^ Binary
+   | OutputPgm Bool -- ^ Binary
+   | OutputPpm Bool -- ^ Binary
    | OutputSunras
    | OutputTiff
    | OutputWebP Int -- ^ Quality [1..100], > 100 == lossless
@@ -169,7 +172,10 @@ marshalOutputFormat = \case
     OutputJpeg params  -> (".jpeg", marshalJpegParams params)
     OutputJpeg2000     -> (".jp2" , [])
     OutputPng params   -> (".png" , marshalPngParams params)
-    OutputPxm binary   -> (".pxm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
+    OutputPnm binary   -> (".pnm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
+    OutputPbm binary   -> (".pbm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
+    OutputPgm binary   -> (".pgm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
+    OutputPpm binary   -> (".ppm" , [c'IMWRITE_PXM_BINARY, fromBool binary])
     OutputSunras       -> (".sr"  , [])
     OutputTiff         -> (".tiff", [])
     OutputWebP quality -> (".webp", [c'IMWRITE_WEBP_QUALITY, fromIntegral quality])
