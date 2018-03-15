@@ -162,7 +162,7 @@ fromImage i@(Image w h _data) = exceptError $ withMatM
     (Proxy :: Proxy c)
     (Proxy :: Proxy d)
     (pure 0 :: V4 Double) $ \m ->
-      forM_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(x,y) ->
+      forM_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(y,x) ->
         unsafeWrite m [y,x] 0 (pixelAt i x y)
   where
     fi :: Int -> Int32
