@@ -393,7 +393,7 @@ matCompare
     :: Mat shape ('S 1) depth
     -> Mat shape ('S 1) depth
     -> CmpType
-    -> CvExcept (Mat shape ('S 1) depth)
+    -> CvExcept (Mat shape ('S 1) ('S Word8))
 matCompare x y cmpType = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
