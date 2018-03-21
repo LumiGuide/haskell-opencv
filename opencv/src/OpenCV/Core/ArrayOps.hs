@@ -51,6 +51,7 @@ module OpenCV.Core.ArrayOps
     , findNonZero
     ) where
 
+import "base" Control.Exception ( mask_ )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
 import "base" Foreign.C.Types ( CDouble )
@@ -1067,7 +1068,7 @@ findNonZero
 findNonZero mat = unsafePerformIO $
   withPtr mat $ \srcPtr ->
   alloca $ \(numPointsPtr :: Ptr Int32) ->
-  alloca $ \(pointsPtrPtr :: Ptr (Ptr (Ptr C'Point2i))) -> do
+  alloca $ \(pointsPtrPtr :: Ptr (Ptr (Ptr C'Point2i))) -> mask_ $ do
     [C.block| void {
       std::vector<cv::Point> points;
       cv::findNonZero( *$(Mat * srcPtr), points );
