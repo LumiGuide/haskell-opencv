@@ -48,8 +48,10 @@ module OpenCV.Core.ArrayOps
     , hconcat
     , vconcat
     , perspectiveTransform
+    , findNonZero
     ) where
 
+import "base" Control.Exception ( mask_ )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
 import "base" Foreign.C.Types ( CDouble )
@@ -1058,3 +1060,28 @@ perspectiveTransform srcPoints transformationMat = unsafePerformIO $
   where
     numPts   = fromIntegral $ V.length srcPoints
     c'numPts = fromIntegral $ V.length srcPoints
+
+-- | Find all non-zero points of a matrix.
+findNonZero
+    :: Mat shape ('S 1) depth
+    -> V.Vector Point2i
+findNonZero mat = unsafePerformIO $
+  withPtr mat $ \srcPtr ->
+  alloca $ \(numPointsPtr :: Ptr Int32) ->
+  alloca $ \(pointsPtrPtr :: Ptr (Ptr (Ptr C'Point2i))) -> mask_ $ do
+    [C.block| void {
+      std::vector<cv::Point> points;
+      cv::findNonZero( *$(Mat * srcPtr), points );
+
+      *$(int32_t * numPointsPtr) = points.size();
+      cv::Point * * pointsPtr = new cv::Point * [points.size()];
+      *$(Point2i * * * pointsPtrPtr) = pointsPtr;
+      for (std::vector<cv::Point>::size_type i = 0; i != points.size(); i++) {
+        pointsPtr[i] = new cv::Point(points[i]);
+      }
+    } |]
+    numPoints <- fromIntegral <$> peek numPointsPtr
+    pointsPtr <- peek pointsPtrPtr
+    points :: [Point2i] <- peekArray numPoints pointsPtr >>= mapM (fromPtr . return)
+    [C.block| void { delete [] *$(Point2i * * * pointsPtrPtr); }|]
+    return (V.fromList points)
