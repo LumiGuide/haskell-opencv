@@ -23,6 +23,7 @@ module OpenCV.Core.ArrayOps
     , matMax
     , CmpType(..)
     , matScalarCompare
+    , matCompare
       -- ** Bitwise operations
       -- $bitwise_intro
     , bitwiseNot
@@ -387,6 +388,29 @@ matScalarCompare src x cmpType = unsafeWrapException $ do
         |]
   where
     c'x = realToFrac x
+    c'cmpOp = marshalCmpType cmpType
+
+-- | Performs a per-element comparison of two matrices.
+matCompare
+    :: Mat shape ('S 1) depth
+    -> Mat shape ('S 1) depth
+    -> CmpType
+    -> CvExcept (Mat shape ('S 1) ('S Word8))
+matCompare x y cmpType = unsafeWrapException $ do
+    dst <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat dst) $
+      withPtr dst $ \dstPtr ->
+      withPtr x $ \xPtr ->
+      withPtr y $ \yPtr ->
+        [cvExcept|
+          cv::compare
+          ( *$(Mat * xPtr)
+          , *$(Mat * yPtr)
+          , *$(Mat * dstPtr)
+          , $(int32_t c'cmpOp)
+          );
+        |]
+  where
     c'cmpOp = marshalCmpType cmpType
 
 --------------------------------------------------------------------------------
