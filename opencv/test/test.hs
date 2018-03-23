@@ -152,10 +152,10 @@ testArrayBinOpArgDiff
      . ( testShapeA ~ 'S ['S 2, 'S 3]
        , testShapeB ~ 'S ['S 4, 'S 4]
        )
-    => (Mat 'D 'D 'D -> Mat 'D 'D 'D -> CvExcept (Mat 'D 'D 'D))
+    => (Mat 'D 'D 'D -> Mat 'D 'D 'D -> Either CvException (Mat 'D 'D 'D))
     -> HU.Assertion
 testArrayBinOpArgDiff arrayOp =
-    case runExcept $ arrayOp (relaxMat a) (relaxMat b) of
+    case arrayOp (relaxMat a) (relaxMat b) of
       Left _err -> pure ()
       Right _mat -> assertFailure "result despite different shapes"
   where

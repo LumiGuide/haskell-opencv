@@ -43,6 +43,7 @@ import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToP
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V4 ( V4 )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.MiscImgTransform.ColorCodes
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -125,8 +126,8 @@ cvtColorImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
-      birds_gray <- pureExcept $   cvtColor gray bgr
-                               =<< cvtColor bgr gray birds_512x341
+      birds_gray <-     cvtColor gray bgr
+                    =<< cvtColor bgr gray birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birds_gray    Nothing
       lift $ arrowedLine imgM (V2 startX midY) (V2 pointX midY) red 4 LineType_8 0 0.15
@@ -157,16 +158,18 @@ cvtColor :: forall (fromColor   :: ColorCode)
                    (dstChannels :: DS Nat)
                    (srcDepth    :: DS *)
                    (dstDepth    :: DS *)
+                   m
           . ( ColorConversion fromColor toColor
             , ColorCodeMatchesChannels fromColor srcChannels
             , dstChannels ~ 'S (ColorCodeChannels toColor)
             , srcDepth `In` ['D, 'S Word8, 'S Word16, 'S Float]
             , dstDepth ~ ColorCodeDepth fromColor toColor srcDepth
+            , MonadError CvException m
             )
          => Proxy fromColor -- ^ Convert from 'ColorCode'. Make sure the source image has this 'ColorCode'
          -> Proxy toColor   -- ^ Convert to 'ColorCode'.
          -> Mat shape srcChannels srcDepth -- ^ Source image
-         -> CvExcept (Mat shape dstChannels dstDepth)
+         -> m (Mat shape dstChannels dstDepth)
 cvtColor fromColor toColor src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -381,11 +384,11 @@ threshToZeroInvBirds =
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#threshold OpenCV Sphinx doc>
 -}
 threshold
-    :: (depth `In` [Word8, Float])
+    :: (depth `In` [Word8, Float], MonadError CvException m)
     => ThreshValue -- ^
     -> ThreshType
     -> (Mat shape ('S 1) ('S depth))
-    -> CvExcept (Mat shape ('S 1) ('S depth), Double)
+    -> m (Mat shape ('S 1) ('S depth), Double)
 threshold threshVal threshType src = unsafeWrapException $ do
     dst <- newEmptyMat
     alloca $ \calcThreshPtr ->
@@ -416,10 +419,10 @@ Before passing the image to the function, you have to roughly outline the desire
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/miscellaneous_transformations.html#watershed OpenCV Sphinx doc>
 -}
 watershed
-  :: (PrimMonad m)
+  :: (PrimMonad m, MonadError CvException m)
   => Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input 8-bit 3-channel image
   -> Mut (Mat ('S [h, w]) ('S 1) ('S Int32)) (PrimState m) -- ^ Input/output 32-bit single-channel image (map) of markers
-  -> CvExceptT m ()
+  -> m ()
 watershed img markers =
     unsafePrimToPrim $
     withPtr img $ \imgPtr ->
@@ -460,6 +463,7 @@ grabCutBird = exceptError $ do
 -}
 grabCut
     :: ( PrimMonad m
+       , MonadError CvException m
        , depth `In` '[ 'D, 'S Word8 ]
        )
     => Mat shape ('S 3) depth
@@ -482,7 +486,7 @@ grabCut
         -- ^ Number of iterations the algorithm should make before returning the result. Note that the result can be refined with further calls with mode==GC_INIT_WITH_MASK or mode==GC_EVAL.
     -> GrabCutOperationMode
         -- ^ Operation mode
-    -> CvExceptT m ()
+    -> m ()
 grabCut img mask bgdModel fgdModel iterCount mode =
     unsafePrimToPrim $
     withPtr img $ \imgPtr ->
@@ -506,11 +510,11 @@ grabCut img mask bgdModel fgdModel iterCount mode =
 
 {- | Returns 0 if the pixels are not in the range, 255 otherwise. -}
 inRange ::
-     (ToScalar scalar)
+     (ToScalar scalar, MonadError CvException m)
   => Mat ('S [w, h]) channels depth
   -> scalar -- ^ Lower bound
   -> scalar -- ^ Upper bound
-  -> CvExcept (Mat ('S [w, h]) ('S 1) ('S Word8))
+  -> m (Mat ('S [w, h]) ('S 1) ('S Word8))
 inRange src lo hi = unsafeWrapException $ do
   dst <- newEmptyMat
   withPtr src $ \srcPtr ->

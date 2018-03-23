@@ -71,6 +71,7 @@ module OpenCV.Internal.Core.Types.Mat
     ) where
 
 import "base" Control.Exception ( throwIO )
+import "base" Control.Monad.IO.Class
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Int
 import qualified "base" Data.List.NonEmpty as NE
@@ -90,6 +91,7 @@ import "base" Unsafe.Coerce ( unsafeCoerce )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Internal ( objFromPtr )
 import "this" OpenCV.Internal.C.FinalizerTH
@@ -240,13 +242,14 @@ coerceMat
     :: ( ToShapeDS    (Proxy shapeOut)
        , ToChannelsDS (Proxy channelsOut)
        , ToDepthDS    (Proxy depthOut)
+       , MonadError CvException m
        )
     => Mat shapeIn channelsIn depthIn -- ^
-    -> CvExcept (Mat shapeOut channelsOut depthOut)
+    -> m (Mat shapeOut channelsOut depthOut)
 coerceMat matIn =
     case NE.nonEmpty errors of
       Nothing -> pure matOut
-      Just neErrors -> throwE $ CoerceMatError neErrors
+      Just neErrors -> throwError $ CoerceMatError neErrors
   where
     matOut = unsafeCoerceMat matIn
     errors = typeCheckMat matOut
@@ -265,8 +268,8 @@ keepMatAliveDuring mat m = do
     touchForeignPtr $ unMat mat
     pure x
 
-newEmptyMat :: IO (Mat ('S '[]) ('S 1) ('S Word8))
-newEmptyMat = unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|]
+newEmptyMat :: MonadIO m => m (Mat ('S '[]) ('S 1) ('S Word8))
+newEmptyMat = liftIO ( unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|] )
 
 -- TODO (RvD): what happens if we construct a mat with more than 4 channels?
 -- A scalar is just 4 values. What would be the default value of the 5th channel?
@@ -275,6 +278,8 @@ newMat
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
+       , MonadError CvException m
+       , MonadIO m
        -- , MinLengthDS 2 shape
        -- , 1 .<=? channels
        -- , channels .<=? 512
@@ -286,8 +291,8 @@ newMat
     -> channels
     -> depth
     -> scalar
-    -> CvExceptT IO (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
-newMat shape channels depth defValue = ExceptT $ do
+    -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+newMat shape channels depth defValue = wrapException $ liftIO $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
       withVector shape' $ \shapePtr ->
@@ -358,12 +363,13 @@ mkMat
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
+       , MonadError CvException m
        )
     => shape    -- ^
     -> channels -- ^
     -> depth    -- ^
     -> scalar   -- ^
-    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+    -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 mkMat shape channels depth defValue =
     unsafeCvExcept $ newMat shape channels depth defValue
 
@@ -404,9 +410,10 @@ coerceMatM
     :: ( ToShapeDS    (Proxy shapeOut)
        , ToChannelsDS (Proxy channelsOut)
        , ToDepthDS    (Proxy depthOut)
+       , MonadError CvException m
        )
     => Mut (Mat shapeIn channelsIn depthIn) s -- ^
-    -> CvExcept (Mut (Mat shapeOut channelsOut depthOut) s)
+    -> m (Mut (Mat shapeOut channelsOut depthOut) s)
 coerceMatM = fmap Mut . coerceMat . unMut
 
 unsafeCoerceMatM
@@ -422,26 +429,36 @@ mkMatM
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
+       , MonadError CvException m
        )
     => shape    -- ^
     -> channels -- ^
     -> depth    -- ^
     -> scalar   -- ^
-    -> CvExceptT m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
+    -> m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
 mkMatM shape channels depth defValue = do
-    mat <- mapExceptT unsafePrimToPrim $ newMat shape channels depth defValue
+    mat <-
+      runExceptT ( exceptTFromIO ( newMat shape channels depth defValue ) )
+        >>= either throwError return
     unsafeThaw mat
 
+  where
+
+    exceptTFromIO :: PrimMonad m => ExceptT e IO a -> ExceptT e m a
+    exceptTFromIO = mapExceptT unsafePrimToPrim
+
 createMat
-    :: (forall s. CvExceptT (ST s) (Mut (Mat shape channels depth) s)) -- ^
-    -> CvExcept (Mat shape channels depth)
-createMat mk = runCvExceptST $ unsafeFreeze =<< mk
+    :: MonadError CvException m
+    => (forall s. ExceptT CvException (ST s) (Mut (Mat shape channels depth) s)) -- ^
+    -> m (Mat shape channels depth)
+createMat mk = runCvExceptST ( unsafeFreeze =<< mk )
 
 withMatM
     :: ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
+       , MonadError CvException m
        )
     => shape    -- ^
     -> channels -- ^
@@ -449,9 +466,9 @@ withMatM
     -> scalar   -- ^
     -> (  forall s
        .  Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState (ST s))
-       -> CvExceptT (ST s) ()
+       -> ExceptT CvException (ST s) ()
        )
-    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+    -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 withMatM shape channels depth defValue f = createMat $ do
     matM <- mkMatM shape channels depth defValue
     f matM

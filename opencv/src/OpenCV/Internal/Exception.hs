@@ -17,15 +17,11 @@ module OpenCV.Internal.Exception
 
       -- * Handling C++ exceptions
     , handleCvException
+    , wrapException
 
       -- * Quasi quoters
     , cvExcept
     , cvExceptU
-
-      -- * Monadic interface
-    , CvExcept
-    , CvExceptT
-    , pureExcept
 
       -- * Promoting exceptions to errors
     , exceptError
@@ -41,7 +37,6 @@ module OpenCV.Internal.Exception
 import "base" Control.Monad.ST ( ST, runST )
 import "base" Control.Exception ( Exception(displayException), mask_, throw, throwIO )
 import "base" Control.Monad ( (<=<) )
-import "base" Data.Functor.Identity
 import "base" Data.List ( intercalate )
 import qualified "base" Data.List.NonEmpty as NE
 import "base" Data.Monoid ( (<>) )
@@ -52,6 +47,7 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "template-haskell" Language.Haskell.TH.Quote ( QuasiQuoter, quoteExp )
 import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -189,9 +185,6 @@ cvExceptWrap s = unlines
 type CvExcept    a = Except  CvException   a
 type CvExceptT m a = ExceptT CvException m a
 
-pureExcept :: (Applicative m) => CvExcept a -> CvExceptT m a
-pureExcept = mapExceptT (pure . runIdentity)
-
 exceptError :: CvExcept a -> a
 exceptError = either throw id . runExcept
 
@@ -201,11 +194,14 @@ exceptErrorIO = either throwIO pure <=< runExceptT
 exceptErrorM :: (Monad m) => CvExceptT m a -> m a
 exceptErrorM = either throw pure <=< runExceptT
 
-runCvExceptST :: (forall s. CvExceptT (ST s) a) -> CvExcept a
-runCvExceptST act = except $ runST $ runExceptT act
+runCvExceptST :: MonadError CvException m => (forall s. CvExceptT (ST s) a) -> m a
+runCvExceptST act = either throwError return $ runST $ runExceptT act
 
-unsafeCvExcept :: CvExceptT IO a -> CvExcept a
-unsafeCvExcept = mapExceptT (Identity . unsafePerformIO)
+unsafeCvExcept :: MonadError CvException m => CvExceptT IO a -> m a
+unsafeCvExcept = either throwError return . unsafePerformIO . runExceptT
 
-unsafeWrapException :: IO (Either CvException a) -> CvExcept a
+unsafeWrapException :: MonadError CvException m => IO (Either CvException a) -> m a
 unsafeWrapException = unsafeCvExcept . ExceptT
+
+wrapException :: ( MonadError CvException m ) => m (Either CvException a) -> m a
+wrapException m = m >>= either throwError return

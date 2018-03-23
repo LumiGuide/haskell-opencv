@@ -10,13 +10,13 @@ module OpenCV.ImgProc.MotionAnalysis
 
 import "base" Data.Word
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except
 
  --------------------------------------------------------------------------------
 
@@ -47,6 +47,7 @@ accumulate
     :: ( srcDepth `In` '[ Word8, Word16, Float, Double ]
        , dstDepth `In` '[ Float, Double ]
        , PrimMonad m
+       , MonadError CvException m
        )
     => Mat ('S '[ height, width ]) channels ('S srcDepth)
        -- ^ @src@: Input image.
@@ -54,8 +55,8 @@ accumulate
        -- ^ @dst@: Accumulator image.
     -> Maybe (Mat ('S '[ height, width ]) ('S 1) ('S Word8))
        -- ^ @mask@: Optional operation mask.
-    -> CvExceptT m ()
-accumulate src dst mbMask = ExceptT $ unsafePrimToPrim $
+    -> m ()
+accumulate src dst mbMask = wrapException $ unsafePrimToPrim $
     withPtr src    $ \srcPtr ->
     withPtr dst    $ \dstPtr ->
     withPtr mbMask $ \maskPtr ->
@@ -88,6 +89,7 @@ accumulateProduct
        , dstDepth `In` '[ Float, Double ]
        , channels `In` '[ 1, 3 ]
        , PrimMonad m
+       , MonadError CvException m
        )
     => Mat ('S '[ height, width ]) ('S channels) ('S srcDepth)
        -- ^ @src1@: First input image.
@@ -97,8 +99,8 @@ accumulateProduct
        -- ^ @dst@: Accumulator image.
     -> Maybe (Mat ('S '[ height, width ]) ('S 1) ('S Word8))
        -- ^ @mask@: Optional operation mask.
-    -> CvExceptT m ()
-accumulateProduct src1 src2 dst mbMask = ExceptT $ unsafePrimToPrim $
+    -> m ()
+accumulateProduct src1 src2 dst mbMask = wrapException $ unsafePrimToPrim $
     withPtr src1   $ \src1Ptr ->
     withPtr src2   $ \src2Ptr ->
     withPtr dst    $ \dstPtr ->
@@ -132,6 +134,7 @@ accumulateSquare
        , dstDepth `In` '[ Float, Double ]
        , channels `In` '[ 1, 3 ]
        , PrimMonad m
+       , MonadError CvException m
        )
     => Mat ('S '[ height, width ]) ('S channels) ('S srcDepth)
        -- ^ @src@: Input image.
@@ -139,8 +142,8 @@ accumulateSquare
        -- ^ @dst@: Accumulator image.
     -> Maybe (Mat ('S '[ height, width ]) ('S 1) ('S Word8))
        -- ^ @mask@: Optional operation mask.
-    -> CvExceptT m ()
-accumulateSquare src dst mbMask = ExceptT $ unsafePrimToPrim $
+    -> m ()
+accumulateSquare src dst mbMask = wrapException $ unsafePrimToPrim $
     withPtr src    $ \srcPtr ->
     withPtr dst    $ \dstPtr ->
     withPtr mbMask $ \maskPtr ->
@@ -175,6 +178,7 @@ accumulateWeighted
        , dstDepth `In` '[ Float, Double ]
        , channels `In` '[ 1, 3 ]
        , PrimMonad m
+       , MonadError CvException m
        )
     => Mat ('S '[ height, width ]) ('S channels) ('S srcDepth)
        -- ^ @src@: Input image.
@@ -183,8 +187,8 @@ accumulateWeighted
     -> Double -- ^ @alpha@: Weight of the input image.
     -> Maybe (Mat ('S '[ height, width ]) ('S 1) ('S Word8))
        -- ^ @mask@: Optional operation mask.
-    -> CvExceptT m ()
-accumulateWeighted src dst alpha mbMask = ExceptT $ unsafePrimToPrim $
+    -> m ()
+accumulateWeighted src dst alpha mbMask = wrapException $ unsafePrimToPrim $
     withPtr src    $ \srcPtr ->
     withPtr dst    $ \dstPtr ->
     withPtr mbMask $ \maskPtr ->

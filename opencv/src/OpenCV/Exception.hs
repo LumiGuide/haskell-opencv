@@ -10,11 +10,6 @@ module OpenCV.Exception
     , ExpectationError(..)
     , CvCppException
 
-      -- * Monadic interface
-    , CvExcept
-    , CvExceptT
-    , pureExcept
-
       -- * Promoting exceptions to errors
     , exceptError
     , exceptErrorIO

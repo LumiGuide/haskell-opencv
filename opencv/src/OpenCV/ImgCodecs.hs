@@ -26,6 +26,7 @@ import "bytestring" Data.ByteString ( ByteString )
 import qualified "bytestring" Data.ByteString.Unsafe as BU
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -35,7 +36,6 @@ import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.ImgCodecs
 import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except
 
 
 --------------------------------------------------------------------------------
@@ -84,9 +84,10 @@ imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgcodecs/doc/reading_and_writing_images.html#imencode OpenCV Sphinx doc>
 imencode
-    :: OutputFormat
+    :: MonadError CvException m
+    => OutputFormat
     -> Mat shape channels depth
-    -> CvExcept ByteString
+    -> m ByteString
 imencode format mat = unsafeWrapException $
     withPtr mat $ \matPtr ->
     withCString ext $ \extPtr ->
@@ -129,9 +130,9 @@ imencode format mat = unsafeWrapException $
 --
 -- See 'imencode'
 imencodeM
-    :: (PrimMonad m)
+    :: (PrimMonad m, MonadError CvException m)
     => OutputFormat
     -> Mut (Mat shape channels depth) (PrimState m)
-    -> CvExceptT m ByteString
+    -> m ByteString
 imencodeM format matM =
-    ExceptT . pure . runExcept =<< (imencode format <$> unsafeFreeze matM)
+     unsafeFreeze matM >>= imencode format 

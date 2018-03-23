@@ -10,6 +10,7 @@ import "base" Data.Int
 import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
@@ -143,9 +144,10 @@ colorMapParulaImg  = mkColorMapImg ColorMapParula
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/colormaps.html#applycolormap OpenCV Sphinx doc>
 -}
 applyColorMap
-    :: ColorMap
+    :: MonadError CvException m
+    => ColorMap
     -> Mat shape ('S 1) ('S Word8)
-    -> CvExcept (Mat shape ('S 3) ('S Word8))
+    -> m (Mat shape ('S 3) ('S Word8))
 applyColorMap colorMap src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $

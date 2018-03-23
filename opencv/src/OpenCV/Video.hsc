@@ -10,6 +10,7 @@ import "base" Data.Int ( Int32 )
 import "base" Foreign.Marshal.Utils ( fromBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError, catchError, throwError )
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -18,7 +19,6 @@ import "this" OpenCV.Internal.Core.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -41,20 +41,22 @@ C.using "namespace cv"
 estimateRigidTransform
     :: ( IsPoint2 srcPoint2 Int32
        , IsPoint2 dstPoint2 Int32
+       , MonadError CvException m
        )
     => V.Vector (srcPoint2 Int32) -- ^ Source
     -> V.Vector (dstPoint2 Int32) -- ^ Destination
     -> Bool -- ^ Full affine
-    -> CvExcept (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
+    -> m (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
 estimateRigidTransform src dst fullAffine = do
     result <- c'estimateRigidTransform
     -- If the c++ function can't estimate a rigid transform it will
     -- return an empty matrix. We check for this case by trying to
     -- coerce the result to the desired type.
-    catchE (Just <$> coerceMat result)
-           (\case CoerceMatError _msgs -> pure Nothing
-                  otherError -> throwE otherError
-           )
+    catchError
+      (Just <$> coerceMat result)
+      (\case CoerceMatError _msgs -> pure Nothing
+             otherError -> throwError otherError
+      )
   where
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat

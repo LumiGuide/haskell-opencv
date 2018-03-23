@@ -53,6 +53,7 @@ import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -156,7 +157,7 @@ bilateralFilterImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \imgM -> do
-      birdsFiltered <- pureExcept $ bilateralFilter (Just 9) Nothing Nothing Nothing birds_512x341
+      birdsFiltered <- bilateralFilter (Just 9) Nothing Nothing Nothing birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsFiltered Nothing
   where
@@ -170,6 +171,7 @@ bilateralFilterImg = exceptError $
 bilateralFilter
     :: ( depth    `In` '[Word8, Float, Double]
        , channels `In` '[1, 3]
+       , MonadError CvException m
        -- , Length shape <= 2
        )
     => Maybe Int32
@@ -187,7 +189,7 @@ bilateralFilter
     -> Maybe BorderMode
        -- ^ Pixel extrapolation method. Default value is BorderReflect101
     -> Mat shape ('S channels) ('S depth)
-    -> CvExcept (Mat shape ('S channels) ('S depth))
+    -> m (Mat shape ('S channels) ('S depth))
 bilateralFilter d sigmaColor sigmaSpace borderType src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -233,8 +235,8 @@ laplacianImg = exceptError $ do
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#laplacian OpenCV Sphinx doc>
 -}
 laplacian
-    :: forall shape channels srcDepth dstDepth
-     . (ToDepth (Proxy dstDepth))
+    :: forall shape channels srcDepth dstDepth m
+     . (ToDepth (Proxy dstDepth), MonadError CvException m)
     => Maybe Int32
        -- ^ Aperture size used to compute the second-derivative filters. The
        -- size must be positive and odd. Default value is 1.
@@ -247,7 +249,7 @@ laplacian
     -> Maybe BorderMode
        -- ^ Pixel extrapolation method.
     -> Mat shape channels srcDepth
-    -> CvExcept (Mat shape channels ('S dstDepth))
+    -> m (Mat shape channels ('S dstDepth))
 laplacian ksize scale delta borderType src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -291,7 +293,7 @@ medianBlurImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
-      birdsBlurred <- pureExcept $ medianBlur birds_512x341 13
+      birdsBlurred <- medianBlur birds_512x341 13
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
@@ -307,6 +309,7 @@ medianBlurImg = exceptError $
 medianBlur
     :: ( depth    `In` '[Word8, Word16, Float]
        , channels `In` '[1, 3, 4]
+       , MonadError CvException m
        -- , Length shape <= 2
        )
     => Mat shape ('S channels) ('S depth)
@@ -316,7 +319,7 @@ medianBlur
     -> Int32
        -- ^ Aperture linear size; it must be odd and greater than 1, for
        -- example: 3, 5, 7...
-    -> CvExcept (Mat shape ('S channels) ('S depth))
+    -> m (Mat shape ('S channels) ('S depth))
 medianBlur matIn ksize = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -344,7 +347,7 @@ boxBlurImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
-      birdsBlurred <- pureExcept $ blur (V2 13 13 :: V2 Int32) birds_512x341
+      birdsBlurred <- blur (V2 13 13 :: V2 Int32) birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
@@ -358,10 +361,11 @@ boxBlurImg = exceptError $
 blur
   :: ( depth `In` '[Word8, Word16, Int16, Float, Double]
      , IsSize  size  Int32
+     , MonadError CvException m
      )
   => size  Int32 -- ^ Blurring kernel size.
   -> Mat shape ('S channels) ('S depth)
-  -> CvExcept (Mat shape ('S channels) ('S depth))
+  -> m (Mat shape ('S channels) ('S depth))
 blur size matIn =
   unsafeWrapException $
   do matOut <- newEmptyMat
@@ -382,12 +386,13 @@ blur size matIn =
 gaussianBlur
   :: ( depth `In` '[Word8, Word16, Float, Double]
      , IsSize size Int32
+     , MonadError CvException m
      )
   => size Int32 -- ^ Blurring kernel size.
   -> Double -- ^ sigmaX
   -> Double -- ^ sigmaY
   -> Mat shape ('S channels) ('S depth)
-  -> CvExcept (Mat shape ('S channels) ('S depth))
+  -> m (Mat shape ('S channels) ('S depth))
 gaussianBlur size sigmaX sigmaY matIn =
   unsafeWrapException $
   do matOut <- newEmptyMat
@@ -432,7 +437,7 @@ erodeImg = exceptError $
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
       erodedLambda <-
-        pureExcept $ erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
+        erode lambda Nothing (Nothing :: Maybe Point2i) 5 BorderReplicate
       matCopyToM imgM (V2 0 0) lambda Nothing
       matCopyToM imgM (V2 w 0) erodedLambda Nothing
   where
@@ -446,6 +451,7 @@ erodeImg = exceptError $
 erode
     :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
+       , MonadError CvException m
        )
     => Mat shape channels ('S depth) -- ^ Input image.
     -> Maybe (Mat ('S [sh, sw]) ('S 1) ('S Word8))
@@ -455,7 +461,7 @@ erode
     -> Maybe (point2 Int32) -- ^ anchor
     -> Int -- ^ iterations
     -> BorderMode
-    -> CvExcept (Mat shape channels ('S depth))
+    -> m (Mat shape channels ('S depth))
 erode src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -506,7 +512,7 @@ filter2DImg = exceptError $
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
       filteredBird <-
-        pureExcept $ filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
+        filter2D birds_512x341 kernel (Nothing :: Maybe Point2i) 0 BorderReplicate
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) filteredBird Nothing
   where
@@ -532,6 +538,7 @@ filter2DImg = exceptError $
 filter2D
     :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
+       , MonadError CvException m
        )
     => Mat shape channels ('S depth) -- ^ Input image.
     -> Mat ('S [sh, sw]) ('S 1) ('S Double)
@@ -543,7 +550,7 @@ filter2D
     -> Maybe (point2 Int32) -- ^ anchor
     -> Double -- ^ delta
     -> BorderMode
-    -> CvExcept (Mat shape channels ('S depth))
+    -> m (Mat shape channels ('S depth))
 filter2D src kernel mbAnchor delta borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -590,7 +597,7 @@ dilateImg = exceptError $
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
       dilatedLambda <-
-        pureExcept $ dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
+        dilate lambda Nothing (Nothing :: Maybe Point2i) 3 BorderReplicate
       matCopyToM imgM (V2 0 0) lambda Nothing
       matCopyToM imgM (V2 w 0) dilatedLambda Nothing
   where
@@ -605,6 +612,7 @@ dilateImg = exceptError $
 dilate
     :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
+       , MonadError CvException m
        )
     => Mat shape channels ('S depth) -- ^ Input image.
     -> Maybe (Mat ('S [sh, sw]) ('S 1) ('S Word8))
@@ -614,7 +622,7 @@ dilate
     -> Maybe (point2 Int32) -- ^ anchor
     -> Int -- ^ iterations
     -> BorderMode
-    -> CvExcept (Mat shape channels ('S depth))
+    -> m (Mat shape channels ('S depth))
 dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -651,6 +659,7 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 morphologyEx
     :: ( IsPoint2 point2 Int32
        , depth `In` [Word8, Word16, Int16, Float, Double]
+       , MonadError CvException m
        )
      => Mat shape channels ('S depth) -- ^ Source image.
     -> MorphOperation -- ^ Type of a morphological operation.
@@ -658,7 +667,7 @@ morphologyEx
     -> Maybe (point2 Int32) -- ^ Anchor position with the kernel.
     -> Int -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
-    -> CvExcept (Mat shape channels ('S depth))
+    -> m (Mat shape channels ('S depth))
 morphologyEx src op kernel mbAnchor iterations borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -721,11 +730,11 @@ morphCrossImg = structureImg $ MorphCross $ toPoint (pure (-1) :: V2 Int32)
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#getstructuringelement OpenCV Sphinx doc>
 -}
 getStructuringElement
-    :: (ToInt32 height, ToInt32 width)
+    :: (ToInt32 height, ToInt32 width, MonadError CvException m)
     => MorphShape -- ^
     -> height
     -> width
-    -> CvExcept (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
+    -> m (Mat (ShapeT (height ::: width ::: Z)) ('S 1) ('S Word8))
 getStructuringElement morphShape height width = unsafeWrapException $ do
     element <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat element) $

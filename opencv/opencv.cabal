@@ -129,6 +129,7 @@ library
       , text              >= 1.2.2.1
       , transformers      >= 0.4.2
       , vector            >= 0.11
+      , mtl
 
     exposed-modules:
         OpenCV

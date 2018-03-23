@@ -66,6 +66,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.Vector ( zero )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -125,7 +126,7 @@ resizeInterAreaImg = exceptError $
              (Proxy :: Proxy Word8)
              transparent $ \\imgM -> do
       birds_resized <-
-        pureExcept $ resize (ResizeRel $ pure 0.5) InterArea birds_768x512
+        resize (ResizeRel $ pure 0.5) InterArea birds_768x512
       matCopyToM imgM (V2 0 0) birds_768x512 Nothing
       matCopyToM imgM (V2 w 0) birds_resized Nothing
       lift $ arrowedLine imgM (V2 startX y) (V2 pointX y) red 4 LineType_8 0 0.15
@@ -141,10 +142,11 @@ resizeInterAreaImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#resize OpenCV Sphinx doc>
 -}
 resize
-    :: ResizeAbsRel
+    :: MonadError CvException m
+    => ResizeAbsRel
     -> InterpolationMethod
     -> Mat ('S [height, width]) channels depth
-    -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+    -> m (Mat ('S ['D, 'D]) channels depth)
 resize factor interpolationMethod src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -192,13 +194,14 @@ warpAffineInvImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
 warpAffine
-    :: Mat ('S [height, width]) channels depth -- ^ Source image.
+    :: MonadError CvException m
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> CvExcept (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
+    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
@@ -229,13 +232,14 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: Mat ('S [height, width]) channels depth -- ^ Source image.
+    :: MonadError CvException m
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> CvExcept (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
+    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
 warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
@@ -266,8 +270,9 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#invertaffinetransform OpenCV Sphinx doc>
 invertAffineTransform
-    :: Mat (ShapeT [2, 3]) ('S 1) depth -- ^
-    -> CvExcept (Mat (ShapeT [2, 3]) ('S 1) depth)
+    :: MonadError CvException m
+    => Mat (ShapeT [2, 3]) ('S 1) depth -- ^
+    -> m (Mat (ShapeT [2, 3]) ('S 1) depth)
 invertAffineTransform matIn = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -325,14 +330,14 @@ linearPolarImg = exceptError $
 <<doc/generated/examples/linearPolarImg.png linearPolarImg>>
 -}
 linearPolar
-    :: (IsPoint2 point2 CFloat)
+    :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> point2 CFloat -- ^ Center.
     -> Double -- ^ Max radius.
     -> InterpolationMethod -- ^ Interpolation algorithm.
     -> Bool -- ^ Inverse mapping.
     -> Bool -- ^ Fill outliers.
-    -> CvExcept (Mat ('S [height, width]) channels depth)
+    -> m (Mat ('S [height, width]) channels depth)
 linearPolar src center maxRadius interpolationMethod inverse fillOutliers =
     unsafeWrapException $ do
       dst <- newEmptyMat
@@ -403,14 +408,14 @@ logPolarImg = exceptError $
 <<doc/generated/examples/logPolarImg.png logPolarImg>>
 -}
 logPolar
-    :: (IsPoint2 point2 CFloat)
+    :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> point2 CFloat -- ^ Center.
     -> Double -- ^ Magnitude scale.
     -> InterpolationMethod -- ^ Interpolation algorithm.
     -> Bool -- ^ Inverse mapping.
     -> Bool -- ^ Fill outliers.
-    -> CvExcept (Mat ('S [height, width]) channels depth)
+    -> m (Mat ('S [height, width]) channels depth)
 logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
     unsafeWrapException $ do
       dst <- newEmptyMat
@@ -524,7 +529,8 @@ remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConsta
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap OpenCV documentation>
 -}
 remap
-    :: Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
+    :: MonadError CvException m
+    => Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
        -- ^ Source image.
     -> Mat ('S [outputHeight, outputWidth]) ('S 2) ('S Float)
        -- ^ A map of @(x, y)@ points.
@@ -532,7 +538,7 @@ remap
        -- ^ Interpolation method to use. Note that 'InterArea' is not
        -- supported by this function.
     -> BorderMode
-    -> CvExcept (Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth)
+    -> m (Mat ('S [outputHeight, outputWidth]) inputChannels inputDepth)
 remap src mapping interpolationMethod borderMode = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $

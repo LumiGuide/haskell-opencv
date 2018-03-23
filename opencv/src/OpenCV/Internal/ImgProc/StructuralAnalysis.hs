@@ -28,6 +28,7 @@ import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Rect ( HRect(..), Rect2i, toRectIO )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -83,14 +84,15 @@ approxHandContourImg = do
 <<doc/generated/examples/approxHandContourImg.png approxHandContourImg>>
 -}
 approxPolyDP
-    :: forall point2 depth
+    :: forall point2 depth m
      . ( IsPoint2 point2 depth
        , ApproxPolyDP depth
+       , MonadError CvException m
        )
     => V.Vector (point2 depth)
     -> Double -- ^ epsilon
     -> Bool   -- ^ is closed
-    -> CvExcept (V.Vector (Point 2 depth))
+    -> m (V.Vector (Point 2 depth))
 approxPolyDP curve epsilon isClosed = unsafeWrapException $
     withArrayPtr (V.map toPoint curve) $ \curvePtr ->
     alloca $ \(approxPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
@@ -205,12 +207,13 @@ rectangle for the specified point set.
 -- TODO (RvD): non empty set of points, or check if V.length points >=
 -- 1 in haskell.
 boundingRect
-    :: forall point2 depth
+    :: forall point2 depth m
      . ( IsPoint2 point2 depth
        , BoundingRect depth
+       , MonadError CvException m
        )
     => V.Vector (point2 depth)
-    -> CvExcept Rect2i
+    -> m Rect2i
 boundingRect points = unsafeWrapException $ do
     result <- toRectIO $ HRect 0 0
     withArrayPtr (V.map toPoint points) $ \pointsPtr ->
@@ -285,9 +288,10 @@ handConvexHullImg = do
 <<doc/generated/examples/handConvexHull.png handConvexHullImg>>
 -}
 convexHull
-    :: forall point2 depth
+    :: forall point2 depth m
      . ( IsPoint2 point2 depth
        , ConvexHull depth
+       , MonadError CvException m
        )
     => V.Vector (point2 depth)
        -- ^ Input 2D point set.
@@ -296,7 +300,7 @@ convexHull
        -- clockwise. Otherwise, it is oriented counter-clockwise. The assumed
        -- coordinate system has its X axis pointing to the right, and its Y axis
        -- pointing upwards.
-    -> CvExcept (V.Vector (Point 2 depth))
+    -> m (V.Vector (Point 2 depth))
        -- ^ Output convex hull.
 convexHull points clockwise = unsafeWrapException $
     withArrayPtr (V.map toPoint points) $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
@@ -403,9 +407,10 @@ Finds the convex hull of a 2D point set using the Sklansky's algorithm
 that has \( O(n \log n) \) complexity in the current implementation.
 -}
 convexHullIndices
-    :: forall point2 depth
+    :: forall point2 depth m
      . ( IsPoint2 point2 depth
        , ConvexHullIndices depth
+       , MonadError CvException m
        )
     => V.Vector (point2 depth)
        -- ^ Input 2D point set.
@@ -414,7 +419,7 @@ convexHullIndices
        -- clockwise. Otherwise, it is oriented counter-clockwise. The assumed
        -- coordinate system has its X axis pointing to the right, and its Y axis
        -- pointing upwards.
-    -> CvExcept (VS.Vector Int32)
+    -> m (VS.Vector Int32)
        -- ^ Indices of those points in the input set that are part of the convex hull.
 convexHullIndices points clockwise = unsafeWrapException $
     withArrayPtr (V.map toPoint points) $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->

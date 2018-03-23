@@ -12,6 +12,7 @@ module OpenCV.VideoIO.VideoWriter
   , videoWriterWrite
   ) where
 
+import "base" Control.Monad.IO.Class ( MonadIO, liftIO )
 import "base" Data.Int ( Int32 )
 import "base" Foreign.C.String ( withCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
@@ -20,6 +21,7 @@ import "linear" Linear.V2 ( V2(..) )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.VideoIO.Types
 import "this" OpenCV.Internal
@@ -28,7 +30,6 @@ import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except ( ExceptT(ExceptT) )
 
 --------------------------------------------------------------------------------
 
@@ -110,9 +111,10 @@ videoWriterOpen sink =
             c'fps = realToFrac (vfsFps vfs)
             c'fourCC = unFourCC (vfsFourCC vfs)
 
-videoWriterRelease :: VideoWriter -> CvExceptT IO ()
+videoWriterRelease :: (MonadIO m, MonadError CvException m) => VideoWriter -> m ()
 videoWriterRelease videoWriter =
-    ExceptT $
+    wrapException $
+    liftIO $
     handleCvException (pure ()) $
     withPtr videoWriter $ \videoWriterPtr ->
       [cvExcept|
@@ -127,9 +129,10 @@ videoWriterIsOpened videoWriter =
         $(VideoWriter * videoWriterPtr)->isOpened()
       }|]
 
-videoWriterWrite :: VideoWriter -> Mat ('S ['D, 'D]) 'D 'D -> CvExceptT IO ()
+videoWriterWrite :: (MonadError CvException m, MonadIO m) => VideoWriter -> Mat ('S ['D, 'D]) 'D 'D -> m ()
 videoWriterWrite videoWriter frame =
-    ExceptT $
+    wrapException $
+    liftIO $
     handleCvException (pure ()) $
     withPtr frame $ \framePtr ->
     withPtr videoWriter $ \videoWriterPtr ->
