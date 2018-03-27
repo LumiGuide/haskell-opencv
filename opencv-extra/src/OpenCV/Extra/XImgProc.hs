@@ -11,6 +11,7 @@ import "base" Data.Int
 import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "opencv" OpenCV.Core.Types
 import "opencv" OpenCV.Internal.Core.Types.Mat
 import "opencv" OpenCV.Internal.C.Types
@@ -62,13 +63,14 @@ anisotropicDiffusionImg = exceptError $ anisotropicDiffusion 1.0 0.02 10 birds_7
 <<doc/generated/examples/anisotropicDiffusionImg.png anisotropicDiffusionImg>>
 -}
 anisotropicDiffusion
-    :: Float
+    :: (MonadError CvException m)
+    => Float
        -- ^ The amount of time to step forward by on each iteration (normally,
        -- it's between 0 and 1). Must be > 0.
     -> Float -- ^ Sensitivity to the edges. Must be /= 0.
     -> Int32 -- ^ The number of iterations. Must be >= 0.
     -> Mat ('S '[h, w]) ('S 3) ('S Word8)
-    -> CvExcept (Mat ('S '[h, w]) ('S 3) ('S Word8))
+    -> m (Mat ('S '[h, w]) ('S 3) ('S Word8))
 anisotropicDiffusion alpha k niters src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -130,7 +132,8 @@ codexLeicesterSAUVOLA = niBlackThresholdExample Binarization_SAUVOLA
 <<doc/generated/examples/codexLeicesterSAUVOLA.png codexLeicesterSAUVOLA>>
 -}
 niBlackThreshold
-    :: ThreshType
+    :: (MonadError CvException m)
+    => ThreshType
     -> Int32
        -- ^ Size of a pixel neighborhood that is used to calculate a
        -- threshold value for the pixel. Must be odd and >= 1.
@@ -142,7 +145,7 @@ niBlackThreshold
        -- subtracted from the mean.
     -> BinarizationMethod -- ^ Binarization method to use.
     -> Mat ('S '[h, w]) ('S 1) ('S Word8) -- ^ Source image.
-    -> CvExcept (Mat ('S '[h, w]) ('S 1) ('S Word8))
+    -> m (Mat ('S '[h, w]) ('S 1) ('S Word8))
 niBlackThreshold threshType blockSize k binarizationMethod src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
