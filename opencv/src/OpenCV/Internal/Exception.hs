@@ -182,22 +182,19 @@ cvExceptWrap s = unlines
    , "}"
    ]
 
-type CvExcept    a = Except  CvException   a
-type CvExceptT m a = ExceptT CvException m a
-
-exceptError :: CvExcept a -> a
+exceptError :: Except CvException a -> a
 exceptError = either throw id . runExcept
 
-exceptErrorIO :: CvExceptT IO a -> IO a
+exceptErrorIO :: ExceptT CvException IO a -> IO a
 exceptErrorIO = either throwIO pure <=< runExceptT
 
-exceptErrorM :: (Monad m) => CvExceptT m a -> m a
+exceptErrorM :: (Monad m) => ExceptT CvException m a -> m a
 exceptErrorM = either throw pure <=< runExceptT
 
-runCvExceptST :: MonadError CvException m => (forall s. CvExceptT (ST s) a) -> m a
+runCvExceptST :: MonadError CvException m => (forall s. ExceptT CvException (ST s) a) -> m a
 runCvExceptST act = either throwError return $ runST $ runExceptT act
 
-unsafeCvExcept :: MonadError CvException m => CvExceptT IO a -> m a
+unsafeCvExcept :: MonadError CvException m => ExceptT CvException IO a -> m a
 unsafeCvExcept = either throwError return . unsafePerformIO . runExceptT
 
 unsafeWrapException :: MonadError CvException m => IO (Either CvException a) -> m a
