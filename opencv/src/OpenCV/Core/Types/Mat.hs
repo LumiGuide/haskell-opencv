@@ -79,6 +79,7 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V4 ( V4(..) )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types.Rect ( Rect2i )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -163,9 +164,10 @@ matSubRectImg = exceptError $
 <<doc/generated/examples/matSubRectImg.png matSubRectImg>>
 -}
 matSubRect
-    :: Mat ('S [height, width]) channels depth
+    :: MonadError CvException m
+    => Mat ('S [height, width]) channels depth
     -> Rect2i
-    -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+    -> m (Mat ('S ['D, 'D]) channels depth)
 matSubRect matIn rect = unsafeWrapException $ do
     matOut <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -180,16 +182,17 @@ matSubRect matIn rect = unsafeWrapException $ do
         |]
 
 matCopyTo
-    :: Mat ('S [dstHeight, dstWidth]) channels depth -- ^
+    :: MonadError CvException m
+    => Mat ('S [dstHeight, dstWidth]) channels depth -- ^
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
-    -> CvExcept (Mat ('S [dstHeight, dstWidth]) channels depth)
+    -> m (Mat ('S [dstHeight, dstWidth]) channels depth)
 matCopyTo dst topLeft src mbSrcMask = runST $ do
     dstM <- thaw dst
     eResult <- runExceptT $ matCopyToM dstM topLeft src mbSrcMask
     case eResult of
-      Left err -> pure $ throwE err
+      Left err -> pure $ throwError err
       Right () -> pure <$> unsafeFreeze dstM
 
 
@@ -198,12 +201,12 @@ matCopyTo dst topLeft src mbSrcMask = runST $ do
 <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html?highlight=convertto#mat-convertto OpenCV Sphinx doc>
 -}
 matConvertTo
-    :: forall shape channels srcDepth dstDepth
-     . (ToDepthDS (Proxy dstDepth))
+    :: forall shape channels srcDepth dstDepth m
+     . (MonadError CvException m, ToDepthDS (Proxy dstDepth))
     => Maybe Double -- ^ Optional scale factor.
     -> Maybe Double -- ^ Optional delta added to the scaled values.
     -> Mat shape channels srcDepth
-    -> CvExcept (Mat shape channels dstDepth)
+    -> m (Mat shape channels dstDepth)
 matConvertTo alpha beta src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -261,17 +264,18 @@ matFromFuncImg = exceptError $
 <<doc/generated/examples/matFromFuncImg.png matFromFuncImg>>
 -}
 matFromFunc
-    :: forall shape channels depth
+    :: forall shape channels depth m
      . ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , Storable   (StaticDepthT depth)
+       , MonadError CvException m
        )
     => shape
     -> channels
     -> depth
     -> ([Int] -> Int -> StaticDepthT depth) -- ^
-    -> CvExcept (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
+    -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 matFromFunc shape channels depth func =
     withMatM shape channels depth (0 :: V4 Double) $ \matM ->
       forM_ positions $ \pos ->
@@ -292,13 +296,14 @@ matFromFunc shape channels depth func =
 --------------------------------------------------------------------------------
 
 matCopyToM
-    :: (PrimMonad m)
+    :: (PrimMonad m, MonadError CvException m)
     => Mut (Mat ('S [dstHeight, dstWidth]) channels depth) (PrimState m) -- ^
     -> V2 Int32 -- ^
     -> Mat ('S [srcHeight, srcWidth]) channels depth -- ^
     -> Maybe (Mat ('S [srcHeight, srcWidth]) ('S 1) ('S Word8))
-    -> CvExceptT m ()
-matCopyToM dstM (V2 x y) src mbSrcMask = ExceptT $
+    -> m ()
+matCopyToM dstM (V2 x y) src mbSrcMask =
+    (>>= either throwError return) $
     unsafePrimToPrim $ handleCvException (pure ()) $
     withPtr dstM $ \dstPtr ->
     withPtr src $ \srcPtr ->

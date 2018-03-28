@@ -16,6 +16,7 @@ import "base" Data.Int
 import "base" Data.Word
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
@@ -191,14 +192,14 @@ matchTemplateImg = exceptError $
 <<doc/generated/examples/matchTemplateImg.png matchTemplateImg>>
 -}
 matchTemplate
-    :: (depth `In` [Word8, Float])
+    :: (depth `In` [Word8, Float], MonadError CvException m)
     => Mat ('S [sh, sw]) ('S channels) ('S depth)
        -- ^ Image where the search is running. It must be 8-bit or 32-bit floating-point.
     -> Mat ('S [th, tw]) ('S channels) ('S depth)
        -- ^ Searched template. It must be not greater than the source image and have the same data type.
     -> MatchTemplateMethod -- ^ Comparison method.
     -> MatchTemplateNormalisation -- ^ Normalization.
-    -> CvExcept (Mat ('S [rh, rw]) ('S 1) ('S Float))
+    -> m (Mat ('S [rh, rw]) ('S 1) ('S Float))
        -- ^ Map of comparison results. It must be single-channel 32-bit
        -- floating-point. If image is \(W \times H\) and templ is
        -- \(w \times h\), then result is \((W-w+1) \times (H-h+1)\).

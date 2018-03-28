@@ -204,7 +204,7 @@ toImage m  = unsafePerformIO $ do
     MatInfo [fromIntegral -> h, fromIntegral -> w] _ _  = matInfo m
 
 -- | An OpenCV 2D-filter preserving the matrix type
-type Filter m h w c d = Mat2D h w c d -> CvExceptT m (Mat2D h w c d)
+type Filter m h w c d = Mat2D h w c d -> m (Mat2D h w c d)
 
 -- | Apply an OpenCV 2D-filter to a JuicyPixels dynamic matrix,
 -- preserving the Juicy pixel encoding
@@ -212,7 +212,7 @@ isoJuicy
     :: forall m. (PrimMonad m)
     => (forall c d h w. Filter m h w c d) -- ^ OpenCV 2D-filter
     -> DynamicImage -- ^ JuicyPixels dynamic image
-    -> CvExceptT m DynamicImage
+    -> m DynamicImage
 isoJuicy f (ImageRGB8 i)    =  ImageRGB8    <$> isoApply f i
 isoJuicy f (ImageRGB16 i)   =  ImageRGB16   <$> isoApply f i
 isoJuicy f (ImageRGBF i)    =  ImageRGBF    <$> isoApply f i

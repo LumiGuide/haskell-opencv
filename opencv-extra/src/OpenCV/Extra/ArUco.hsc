@@ -44,6 +44,7 @@ import "base" System.IO.Unsafe
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "opencv" OpenCV
 import "opencv" OpenCV.Core.Types.Vec (Vec3d)
 import "opencv" OpenCV.Internal
@@ -267,11 +268,12 @@ drawEstimatedPose cameraMatrix distCoeffs (rvec, tvec) image = unsafePrimToPrim 
 camera calibration.
 -}
 calibrateCameraFromFrames
-    :: CharucoBoard
+    :: (MonadError CvException m)
+    => CharucoBoard
     -> Int
     -> Int
     -> [(ArUcoMarkers, CharucoMarkers)]
-    -> CvExcept (Matx33d, Matx51d)
+    -> m (Matx33d, Matx51d)
 calibrateCameraFromFrames board width height frames = unsafeWrapException $ do
     cameraMatrix <- newMatx33d 0 0 0 0 0 0 0 0 0
     distCoeffs <- newMatx51d 0 0 0 0 0

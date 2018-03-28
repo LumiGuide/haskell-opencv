@@ -86,6 +86,7 @@ library
       , bytestring        >= 0.10.6
       , containers        >= 0.5.6.2
       , linear            >= 1.20.4
+      , mtl
       , opencv            >= 0.0.0.0
       , primitive         >= 0.6.1
       , template-haskell  >= 2.10

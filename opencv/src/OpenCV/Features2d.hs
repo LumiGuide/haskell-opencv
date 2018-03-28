@@ -54,6 +54,7 @@ import "linear" Linear.V4
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Features2d.Constants
@@ -240,10 +241,11 @@ orbDetectAndComputeImg = exceptError $ do
 <<doc/generated/examples/orbDetectAndComputeImg.png orbDetectAndComputeImg>>
 -}
 orbDetectAndCompute
-    :: Orb
+    :: MonadError CvException m
+    => Orb
     -> Mat ('S [height, width]) channels depth -- ^ Image.
     -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8)) -- ^ Mask.
-    -> CvExcept ( V.Vector KeyPoint
+    -> m ( V.Vector KeyPoint
                 , Mat 'D 'D 'D
                 )
 orbDetectAndCompute orb img mbMask = unsafeWrapException $ do
@@ -454,10 +456,11 @@ mkSimpleBlobDetector = unsafePerformIO . newSimpleBlobDetector
 {- | Detect keypoints and compute descriptors
 -}
 blobDetect
-    :: SimpleBlobDetector
+    :: MonadError CvException m
+    => SimpleBlobDetector
     -> Mat ('S [height, width]) channels depth -- ^ Image.
     -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8)) -- ^ Mask.
-    -> CvExcept (V.Vector KeyPoint)
+    -> m (V.Vector KeyPoint)
 blobDetect detector img mbMask = unsafeWrapException $ do
     withPtr detector $ \detectorPtr ->
       withPtr img $ \imgPtr ->
@@ -659,7 +662,7 @@ bfMatcherImg = do
                      descs1 -- Query descriptors
                      descs2 -- Train descriptors
                      Nothing
-    exceptErrorIO $ pureExcept $
+    exceptErrorIO $
       withMatM (Proxy :: Proxy [height, width2])
                (Proxy :: Proxy channels)
                (Proxy :: Proxy depth)
@@ -778,7 +781,7 @@ fbMatcherImg = do
                      descs1 -- Query descriptors
                      descs2 -- Train descriptors
                      Nothing
-    exceptErrorIO $ pureExcept $
+    exceptErrorIO $
       withMatM (Proxy :: Proxy [height, width2])
                (Proxy :: Proxy channels)
                (Proxy :: Proxy depth)
@@ -908,13 +911,14 @@ instance Default DrawMatchesParams where
         , flags = 0
         }
 
-drawMatches :: Mat ('S [height, width]) channels depth
+drawMatches :: MonadError CvException m
+            => Mat ('S [height, width]) channels depth
             -> V.Vector KeyPoint
             -> Mat ('S [height, width]) channels depth
             -> V.Vector KeyPoint
             -> V.Vector DMatch
             -> DrawMatchesParams
-            -> CvExcept (Mat ('S ['D, 'D]) channels depth)
+            -> m (Mat ('S ['D, 'D]) channels depth)
 drawMatches img1 keypoints1 img2 keypoints2 matches1to2 (DrawMatchesParams{..}) = unsafeWrapException $ do
     outImg <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat outImg) $

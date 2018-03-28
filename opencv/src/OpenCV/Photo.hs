@@ -19,6 +19,7 @@ import "base" Data.Int ( Int32 )
 import "base" Data.Word ( Word8 )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types ( withPtr )
 import "this" OpenCV.Internal.Exception
@@ -88,14 +89,16 @@ inpaintImg = exceptError $ do
 <<doc/generated/examples/inpaintImg.png inpaintImg>>
 -}
 inpaint
-   :: (channels `In` [1, 3])
+   :: ( channels `In` [1, 3]
+      , MonadError CvException m
+      )
    => Double
       -- ^ inpaintRadius - Radius of a circular neighborhood of each
       -- point inpainted that is considered by the algorithm.
    -> InpaintingMethod
    -> Mat ('S [h, w]) ('S channels) ('S Word8) -- ^ Input image.
    -> Mat ('S [h, w]) ('S 1) ('S Word8) -- ^ Inpainting mask.
-   -> CvExcept (Mat ('S [h, w]) ('S channels) ('S Word8)) -- ^ Output image.
+   -> m (Mat ('S [h, w]) ('S channels) ('S Word8)) -- ^ Output image.
 inpaint inpaintRadius method src inpaintMask = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -143,7 +146,8 @@ fastNlMeansDenoisingColoredImg = exceptError $ do
 -}
 
 fastNlMeansDenoisingColored
-   :: Double -- ^ Parameter regulating filter strength for luminance component.
+   :: ( MonadError CvException m )
+   => Double -- ^ Parameter regulating filter strength for luminance component.
              -- Bigger h value perfectly removes noise but also removes image
              -- details, smaller h value preserves details but also preserves
              -- some noise
@@ -158,7 +162,7 @@ fastNlMeansDenoisingColored
              -- Affect performance linearly: greater searchWindowsSize
              -- - greater denoising time. Recommended value 21 pixels
    -> Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image 8-bit 3-channel image.
-   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+   -> m (Mat ('S [h, w]) ('S 3) ('S Word8))
              -- ^ Output image same size and type as input.
 fastNlMeansDenoisingColored h hColor templateWindowSize searchWindowSize src =
   unsafeWrapException $ do
@@ -213,7 +217,8 @@ fastNlMeansDenoisingColoredMultiImg = exceptError $ do
 -}
 
 fastNlMeansDenoisingColoredMulti
-   :: Double -- ^ Parameter regulating filter strength for luminance component.
+   :: ( MonadError CvException m )
+   => Double -- ^ Parameter regulating filter strength for luminance component.
              -- Bigger h value perfectly removes noise but also removes image
              -- details, smaller h value preserves details but also preserves
              -- some noise
@@ -229,7 +234,7 @@ fastNlMeansDenoisingColoredMulti
              -- greater denoising time. Recommended value 21 pixels
    -> V.Vector (Mat ('S [h, w]) ('S 3) ('S Word8))
              -- ^ Vector of odd number of input 8-bit 3-channel images.
-   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+   -> m (Mat ('S [h, w]) ('S 3) ('S Word8))
              -- ^ Output image same size and type as input.
 
 fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize srcVec =
@@ -290,11 +295,12 @@ denoise_TVL1Img = exceptError $ do
 -}
 
 denoise_TVL1
-   :: Double -- ^ details more is more 2
+   :: MonadError CvException m
+   => Double -- ^ details more is more 2
    -> Int32  -- ^ Number of iterations that the algorithm will run
    -> V.Vector (Mat ('S [h, w]) ('S 1) ('S Word8))
              -- ^ Vector of odd number of input 8-bit 3-channel images.
-   -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
+   -> m (Mat ('S [h, w]) ('S 1) ('S Word8))
              -- ^ Output image same size and type as input.
 
 denoise_TVL1 lambda niters srcVec = unsafeWrapException $ do
@@ -350,8 +356,9 @@ decolorImg = exceptError $ do
 -}
 
 decolor
-   :: Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
-   -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8), Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output images.
+   :: MonadError CvException m
+   => Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
+   -> m (Mat ('S [h, w]) ('S 1) ('S Word8), Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output images.
 
 decolor src = unsafeWrapException $ do
     gray <- newEmptyMat

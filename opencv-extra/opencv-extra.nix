@@ -14,6 +14,7 @@
 , data-default
 , inline-c
 , inline-c-cpp
+, mtl
 , opencv
 , primitive
 , template-haskell
@@ -55,6 +56,7 @@ mkDerivation {
     containers
     inline-c
     inline-c-cpp
+    mtl
     opencv
     primitive
     template-haskell

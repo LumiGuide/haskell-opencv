@@ -39,6 +39,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types ( Mut )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Vec ( fromVec, Vec4i )
@@ -135,10 +136,10 @@ data Contour
      } deriving Show
 
 arcLength
-    :: (IsPoint2 point2 Int32)
+    :: (IsPoint2 point2 Int32, MonadError CvException m)
     => V.Vector (point2 Int32)
     -> Bool -- ^ is closed
-    -> CvExcept Double
+    -> m Double
 arcLength curve isClosed = unsafeWrapException $
     withArrayPtr (V.map toPoint curve) $ \curvePtr ->
     alloca $ \c'resultPtr ->
@@ -168,12 +169,12 @@ will most certainly give a wrong results for contours with self-intersections.
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=contourarea#cv2.contourArea OpenCV Sphinx doc>
 -}
 contourArea
-    :: (IsPoint2 point2 CFloat)
+    :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat)
        -- ^ Input vector of 2D points (contour vertices).
     -> ContourAreaOriented
        -- ^ Signed or unsigned area
-    -> CvExcept Double
+    -> m Double
 contourArea contour areaOriented = unsafeWrapException $
     withArrayPtr (V.map toPoint contour) $ \contourPtr ->
     alloca $ \c'area ->
@@ -239,12 +240,12 @@ handDefectsImg = do
 <<doc/generated/examples/handDefectsImg.png handDefectsImg>>
 -}
 convexityDefects
-    :: (IsPoint2 point2 Int32)
+    :: (IsPoint2 point2 Int32, MonadError CvException m)
     => V.Vector (point2 Int32) -- ^ Input contour
     -> VS.Vector Int32
        -- ^ Indices (0 based) of those points in the input contour
        -- that form a convex hull.
-    -> CvExcept (V.Vector Vec4i)
+    -> m (V.Vector Vec4i)
        -- ^ The output vector of convexity defects.
 convexityDefects contour hull = unsafeWrapException $
     withArrayPtr (V.map toPoint contour) $ \contourPtr ->
@@ -456,9 +457,9 @@ is undefined.
 -}
 -- TODO (RvD): support Int32 points
 isContourConvex
-    :: (IsPoint2 point2 CFloat)
+    :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat)
-    -> CvExcept Bool
+    -> m Bool
 isContourConvex contour = unsafeWrapException $
     alloca $ \c'resultPtr ->
     handleCvException (toBool <$> peek c'resultPtr) $
@@ -501,6 +502,7 @@ minAreaRect points =
 pointPolygonTest
     :: ( IsPoint2 contourPoint2 CFloat
        , IsPoint2 testPoint2    CFloat
+       , MonadError CvException m
        )
     => V.Vector (contourPoint2 CFloat) -- ^ Contour.
     -> testPoint2 CFloat -- ^ Point tested against the contour.
@@ -508,7 +510,7 @@ pointPolygonTest
        -- ^ If true, the function estimates the signed distance from the point
        -- to the nearest contour edge. Otherwise, the function only checks if
        -- the point is inside a contour or not.
-    -> CvExcept Double
+    -> m Double
 pointPolygonTest contour pt measureDist = unsafeWrapException $
     withArrayPtr (V.map toPoint contour) $ \contourPtr ->
     withPtr (toPoint pt) $ \ptPtr ->

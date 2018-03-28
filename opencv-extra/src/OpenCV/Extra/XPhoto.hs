@@ -15,6 +15,7 @@ import "base" Data.Word ( Word8 )
 import "base" Data.Maybe ( fromMaybe )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "opencv" OpenCV.Internal.C.Inline ( openCvCtx )
 import "opencv" OpenCV.Internal.C.Types ( withPtr )
 import "opencv" OpenCV.Internal.Exception
@@ -57,10 +58,11 @@ dctDenoisingImg = exceptError $ do
 -}
 
 dctDenoising
-   :: Double -- ^ expected noise standard deviation
+   :: (MonadError CvException m)
+   => Double -- ^ expected noise standard deviation
    -> Maybe Int32  -- ^ size of block side where dct is computed use default 16
    -> Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image 8-bit 3-channel image.
-   -> CvExcept (Mat ('S [h, w]) ('S 3) ('S Word8))
+   -> m (Mat ('S [h, w]) ('S 3) ('S Word8))
              -- ^ Output image same size and type as input.
 dctDenoising sigma mPSize src =
   unsafeWrapException $ do

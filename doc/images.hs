@@ -194,7 +194,7 @@ loadAnimation delay fp = do
           case mbFrameRaw of
             Nothing -> pure $ reverse frames
             Just frameRaw -> do
-              frame <- exceptErrorIO $ pureExcept $ coerceMat frameRaw
+              frame <- exceptErrorIO $ coerceMat frameRaw
               grabFrames cap (frame : frames)
         else pure $ reverse frames
 

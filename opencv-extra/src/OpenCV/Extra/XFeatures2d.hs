@@ -25,6 +25,7 @@ import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "opencv" OpenCV.Core.Types
 import "opencv" OpenCV.Internal
 import "opencv" OpenCV.Internal.C.FinalizerTH
@@ -147,12 +148,11 @@ surfDetectAndComputeImg = exceptError $ do
 <<doc/generated/examples/surfDetectAndComputeImg.png surfDetectAndComputeImg>>
 -}
 surfDetectAndCompute
-    :: Surf
+    :: (MonadError CvException m)
+    => Surf
     -> Mat ('S [height, width]) channels depth -- ^ Image.
     -> Maybe (Mat ('S [height, width]) ('S 1) ('S Word8)) -- ^ Mask.
-    -> CvExcept ( V.Vector KeyPoint
-                , Mat 'D 'D 'D
-                )
+    -> m (V.Vector KeyPoint, Mat 'D 'D 'D)
 surfDetectAndCompute surf img mbMask = unsafeWrapException $ do
     descriptors <- newEmptyMat
     withPtr surf $ \surfPtr ->

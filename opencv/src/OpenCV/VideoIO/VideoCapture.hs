@@ -17,6 +17,7 @@ module OpenCV.VideoIO.VideoCapture
   , videoCaptureSetI
   ) where
 
+import "base" Control.Monad.IO.Class ( MonadIO, liftIO )
 import "base" Data.Int ( Int32 )
 import "base" Foreign.C.String ( withCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
@@ -24,6 +25,7 @@ import "base" Foreign.Marshal.Utils ( toBool )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types.Mat
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Exception
@@ -33,7 +35,6 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.VideoIO.Types
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except ( ExceptT(ExceptT) )
 
 --------------------------------------------------------------------------------
 
@@ -68,9 +69,10 @@ newVideoCapture = fromPtr $
       new cv::VideoCapture()
     }|]
 
-videoCaptureOpen :: VideoCapture -> VideoCaptureSource -> CvExceptT IO ()
+videoCaptureOpen :: ( MonadIO m, MonadError CvException m ) => VideoCapture -> VideoCaptureSource -> m ()
 videoCaptureOpen videoCapture src =
-    ExceptT $
+    wrapException $
+    liftIO $
     handleCvException (pure ()) $
     withPtr videoCapture $ \videoCapturePtr ->
       case src of
@@ -88,9 +90,10 @@ videoCaptureOpen videoCapture src =
             where
               c'device = device + maybe 0 marshalVideoCaptureAPI api
 
-videoCaptureRelease :: VideoCapture -> CvExceptT IO ()
+videoCaptureRelease :: (MonadIO m, MonadError CvException m) => VideoCapture -> m ()
 videoCaptureRelease videoCapture =
-    ExceptT $
+    wrapException $
+    liftIO $
     handleCvException (pure ()) $
     withPtr videoCapture $ \videoCapturePtr ->
       [cvExcept|

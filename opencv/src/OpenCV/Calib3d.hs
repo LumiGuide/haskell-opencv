@@ -30,6 +30,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "data-default" Data.Default
 import "linear" Linear ( V2 )
+import "mtl" Control.Monad.Error.Class ( MonadError, catchError, throwError )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Calib3d.Constants
@@ -224,7 +225,7 @@ The computed transformation is then refined further (using only inliers) with th
 Levenberg-Marquardt method to reduce the re-projection error even more.
 -}
 estimateAffine2D
-    :: forall point2. (IsPoint2 point2 CFloat)
+    :: forall point2 m. (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat)
     -> V.Vector (point2 CFloat)
     -> EstimateAffine2DMethod
@@ -239,7 +240,7 @@ estimateAffine2D
        -- ^ Maximum number of iterations of refining algorithm
        -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
        -- matrix will be output of robust method.
-    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
+    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
                         )
                 )
@@ -248,10 +249,11 @@ estimateAffine2D fromPts toPts method maxIters confidence refineIters = do
     -- If the c++ function can't find an affine transform it will return an
     -- empty matrix. We check for this case by trying to coerce the result to
     -- the desired type.
-    catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
-           (\case CoerceMatError _msgs -> pure Nothing
-                  otherError -> throwE otherError
-           )
+    wrapException . runExceptT $
+      catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+             (\case CoerceMatError _msgs -> pure Nothing
+                    otherError -> throwE otherError
+             )
   where
     c'estimateAffine2D = unsafeWrapException $ do
         h       <- newEmptyMat
@@ -315,7 +317,7 @@ Where \( \theta \) is the rotation angle, \( s \) the scaling factor
 and \( t_x, t_y \) are translations in \( x, y \) axes respectively.
 -}
 estimateAffinePartial2D
-    :: forall point2. (IsPoint2 point2 CFloat)
+    :: forall point2 m. (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat)
     -> V.Vector (point2 CFloat)
     -> EstimateAffine2DMethod
@@ -330,7 +332,7 @@ estimateAffinePartial2D
        -- ^ Maximum number of iterations of refining algorithm
        -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
        -- matrix will be output of robust method.
-    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
+    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
                         )
                 )
@@ -339,10 +341,11 @@ estimateAffinePartial2D fromPts toPts method maxIters confidence refineIters = d
     -- If the c++ function can't find an affine transform it will return an
     -- empty matrix. We check for this case by trying to coerce the result to
     -- the desired type.
-    catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
-           (\case CoerceMatError _msgs -> pure Nothing
-                  otherError -> throwE otherError
-           )
+    wrapException . runExceptT $
+      catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+             (\case CoerceMatError _msgs -> pure Nothing
+                    otherError -> throwE otherError
+             )
   where
     c'estimateAffine2D = unsafeWrapException $ do
         h       <- newEmptyMat
@@ -421,11 +424,11 @@ contains 3 rows.
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findfundamentalmat OpenCV Sphinx doc>
 -}
 findFundamentalMat
-    :: (IsPoint2 point2 CDouble)
+    :: (IsPoint2 point2 CDouble, MonadError CvException m)
     => V.Vector (point2 CDouble) -- ^ Points from the first image.
     -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FundamentalMatMethod
-    -> CvExcept ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
+    -> m ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
                         )
                 )
@@ -434,10 +437,11 @@ findFundamentalMat pts1 pts2 method = do
     -- If the c++ function can't find a fundamental matrix it will return an
     -- empty matrix. We check for this case by trying to coerce the result to
     -- the desired type.
-    catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
-           (\case CoerceMatError _msgs -> pure Nothing
-                  otherError -> throwE otherError
-           )
+    catchError
+      (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+      (\case CoerceMatError _msgs -> pure Nothing
+             otherError -> throwError otherError
+      )
   where
     c'findFundamentalMat = unsafeWrapException $ do
         fm        <- newEmptyMat
@@ -482,11 +486,11 @@ instance Default FindHomographyParams where
           }
 
 findHomography
-    :: (IsPoint2 point2 CDouble)
+    :: (IsPoint2 point2 CDouble, MonadError CvException m)
     => V.Vector (point2 CDouble) -- ^ Points from the first image.
     -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FindHomographyParams
-    -> CvExcept ( Maybe ( Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
+    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
                         , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
                         )
                 )
@@ -495,10 +499,11 @@ findHomography srcPoints dstPoints fhp = do
     -- If the c++ function can't find a fundamental matrix it will
     -- return an empty matrix. We check for this case by trying to
     -- coerce the result to the desired type.
-    catchE (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
-           (\case CoerceMatError _msgs -> pure Nothing
-                  otherError           -> throwE otherError
-           )
+    catchError
+      (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+      (\case CoerceMatError _msgs -> pure Nothing
+             otherError           -> throwError otherError
+      )
   where
     c'findHomography = unsafeWrapException $ do
         fm        <- newEmptyMat
@@ -534,11 +539,11 @@ findHomography srcPoints dstPoints fhp = do
 <http://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#computecorrespondepilines OpenCV Sphinx doc>
 -}
 computeCorrespondEpilines
-    :: (IsPoint2 point2 CDouble)
+    :: (IsPoint2 point2 CDouble, MonadError CvException m)
     => V.Vector (point2 CDouble) -- ^ Points.
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
-    -> CvExcept (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
+    -> m (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
 computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
     epilines <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat epilines) $
@@ -712,7 +717,7 @@ frame into the camera frame:
 
 -}
 solvePnP
-    :: forall point3 point2 distCoeffs
+    :: forall point3 point2 distCoeffs m
      . ( IsPoint3 point3 CDouble
        , IsPoint2 point2 CDouble
        , ToMat distCoeffs
@@ -722,12 +727,13 @@ solvePnP
                                    , 'S '[ 'S 12, 'S 1 ]
                                    , 'S '[ 'S 14, 'S 1 ]
                                    ]
+       , MonadError CvException m
        )
     => V.Vector (point3 CDouble, point2 CDouble) -- ^ 3D-2D point correspondences.
     -> Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- ^ Camera matrix.
     -> Maybe distCoeffs -- ^ Distortion coefficients.
     -> SolvePnPMethod
-    -> CvExcept
+    -> m
        ( Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- rotation vector
        , Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- translation vector
        , Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- output camera matrix

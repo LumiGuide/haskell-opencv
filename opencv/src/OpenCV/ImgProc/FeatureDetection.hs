@@ -36,6 +36,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear ( V2(..), V3(..), V4(..) )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -43,7 +44,6 @@ import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.TypeLevel
-import "transformers" Control.Monad.Trans.Except ( ExceptT(..) )
 #if MIN_VERSION_base(4,9,0)
 import "base" Data.Foldable ( Foldable )
 import "base" Data.Traversable ( Traversable )
@@ -82,7 +82,8 @@ cannyImg = exceptError $
 
 -}
 canny
-    :: Double
+    :: MonadError CvException m
+    => Double
        -- ^ First threshold for the hysteresis procedure.
     -> Double
        -- ^ Second threshold for the hysteresis procedure.
@@ -93,7 +94,7 @@ canny
        -- ^ A flag, indicating whether to use the more accurate L2 norm or the default L1 norm.
     -> Mat ('S [h, w]) channels ('S Word8)
        -- ^ 8-bit input image.
-    -> CvExcept (Mat ('S [h, w]) ('S 1) ('S Word8))
+    -> m (Mat ('S [h, w]) ('S 1) ('S Word8))
 canny threshold1 threshold2 apertureSize norm src = unsafeWrapException $ do
     dst <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat dst) $
@@ -168,7 +169,7 @@ goodFeaturesToTrackTraces = exceptError $ do
 <<doc/generated/examples/goodFeaturesToTrackTraces.png goodFeaturesToTrackTraces>>
 -}
 goodFeaturesToTrack
-    :: (depth `In` ['S Word8, 'S Float, 'D])
+    :: (depth `In` ['S Word8, 'S Float, 'D], MonadError CvException m)
     => Mat ('S [h, w]) ('S 1) depth
     -- ^ Input 8-bit or floating-point 32-bit, single-channel image.
     -> Int32
@@ -194,7 +195,7 @@ goodFeaturesToTrack
     -> GoodFeaturesToTrackDetectionMethod
     -- ^ Parameter indicating whether to use a Harris detector (see cornerHarris)
     -- or cornerMinEigenVal.
-    -> CvExcept (V.Vector (V2 Float))
+    -> m (V.Vector (V2 Float))
 goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafeWrapException $
     withPtr src  $ \srcPtr ->
     withPtr mbMask $ \mskPtr ->
@@ -289,7 +290,8 @@ houghCircleTraces = exceptError $ do
 <<doc/generated/examples/houghCircleTraces.png houghCircleTraces>>
 -}
 houghCircles
-    :: Double
+    :: MonadError CvException m
+    => Double
        -- ^ Inverse ratio of the accumulator resolution to the image resolution.
        -- For example, if @dp=1@, the accumulator has the same resolution as the
        -- input image. If @dp=2@, the accumulator has half as big width and height.
@@ -311,7 +313,7 @@ houghCircles
     -> Maybe Int32
        -- ^ Maximum circle radius.
     -> Mat ('S [h, w]) ('S 1) ('S Word8)
-    -> CvExcept (V.Vector Circle)
+    -> m (V.Vector Circle)
 houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapException $
     withPtr src $ \srcPtr ->
     alloca $ \(circleLengthsPtr :: Ptr Int32) ->
@@ -411,7 +413,7 @@ houghLinesPTraces = exceptError $ do
 <<doc/generated/examples/houghLinesPTraces.png houghLinesPTraces>>
 -}
 houghLinesP
-    :: (PrimMonad m)
+    :: (PrimMonad m, MonadError CvException m)
     => Double
        -- ^ Distance resolution of the accumulator in pixels.
     -> Double
@@ -425,8 +427,8 @@ houghLinesP
        -- ^ Maximum allowed gap between points on the same line to link them.
     -> Mut (Mat ('S [h, w]) ('S 1) ('S Word8)) (PrimState m)
        -- ^ Source image. May be modified by the function.
-    -> CvExceptT m (V.Vector (LineSegment Int32))
-houghLinesP rho theta threshold minLineLength maxLineGap src = ExceptT $ unsafePrimToPrim $
+    -> m (V.Vector (LineSegment Int32))
+houghLinesP rho theta threshold minLineLength maxLineGap src = wrapException $ unsafePrimToPrim $
     withPtr src $ \srcPtr ->
     -- Pointer to number of lines.
     alloca $ \(numLinesPtr :: Ptr Int32) ->

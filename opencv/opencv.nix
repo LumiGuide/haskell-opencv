@@ -19,6 +19,7 @@
 , inline-c-cpp
 , JuicyPixels
 , linear
+, mtl
 , primitive
 , repa
 , template-haskell
@@ -78,6 +79,7 @@ mkDerivation ({
     inline-c-cpp
     JuicyPixels
     linear
+    mtl
     primitive
     repa
     template-haskell
