@@ -63,9 +63,10 @@ module OpenCV.Core.Types.Mat
     , ToDepthDS(toDepthDS)
     ) where
 
-import "base" Control.Monad ( forM, forM_ )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
+import "base" Data.Foldable ( for_ )
+import "base" Data.Traversable ( for )
 import "base" Data.List ( foldl' )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
@@ -278,8 +279,8 @@ matFromFunc
     -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
 matFromFunc shape channels depth func =
     withMatM shape channels depth (0 :: V4 Double) $ \matM ->
-      forM_ positions $ \pos ->
-        forM_ [0 .. fromIntegral channels' - 1] $ \channel ->
+      for_ positions $ \pos ->
+        for_ [0 .. fromIntegral channels' - 1] $ \channel ->
            unsafeWrite matM pos channel $ func pos channel
   where
     positions :: [[Int]]
@@ -351,7 +352,7 @@ foldMat f z mats = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions 
     MatInfo !shape _ !channels = matInfo (head mats)
 
     stepsAndPtrs :: IO [([Int32], Ptr depth)]
-    stepsAndPtrs = forM mats $ \mat ->
+    stepsAndPtrs = for mats $ \mat ->
         withMatData mat $ \step ptr ->
             return (fromIntegral <$> step, castPtr ptr)
 

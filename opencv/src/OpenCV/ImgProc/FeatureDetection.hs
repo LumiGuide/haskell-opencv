@@ -162,7 +162,7 @@ goodFeaturesToTrackTraces = exceptError $ do
            (Proxy :: Proxy depth)
            white $ \\imgM -> do
     void $ matCopyToM imgM (V2 0 0) frog Nothing
-    forM_ features $ \\f -> do
+    for_ features $ \\f -> do
       circle imgM (round \<$> f :: V2 Int32) 2 blue 5 LineType_AA 0
 @
 
@@ -283,7 +283,7 @@ houghCircleTraces = exceptError $ do
            (Proxy :: Proxy depth)
            white $ \\imgM -> do
     void $ matCopyToM imgM (V2 0 0) circles_1000x625 Nothing
-    forM_ circles $ \\c -> do
+    for_ circles $ \\c -> do
       circle imgM (round \<$> circleCenter c :: V2 Int32) (round (circleRadius c)) blue 1 LineType_AA 0
 @
 
@@ -403,7 +403,7 @@ houghLinesPTraces = exceptError $ do
       edgeImgM <- thaw edgeImg
       lineSegments <- houghLinesP 1 (pi / 180) 80 (Just 30) (Just 10) edgeImgM
       void $ matCopyToM imgM (V2 0 0) edgeImgBgr Nothing
-      forM_ lineSegments $ \\lineSegment -> do
+      for_ lineSegments $ \\lineSegment -> do
         line imgM
              (lineSegmentStart lineSegment)
              (lineSegmentStop  lineSegment)

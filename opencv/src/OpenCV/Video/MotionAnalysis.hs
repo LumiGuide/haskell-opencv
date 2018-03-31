@@ -77,7 +77,7 @@ carAnim = carOverhead
 mog2Anim :: IO (Animation (ShapeT [240, 320]) ('S 3) ('S Word8))
 mog2Anim = exceptErrorIO $ do
     mog2 <- newBackgroundSubtractorMOG2 Nothing Nothing Nothing
-    forM carOverhead $ \(delay, img) -> do
+    for carOverhead $ \(delay, img) -> do
       fg <- bgSubApply mog2 0.1 img
       fgBgr <- cvtColor gray bgr fg
       pure (delay, fgBgr)

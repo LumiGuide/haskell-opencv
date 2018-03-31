@@ -17,6 +17,7 @@ import OpenCV.TypeLevel
 import Linear.V2 ( V2(..) )
 import Linear.V4 ( V4(..)  )
 import Data.Int
+import Data.Foldable
 import Data.Maybe
 import GHC.TypeLits ()
 import Data.Proxy
@@ -72,8 +73,8 @@ main = do
           let box = CV.exceptError $
                 CV.withMatM (h ::: w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white $ \imgM -> do
                    void $ CV.matCopyToM imgM (V2 0 0) (CV.unsafeCoerceMat img) Nothing
-                   forM_ faces $ \faceRect -> lift $ CV.rectangle imgM faceRect blue 2 CV.LineType_8 0
-                   forM_ mbTrac $ \trac ->
+                   for_ faces $ \faceRect -> lift $ CV.rectangle imgM faceRect blue 2 CV.LineType_8 0
+                   for_ mbTrac $ \trac ->
                      lift $ CV.rectangle
                               imgM
                               (CV.fmapRect round trac)

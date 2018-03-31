@@ -659,7 +659,7 @@ putTextImg = exceptError $
              (Proxy :: Proxy 4)
              (Proxy :: Proxy Word8)
              transparent $ \\imgM -> do
-      forM_ (zip [0..] [minBound .. maxBound]) $ \\(n, fontFace) ->
+      for_ (zip [0..] [minBound .. maxBound]) $ \\(n, fontFace) ->
         lift $ putText imgM
                        (T.pack $ show fontFace)
                        (V2 10 (35 + n * 30) :: V2 Int32)

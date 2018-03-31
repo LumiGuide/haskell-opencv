@@ -6,7 +6,7 @@
 module Main where
 
 import "base" Data.Functor ( void )
-import "base" Data.Foldable ( forM_ )
+import "base" Data.Foldable ( for_ )
 import "base" Data.Int
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
@@ -278,9 +278,9 @@ main = do
     renderImage "flower_512x341.png"   flower_512x341
     renderImage "sailboat_512x341.png" sailboat_512x341
     renderImage "bikes_512x341.png"    bikes_512x341
-    forM_ [minBound .. maxBound] $ \lineType ->
+    for_ [minBound .. maxBound] $ \lineType ->
       renderImage (show lineType <> ".png") (lineTypeImg lineType)
-    forM_ [minBound .. maxBound] $ \fontFace -> do
+    for_ [minBound .. maxBound] $ \fontFace -> do
       renderImage (show fontFace <> ".png")         (fontImg $ Font fontFace NotSlanted 1)
       renderImage (show fontFace <> "_slanted.png") (fontImg $ Font fontFace Slanted    1)
 

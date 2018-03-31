@@ -12,7 +12,7 @@ import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
-import "base" Data.Foldable ( forM_ )
+import "base" Data.Foldable ( for_ )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
@@ -262,7 +262,7 @@ myRectContains point rect =
 -- | Roundtrip every 'Depth' through the `Int32` encoding.
 depthMarshalUnmarshal :: HU.Assertion
 depthMarshalUnmarshal =
-    forM_ [minBound .. maxBound] $ \depth ->
+    for_ [minBound .. maxBound] $ \depth ->
       assertEqual "" depth (unmarshalDepth . marshalDepth $ depth)
 
 depthUnmarshalUnknown :: Int32 -> QC.Property

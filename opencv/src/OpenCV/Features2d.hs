@@ -231,7 +231,7 @@ orbDetectAndComputeImg = exceptError $ do
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
       void $ matCopyToM imgM (V2 0 0) frog Nothing
-      forM_ kpts $ \\kpt -> do
+      for_ kpts $ \\kpt -> do
         let kptRec = keyPointAsRec kpt
         circle imgM (round \<$> kptPoint kptRec :: V2 Int32) 5 blue 1 LineType_AA 0
   where
@@ -671,7 +671,7 @@ bfMatcherImg = do
         matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
         -- Draw the matches as lines from the query image to the train image.
-        forM_ matches $ \\dmatch -> do
+        for_ matches $ \\dmatch -> do
           let matchRec = dmatchAsRec dmatch
               queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
               trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)
@@ -790,7 +790,7 @@ fbMatcherImg = do
         matCopyToM imgM (V2 width 0) rotatedFrog Nothing
 
         -- Draw the matches as lines from the query image to the train image.
-        forM_ matches $ \\dmatch -> do
+        for_ matches $ \\dmatch -> do
           let matchRec = dmatchAsRec dmatch
               queryPt = kpts1 V.! fromIntegral (dmatchQueryIdx matchRec)
               trainPt = kpts2 V.! fromIntegral (dmatchTrainIdx matchRec)

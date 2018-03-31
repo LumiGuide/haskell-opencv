@@ -32,7 +32,7 @@ import "base" Foreign.Ptr (Ptr, plusPtr)
 import "base" System.IO.Unsafe (unsafePerformIO)
 import "base" Data.Word (Word8,Word16)
 import "base" Data.Int (Int32)
-import "base" Control.Monad (forM_)
+import "base" Data.Foldable (for_)
 import "primitive" Control.Monad.Primitive (PrimMonad)
 import "linear" Linear.V4 (V4)
 import "this" OpenCV
@@ -162,7 +162,7 @@ fromImage i@(Image w h _data) = exceptError $ withMatM
     (Proxy :: Proxy c)
     (Proxy :: Proxy d)
     (pure 0 :: V4 Double) $ \m ->
-      forM_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(y,x) ->
+      for_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(y,x) ->
         unsafeWrite m [y,x] 0 (pixelAt i x y)
   where
     fi :: Int -> Int32

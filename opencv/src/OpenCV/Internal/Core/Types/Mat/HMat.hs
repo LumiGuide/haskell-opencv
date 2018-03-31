@@ -116,9 +116,9 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
         copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
         copyToVec = do
             v <- VUM.unsafeNew $ product0 (map fromIntegral shape) * (fromIntegral channels)
-            forM_ (zip [0,channels..] $ dimPositions $ map fromIntegral shape) $ \(posIx, pos) -> do
+            for_ (zip [0,channels..] $ dimPositions $ map fromIntegral shape) $ \(posIx, pos) -> do
                 let elemPtr = matElemAddress dataPtr step pos
-                forM_ [0 .. channels - 1] $ \channelIx -> do
+                for_ [0 .. channels - 1] $ \channelIx -> do
                   e <- peekElemOff elemPtr $ fromIntegral channelIx
                   VUM.unsafeWrite v (fromIntegral $ posIx + channelIx) e
             VU.unsafeFreeze v
@@ -148,9 +148,9 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
       where
         copyFromVec :: (Storable a, VU.Unbox a) => VU.Vector a -> IO ()
         copyFromVec v =
-            forM_ (zip [0, fromIntegral channels ..] $ dimPositions (fromIntegral <$> shape)) $ \(posIx, pos) -> do
+            for_ (zip [0, fromIntegral channels ..] $ dimPositions (fromIntegral <$> shape)) $ \(posIx, pos) -> do
               let elemPtr = matElemAddress dataPtr (fromIntegral <$> step) pos
-              forM_ [0 .. channels - 1] $ \channelIx ->
+              for_ [0 .. channels - 1] $ \channelIx ->
                 pokeElemOff elemPtr (fromIntegral channelIx) $ VU.unsafeIndex v (fromIntegral $ posIx + channelIx)
 
 product0 :: (Num a) => [a] -> a

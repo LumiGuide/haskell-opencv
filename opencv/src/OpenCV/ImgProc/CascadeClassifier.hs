@@ -92,8 +92,8 @@ cascadeClassifierArnold = do
                (Proxy :: Proxy depth)
                white $ \\imgM -> do
         void $ matCopyToM imgM (V2 0 0) arnold_small Nothing
-        forM_ eyes  $ \\eyeRect  -> lift $ rectangle imgM eyeRect  blue  2 LineType_8 0
-        forM_ faces $ \\faceRect -> lift $ rectangle imgM faceRect green 2 LineType_8 0
+        for_ eyes  $ \\eyeRect  -> lift $ rectangle imgM eyeRect  blue  2 LineType_8 0
+        for_ faces $ \\faceRect -> lift $ rectangle imgM faceRect green 2 LineType_8 0
   where
     arnoldGray = exceptError $ cvtColor bgr gray arnold_small
 

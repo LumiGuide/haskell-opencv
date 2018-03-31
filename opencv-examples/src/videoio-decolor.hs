@@ -1,7 +1,8 @@
 {-# language DataKinds #-}
 {-# language FlexibleInstances #-}
 
-import Control.Monad ( unless, forM_ )
+import Control.Monad ( unless )
+import Data.Foldable ( for_ )
 import Data.Function ( fix )
 import qualified OpenCV as CV
 import OpenCV.TypeLevel
@@ -17,7 +18,7 @@ main = do
         fix $ \continue -> do
           _ok <- CV.videoCaptureGrab cap
           mbImg <- CV.videoCaptureRetrieve cap
-          forM_ mbImg $ \img -> do
+          for_ mbImg $ \img -> do
             -- Assert that the retrieved frame is 2-dimensional.
             let img' :: CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8)
                 img' = CV.exceptError $ CV.coerceMat img

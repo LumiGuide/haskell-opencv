@@ -231,7 +231,7 @@ handDefectsImg = do
         -- Draw convex hull of contour.
         polylines imgM (V.singleton handHull) True red 2 LineType_AA 0
         -- Draw defects.
-        forM_ handDefects $ \defect -> do
+        for_ handDefects $ \defect -> do
           let V4 _start_index _end_index farthest_pt_index _fixpt_depth = fromVec defect
           let farthest_pt = handContour V.! (fromIntegral farthest_pt_index)
           circle imgM farthest_pt 7 green (-1) LineType_AA 0
