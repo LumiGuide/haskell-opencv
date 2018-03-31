@@ -523,11 +523,16 @@ filter2DImg = exceptError $
                (Proxy :: Proxy 1)
                (Proxy :: Proxy Double)
                black $ \\imgM -> do
-        lift $ line imgM (V2 0 0 :: V2 Int32) (V2 0 0 :: V2 Int32) (V4 (-2) (-2) (-2) 1 :: V4 Double) 0 LineType_8 0
-        lift $ line imgM (V2 1 0 :: V2 Int32) (V2 0 1 :: V2 Int32) (V4 (-1) (-1) (-1) 1 :: V4 Double) 0 LineType_8 0
-        lift $ line imgM (V2 1 1 :: V2 Int32) (V2 1 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
-        lift $ line imgM (V2 1 2 :: V2 Int32) (V2 2 1 :: V2 Int32) (V4   1    1    1  1 :: V4 Double) 0 LineType_8 0
-        lift $ line imgM (V2 2 2 :: V2 Int32) (V2 2 2 :: V2 Int32) (V4   2    2    2  1 :: V4 Double) 0 LineType_8 0
+
+        let pixels :: [[Double]]
+            pixels = [ [-2, -1, 0]
+                     , [-1,  1, 1]
+                     , [ 0,  1, 2]
+                     ]
+
+        for_ (zip [0..] pixels) $ \\(y, row) ->
+          for_ (zip [0..] row) $ \\(x, elem) ->
+            unsafeWrite imgM [y,x] 0 elem
 @
 
 <<doc/generated/examples/filter2DImg.png filter2DImg>>
