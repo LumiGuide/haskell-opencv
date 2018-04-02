@@ -16,7 +16,6 @@ import "base" Control.Monad
 import "base" Data.Bifunctor
 import "base" Data.Either
 import "base" Data.Maybe
-import "base" Data.Monoid
 import "base" Data.Word
 import qualified "containers" Data.Map.Strict as M
 import "directory" System.Directory ( canonicalizePath )
@@ -37,6 +36,10 @@ import qualified "bytestring" Data.ByteString.Lazy as BL
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Syntax
 import "this" Language.Haskell.Meta.Syntax.Translate ( toDecs )
+
+#if !MIN_VERSION_base(4,11,0)
+import "base" Data.Monoid
+#endif
 
 --------------------------------------------------------------------------------
 

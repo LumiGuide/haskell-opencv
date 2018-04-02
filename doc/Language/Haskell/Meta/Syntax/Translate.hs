@@ -136,6 +136,11 @@ instance ToName (Hs.QName l) where
   toName (Hs.UnQual _ n) = toName n
   toName (Hs.Special _ s) = toName s
 
+#if MIN_VERSION_haskell_src_exts(1,20,1)
+instance ToName (Hs.MaybePromotedName l) where
+    toName (Hs.PromotedName   _ qn) = toName qn
+    toName (Hs.UnpromotedName _ qn) = toName qn
+#endif
 
 instance ToName (Hs.Op l) where
   toName (Hs.VarOp _ n) = toName n
@@ -381,7 +386,12 @@ instance ToPred (Hs.Asst l) where
     toPred p = todo "toPred" p
 
 instance ToCxt (Hs.Deriving l) where
-  toCxt (Hs.Deriving _ rule) = toCxt rule
+#if MIN_VERSION_haskell_src_exts(1,20,1)
+  toCxt (Hs.Deriving _ _ rule) = toCxt rule
+#else
+  toCxt (Hs.Deriving _   rule) = toCxt rule
+#endif
+
 instance ToCxt [Hs.InstRule l] where
   toCxt = concatMap toCxt
 
@@ -513,7 +523,11 @@ instance ToNames a => ToNames (Maybe a) where
   toNames (Just a) = toNames a
 
 instance ToNames (Hs.Deriving l) where
-  toNames (Hs.Deriving _ irules) = concatMap toNames irules
+#if MIN_VERSION_haskell_src_exts(1,20,1)
+  toNames (Hs.Deriving _ _ irules) = concatMap toNames irules
+#else
+  toNames (Hs.Deriving _   irules) = concatMap toNames irules
+#endif
 instance ToNames (Hs.InstRule l) where
   toNames (Hs.IParen _ irule) = toNames irule
   toNames (Hs.IRule _ _mtvbs _mcxt mihd) = toNames mihd

@@ -18,7 +18,6 @@ module OpenCV.Core.Types.Mat.Repa
     ) where
 
 import "base" Data.Int
-import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Foreign.C.Types
@@ -39,6 +38,9 @@ import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.TypeLevel
 
+#if !MIN_VERSION_base(4,11,0)
+import "base" Data.Monoid
+#endif
 
 --------------------------------------------------------------------------------
 
