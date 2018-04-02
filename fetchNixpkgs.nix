@@ -7,11 +7,6 @@
 let url = "https://github.com/${owner}/${repo}/archive/${rev}.tar.gz";
 in
 
-if 0 <= builtins.compareVersions builtins.nixVersion "1.12"
-then builtins.fetchTarball { inherit url sha256; }
-else
-
-# `builtins.fetchTarball` only accepts a `sha256` argument in Nix version 1.12 or later
 with rec {
   system = builtins.currentSystem;
 
