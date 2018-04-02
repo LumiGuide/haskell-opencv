@@ -12,10 +12,17 @@ let
 in  {
   haskellPackages = previous.haskellPackages.override haskellOverrides;
   haskell = previous.haskell // {
-    packages = previous.haskell.packages //
-      previous.lib.genAttrs [ "ghc802" "ghc822" "ghc841" ] (compiler:
-        previous.haskell.packages.${compiler}.override haskellOverrides
-      );
+    packages = previous.haskell.packages // {
+      ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
+      ghc822 = previous.haskell.packages.ghc822.override haskellOverrides;
+      ghc841 = previous.haskell.packages.ghc822.override {
+        overrides = self: super:
+          haskellOverrides.overrides self super // (with previous.haskell.lib; {
+            safe-exceptions = doJailbreak super.safe-exceptions;
+            repa            = doJailbreak super.repa;
+          });
+      };
+    };
   };
 
   opencv3 = previous.opencv3.override {
