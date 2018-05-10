@@ -1,11 +1,102 @@
-final : previous :
+final : previous : with final.haskell.lib;
 let
   haskellOverrides = {
     overrides = self: super: {
-      opencv                = self.callPackage (import ./opencv/opencv.nix) {};
-      opencv-examples       = self.callPackage (import ./opencv-examples/opencv-examples.nix) {};
-      opencv-extra          = self.callPackage (import ./opencv-extra/opencv-extra.nix) {};
-      opencv-extra-examples = self.callPackage (import ./opencv-extra-examples/opencv-extra-examples.nix) {};
+      opencv = overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (_drv : {
+        src = final.runCommand "opencv-src"
+          { files = final.lib.sourceByRegex ./opencv [
+              "^src$"
+              "^src/.*"
+              "^include$"
+              "^include/.*"
+              "^test$"
+              "^test/.*"
+              "^bench$"
+              "^bench/.*"
+              "^opencv.cabal$"
+              "^Setup.hs$"
+            ];
+            doc     = ./doc;
+            data    = ./data;
+            LICENSE = ./LICENSE;
+          } ''
+            mkdir -p $out
+            cp -r $files/* $out
+            cp -r $doc     $out/doc
+            cp -r $data    $out/data
+            cp $LICENSE    $out/LICENSE
+          '';
+        libraryPkgconfigDepends = [ final.opencv3 ];
+        shellHook = ''
+          export hardeningDisable=bindnow
+        '';
+      });
+
+      opencv-examples =
+        overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
+          src = final.runCommand "opencv-examples-src"
+            { files = final.lib.sourceByRegex ./opencv-examples [
+                "^src$"
+                "^src/.*"
+                "^lib$"
+                "^lib/.*"
+                "^opencv-examples.cabal$"
+              ];
+              data = ./data;
+              LICENSE = ./LICENSE;
+           } ''
+              mkdir -p $out
+              cp -r $files/* $out
+              cp -r $data    $out/data
+              cp $LICENSE    $out/LICENSE
+            '';
+        });
+
+      opencv-extra =
+        overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
+          src = runCommand "opencv-extra-src"
+            { files = lib.sourceByRegex ./opencv-extra [
+                "^include$"
+                "^include/.*"
+                "^src$"
+                "^src/.*"
+                "^opencv-extra.cabal$"
+                "^Setup.hs$"
+              ];
+              doc     = ./doc;
+              data    = ./data;
+              LICENSE = ./LICENSE;
+            } ''
+              mkdir -p $out
+              cp -r $files/* $out
+              cp -r $doc     $out/doc
+              cp -r $data    $out/data
+              cp $LICENSE    $out/LICENSE
+            '';
+          libraryPkgconfigDepends = [ final.opencv3 ];
+          shellHook = ''
+            export hardeningDisable=bindnow
+          '';
+        });
+
+      opencv-extra-examples =
+        overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
+          src = runCommand "opencv-extra-examples-src"
+            { files = lib.sourceByRegex ./opencv-extra-examples [
+                "^src$"
+                "^src/.*"
+                "^opencv-extra-examples.cabal$"
+              ];
+              data = ./data;
+              LICENSE = ./LICENSE;
+            } ''
+              mkdir -p $out
+              cp -r $files/* $out
+              cp -r $data    $out/data
+              cp $LICENSE    $out/LICENSE
+            '';
+        });
+
     };
   };
   osx = builtins.currentSystem == "x86_64-darwin";
@@ -15,20 +106,13 @@ in  {
     packages = previous.haskell.packages // {
       ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
       ghc822 = previous.haskell.packages.ghc822.override haskellOverrides;
-      ghc841 = previous.haskell.packages.ghc841.override {
+      ghc842 = previous.haskell.packages.ghc842.override {
         overrides = self: super:
           haskellOverrides.overrides self super // (with previous.haskell.lib; {
-            safe-exceptions = doJailbreak super.safe-exceptions;
-            repa = doJailbreak super.repa;
-            inline-c = overrideSrc super.inline-c {
-              src = (previous.fetchFromGitHub {
-                owner  = "basvandijk";
-                repo   = "inline-c";
-                rev    = "bb8a77b5abb58084de3f3d2b7d3335d6997d9905";
-                sha256 = "16n769pkkbjxp2khj7s0i9qya0pigjw666mwvib1ys78j59fpbjb";
-              }) + "/inline-c";
-            };
-            criterion = super.criterion_1_4_0_0;
+            inline-c = super.inline-c_0_6_0_6;
+            criterion = super.criterion_1_4_1_0;
+            base-compat-batteries = doJailbreak super.base-compat-batteries;
+            base-compat = super.base-compat_0_10_1;
           });
       };
     };

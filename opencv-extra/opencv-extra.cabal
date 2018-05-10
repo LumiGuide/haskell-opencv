@@ -1,13 +1,13 @@
+cabal-version: 2.2
 name:          opencv-extra
 version:       0.2.0.1
 homepage:      https://github.com/LumiGuide/haskell-opencv
 bug-reports:   https://github.com/LumiGuide/haskell-opencv/issues
-license:       BSD3
+license:       BSD-3-Clause
 license-file:  LICENSE
 author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Custom
-cabal-version: >=1.23
 category:      AI, Graphics
 synopsis:      Haskell binding to OpenCV-3.x extra modules
 description:   <<https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png>>
@@ -75,8 +75,12 @@ library
           inline-c     >= 0.6
         , inline-c-cpp >= 0.2.1
 
-    cc-options: -Wall -std=c++11
-    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -optc-std=c++11
+    cxx-options:       -std=c++11
+    extra-libraries:   stdc++
+    pkgconfig-depends: opencv >= 3.0.0
+
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
+
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
@@ -122,8 +126,6 @@ library
         TypeOperators
 
     default-language:   Haskell2010
-    pkgconfig-depends:  opencv >= 3.0.0
-    extra-libraries:    stdc++
 
 test-suite doc-images-opencv-extra
     type: exitcode-stdio-1.0
