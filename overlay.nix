@@ -54,8 +54,8 @@ let
 
       opencv-extra =
         overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
-          src = runCommand "opencv-extra-src"
-            { files = lib.sourceByRegex ./opencv-extra [
+          src = final.runCommand "opencv-extra-src"
+            { files = final.lib.sourceByRegex ./opencv-extra [
                 "^include$"
                 "^include/.*"
                 "^src$"
@@ -81,8 +81,8 @@ let
 
       opencv-extra-examples =
         overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
-          src = runCommand "opencv-extra-examples-src"
-            { files = lib.sourceByRegex ./opencv-extra-examples [
+          src = final.runCommand "opencv-extra-examples-src"
+            { files = final.lib.sourceByRegex ./opencv-extra-examples [
                 "^src$"
                 "^src/.*"
                 "^opencv-extra-examples.cabal$"
