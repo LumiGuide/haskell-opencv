@@ -30,6 +30,13 @@ let
         shellHook = ''
           export hardeningDisable=bindnow
         '';
+        # TODO: cabal2nix automatically adds:
+        #
+        #   configureFlags = ["--with-gcc=${stdenv.cc}/bin/c++" "--with-ld=${stdenv.cc}/bin/c++"];
+        #
+        # This is not needed anymore and will actually break the build.
+        # So lets remove this from cabal2nix or ask @peti to do it.
+        configureFlags = [];
       });
 
       opencv-examples =
@@ -77,6 +84,7 @@ let
           shellHook = ''
             export hardeningDisable=bindnow
           '';
+          configureFlags = [];
         });
 
       opencv-extra-examples =
