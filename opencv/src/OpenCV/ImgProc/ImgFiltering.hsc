@@ -435,8 +435,8 @@ gaussianBlur
   -- regardless of possible future modifications of all this semantics, it is
   -- recommended to specify all of ksize, sigmaX, and sigmaY.
   -> Maybe (BorderMode)
-  -- ^ pixel extrapolation method (see borderInterpolate for details). There is
-  -- no support for BorderConstant other than 0, BorderTransparent or BorderIsolated.
+  -- ^ pixel extrapolation method (see 'borderInterpolate' for details). There is
+  -- no support for 'BorderConstant' other than 0, 'BorderTransparent' or 'BorderIsolated'.
   -> Mat shape ('S channels) ('S depth) -- ^ input image
   -> m (Mat shape ('S channels) ('S depth))
 gaussianBlur size sigmaX sigmaY mbBorderMode matIn =
@@ -711,6 +711,43 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 
 {- | Performs advanced morphological transformations
 
+The function morphologyEx can perform advanced morphological transformations
+using an erosion and dilation as basic operations.
+
+__Note:__
+The number of iterations is the number of times erosion or dilatation operation
+will be applied. For instance, an opening operation (MORPH_OPEN) with two
+iterations is equivalent to apply successively: erode -> erode -> dilate ->
+dilate (and not erode -> dilate -> erode -> dilate). 
+
+Example:
+
+@
+morphologyExImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ DamageMask
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+morphologyExImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \\imgM -> do
+      element <- getStructuringElement MorphEllipse (Proxy :: Proxy 3) (Proxy :: Proxy 3)
+      ptsRemoved <- morphologyEx damageMask MorphTopHat element (Nothing :: Maybe (V2 Int32)) 3 BorderReflect101
+      matCopyToM imgM (V2 0 0) damageMask Nothing
+      matCopyToM imgM (V2 w 0) ptsRemoved  Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/morphologyExImg.png morphologyExImg>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
@@ -720,7 +757,7 @@ morphologyEx
        )
      => Mat shape channels ('S depth) -- ^ Source image.
     -> MorphOperation -- ^ Type of a morphological operation.
-    -> Mat 'D 'D 'D -- ^ Structuring element.
+    -> Mat kernelShape kernelChannels kernelDepth -- ^ Structuring element.
     -> Maybe (point2 Int32) -- ^ Anchor position with the kernel.
     -> Int -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
