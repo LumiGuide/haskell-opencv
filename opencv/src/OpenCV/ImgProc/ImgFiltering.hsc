@@ -86,6 +86,8 @@ C.using "namespace cv"
 defaultAnchor :: Point2i
 defaultAnchor = toPoint (pure (-1) :: V2 Int32)
 
+defaultBorderMode :: BorderMode
+defaultBorderMode = BorderReflect101
 
 --------------------------------------------------------------------------------
 -- Types
@@ -383,17 +385,61 @@ blur size matIn =
   where ksize :: Size2i
         ksize = toSize size
 
+{- | Blurs an image using a Gaussian filter.
+The function convolves the source image with the specified Gaussian kernel. In-place filtering is supported.
+
+Example:
+
+@
+gaussianBlurImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+gaussianBlurImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \\imgM -> do
+      birdsBlurred <- gaussianBlur (V2 13 13 :: V2 Int32) 0 0 Nothing birds_512x341
+      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
+      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/gaussianBlurImg.png gaussianBlurImg>>
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#gaussianblur OpenCV Sphinx doc>
+-}
 gaussianBlur
   :: ( depth `In` '[Word8, Word16, Float, Double]
      , IsSize size Int32
      , MonadError CvException m
      )
-  => size Int32 -- ^ Blurring kernel size.
-  -> Double -- ^ sigmaX
-  -> Double -- ^ sigmaY
-  -> Mat shape ('S channels) ('S depth)
+  => size Int32
+  -- ^ Blurring kernel size. height and width can differ but they both must be
+  -- positive and odd. Or, they can be zero’s and then they are computed from
+  -- sigmaX/sigmaY.
+  -> Double -- ^ Gaussian kernel standard deviation in X direction.
+  -> Double
+  -- ^ Gaussian kernel standard deviation in Y direction.
+  -- If sigmaY is zero, it is set to be equal to sigmaX, if both sigmas are
+  -- zeros, they are computed from size.width and size.height, respectively
+  -- (see getGaussianKernel() for details); to fully control the result
+  -- regardless of possible future modifications of all this semantics, it is
+  -- recommended to specify all of ksize, sigmaX, and sigmaY.
+  -> Maybe (BorderMode)
+  -- ^ pixel extrapolation method (see 'borderInterpolate' for details). There is
+  -- no support for 'BorderConstant' other than 0, 'BorderTransparent' or 'BorderIsolated'.
+  -> Mat shape ('S channels) ('S depth) -- ^ input image
   -> m (Mat shape ('S channels) ('S depth))
-gaussianBlur size sigmaX sigmaY matIn =
+gaussianBlur size sigmaX sigmaY mbBorderMode matIn =
   unsafeWrapException $
   do matOut <- newEmptyMat
      handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -407,6 +453,7 @@ gaussianBlur size sigmaX sigmaY matIn =
            , *$(Size2i * ksizePtr)
            , $(double c'sigmaX)
            , $(double c'sigmaY)
+           , $(int32_t c'borderType)
            );
        |]
   where
@@ -415,6 +462,11 @@ gaussianBlur size sigmaX sigmaY matIn =
 
     c'sigmaX = realToFrac sigmaX
     c'sigmaY = realToFrac sigmaY
+
+    borderMode :: BorderMode
+    borderMode = maybe defaultBorderMode id mbBorderMode
+
+    (c'borderType, _) = marshalBorderMode borderMode
 
 {- | Erodes an image by using a specific structuring element
 
@@ -659,6 +711,43 @@ dilate src mbKernel mbAnchor iterations borderMode = unsafeWrapException $ do
 
 {- | Performs advanced morphological transformations
 
+The function morphologyEx can perform advanced morphological transformations
+using an erosion and dilation as basic operations.
+
+__Note:__
+The number of iterations is the number of times erosion or dilatation operation
+will be applied. For instance, an opening operation (MORPH_OPEN) with two
+iterations is equivalent to apply successively: erode -> erode -> dilate ->
+dilate (and not erode -> dilate -> erode -> dilate). 
+
+Example:
+
+@
+morphologyExImg
+    :: forall (width    :: Nat)
+              (width2   :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ DamageMask
+       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
+       )
+    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+morphologyExImg = exceptError $
+    withMatM (Proxy :: Proxy [height, width2])
+             (Proxy :: Proxy channels)
+             (Proxy :: Proxy depth)
+             white $ \\imgM -> do
+      element <- getStructuringElement MorphEllipse (Proxy :: Proxy 3) (Proxy :: Proxy 3)
+      ptsRemoved <- morphologyEx damageMask MorphTopHat element (Nothing :: Maybe (V2 Int32)) 3 BorderReflect101
+      matCopyToM imgM (V2 0 0) damageMask Nothing
+      matCopyToM imgM (V2 w 0) ptsRemoved  Nothing
+  where
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+@
+
+<<doc/generated/examples/morphologyExImg.png morphologyExImg>>
+
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/filtering.html#morphologyex OpenCV Sphinx doc>
 -}
 morphologyEx
@@ -668,7 +757,7 @@ morphologyEx
        )
      => Mat shape channels ('S depth) -- ^ Source image.
     -> MorphOperation -- ^ Type of a morphological operation.
-    -> Mat 'D 'D 'D -- ^ Structuring element.
+    -> Mat kernelShape kernelChannels kernelDepth -- ^ Structuring element.
     -> Maybe (point2 Int32) -- ^ Anchor position with the kernel.
     -> Int -- ^ Number of times erosion and dilation are applied.
     -> BorderMode
