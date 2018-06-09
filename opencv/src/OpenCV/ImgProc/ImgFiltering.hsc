@@ -583,8 +583,8 @@ filter2DImg = exceptError $
                      ]
 
         for_ (zip [0..] pixels) $ \\(y, row) ->
-          for_ (zip [0..] row) $ \\(x, elem) ->
-            unsafeWrite imgM [y,x] 0 elem
+          for_ (zip [0..] row) $ \\(x, pixel) ->
+            unsafeWrite imgM [y,x] 0 pixel
 @
 
 <<doc/generated/examples/filter2DImg.png filter2DImg>>
