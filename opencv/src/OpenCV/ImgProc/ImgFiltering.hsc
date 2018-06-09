@@ -86,6 +86,8 @@ C.using "namespace cv"
 defaultAnchor :: Point2i
 defaultAnchor = toPoint (pure (-1) :: V2 Int32)
 
+defaultBorderMode :: BorderMode
+defaultBorderMode = BorderReflect101
 
 --------------------------------------------------------------------------------
 -- Types
@@ -404,7 +406,7 @@ gaussianBlurImg = exceptError $
              (Proxy :: Proxy channels)
              (Proxy :: Proxy depth)
              white $ \\imgM -> do
-      birdsBlurred <- gaussianBlur (V2 13 13 :: V2 Int32) 0 0 birds_512x341
+      birdsBlurred <- gaussianBlur (V2 13 13 :: V2 Int32) 0 0 Nothing birds_512x341
       matCopyToM imgM (V2 0 0) birds_512x341 Nothing
       matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
   where
@@ -432,9 +434,12 @@ gaussianBlur
   -- (see getGaussianKernel() for details); to fully control the result
   -- regardless of possible future modifications of all this semantics, it is
   -- recommended to specify all of ksize, sigmaX, and sigmaY.
+  -> Maybe (BorderMode)
+  -- ^ pixel extrapolation method (see borderInterpolate for details). There is
+  -- no support for BorderConstant other than 0, BorderTransparent or BorderIsolated.
   -> Mat shape ('S channels) ('S depth) -- ^ input image
   -> m (Mat shape ('S channels) ('S depth))
-gaussianBlur size sigmaX sigmaY matIn =
+gaussianBlur size sigmaX sigmaY mbBorderMode matIn =
   unsafeWrapException $
   do matOut <- newEmptyMat
      handleCvException (pure $ unsafeCoerceMat matOut) $
@@ -448,6 +453,7 @@ gaussianBlur size sigmaX sigmaY matIn =
            , *$(Size2i * ksizePtr)
            , $(double c'sigmaX)
            , $(double c'sigmaY)
+           , $(int32_t c'borderType)
            );
        |]
   where
@@ -456,6 +462,11 @@ gaussianBlur size sigmaX sigmaY matIn =
 
     c'sigmaX = realToFrac sigmaX
     c'sigmaY = realToFrac sigmaY
+
+    borderMode :: BorderMode
+    borderMode = maybe defaultBorderMode id mbBorderMode
+
+    (c'borderType, _) = marshalBorderMode borderMode
 
 {- | Erodes an image by using a specific structuring element
 
