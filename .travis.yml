@@ -34,6 +34,12 @@ env:
 - ARGS="--jobs 2 --resolver nightly-2018-05-23" CACHE_NAME=NIGHTLY_2018_06_08_CV_3_4_0
 
 before_install:
+- sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+- sudo apt-get update -q
+- sudo apt-get install gcc-7 g++-7 -y
+- sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+- sudo update-alternatives --auto gcc
+
 # Install OpenCV 3
 - ./travis-build-opencv
 - export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config):$HOME/usr/lib/pkgconfig
