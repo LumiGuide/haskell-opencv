@@ -108,7 +108,7 @@ let
     };
   };
 in  {
-  haskellPackages = previous.haskellPackages.override haskellOverrides;
+  haskellPackages = previous.haskell.packages.ghc842.override haskellOverrides;
   haskell = previous.haskell // {
     packages = previous.haskell.packages // {
       ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
