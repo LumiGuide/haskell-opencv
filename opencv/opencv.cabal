@@ -129,6 +129,7 @@ library
       , linear            >= 1.20.4
       , primitive         >= 0.6.1
       , repa              >= 3.4.0.2
+      , massiv            >= 0.1.6
       , template-haskell  >= 2.10
       , text              >= 1.2.2.1
       , transformers      >= 0.4.2
@@ -144,6 +145,7 @@ library
         OpenCV.Core.Types.Mat
         OpenCV.Core.Types.Mat.HMat
         OpenCV.Core.Types.Mat.Repa
+        OpenCV.Core.Types.Mat.Massiv
         OpenCV.Core.Types.Matx
         OpenCV.Core.Types.Point
         OpenCV.Core.Types.Rect
