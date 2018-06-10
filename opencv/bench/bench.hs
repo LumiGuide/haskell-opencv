@@ -1,21 +1,27 @@
+{-# language TypeApplications #-}
+
 module Main where
 
 import "base" Control.Exception ( evaluate )
-import "base" Data.Monoid
 import "base" Data.Word
+import "base" Data.Int
+import "base" Data.Proxy
 import qualified "bytestring" Data.ByteString as B
 import "criterion" Criterion.Main
+import "linear" Linear.V4
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
+import "opencv" OpenCV.Internal.Core.Types.Mat ( newMat )
 import qualified "repa" Data.Array.Repa as Repa
+import qualified "vector" Data.Vector as V
 
 main :: IO ()
 main = defaultMain
     [ bgroup "Core"
       [
         bgroup "Mat"
-        [
-          bgroup "Repa"
+        [ bench "newMat" $ nfIO mkSimpleNewMat
+        , bgroup "Repa"
           [ env (loadImgAsRepa "Lenna.png") $ \a ->
               bench "computeS" $ nfArray benchComputeS a
           , env (loadImgAsRepa "Lenna.png") $ \a ->
@@ -36,6 +42,13 @@ main = defaultMain
       [
       ]
     ]
+
+mkSimpleNewMat :: IO (Mat 'D 'D ('S Word8))
+mkSimpleNewMat = exceptErrorIO $
+    newMat (V.fromList [1] :: V.Vector Int32)
+           (1 :: Int32)
+           (Proxy @Word8)
+           (V4 0 0 0 0 :: V4 Double)
 
 nfArray :: (Repa.Source r e, Repa.Shape sh) => (a -> Repa.Array r sh e) -> a -> Benchmarkable
 nfArray f = nf (\x -> Repa.deepSeqArray (f x) ())

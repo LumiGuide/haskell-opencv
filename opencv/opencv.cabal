@@ -309,6 +309,8 @@ benchmark bench-opencv
       , criterion         >= 1.1.1
       , opencv
       , repa              >= 3.4.0.2
+      , vector
+      , linear
 
     default-extensions:
         DataKinds

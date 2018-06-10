@@ -88,6 +88,7 @@ import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import "base" Unsafe.Coerce ( unsafeCoerce )
+import "deepseq" Control.DeepSeq ( NFData(..) )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
@@ -142,6 +143,9 @@ instance FreezeThaw (Mat shape channels depth) where
 
     unsafeFreeze = pure . unMut
     unsafeThaw = pure . Mut
+
+instance NFData (Mat shape channels depth) where
+    rnf _ = ()
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 
