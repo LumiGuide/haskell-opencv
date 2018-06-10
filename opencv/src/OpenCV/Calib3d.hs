@@ -485,6 +485,116 @@ instance Default FindHomographyParams where
           , fhpConfidence            = 0.995
           }
 
+{- | Finds a perspective transformation between two planes. 
+
+The function finds and returns the perspective transformation \(H\) between
+the source and the destination planes:
+
+\[
+    s_i  
+    \begin{bmatrix}
+        x'_i \\
+        y'_i \\
+        1
+    \end{bmatrix}
+    \sim H
+    \begin{bmatrix}
+        x_i \\
+        y_i \\
+        1
+    \end{bmatrix}
+\]
+
+so that the back-projection error
+
+\[
+  \sum _i \left ( x'_i- \frac{h_{11} x_i + h_{12} y_i + h_{13}}{h_{31} x_i +
+  h_{32} y_i + h_{33}} \right )^2+ \left ( y'_i- \frac{h_{21} x_i + h_{22} y_i +
+  h_{23}}{h_{31} x_i + h_{32} y_i + h_{33}} \right )^2
+\]
+
+is minimized. If the parameter method is set to the default value 0, the
+function uses all the point pairs to compute an initial homography estimate
+with a simple least-squares scheme.
+
+However, if not all of the point pairs ( \(srcPoints_i\), \(dstPoints_i\) )
+fit the rigid perspective transformation (that is, there are some outliers),
+this initial estimate will be poor. In this case, you can use one of the three
+robust methods. The methods RANSAC, LMeDS and RHO try many different random
+subsets of the corresponding point pairs (of four pairs each, collinear pairs
+are discarded), estimate the homography matrix using this subset and a simple
+least-squares algorithm, and then compute the quality/goodness of the computed
+homography (which is the number of inliers for RANSAC or the least median
+re-projection error for LMeDS). The best subset is then used to produce the
+initial estimate of the homography matrix and the mask of inliers/outliers.
+
+Regardless of the method, robust or not, the computed homography matrix is
+refined further (using inliers only in case of a robust method) with the
+Levenberg-Marquardt method to reduce the re-projection error even more.
+
+The methods RANSAC and RHO can handle practically any ratio of outliers but
+need a threshold to distinguish inliers from outliers. The method LMeDS does
+not need any threshold but it works correctly only when there are more than 50%
+of inliers. Finally, if there are no outliers and the noise is rather small,
+use the default method (method=0).
+
+The function is used to find initial intrinsic and extrinsic matrices.
+Homography matrix is determined up to a scale. Thus, it is normalized so that \( h_{33}=1 \).
+Note that whenever an \(H\) matrix cannot be estimated, an empty one will be
+returned.
+
+Example:
+
+@
+findHomographyImg
+    :: forall (width    :: Nat)
+              (height   :: Nat)
+              (channels :: Nat)
+              (depth    :: *)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
+       )
+    => Mat (ShapeT ['S height, 'D]) ('S channels) ('S depth)
+findHomographyImg = exceptError $
+  hconcat $ V.fromList
+    [ relaxMat $ exceptError $ origImgWithPoints
+    , relaxMat $ exceptError $ warpedImg
+    ]
+  where
+    pointsSrc = V.fromList
+      [ V2 120.4 260.2 :: V2 CDouble -- bottom left corner
+      , V2 280.5 259.3 :: V2 CDouble -- bottom right
+      , V2 268.4 105.5 :: V2 CDouble -- top right
+      , V2 120.9  84.0 :: V2 CDouble -- top left
+      ]
+    w = fromInteger $ natVal (Proxy :: Proxy width)
+    h = fromInteger $ natVal (Proxy :: Proxy height)
+    pointsDst = V.fromList
+      [ V2 0 h :: V2 CDouble
+      , V2 w h :: V2 CDouble
+      , V2 w 0 :: V2 CDouble
+      , V2 0 0 :: V2 CDouble
+      ]
+
+    origImgWithPoints =
+      withMatM (Proxy :: Proxy [height, width])
+               (Proxy :: Proxy channels)
+               (Proxy :: Proxy depth)
+               white $ \\imgM -> do
+        matCopyToM imgM (V2 0 0) flower_512x341 Nothing
+        arrowedLine imgM (V2 280 190) (V2 500 190) blue 3 LineType_AA 0 0.15
+        for_ pointsSrc $ \\p -> do
+          lift $ circle imgM (round \<$> p :: V2 Int32) 5 red 2 LineType_AA 0
+
+    warpedImg = case exceptError $ findHomography pointsSrc pointsDst def of
+        Nothing      -> pure flower_512x341  -- if find homography fails just do nothing (TODO: how to throw an exception or something here?)
+        Just (fm, _) -> warpPerspective flower_512x341 fm InterLanczos4 False False BorderReflect101
+@
+
+<<doc/generated/examples/findHomographyImg.png findHomographyImg>>
+
+<https://docs.opencv.org/3.0-last-rst/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#findhomography OpenCV Sphinx doc>
+
+ -}
 findHomography
     :: (IsPoint2 point2 CDouble, MonadError CvException m)
     => V.Vector (point2 CDouble) -- ^ Points from the first image.

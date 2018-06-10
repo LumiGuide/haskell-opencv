@@ -12,7 +12,7 @@ import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Traversable
 import "base" Data.Word
-import "base" Foreign.C.Types ( CFloat )
+import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import "data-default" Data.Default
