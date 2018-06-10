@@ -434,7 +434,7 @@ gaussianBlur
   -- (see getGaussianKernel() for details); to fully control the result
   -- regardless of possible future modifications of all this semantics, it is
   -- recommended to specify all of ksize, sigmaX, and sigmaY.
-  -> Maybe (BorderMode)
+  -> Maybe BorderMode
   -- ^ pixel extrapolation method (see 'borderInterpolate' for details). There is
   -- no support for 'BorderConstant' other than 0, 'BorderTransparent' or 'BorderIsolated'.
   -> Mat shape ('S channels) ('S depth) -- ^ input image
@@ -583,8 +583,8 @@ filter2DImg = exceptError $
                      ]
 
         for_ (zip [0..] pixels) $ \\(y, row) ->
-          for_ (zip [0..] row) $ \\(x, elem) ->
-            unsafeWrite imgM [y,x] 0 elem
+          for_ (zip [0..] row) $ \\(x, pixel) ->
+            unsafeWrite imgM [y,x] 0 pixel
 @
 
 <<doc/generated/examples/filter2DImg.png filter2DImg>>
@@ -718,7 +718,7 @@ __Note:__
 The number of iterations is the number of times erosion or dilatation operation
 will be applied. For instance, an opening operation (MORPH_OPEN) with two
 iterations is equivalent to apply successively: erode -> erode -> dilate ->
-dilate (and not erode -> dilate -> erode -> dilate). 
+dilate (and not erode -> dilate -> erode -> dilate).
 
 Example:
 

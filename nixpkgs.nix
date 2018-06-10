@@ -4,11 +4,12 @@
 # See: https://nixos.wiki/wiki/How_to_fetch_Nixpkgs_with_an_empty_NIX_PATH
 
 let
-  fetchNixpkgs = import ./fetchNixpkgs.nix;
-
   nixpkgsVersion = import ./nixpkgs-version.nix;
 
-  nixpkgs = fetchNixpkgs nixpkgsVersion;
+  nixpkgs = builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/${nixpkgsVersion.rev}.tar.gz";
+    inherit (nixpkgsVersion) sha256;
+  };
 
   pkgs = import nixpkgs {};
 

@@ -1,4 +1,4 @@
-FROM fpco/stack-build:lts-10.2
+FROM fpco/stack-build:latest
 
 RUN apt-get update
 RUN apt-get install -y cmake libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev qt5-default
@@ -6,14 +6,14 @@ RUN apt-get install -y cmake libgtk2.0-dev pkg-config libavcodec-dev libavformat
 RUN mkdir /opencv-build
 WORKDIR /opencv-build
 
-ADD https://github.com/opencv/opencv/archive/3.3.1.zip opencv.zip
+ADD https://github.com/opencv/opencv/archive/3.4.0.zip opencv.zip
 RUN unzip opencv.zip
 
-ADD https://github.com/opencv/opencv_contrib/archive/3.3.1.zip opencv_contrib.zip
+ADD https://github.com/opencv/opencv_contrib/archive/3.4.0.zip opencv_contrib.zip
 RUN unzip opencv_contrib.zip
 
-RUN mkdir opencv-3.3.1/build
-WORKDIR opencv-3.3.1/build
+RUN mkdir opencv-3.4.0/build
+WORKDIR opencv-3.4.0/build
 RUN cmake -D WITH_IPP=ON \
       -D WITH_OPENGL=ON \
       -D WITH_QT=ON \
@@ -24,7 +24,7 @@ RUN cmake -D WITH_IPP=ON \
       -D BUILD_opencv_python=OFF \
       -D BUILD_opencv_python2=OFF \
       -D BUILD_opencv_python3=OFF \
-      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.3.1/modules ..
+      -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.4.0/modules ..
 
 RUN make -j 8
 
