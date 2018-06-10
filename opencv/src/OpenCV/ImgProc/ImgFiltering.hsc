@@ -393,24 +393,16 @@ Example:
 @
 gaussianBlurImg
     :: forall (width    :: Nat)
-              (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
               (depth    :: *)
-     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
-       , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
-       )
-    => Mat (ShapeT [height, width2]) ('S channels) ('S depth)
+     . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341 )
+    => Mat (ShapeT ['S height, 'D]) ('S channels) ('S depth)
 gaussianBlurImg = exceptError $
-    withMatM (Proxy :: Proxy [height, width2])
-             (Proxy :: Proxy channels)
-             (Proxy :: Proxy depth)
-             white $ \\imgM -> do
-      birdsBlurred <- gaussianBlur (V2 13 13 :: V2 Int32) 0 0 Nothing birds_512x341
-      matCopyToM imgM (V2 0 0) birds_512x341 Nothing
-      matCopyToM imgM (V2 w 0) birdsBlurred  Nothing
-  where
-    w = fromInteger $ natVal (Proxy :: Proxy width)
+    hconcat $ V.fromList
+      [ relaxMat birds_512x341
+      , relaxMat $ exceptError $ gaussianBlur (V2 13 13 :: V2 Int32) 0 0 Nothing birds_512x341
+      ]
 @
 
 <<doc/generated/examples/gaussianBlurImg.png gaussianBlurImg>>
