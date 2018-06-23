@@ -14,6 +14,8 @@ data C'Ptr_BackgroundSubtractorGMG
 data C'Ptr_BackgroundSubtractorMOG
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::xfeatures2d::SURF>@ object
 data C'Ptr_SURF
+-- | Haskell representation of an OpenCV @cv::Ptr<cv::xfeatures2d::SIFT>@ object
+data C'Ptr_SIFT
 
 -- | Haskell representation of an OpenCV @cv::Ptr<cv::xphoto::GrayworldWB>@ object
 data C'Ptr_GrayworldWB
