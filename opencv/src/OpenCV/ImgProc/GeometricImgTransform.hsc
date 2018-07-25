@@ -547,11 +547,12 @@ remap src mapping interpolationMethod borderMode = unsafeWrapException $ do
       withPtr mapping $ \mappingPtr ->
       withPtr borderValue $ \borderValuePtr ->
         [cvExcept|
+          cv::Mat map2;
           cv::remap
             ( *$(Mat * srcPtr)
             , *$(Mat * dstPtr)
             , *$(Mat * mappingPtr)
-            , {}
+            , map2
             , $(int32_t c'interpolation)
             , $(int32_t c'borderMode)
             , *$(Scalar * borderValuePtr)
