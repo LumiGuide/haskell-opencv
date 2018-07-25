@@ -1,7 +1,6 @@
 final : previous : with final.haskell.lib;
 let
-  haskellOverrides = {
-    overrides = self: super: {
+  haskellOverrides = self: super: {
       opencv = doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (_drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
@@ -104,26 +103,11 @@ let
               cp $LICENSE    $out/LICENSE
             '';
         });
-
-    };
   };
-
-  ghc842Pkgs = previous.haskell.packages.ghc842.override {
-    overrides = self: super:
-      haskellOverrides.overrides self super // (with previous.haskell.lib; {
-        criterion = super.criterion_1_4_1_0;
-        base-compat-batteries = doJailbreak super.base-compat-batteries;
-        base-compat = super.base-compat_0_10_1;
-      });
-  };
-
 in  {
-  haskellPackages = ghc842Pkgs;
   haskell = previous.haskell // {
-    packages = previous.haskell.packages // {
-      ghc802 = previous.haskell.packages.ghc802.override haskellOverrides;
-      ghc822 = previous.haskell.packages.ghc822.override haskellOverrides;
-      ghc842 = ghc842Pkgs;
-    };
+    packageOverrides = self: super:
+      previous.haskell.packageOverrides self super //
+      haskellOverrides self super;
   };
 }
