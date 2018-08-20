@@ -13,6 +13,10 @@ extra-deps:
 extra-lib-dirs:
 - /usr/local/lib
 
+nix:
+  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/4ccaa7de8eb34a0bb140f109a0e88095480118eb.tar.gz" ]
+  packages: [ zlib pkgconfig opencv3 ]
+
 # Uncomment if you wish to use Docker integration
 # See README.md for further information.
 #docker:

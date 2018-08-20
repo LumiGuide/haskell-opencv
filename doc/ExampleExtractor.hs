@@ -31,6 +31,7 @@ import qualified "opencv" OpenCV as CV
 import qualified "opencv" OpenCV.Juicy as CVJ
 import qualified "text" Data.Text as T
 import qualified "text" Data.Text.IO as T
+import qualified "text" Data.Text.Encoding as TE
 import qualified "bytestring" Data.ByteString as B
 import qualified "bytestring" Data.ByteString.Lazy as BL
 import "template-haskell" Language.Haskell.TH
@@ -298,7 +299,12 @@ haddockToHaskell =
   . T.replace "\\/" "/"
 
 findExamples :: FilePath -> IO ([ExampleSrc], [RenderTarget])
-findExamples fp = ((parseExamples &&& parseGeneratedImages) . textToSource fp) <$> T.readFile fp
+findExamples fp = ((parseExamples &&& parseGeneratedImages) . textToSource fp) <$> readFileUtf8 fp
+
+-- https://www.snoyman.com/blog/2016/12/beware-of-readfile
+-- Data.Text.readFile has problems with character encoding.
+readFileUtf8 :: FilePath -> IO T.Text
+readFileUtf8 = fmap TE.decodeUtf8 . B.readFile
 
 textToSource :: FilePath -> T.Text -> [SrcLine]
 textToSource fp txt = zipWith lineToSource [1..] (T.lines txt)

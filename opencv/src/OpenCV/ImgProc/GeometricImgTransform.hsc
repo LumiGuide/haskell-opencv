@@ -52,12 +52,14 @@ module OpenCV.ImgProc.GeometricImgTransform
     , linearPolar
     , logPolar
     , getPerspectiveTransform
+    , getAffineTransform
     , getRotationMatrix2D
     , remap
     , undistort
     ) where
 
 import "base" Data.Int ( Int32 )
+import "base" Data.Foldable
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified Data.Vector as V
@@ -65,6 +67,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
+import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.Vector ( zero )
 import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
@@ -457,6 +460,30 @@ getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $
             ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
             );
         }|]
+
+{- | Calculates an affine transformation matrix for 2D affine transform
+
+<http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getaffinetransform OpenCV Sphinx doc>
+-}
+getAffineTransform
+    :: forall m point2. (MonadError CvException m, IsPoint2 point2 CFloat)
+    => V3 (point2 CFloat) -- ^ Points representing vertices in source image
+    -> V3 (point2 CFloat) -- ^ Points representing vertices in destination image
+    -> m (Mat (ShapeT [2, 3]) ('S 1) ('S Double)) -- ^ The output affine transformation, 2x3 floating-point-matrix.
+getAffineTransform srcPts dstPts = unsafeWrapException $ do
+    result <- newEmptyMat
+    handleCvException (pure $ unsafeCoerceMat result) $
+        withPtr result $ \resultPtr ->
+        withArrayPtr (v3ToVector srcPts) $ \srcPtsPtr ->
+        withArrayPtr (v3ToVector dstPts) $ \dstPtsPtr ->
+        [cvExcept|
+            *$(Mat * resultPtr) =
+                cv::getAffineTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr));
+        }|]
+  where
+    v3ToVector :: V3 (point2 CFloat) -> V.Vector Point2f
+    v3ToVector = V.map toPoint . V.fromList . toList
+
 
 {- | Calculates an affine matrix of 2D rotation
 
