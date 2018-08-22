@@ -6,24 +6,28 @@
 
 module Main where
 
-import "base" Control.Exception ( evaluate )
+import "base" Control.Exception ( evaluate, displayException )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int
 import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
+import "base" Data.List.NonEmpty ( nonEmpty )
 import "base" Data.Foldable ( for_ )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
-import "linear" Linear.Matrix ( M23, M33 )
-import "linear" Linear.Vector ( (^+^), zero )
+import "lens" Control.Lens.Combinators ( view )
+import "linear" Linear.Matrix ( M23, M33, (!*) )
+import qualified "linear" Linear as L ( Metric(..) )
+import "linear" Linear.Vector ( (^+^), (^-^), zero )
 import "linear" Linear.V2 ( V2(..) )
-import "linear" Linear.V3 ( V3(..) )
+import "linear" Linear.V3 ( V3(..), _xy )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
 import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM )
+import "opencv" OpenCV.Internal.Exception ( CoerceMatError(..) )
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
@@ -32,6 +36,7 @@ import "tasty-hunit" Test.Tasty.HUnit as HU
 import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
 import qualified "QuickCheck" Test.QuickCheck as QC
 import           "QuickCheck" Test.QuickCheck ( (==>) )
+import           "QuickCheck" Test.QuickCheck.Property ( Result(..), failed, succeeded )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 
@@ -145,6 +150,7 @@ main = defaultMain $ testGroup "opencv"
     , testGroup "Video"
       [
       ]
+    , QC.testProperty "getAffineTransform" getAffineTransformProp
     ]
 
 testArrayBinOpArgDiff
@@ -423,6 +429,41 @@ testMatToM33
     -> V3 (V3 e)
     -> HU.Assertion
 testMatToM33 m v = assertEqual "" v $ fromMat m
+
+getAffineTransformProp :: V3 (V2 CFloat) -> V3 (V2 CFloat) -> Result
+getAffineTransformProp v v' =
+    let transfEither = getAffineTransform v v'
+    in case transfEither of
+        Left exception -> failedWithReason $ displayException exception
+        Right transf ->
+            let m23 = fmap realToFrac <$> fromMat transf
+                newPoints = warpAffineV2 m23 <$> v
+            in case nonEmpty $ typeCheckMat transf of
+                Nothing ->
+                    if and $ almostEqualFloats <$> v' <*> newPoints
+                        then succeeded
+                        else failedWithReason $ "The points are too far apart; newPoints =\n" <> show newPoints <> "\n"
+                Just errs -> failedWithReason . displayException $ CoerceMatError errs
+
+warpAffineV2 :: (Num a) => M23 a -> V2 a -> V2 a
+warpAffineV2 m23 pt = view _xy (m23 !* homogeneous pt)
+  where
+    homogeneous :: (Num a) => V2 a -> V3 a
+    homogeneous (V2 x y) = V3 x y 1
+
+failedWithReason :: String -> Result
+failedWithReason s = failed { reason = s }
+
+almostEqualFloats :: V2 CFloat -> V2 CFloat -> Bool
+almostEqualFloats v v' = isSmall $ relError v v'
+
+relError :: V2 CFloat -> V2 CFloat -> CFloat
+relError x y
+    | isSmall (L.norm x) = L.distance x y
+    | otherwise = L.distance x y / L.norm x
+
+isSmall :: CFloat -> Bool
+isSmall = (>) 2e-2 . abs
 
 --------------------------------------------------------------------------------
 

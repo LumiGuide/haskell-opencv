@@ -479,7 +479,7 @@ getAffineTransform srcPts dstPts = unsafeWrapException $ do
         [cvExcept|
             *$(Mat * resultPtr) =
                 cv::getAffineTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr));
-        }|]
+        |]
   where
     v3ToVector :: V3 (point2 CFloat) -> V.Vector Point2f
     v3ToVector = V.map toPoint . V.fromList . toList
