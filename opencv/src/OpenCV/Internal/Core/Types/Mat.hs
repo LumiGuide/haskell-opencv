@@ -29,9 +29,11 @@ module OpenCV.Internal.Core.Types.Mat
     , newEmptyMat
     , newMat
     , withMatData
+    , withMatAsVec
     , matElemAddress
     , mkMat
     , cloneMat
+    , isContinuous
 
       -- * Mutable matrix
     , typeCheckMatM
@@ -80,10 +82,12 @@ import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Foreign.C.Types
-import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, touchForeignPtr )
+import "base" Foreign.ForeignPtr
+    ( ForeignPtr, withForeignPtr, touchForeignPtr, newForeignPtr_ )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
-import "base" Foreign.Ptr ( Ptr, plusPtr )
+import "base" Foreign.Marshal.Utils ( toBool )
+import "base" Foreign.Ptr ( Ptr, plusPtr, castPtr )
 import "base" Foreign.Storable ( Storable(..), peek )
 import "base" GHC.TypeLits
 import "base" System.IO.Unsafe ( unsafePerformIO )
@@ -107,6 +111,7 @@ import "this" OpenCV.Internal.Mutable
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
 import qualified "vector" Data.Vector.Generic as VG
 
 --------------------------------------------------------------------------------
@@ -393,6 +398,29 @@ withMatData mat f = withPtr mat $ \matPtr ->
       step    <- peekArray (fromIntegral dims) stepPtr
       f step dataPtr
 
+-- | Access a Mat's data via a temporary Storable Vector.
+--
+-- The storable vector may no longer be used after the supplied
+-- computation terminates.
+withMatAsVec
+    :: forall a shape channels depth. (Storable depth)
+    => Mat shape channels ('S depth)
+    -> (VS.Vector depth -> IO a)
+       -- ^ A computation to perform on the vector.
+    -> IO a
+withMatAsVec mat f =
+    withMatData continuousMat $ \_step dataPtr -> do
+      foreignDataPtr :: ForeignPtr depth <- newForeignPtr_ $ castPtr dataPtr
+      f $ VS.unsafeFromForeignPtr0 foreignDataPtr numElems
+  where
+    numElems = fromIntegral $ product $ miChannels i : miShape i
+      where
+        i = matInfo continuousMat
+
+    continuousMat
+        | isContinuous mat = mat
+        | otherwise = cloneMat mat
+
 matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
 matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
@@ -424,6 +452,11 @@ cloneMatIO :: Mat shape channels depth
 cloneMatIO mat =
     fmap unsafeCoerceMat $ fromPtr $ withPtr mat $ \matPtr ->
       [C.exp|Mat * { new Mat($(Mat * matPtr)->clone()) }|]
+
+isContinuous :: Mat shape channels depth -> Bool
+isContinuous mat = toBool $ unsafePerformIO $
+    withPtr mat $ \matPtr ->
+      [CU.exp| bool { $(Mat * matPtr)->isContinuous() } |]
 
 --------------------------------------------------------------------------------
 -- Mutable matrix
