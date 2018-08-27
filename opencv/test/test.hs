@@ -13,7 +13,7 @@ import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.List.NonEmpty ( nonEmpty )
-import "base" Data.Foldable ( for_ )
+import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
@@ -39,6 +39,7 @@ import           "QuickCheck" Test.QuickCheck ( (==>) )
 import           "QuickCheck" Test.QuickCheck.Property ( Result(..), failed, succeeded )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
+import qualified "vector" Data.Vector.Storable as VS
 
 main :: IO ()
 main = defaultMain $ testGroup "opencv"
@@ -105,6 +106,11 @@ main = defaultMain $ testGroup "opencv"
           , testGroup "fixed size matrices"
             [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
             , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
+            ]
+          , testGroup "withMatAsVec"
+            [ HU.testCase "eye_m33 Word8"  $ testWithMatAsVec (eye_m33 :: M33 Word8)
+            , HU.testCase "eye_m33 Double" $ testWithMatAsVec (eye_m33 :: M33 Double)
+            , HU.testCase "1..9 Int16" $ testWithMatAsVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
             ]
           ]
         ]
@@ -429,6 +435,12 @@ testMatToM33
     -> V3 (V3 e)
     -> HU.Assertion
 testMatToM33 m v = assertEqual "" v $ fromMat m
+
+testWithMatAsVec :: (ToMat (M33 a), Storable a, Eq a, Show a) => M33 a -> HU.Assertion
+testWithMatAsVec m33 = do
+    xs <- withMatAsVec (toMat m33) $ \vec ->
+      pure $ VS.toList vec
+    assertEqual "" (concatMap toList $ toList m33) xs
 
 getAffineTransformProp :: V3 (V2 CFloat) -> V3 (V2 CFloat) -> Result
 getAffineTransformProp v v' =
