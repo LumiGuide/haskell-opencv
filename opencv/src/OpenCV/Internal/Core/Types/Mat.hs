@@ -120,6 +120,44 @@ C.using "namespace cv"
 -- Matrix
 --------------------------------------------------------------------------------
 
+{- | n-dimensional dense array
+
+The class Mat represents an n-dimensional dense numerical
+single-channel or multi-channel array. It can be used to store real or
+complex-valued vectors and matrices, grayscale or color images, voxel
+volumes, vector fields, point clouds, tensors or histograms.
+
+The Mat type has 3 type parameters that describe properties of the
+matrix: __shape__, __channels__ and __depth__.
+
+  [@shape@] The number of dimensions and the size of each
+  dimension. Images are 2-dimensional.
+
+  [@channels@] The number of channels. An RGB color image has 3
+  channels. A grayscale image has 1 channel.
+
+  [@depth@] The type of the elements of the matrix. In an RGB image a
+  single pixel would be 3 individual elements of type 'Word8' (a
+  single byte). But if you calculate a derivative of an image the
+  @depth@ of the result would probably be a 'Float' or a 'Double'.
+
+Looking at the kinds of these parameters you will notice that
+everything is wrapped in the 'DS' kind. This kind allows you to choose
+how much information is fixed at compile time. A type wrapped in ''S'
+is __s__tatically known and can be reasoned about. Like a depth of
+''S' 'Word8'. The opposite is the ''D' type, which means some
+information is __d__ynamically known. A depth of ''D' can not be
+reasoned about at compile time. Another way to think about 'DS' is
+that it is basically a 'Maybe'. See also the 'dsToMaybe' function.
+
+Example matrix:
+
+@
+  Mat ('S '[ 'S 1080, 'S 1920 ]) ('S 3) ('S Word8)
+@
+
+A 1920x1080 3 channel image where each element is a single byte.
+-}
 newtype Mat (shape    :: DS [DS Nat])
             (channels :: DS Nat)
             (depth    :: DS *)
