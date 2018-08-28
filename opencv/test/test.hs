@@ -20,14 +20,14 @@ import qualified "bytestring" Data.ByteString as B
 import "lens" Control.Lens.Combinators ( view )
 import "linear" Linear.Matrix ( M23, M33, (!*) )
 import qualified "linear" Linear as L ( Metric(..) )
-import "linear" Linear.Vector ( (^+^), (^-^), zero )
+import "linear" Linear.Vector ( (^+^), zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..), _xy )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
 import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM )
-import "opencv" OpenCV.Internal.Exception ( CoerceMatError(..) )
+import "opencv" OpenCV.Internal.Exception ()
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))

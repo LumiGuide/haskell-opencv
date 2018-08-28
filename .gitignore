@@ -3,3 +3,4 @@ opencv-extra/src/**/*.cpp
 dist
 .stack-work
 result
+tmpDump
