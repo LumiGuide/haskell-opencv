@@ -1,12 +1,15 @@
+{-# language AllowAmbiguousTypes #-}
 {-# language FlexibleInstances #-}
 {-# language TypeSynonymInstances #-}
 {-# language TypeFamilies #-}
+{-# language TypeApplications #-}
 {-# language CPP #-}
 {-# options_ghc -fno-warn-orphans #-}
 
 module Main where
 
 import "base" Control.Exception ( evaluate, displayException )
+import "base" Control.Monad
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int
 import "base" Data.Monoid
@@ -17,6 +20,7 @@ import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
+import "exceptions" Control.Monad.Catch
 import "lens" Control.Lens.Combinators ( view )
 import "linear" Linear.Matrix ( M23, M33, (!*) )
 import qualified "linear" Linear as L ( Metric(..) )
@@ -29,6 +33,7 @@ import "opencv" OpenCV.Unsafe
 import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM )
 import "opencv" OpenCV.Internal.Exception ()
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
+import "random" System.Random (Random)
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
@@ -111,6 +116,7 @@ main = defaultMain $ testGroup "opencv"
             [ HU.testCase "eye_m33 Word8"  $ testWithMatAsVec (eye_m33 :: M33 Word8)
             , HU.testCase "eye_m33 Double" $ testWithMatAsVec (eye_m33 :: M33 Double)
             , HU.testCase "1..9 Int16" $ testWithMatAsVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+            , QC.testProperty "gives a storable vector with row major order" $ propWithMatAsVecOrder (Proxy @Int32)
             ]
           ]
         ]
@@ -476,6 +482,48 @@ relError x y
 
 isSmall :: CFloat -> Bool
 isSmall = (>) 2e-2 . abs
+
+genSplitNonZero :: (QC.Arbitrary a, Random a, Ord a, Num a)
+    => a ->  QC.Gen (a, a)
+genSplitNonZero n
+    | n <= 2 = pure (1, 1)
+    | otherwise = do
+        i <- QC.choose (1, n - 1)
+        pure (i, n - i)
+
+genSplit3NonZero :: (QC.Arbitrary a, Random a, Ord a, Num a)
+    => a -> QC.Gen (a, a, a)
+genSplit3NonZero n
+    | n <= 3 = pure (1, 1, 1)
+    | otherwise = do
+        (a, z) <- genSplitNonZero n
+        (b, c) <- genSplitNonZero z
+        pure (a, b, c)
+
+genDimensions :: QC.Gen (Int32, Int32, Int32)
+genDimensions = QC.sized $ \n -> genSplit3NonZero (fromIntegral n)
+
+genArray :: (QC.Arbitrary a, Integral n) => (n, n, n) -> QC.Gen [[[a]]]
+genArray (a, b, c) = rep a $ rep b $ rep c QC.arbitrary
+  where
+    rep x = replicateM $ fromIntegral x
+
+propWithMatAsVecOrder :: forall proxy a.
+    (Eq a, Show a, Storable a, QC.Arbitrary a, ToDepth (proxy a))
+    => proxy a -> QC.Property
+propWithMatAsVecOrder proxy =
+    --QC.forAll (QC.resize 10 genDimensions) $ \shape@(xDim, yDim, nOfChan) -> do
+    QC.forAll genDimensions $ \shape@(xDim, yDim, nOfChan) -> do
+    QC.forAll (genArray shape) $ \xs -> QC.ioProperty $
+        case runExcept $ matFromFunc [xDim, yDim] nOfChan proxy $ ixToValue xs of
+            Left err -> throwM err
+            Right mat -> do
+                let vect = VS.fromList . concat $ concat xs :: VS.Vector a
+                vect' <- withMatAsVec mat $ \vs -> VS.freeze =<< VS.unsafeThaw vs
+                pure $ vect' QC.=== vect
+  where
+    ixToValue ys [x, y] c = ys !! x !! y !! c
+    ixToValue _ _ _ = error "ixToValue was called on a non-2D shape."
 
 --------------------------------------------------------------------------------
 
