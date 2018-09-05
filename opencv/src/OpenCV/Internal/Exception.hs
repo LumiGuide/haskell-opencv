@@ -74,6 +74,8 @@ data CvException
    | CoerceMatError !(NE.NonEmpty CoerceMatError)
      -- ^ A 'Mat' couldn't be coerced to a different type because that
      -- type does not match the actual shape of the matrix.
+   | CvException !String
+     -- ^ General exception which doesn't fit in any of the other constructors.
      deriving Show
 
 data CoerceMatError
@@ -96,6 +98,7 @@ instance Exception CvException where
       CoerceMatError coerceMatErrors ->
         "A matrix can't be converted to the desired type:\n  - " ++
           intercalate "\n  - " (map displayCoerceMatError (NE.toList coerceMatErrors))
+      CvException msg -> msg
 
 displayCoerceMatError :: CoerceMatError -> String
 displayCoerceMatError = \case

@@ -62,6 +62,11 @@ module OpenCV.Core.Types.Mat
     , ToChannelsDS, toChannelsDS
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
+
+    , ValidDimensions
+    , ValidDimensions'
+    , ValidChannels
+    , ValidChannels'
     ) where
 
 import "base" Control.Monad.ST ( runST )
@@ -119,19 +124,23 @@ eyeMat
        , ToInt32    width
        , ToChannels channels
        , ToDepth    depth
+       , MonadError CvException m
        )
     => height   -- ^
     -> width    -- ^
     -> channels -- ^
     -> depth    -- ^
-    -> Mat (ShapeT (height ::: width ::: Z)) (ChannelsT channels) (DepthT depth)
-eyeMat height width channels depth = unsafeCoerceMat $ unsafePerformIO $
-    fromPtr [CU.exp|Mat * {
-      new Mat(Mat::eye( $(int32_t c'height)
-                      , $(int32_t c'width)
-                      , $(int32_t c'type)
-                      ))
-    }|]
+    -> m (Mat (ShapeT (height ::: width ::: Z)) (ChannelsT channels) (DepthT depth))
+eyeMat height width channels depth = do
+    checkMatShape $ V.fromList [c'height, c'width]
+    checkMatChannels channels'
+    pure $ unsafeCoerceMat $ unsafePerformIO $
+      fromPtr [CU.exp|Mat * {
+        new Mat(Mat::eye( $(int32_t c'height)
+                        , $(int32_t c'width)
+                        , $(int32_t c'type)
+                        ))
+      }|]
   where
     c'type = marshalFlags depth' channels'
 

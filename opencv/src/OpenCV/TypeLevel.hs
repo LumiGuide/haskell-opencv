@@ -125,9 +125,12 @@ instance (ToNatDS (Proxy a), ToNatListDS (Proxy as))
 -- Type functions
 --------------------------------------------------------------------------------
 
-type family Length (xs :: [a]) :: Nat where
+type family Length (xs :: k) :: Nat where
     Length '[]        = 0
     Length (_x ': xs) = 1 + Length xs
+
+    Length Z           = 0
+    Length (_x ::: xs) = 1 + Length xs
 
 type family Elem (e :: a) (xs :: [a]) :: Bool where
     Elem _e '[]         = 'False

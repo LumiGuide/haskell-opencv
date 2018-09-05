@@ -21,6 +21,9 @@ module OpenCV.Internal.Core.Types.Mat
       Mat(..)
 
     , typeCheckMat
+    , checkMatShape
+    , checkMatChannels
+    , checkMatDefValue
     , relaxMat
     , coerceMat
     , unsafeCoerceMat
@@ -66,16 +69,24 @@ module OpenCV.Internal.Core.Types.Mat
 
     , ToShape(toShape)
     , ToShapeDS(toShapeDS)
-    , ToChannels, toChannels
-    , ToChannelsDS, toChannelsDS
+    , ToChannels(toChannels)
+    , ToChannelsDS(toChannelsDS)
     , ToDepth(toDepth)
     , ToDepthDS(toDepthDS)
+
+    , ValidDimensions
+    , ValidDimensions'
+    , ValidChannels
+    , ValidChannels'
     ) where
 
 import "base" Control.Exception ( throwIO )
+import "base" Control.Monad ( when )
 import "base" Control.Monad.IO.Class
 import "base" Control.Monad.ST ( ST )
+import "base" Data.Foldable ( traverse_ )
 import "base" Data.Int
+import "base" Data.Kind ( Constraint )
 import qualified "base" Data.List.NonEmpty as NE
 import "base" Data.Maybe
 import "base" Data.Monoid ( (<>) )
@@ -96,6 +107,7 @@ import "deepseq" Control.DeepSeq ( NFData(..) )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
+import "linear" Linear ( V4 )
 import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
 import "this" OpenCV.Internal ( objFromPtr )
@@ -265,6 +277,33 @@ typeCheckMat mat =
         | otherwise = Just $ DepthError
                            $ ExpectationError expectedDepth (miDepth mi)
 
+checkMatShape
+    :: forall m
+     . (Applicative m, MonadError CvException m) => V.Vector Int32 -> m ()
+checkMatShape shape = do
+    traverse_ checkDim shape
+    when (V.length shape < 0 || V.length shape > 32) $
+      throwError $ CvException $
+        "d == 0 || (d >= 2 && d <= 32), but number of length of shape is " ++ show (V.length shape)
+    when (V.length shape == 1) $
+      throwError $ CvException $
+        "1 dimensional mats are not allowed, please add another dimension of size 1"
+  where
+    checkDim :: Int32 -> m ()
+    checkDim dim =
+        when (dim < 1) $
+          throwError $ CvException $ "invalid dimension size: " ++ show dim
+
+checkMatChannels :: (Applicative m, MonadError CvException m) => Int32 -> m ()
+checkMatChannels channels =
+    when (channels < 1 || channels > 512) $
+      throwError $ CvException $ "invalid number of channels: " ++ show channels
+
+checkMatDefValue :: (Applicative m, MonadError CvException m) => Int32 -> Scalar -> m ()
+checkMatDefValue channels defValue =
+    when (channels > 4 && fromScalar defValue /= (0 :: V4 Double)) $
+      throwError $ CvException $ "with more than 4 channels the default value must be 0"
+
 -- | Relaxes the type level constraints
 --
 -- Only identical or looser constraints are allowed. For tighter
@@ -318,41 +357,38 @@ keepMatAliveDuring mat m = do
 newEmptyMat :: MonadIO m => m (Mat ('S '[]) ('S 1) ('S Word8))
 newEmptyMat = liftIO ( unsafeCoerceMat <$> fromPtr [CU.exp|Mat * { new Mat() }|] )
 
--- TODO (RvD): what happens if we construct a mat with more than 4 channels?
--- A scalar is just 4 values. What would be the default value of the 5th channel?
 newMat
-    :: ( ToShape    shape
+    :: forall shape channels depth scalar m
+     . ( ToShape    shape
        , ToChannels channels
        , ToDepth    depth
        , ToScalar   scalar
        , MonadError CvException m
        , MonadIO m
-       -- , MinLengthDS 2 shape
-       -- , 1 .<=? channels
-       -- , channels .<=? 512
-       -- , 2 <= Length shape
-       -- , 1 <= channels
-       -- , channels <= 512
        )
     => shape -- ^
     -> channels
     -> depth
     -> scalar
     -> m (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth))
-newMat shape channels depth defValue = wrapException $ liftIO $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withVector shape' $ \shapePtr ->
-      withPtr (toScalar defValue) $ \scalarPtr ->
-      withPtr dst $ \dstPtr ->
-        [cvExcept|
-          *$(Mat * dstPtr) =
-            Mat( $(int32_t c'ndims)
-               , $(int32_t * shapePtr)
-               , $(int32_t c'type)
-               , *$(Scalar * scalarPtr)
-               );
-        |]
+newMat shape channels depth defValue = do
+    checkMatShape shape'
+    checkMatChannels channels'
+    checkMatDefValue channels' defValue'
+    wrapException $ liftIO $ do
+      dst <- newEmptyMat
+      handleCvException (pure $ unsafeCoerceMat dst) $
+        withVector shape' $ \shapePtr ->
+        withPtr (toScalar defValue) $ \scalarPtr ->
+        withPtr dst $ \dstPtr ->
+          [cvExcept|
+            *$(Mat * dstPtr) =
+              Mat( $(int32_t c'ndims)
+                 , $(int32_t * shapePtr)
+                 , $(int32_t c'type)
+                 , *$(Scalar * scalarPtr)
+                 );
+          |]
   where
     c'ndims = fromIntegral $ VG.length shape'
     c'type  = marshalFlags depth' channels'
@@ -360,6 +396,7 @@ newMat shape channels depth defValue = wrapException $ liftIO $ do
     shape'    = toShape shape
     channels' = toChannels channels
     depth'    = toDepth depth
+    defValue' = toScalar defValue
 
 -- TODO (BvD): Move to some Utility module.
 withVector
@@ -426,8 +463,6 @@ matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
     where
       offset = sum $ zipWith (*) step pos
 
--- TODO (RvD): check for negative sizes
--- This crashes OpenCV
 mkMat
     :: ( ToShape    shape
        , ToChannels channels
@@ -497,7 +532,6 @@ unsafeCoerceMatM
 unsafeCoerceMatM = unsafeCoerce
 
 -- TODO (RvD): check for negative sizes
--- This crashes OpenCV
 mkMatM
     :: ( PrimMonad m
        , ToShape    shape
@@ -513,12 +547,10 @@ mkMatM
     -> m (Mut (Mat (ShapeT shape) (ChannelsT channels) (DepthT depth)) (PrimState m))
 mkMatM shape channels depth defValue = do
     mat <-
-      runExceptT ( exceptTFromIO ( newMat shape channels depth defValue ) )
+      runExceptT (exceptTFromIO (newMat shape channels depth defValue))
         >>= either throwError return
     unsafeThaw mat
-
   where
-
     exceptTFromIO :: PrimMonad m => ExceptT e IO a -> ExceptT e m a
     exceptTFromIO = mapExceptT unsafePrimToPrim
 
@@ -641,28 +673,75 @@ instance ToShape [Int32] where
     toShape = V.fromList
 
 -- | empty 'V.Vector'
-instance ToShape (Proxy '[]) where
+instance (ValidDimensions 0) => ToShape (Proxy '[]) where
     toShape _proxy = V.empty
 
 -- | fold over the type level list
-instance (ToInt32 (Proxy a), ToShape (Proxy as))
+instance ( ValidDimensions (Length (a ': as))
+         , ToInt32 (Proxy a)
+         , ToUncheckedShape (Proxy (a ': as))
+         )
       => ToShape (Proxy (a ': as)) where
-    toShape _proxy =
-        V.cons
-          (toInt32 (Proxy :: Proxy a))
-          (toShape (Proxy :: Proxy as))
+    toShape proxy = toUncheckedShape proxy
 
 -- | empty 'V.Vector'
-instance ToShape Z where
+instance (ValidDimensions 0) => ToShape Z where
     toShape Z = V.empty
 
 -- | fold over ':::'
-instance (ToInt32 a, ToShape as) => ToShape (a ::: as) where
-    toShape (a ::: as) = V.cons (toInt32 a) (toShape as)
+instance ( dims ~ Length (a ::: as)
+         , ValidDimensions dims
+         , ToInt32 a
+         , ToUncheckedShape as
+         ) => ToShape (a ::: as) where
+    toShape (a ::: as) = toUncheckedShape (a ::: as)
 
 -- | strip away 'S'
 instance (ToShape (Proxy a)) => ToShape (Proxy ('S a)) where
     toShape _proxy = toShape (Proxy :: Proxy a)
+
+--------------------------------------------------------------------------------
+
+-- | Helper for 'ToShape'.
+class ToUncheckedShape a where
+    toUncheckedShape :: a -> V.Vector Int32
+
+-- | empty 'V.Vector'
+instance ToUncheckedShape (Proxy '[]) where
+    toUncheckedShape _proxy = V.empty
+
+-- | fold over the type level list
+instance (ToInt32 (Proxy a), ToUncheckedShape (Proxy as))
+      => ToUncheckedShape (Proxy (a ': as)) where
+    toUncheckedShape _proxy =
+        V.cons
+          (toInt32          (Proxy :: Proxy a ))
+          (toUncheckedShape (Proxy :: Proxy as))
+
+-- | empty 'V.Vector'
+instance ToUncheckedShape Z where
+    toUncheckedShape Z = V.empty
+
+-- | fold over ':::'
+instance (ToInt32 a, ToUncheckedShape as) => ToUncheckedShape (a ::: as) where
+    toUncheckedShape (a ::: as) = V.cons (toInt32 a) (toUncheckedShape as)
+
+--------------------------------------------------------------------------------
+
+-- | Constraint which expresses a valid number of dimensions for a
+-- 'Mat'.
+--
+-- Number of dimensions must be 0 or [2..32].
+type ValidDimensions dims = ValidDimensions' dims (CmpNat dims 33)
+
+-- | 'ValidDimensions' helper which produces custom type errors.
+type family ValidDimensions' (dims :: Nat) (cmpMax :: Ordering) :: Constraint where
+    ValidDimensions' 0 _ = ()
+    ValidDimensions' 1 _ =
+        TypeError ('Text "Mat may not be 1-dimensional. Please add another dimension of size 1")
+    ValidDimensions' _ 'LT = ()
+    ValidDimensions' n _ =
+        TypeError ('Text "Mat has too many dimensions: " ':<>: 'ShowType n ':<>: 'Text " > 32")
 
 --------------------------------------------------------------------------------
 
@@ -677,15 +756,54 @@ instance (ToNatListDS (Proxy as)) => ToShapeDS (Proxy ('S as)) where
 
 --------------------------------------------------------------------------------
 
-type ToChannels a = ToInt32 a
+-- | Conversions to number of channels.
+class ToChannels a where
+    toChannels :: a -> Int32
 
-toChannels :: (ToInt32 a) => a -> Int32
-toChannels = toInt32
+-- | value level: identity
+instance ToChannels Int32 where
+    toChannels = id
 
-type ToChannelsDS a = ToNatDS a
+-- | type level: reify the known natural number @n@
+instance (KnownNat n, ValidChannels n) => ToChannels (proxy n) where
+    toChannels = fromInteger . natVal
 
-toChannelsDS :: (ToChannelsDS a) => a -> DS Int32
-toChannelsDS = toNatDS
+-- | strip away 'S'
+instance (ToChannels (Proxy n)) => ToChannels (proxy ('S n)) where
+    toChannels _proxy = toChannels (Proxy :: Proxy n)
+
+--------------------------------------------------------------------------------
+
+-- | Constraint which expresses a valid number of channels for a
+-- 'Mat'.
+--
+-- Number of channels must be [1..512].
+type ValidChannels channels = ValidChannels' channels (CmpNat channels 513)
+
+-- | 'ValidChannels' helper which produces custom type errors.
+type family ValidChannels' (channels :: Nat) (cmpMax :: Ordering) :: Constraint where
+    ValidChannels' 0 _ = TypeError ('Text "Mat must have at least 1 channel")
+    ValidChannels' _ 'LT = ()
+    ValidChannels' n _ =
+        TypeError ('Text "Mat has too many channels: " ':<>: 'ShowType n ':<>: 'Text " > 512")
+
+--------------------------------------------------------------------------------
+
+-- | Type level to value level conversion of numbers of channels that
+-- are either 'D'ynamically or 'S'tatically known.
+--
+-- > toChannelsDS (Proxy ('S 42)) == S 42
+-- > toChannelsDS (Proxy 'D) == D
+class ToChannelsDS a where
+    toChannelsDS :: a -> DS Int32
+
+-- | value level numbers are dynamically known
+instance ToChannelsDS (proxy 'D) where
+    toChannelsDS _proxy = D
+
+-- | type level numbers are statically known
+instance (ToChannels (Proxy n)) => ToChannelsDS (Proxy ('S n)) where
+    toChannelsDS _proxy = S $ toChannels (Proxy :: Proxy n)
 
 --------------------------------------------------------------------------------
 

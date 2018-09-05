@@ -1,4 +1,6 @@
 {-# language FlexibleInstances #-}
+{-# language LambdaCase #-}
+{-# language TypeApplications #-}
 {-# language TypeSynonymInstances #-}
 {-# language TypeFamilies #-}
 {-# language CPP #-}
@@ -6,7 +8,7 @@
 
 module Main where
 
-import "base" Control.Exception ( evaluate, displayException )
+import "base" Control.Exception ( Exception, try, displayException, evaluate )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int
 import "base" Data.Monoid
@@ -20,13 +22,13 @@ import qualified "bytestring" Data.ByteString as B
 import "lens" Control.Lens.Combinators ( view )
 import "linear" Linear.Matrix ( M23, M33, (!*) )
 import qualified "linear" Linear as L ( Metric(..) )
-import "linear" Linear.Vector ( (^+^), (^-^), zero )
+import "linear" Linear.Vector ( (^+^), zero )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..), _xy )
 import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
-import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM )
+import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM, newMat )
 import "opencv" OpenCV.Internal.Exception ( CoerceMatError(..) )
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
@@ -87,6 +89,21 @@ main = defaultMain $ testGroup "opencv"
         , testGroup "Mat"
           [ HU.testCase "emptyMat" $ testMatType emptyMat
           , HU.testCase "deallocate" $ testDeallocate
+          , testGroup "newMat"
+            [ testNewMat False (MatInfo []     Depth_8U 1) 0
+            , testNewMat True  (MatInfo [0]    Depth_8U 1) 0
+            , testNewMat True  (MatInfo [-1]   Depth_8U 1) 0
+            , testNewMat True  (MatInfo [1,0]  Depth_8U 1) 0
+            , testNewMat True  (MatInfo [1,-1] Depth_8U 1) 0
+            , testNewMat False (MatInfo [1,3]  Depth_8U 1) 0
+            , testNewMat False (MatInfo [3,1]  Depth_8U 1) 0
+            , testNewMat True  (MatInfo [1]    Depth_8U 0) 0
+            , testNewMat True  (MatInfo [1]    Depth_8U (-1)) 0
+            , testNewMat False (MatInfo [1,1]  Depth_8U 512) 0
+            , testNewMat True  (MatInfo [1,1]  Depth_8U 513) 0
+            , testNewMat False (MatInfo (replicate  32 1) Depth_8U 1) 0
+            , testNewMat True  (MatInfo (replicate 100 1) Depth_8U 1) 0
+            ]
           , testGroup "matInfo"
             [ matHasInfoFP "Lenna.png"  $ MatInfo [512, 512] Depth_8U 3
             , matHasInfoFP "kikker.jpg" $ MatInfo [390, 500] Depth_8U 3
@@ -301,6 +318,33 @@ testDeallocate = do
     mutMat <- thaw mat
     deallocateMatM mutMat
 
+testNewMat :: Bool -> MatInfo -> V4 Double -> TestTree
+testNewMat throwsException infoIn defValue =
+    HU.testCase testName $ checkException $ do
+        mat <- exceptErrorIO $ newMat shapeIn (miChannels infoIn) (miDepth infoIn) defValue
+        let infoOut = matInfo mat
+        HU.assertEqual "Mat not created according to specification" infoIn infoOut
+  where
+    testName = concat
+        [ "shape "
+        , if shapeInLen <= 4
+          then show shapeIn
+          else show shapeInLen ++ "D"
+        , " channels ", show $ miChannels infoIn
+        , " depth "   , show $ miDepth    infoIn
+        ]
+
+    shapeIn = miShape infoIn
+    shapeInLen = length shapeIn
+
+    checkException :: IO () -> Assertion
+    checkException
+        | throwsException = assertException acceptCvException
+        | otherwise = id
+
+    acceptCvException (CvException _) = True
+    acceptCvException _ = False
+
 matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
     mat <- loadImg ImreadUnchanged fp
@@ -483,9 +527,9 @@ eye23_8u_1c :: Mat (ShapeT [2, 3]) ('S 1) ('S Word8)
 eye33_8u_1c :: Mat (ShapeT [3, 3]) ('S 1) ('S Word8)
 eye22_8u_3c :: Mat (ShapeT [2, 2]) ('S 3) ('S Word8)
 
-eye23_8u_1c = eyeMat (Proxy :: Proxy 2) (Proxy :: Proxy 3) (Proxy :: Proxy 1) (Proxy :: Proxy Word8)
-eye33_8u_1c = eyeMat (Proxy :: Proxy 3) (Proxy :: Proxy 3) (Proxy :: Proxy 1) (Proxy :: Proxy Word8)
-eye22_8u_3c = eyeMat (Proxy :: Proxy 2) (Proxy :: Proxy 2) (Proxy :: Proxy 3) (Proxy :: Proxy Word8)
+eye23_8u_1c = exceptError $ eyeMat (Proxy @2) (Proxy @3) (Proxy @1) (Proxy @Word8)
+eye33_8u_1c = exceptError $ eyeMat (Proxy @3) (Proxy @3) (Proxy @1) (Proxy @Word8)
+eye22_8u_3c = exceptError $ eyeMat (Proxy @2) (Proxy @2) (Proxy @3) (Proxy @Word8)
 
 eye_m23 :: (Num e) => M23 e
 eye_m33 :: (Num e) => M33 e
@@ -531,3 +575,14 @@ assertNull
     -> IO ()
 assertNull [] _showError = pure ()
 assertNull xs  showError = assertFailure $ showError xs
+
+-- | Asserts that an exception is thrown.
+assertException
+    :: (Exception e)
+    => (e -> Bool) -- | Function which accepts or rejects the exception.
+    -> IO () -- | Action which should throw an exception.
+    -> Assertion
+assertException acceptException act =
+    try act >>= \case
+      Left e -> assertBool ("Unexpected exception: " <> displayException e) $ acceptException e
+      Right _ -> HU.assertFailure "Excepted exception was not thrown"

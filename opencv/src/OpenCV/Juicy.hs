@@ -147,24 +147,28 @@ fromImageImg = do
 <<doc/generated/examples/fromImageImg.png fromImageImg>>
 -}
 fromImage
-    :: forall a c d
-     . ( ToDepth (Proxy d)
-       , KnownNat c
+    :: forall a channels depth
+     . ( ToDepth (Proxy depth)
+       , KnownNat channels
+       , ToChannels (Proxy channels)
        , Pixel a
        , Storable a
-       , c ~ PixelChannels a
-       , d ~ PixelDepth a
+       , channels ~ PixelChannels a
+       , depth ~ PixelDepth a
        )
     => Image a -- ^ JuicyPixels image
-    -> Mat2D 'D 'D ('S c) ('S d)
+    -> Mat2D 'D 'D ('S channels) ('S depth)
 fromImage i@(Image w h _data) = exceptError $ withMatM
-    (fi h ::: fi w ::: Z)
-    (Proxy :: Proxy c)
-    (Proxy :: Proxy d)
+    shape
+    (Proxy :: Proxy channels)
+    (Proxy :: Proxy depth)
     (pure 0 :: V4 Double) $ \m ->
-      for_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(y,x) ->
-        unsafeWrite m [y,x] 0 (pixelAt i x y)
+      for_ ((,) <$> [0 .. h - 1] <*> [0 .. w - 1]) $ \(y, x) ->
+        unsafeWrite m [y, x] 0 (pixelAt i x y)
   where
+    shape :: Int32 ::: Int32 ::: Z
+    shape = fi h ::: fi w ::: Z
+
     fi :: Int -> Int32
     fi = fromIntegral
 
@@ -188,20 +192,20 @@ toImageImg = exceptError . cvtColor rgb bgr . from . to . exceptError . cvtColor
 <<doc/generated/examples/toImageImg.png toImageImg>>
 -}
 toImage
-    :: forall a c d h w.
-       ( KnownNat c
+    :: forall a channels depth height width
+     . ( KnownNat channels
        , Pixel a
        , Storable a
-       , c ~ PixelChannels a
-       , d ~ PixelDepth a
+       , channels ~ PixelChannels a
+       , depth ~ PixelDepth a
        )
-    => Mat2D h w ('S c) ('S d)  -- ^ OpenCV 2D-matrix
+    => Mat2D height width ('S channels) ('S depth)  -- ^ OpenCV 2D-matrix
     -> Image a
 toImage m  = unsafePerformIO $ do
     mat <- unsafeThaw m
-    withImage w h $ \x y -> unsafeRead mat [y, x] 0
+    withImage width height $ \x y -> unsafeRead mat [y, x] 0
   where
-    MatInfo [fromIntegral -> h, fromIntegral -> w] _ _  = matInfo m
+    MatInfo [fromIntegral -> height, fromIntegral -> width] _ _  = matInfo m
 
 -- | An OpenCV 2D-filter preserving the matrix type
 type Filter m h w c d = Mat2D h w c d -> m (Mat2D h w c d)
@@ -224,18 +228,21 @@ isoJuicy _ _                =  error
     "Unhandled conversion from DynamicImage to Mat"
 
 isoApply
-    :: forall f inPixel outPixel
+    :: forall f inPixel outPixel inChannels outChannels
     . ( Functor f
-      , KnownNat (PixelChannels inPixel)
-      , KnownNat (PixelChannels outPixel)
+      , inChannels ~ PixelChannels inPixel
+      , outChannels ~ PixelChannels outPixel
+      , KnownNat inChannels
+      , KnownNat outChannels
+      , ToChannels (Proxy inChannels)
       , Storable inPixel
       , Storable outPixel
       , ToDepth (Proxy (PixelDepth inPixel))
       , Pixel inPixel
       , Pixel outPixel
       )
-    => (     Mat2D 'D 'D ('S (PixelChannels inPixel))  ('S (PixelDepth inPixel))
-       -> f (Mat2D 'D 'D ('S (PixelChannels outPixel)) ('S (PixelDepth outPixel)))
+    => (     Mat2D 'D 'D ('S inChannels)  ('S (PixelDepth inPixel))
+       -> f (Mat2D 'D 'D ('S outChannels) ('S (PixelDepth outPixel)))
        )
     -> (     Image inPixel
        -> f (Image outPixel)
