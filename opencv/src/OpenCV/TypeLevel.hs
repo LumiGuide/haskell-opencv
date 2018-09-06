@@ -163,26 +163,6 @@ type family Relax (a :: DS ka) (b :: DS kb) :: Bool where
 
 type MayRelax a b = Relax a b ~ 'True
 
--- type family LeDS_F (a :: Nat) (b :: DS Nat) :: Bool where
---     LeDS_F _a 'D     = 'True
---     LeDS_F  a ('S b) = a <=? b
-
--- type (.<=?) a b = LeDS_F a b ~ 'True
-
--- type LE a b = a <=? b ~ True
--- type GT a b = b <=? a ~ True
-
-
--- type family LengthDS (as :: DS [k]) :: DS Nat where
---     LengthDS 'D = 'D
---     LengthDS ('S xs) = 'S (Length xs)
-
--- type family MinLengthDS_F (a :: Nat) (bs :: DS [k]) :: Bool where
---     MinLengthDS_F _a 'D = 'True
---     MinLengthDS_F  a bs = LeDS_F a (LengthDS bs)
-
--- type MinLengthDS a bs = MinLengthDS_F a bs ~ 'True
-
 class PrivateIsStatic (ds :: DS a)
 instance PrivateIsStatic ('S a)
 
