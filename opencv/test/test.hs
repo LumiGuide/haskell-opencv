@@ -11,7 +11,6 @@ module Main where
 import "base" Control.Exception ( Exception, try, displayException, evaluate )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int
-import "base" Data.Monoid
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.List.NonEmpty ( nonEmpty )
@@ -29,7 +28,6 @@ import "linear" Linear.V4 ( V4(..) )
 import "opencv" OpenCV
 import "opencv" OpenCV.Unsafe
 import "opencv" OpenCV.Internal.Core.Types.Mat ( deallocateMatM, newMat )
-import "opencv" OpenCV.Internal.Exception ( CoerceMatError(..) )
 import "opencv" OpenCV.Internal.Core.Types.Mat.Marshal ( marshalDepth, unmarshalDepth )
 import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
