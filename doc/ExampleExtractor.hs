@@ -30,7 +30,6 @@ import "JuicyPixels" Codec.Picture.Types      as JP
 import qualified "opencv" OpenCV as CV
 import qualified "opencv" OpenCV.Juicy as CVJ
 import qualified "text" Data.Text as T
-import qualified "text" Data.Text.IO as T
 import qualified "text" Data.Text.Encoding as TE
 import qualified "bytestring" Data.ByteString as B
 import qualified "bytestring" Data.ByteString.Lazy as BL
