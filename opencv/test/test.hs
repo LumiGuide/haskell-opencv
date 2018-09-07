@@ -270,14 +270,14 @@ rectBasicProperties
     -> V2 Int32 -- ^ size
     -> Bool
 rectBasicProperties tl size@(V2 w h) = and
-      [ fromPoint (rectTopLeft     rect) == tl
-      , fromPoint (rectBottomRight rect) == tl ^+^ size
-      , fromSize  (rectSize        rect) == size
-      ,           rectArea         rect  == (w  *  h)
-      ]
-    where
-      rect :: Rect2i
-      rect = toRect $ HRect tl size
+    [ fromPoint (rectTopLeft     rect) == tl
+    , fromPoint (rectBottomRight rect) == tl ^+^ size
+    , fromSize  (rectSize        rect) == size
+    ,           rectArea         rect  == (w  *  h)
+    ]
+  where
+    rect :: Rect2i
+    rect = toRect $ HRect tl size
 
 rectContainsProperty :: Point2i -> Rect2i -> Bool
 rectContainsProperty point rect = rectContains point rect == myRectContains point rect
@@ -383,8 +383,8 @@ hMatEncodeDecode m1 =
 
 hmatElemSize :: FilePath -> Int -> HU.Assertion
 hmatElemSize fp expectedElemSize = do
-  mat <- loadImg ImreadUnchanged fp
-  assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
+    mat <- loadImg ImreadUnchanged fp
+    assertEqual "" expectedElemSize $ hElemsLength $ hmElems $ matToHMat mat
 
 encodeDecode :: ImreadMode -> OutputFormat -> HU.Assertion
 encodeDecode imreadMode outputFormat = do
@@ -462,8 +462,8 @@ type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
 
 loadLambda :: IO Lambda
 loadLambda =
-  fmap (exceptError . coerceMat . imdecode ImreadGrayscale)
-       (B.readFile "data/lambda.png")
+    fmap (exceptError . coerceMat . imdecode ImreadGrayscale)
+         (B.readFile "data/lambda.png")
 
 loadImg :: ImreadMode -> FilePath -> IO (Mat ('S ['D, 'D]) 'D 'D)
 loadImg readMode fp = imdecode readMode <$> B.readFile ("data/" <> fp)
