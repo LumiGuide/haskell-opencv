@@ -15,6 +15,7 @@ import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.List.NonEmpty ( nonEmpty )
+import "base" Data.Monoid ( (<>) )
 import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
