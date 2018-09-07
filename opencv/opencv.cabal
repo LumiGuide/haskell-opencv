@@ -1,4 +1,4 @@
-cabal-version: 2.2
+cabal-version: >= 1.23
 name:          opencv
 version:       0.0.2.1
 homepage:      https://github.com/LumiGuide/haskell-opencv
@@ -107,11 +107,11 @@ library
           inline-c     >= 0.6
         , inline-c-cpp >= 0.2.1
 
-    cxx-options:       -std=c++11
+    cc-options: -Wall -std=c++11
     extra-libraries:   stdc++
     pkgconfig-depends: opencv >= 3.0.0
 
-    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
+    ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields -optc-std=c++11
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
