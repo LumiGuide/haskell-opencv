@@ -9,6 +9,7 @@
 module Main where
 
 import "base" Control.Exception ( Exception, try, displayException, evaluate )
+import "base" Control.Monad.IO.Class ( liftIO )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int
 import "base" Data.Proxy
@@ -18,6 +19,7 @@ import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
 import qualified "bytestring" Data.ByteString as B
+import "deepseq" Control.DeepSeq ( NFData, force )
 import "lens" Control.Lens.Combinators ( view )
 import "linear" Linear.Matrix ( M23, M33, (!*) )
 import qualified "linear" Linear as L ( Metric(..) )
@@ -122,10 +124,22 @@ main = defaultMain $ testGroup "opencv"
             [ HU.testCase "M23 eye" $ testMatToM23 eye23_8u_1c (eye_m23 :: M23 Word8)
             , HU.testCase "M33 eye" $ testMatToM33 eye33_8u_1c (eye_m33 :: M33 Word8)
             ]
-          , testGroup "withMatAsVec"
-            [ HU.testCase "eye_m33 Word8"  $ testWithMatAsVec (eye_m33 :: M33 Word8)
-            , HU.testCase "eye_m33 Double" $ testWithMatAsVec (eye_m33 :: M33 Double)
-            , HU.testCase "1..9 Int16" $ testWithMatAsVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+          , testGroup "mat <-> vector conversions"
+            [ testGroup "unsafeWithMatAsVec"
+              [ HU.testCase "eye_m33 Word8"  $ testUnsafeWithMatAsVec (eye_m33 :: M33 Word8)
+              , HU.testCase "eye_m33 Double" $ testUnsafeWithMatAsVec (eye_m33 :: M33 Double)
+              , HU.testCase "1..9 Int16" $ testUnsafeWithMatAsVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+              ]
+            , testGroup "mat -> vec -> mat"
+              [ HU.testCase "eye_m33 Word8" $ testMatVecMat (eye_m33 :: M33 Word8)
+              , HU.testCase "eye_m33 Double" $ testMatVecMat (eye_m33 :: M33 Double)
+              , HU.testCase "1..9 Int16" $ testMatVecMat (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+              ]
+            , testGroup "vec -> mat -> vec"
+              [ HU.testCase "eye_m33 Word8" $ testVecMatVec (eye_m33 :: M33 Word8)
+              , HU.testCase "eye_m33 Double" $ testVecMatVec (eye_m33 :: M33 Double)
+              , HU.testCase "1..9 Int16" $ testVecMatVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+              ]
             ]
           ]
         ]
@@ -478,11 +492,43 @@ testMatToM33
     -> HU.Assertion
 testMatToM33 m v = assertEqual "" v $ fromMat m
 
-testWithMatAsVec :: (ToMat (M33 a), Storable a, Eq a, Show a) => M33 a -> HU.Assertion
-testWithMatAsVec m33 = do
-    xs <- withMatAsVec (toMat m33) $ \vec ->
-      pure $ VS.toList vec
+testUnsafeWithMatAsVec :: (ToMat (M33 a), Storable a, Eq a, Show a, NFData a) => M33 a -> HU.Assertion
+testUnsafeWithMatAsVec m33 = do
+    xs <- unsafeWithMatAsVec (toMat m33) $ \vec ->
+      evaluate $ force $ VS.toList vec
     assertEqual "" (concatMap toList $ toList m33) xs
+
+testMatVecMat
+    :: forall a
+     . (Eq a, Show a, NFData a, ToDepth (Proxy a), Storable a, ToMat (M33 a))
+    => M33 a -> HU.Assertion
+testMatVecMat m33In = do
+    m33Out <-
+      unsafeWithMatAsVec matIn $ \(vec :: VS.Vector a) ->
+        exceptErrorIO $
+          unsafeWithVecAsMat (Proxy @[3, 3]) (Proxy @1) vec $ \matOut ->
+            liftIO $ evaluate $ fromMat matOut
+    assertEqual "" m33In m33Out
+  where
+    matIn :: Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S a)
+    matIn = toMat m33In
+
+testVecMatVec
+    :: forall a
+     . (Eq a, Show a, NFData a, ToDepth (Proxy a), Storable a)
+    => M33 a -> HU.Assertion
+testVecMatVec m33In = do
+    elemsOut <- exceptErrorIO $
+      unsafeWithVecAsMat (Proxy @[3, 3]) (Proxy @1) vecIn $ \mat ->
+        liftIO $ unsafeWithMatAsVec mat $ \vecOut ->
+          evaluate $ force $ VS.toList vecOut
+    assertEqual "" elemsIn elemsOut
+  where
+    vecIn :: VS.Vector a
+    vecIn = VS.fromList elemsIn
+
+    elemsIn :: [a]
+    elemsIn = concatMap toList $ toList m33In
 
 getAffineTransformProp :: V3 (V2 CFloat) -> V3 (V2 CFloat) -> Result
 getAffineTransformProp v v' =

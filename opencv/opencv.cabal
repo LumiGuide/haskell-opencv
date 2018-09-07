@@ -278,6 +278,7 @@ test-suite test-opencv
     build-depends:
         base              >= 4.8 && < 5
       , bytestring        >= 0.10.6
+      , deepseq           >= 1.4.1.1
       , lens              >= 4.13
       , linear            >= 1.20.4
       , opencv

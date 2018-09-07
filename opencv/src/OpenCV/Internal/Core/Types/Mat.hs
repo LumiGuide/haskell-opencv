@@ -32,7 +32,8 @@ module OpenCV.Internal.Core.Types.Mat
     , newEmptyMat
     , newMat
     , withMatData
-    , withMatAsVec
+    , unsafeWithMatAsVec
+    , unsafeWithVecAsMat
     , matElemAddress
     , mkMat
     , cloneMat
@@ -437,15 +438,15 @@ withMatData mat f = withPtr mat $ \matPtr ->
 
 -- | Access a Mat's data via a temporary Storable Vector.
 --
--- The storable vector may no longer be used after the supplied
--- computation terminates.
-withMatAsVec
+-- The storable vector and its data may no longer be used after the
+-- supplied computation terminates.
+unsafeWithMatAsVec
     :: forall a shape channels depth. (Storable depth)
     => Mat shape channels ('S depth)
     -> (VS.Vector depth -> IO a)
        -- ^ A computation to perform on the vector.
     -> IO a
-withMatAsVec mat f =
+unsafeWithMatAsVec mat f =
     withMatData continuousMat $ \_step dataPtr -> do
       foreignDataPtr :: ForeignPtr depth <- newForeignPtr_ $ castPtr dataPtr
       f $ VS.unsafeFromForeignPtr0 foreignDataPtr numElems
@@ -457,6 +458,69 @@ withMatAsVec mat f =
     continuousMat
         | isContinuous mat = mat
         | otherwise = cloneMat mat
+
+-- | Create a temporary Mat from a Storable Vector's data.
+--
+-- The @shape@ and @channels@ of the Mat must exactly match the
+-- length of the vector.
+--
+-- The Mat and its data may no longer be used after the supplied
+-- computation terminates.
+unsafeWithVecAsMat
+    :: forall a shape channels depth m
+     . ( Storable depth
+       , ToShape shape
+       , ToChannels channels
+       , ToDepth (Proxy depth)
+       , MonadError CvException m
+       , MonadIO m
+       )
+    => shape
+    -> channels
+    -> VS.Vector depth
+    -> (Mat (ShapeT shape) (ChannelsT channels) ('S depth) -> ExceptT CvException IO a)
+    -> m a
+unsafeWithVecAsMat shape channels vec f = do
+    checkMatShape shape'
+    checkMatChannels channels'
+    checkVec
+    unsafeWrapException $ VS.unsafeWith vec $ \vecPtr ->
+      withVector shape' $ \shapePtr -> do
+        let dataPtr :: Ptr Word8
+            dataPtr = castPtr vecPtr
+        dst <- unsafeCoerceMat <$> newEmptyMat
+        result <- handleCvException (pure ()) $
+          withPtr dst $ \dstPtr ->
+            [cvExcept|
+              *$(Mat * dstPtr) =
+                Mat( $(int32_t c'ndims)
+                   , $(int32_t * shapePtr)
+                   , $(int32_t c'type)
+                   , (void *)$(uint8_t * dataPtr)
+                   );
+            |]
+        case result of
+          Left err -> pure $ Left err
+          Right () -> runExceptT $ f dst
+  where
+    checkVec =
+        when (VS.length vec /= requiredVecLength) $
+          throwError $ CvException $ concat
+            [ "Mat requires a vector of length "
+            , show requiredVecLength
+            , ", but supplied vector has length "
+            , show $ VS.length vec
+            ]
+
+    requiredVecLength :: Int
+    requiredVecLength = fromIntegral $ channels' * product shape'
+
+    c'ndims = fromIntegral $ VG.length shape'
+    c'type  = marshalFlags depth' channels'
+
+    shape'    = toShape shape
+    channels' = toChannels channels
+    depth'    = toDepth (Proxy :: Proxy depth)
 
 matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
 matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
