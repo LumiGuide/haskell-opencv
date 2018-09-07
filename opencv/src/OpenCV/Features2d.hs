@@ -54,7 +54,7 @@ import "linear" Linear.V4
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.Internal
 import "this" OpenCV.Internal.Features2d.Constants
@@ -62,7 +62,7 @@ import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
-import "this" OpenCV.Internal.Core.Types ( withArrayPtr, Scalar )
+import "this" OpenCV.Internal.Core.Types ( withArrayPtr, unsafeWithArrayPtr, Scalar )
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException, handleCvException )
 import "this" OpenCV.TypeLevel
@@ -509,11 +509,13 @@ blobDetect detector img mbMask = unsafeWrapException $ do
 
 class DescriptorMatcher a where
     upcast :: a -> BaseMatcher
+
     add :: a
         -> V.Vector (Mat 'D 'D 'D) -- ^ Train set of descriptors.
         -> IO ()
     add dm trainDescriptors =
-        withPtr (upcast dm)           $ \dmPtr       ->
+        fmap (fromMaybe ()) $ -- adding 0 training descriptors does nothing
+        withPtr (upcast dm) $ \dmPtr ->
         withArrayPtr trainDescriptors $ \trainVecPtr ->
             [C.block| void {
                 std::vector<Mat> buffer( $(Mat * trainVecPtr)
@@ -522,8 +524,8 @@ class DescriptorMatcher a where
             }|]
       where
         c'trainVecLength = fromIntegral $ V.length trainDescriptors
-    train :: a
-          -> IO ()
+
+    train :: a -> IO ()
     train dm =
         withPtr (upcast dm) $ \dmPtr ->
             [C.block| void { $(DescriptorMatcher * dmPtr)->train(); } |]
@@ -911,36 +913,55 @@ instance Default DrawMatchesParams where
         , flags = 0
         }
 
-drawMatches :: MonadError CvException m
-            => Mat ('S [height, width]) channels depth
-            -> V.Vector KeyPoint
-            -> Mat ('S [height, width]) channels depth
-            -> V.Vector KeyPoint
-            -> V.Vector DMatch
-            -> DrawMatchesParams
-            -> m (Mat ('S ['D, 'D]) channels depth)
-drawMatches img1 keypoints1 img2 keypoints2 matches1to2 (DrawMatchesParams{..}) = unsafeWrapException $ do
-    outImg <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat outImg) $
-        withPtr img1             $ \img1Ptr ->
-        withArrayPtr keypoints1  $ \kps1Ptr ->
-        withPtr img2             $ \img2Ptr ->
-        withArrayPtr keypoints2  $ \kps2Ptr ->
-        withArrayPtr matches1to2 $ \mt12Ptr ->
-        withPtr outImg           $ \outImgPtr ->
+-- TODO (RvD): DrawMatchesParams is not actually used in this function
+-- but it should
+drawMatches
+    :: (MonadError CvException m)
+    => Mat ('S [height, width]) channels depth
+    -> V.Vector KeyPoint
+    -> Mat ('S [height, width]) channels depth
+    -> V.Vector KeyPoint
+    -> V.Vector DMatch
+    -> DrawMatchesParams
+    -> m (Mat ('S ['D, 'D]) channels depth)
+drawMatches img1 keypoints1 img2 keypoints2 matches1to2 _params
+    | V.null keypoints1 = emptyVecErr "keypoints1"
+    | V.null keypoints2 = emptyVecErr "keypoints2"
+    | V.null matches1to2 = emptyVecErr "matches1to2"
+    | otherwise = unsafeWrapException $ do
+        outImg <- newEmptyMat
+        handleCvException (pure $ unsafeCoerceMat outImg) $
+          withPtr img1 $ \img1Ptr ->
+          unsafeWithArrayPtr keypoints1 $ \kps1Ptr ->
+          withPtr img2 $ \img2Ptr ->
+          unsafeWithArrayPtr keypoints2 $ \kps2Ptr ->
+          unsafeWithArrayPtr matches1to2 $ \mt12Ptr ->
+          withPtr outImg $ \outImgPtr ->
             [cvExcept|
-                std::vector<KeyPoint> kps1($(KeyPoint * kps1Ptr), $(KeyPoint * kps1Ptr) + $(int32_t c'kps1Length));
-                std::vector<KeyPoint> kps2($(KeyPoint * kps2Ptr), $(KeyPoint * kps2Ptr) + $(int32_t c'kps2Length));
-                std::vector<DMatch>   mt12($(DMatch * mt12Ptr),   $(DMatch * mt12Ptr) + $(int32_t c'matches1to2Length));
-                drawMatches(
-                    *$(Mat* img1Ptr),
-                    kps1,
-                    *$(Mat* img2Ptr),
-                    kps2,
-                    mt12,
-                    *$(Mat* outImgPtr));
+              std::vector<KeyPoint> kps1
+                ( $(KeyPoint * kps1Ptr)
+                , $(KeyPoint * kps1Ptr) + $(int32_t c'kps1Length)
+                );
+              std::vector<KeyPoint> kps2
+                ( $(KeyPoint * kps2Ptr)
+                , $(KeyPoint * kps2Ptr) + $(int32_t c'kps2Length)
+                );
+              std::vector<DMatch> mt12
+                ( $(DMatch * mt12Ptr)
+                , $(DMatch * mt12Ptr) + $(int32_t c'matches1to2Length)
+                );
+              drawMatches
+                ( *$(Mat * img1Ptr)
+                , kps1
+                , *$(Mat * img2Ptr)
+                , kps2
+                , mt12
+                , *$(Mat * outImgPtr)
+                );
             |]
   where
+    emptyVecErr name = throwError $ CvException $ "drawMatches: empty " <> name
+
     c'kps1Length = fromIntegral $ V.length keypoints1
     c'kps2Length = fromIntegral $ V.length keypoints2
     c'matches1to2Length = fromIntegral $ V.length matches1to2

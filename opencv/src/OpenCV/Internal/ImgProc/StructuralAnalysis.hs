@@ -28,7 +28,7 @@ import "base" Foreign.Storable ( peek )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Rect ( HRect(..), Rect2i, toRectIO )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -93,25 +93,28 @@ approxPolyDP
     -> Double -- ^ epsilon
     -> Bool   -- ^ is closed
     -> m (V.Vector (Point 2 depth))
-approxPolyDP curve epsilon isClosed = unsafeWrapException $
-    withArrayPtr (V.map toPoint curve) $ \curvePtr ->
-    alloca $ \(approxPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
-    alloca $ \(approxSizePtr :: Ptr Int32) ->
-    handleCvException
-      ( do approxSize <- fromIntegral <$> peek approxSizePtr
-           approxPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek approxPtrPtr
-           approxList :: [Ptr (C (Point 2 depth))] <- peekArray approxSize approxPtr
-           approxVec <- V.fromList <$> mapM (fromPtr . pure) approxList
-           approxPolyDP_deletePtrArray approxPtrPtr
-           pure approxVec
-      ) $
-      approxPolyDP_internal
-        (fromIntegral $ V.length curve)
-        curvePtr
-        approxSizePtr
-        approxPtrPtr
-        (toCDouble epsilon)
-        (fromBool isClosed)
+approxPolyDP curve epsilon isClosed
+    | V.null curve = pure V.empty
+    | otherwise =
+        unsafeWrapException $
+        unsafeWithArrayPtr (V.map toPoint curve) $ \curvePtr ->
+        alloca $ \(approxPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
+        alloca $ \(approxSizePtr :: Ptr Int32) ->
+        handleCvException
+          ( do approxSize <- fromIntegral <$> peek approxSizePtr
+               approxPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek approxPtrPtr
+               approxList :: [Ptr (C (Point 2 depth))] <- peekArray approxSize approxPtr
+               approxVec <- V.fromList <$> mapM (fromPtr . pure) approxList
+               approxPolyDP_deletePtrArray approxPtrPtr
+               pure approxVec
+          ) $
+          approxPolyDP_internal
+            (fromIntegral $ V.length curve)
+            curvePtr
+            approxSizePtr
+            approxPtrPtr
+            (toCDouble epsilon)
+            (fromBool isClosed)
 
 -- | Internal class used to overload the 'approxPolyDP' depth.
 class ( FromPtr      (Point   2 depth)
@@ -204,8 +207,6 @@ instance ApproxPolyDP CFloat where
 The function calculates and returns the minimal up-right bounding
 rectangle for the specified point set.
 -}
--- TODO (RvD): non empty set of points, or check if V.length points >=
--- 1 in haskell.
 boundingRect
     :: forall point2 depth m
      . ( IsPoint2 point2 depth
@@ -214,15 +215,17 @@ boundingRect
        )
     => V.Vector (point2 depth)
     -> m Rect2i
-boundingRect points = unsafeWrapException $ do
-    result <- toRectIO $ HRect 0 0
-    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
-      withPtr result $ \resultPtr ->
-      handleCvException (pure result) $
-        boundingRect_internal
-          (fromIntegral $ V.length points)
-          pointsPtr
-          resultPtr
+boundingRect points
+    | V.null points = throwError $ CvException "boundingRect: empty vector"
+    | otherwise = unsafeWrapException $ do
+        result <- toRectIO $ HRect 0 0
+        unsafeWithArrayPtr (V.map toPoint points) $ \pointsPtr ->
+          withPtr result $ \resultPtr ->
+          handleCvException (pure result) $
+          boundingRect_internal
+            (fromIntegral $ V.length points)
+            pointsPtr
+            resultPtr
 
 -- | Internal class used to overload the 'boundingRect' depth.
 class ( CSizeOf      (C'Point 2 depth)
@@ -302,24 +305,29 @@ convexHull
        -- pointing upwards.
     -> m (V.Vector (Point 2 depth))
        -- ^ Output convex hull.
-convexHull points clockwise = unsafeWrapException $
-    withArrayPtr (V.map toPoint points) $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
-    alloca $ \(hullPointsPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
-    alloca $ \(hullSizePtr :: Ptr Int32) ->
-    handleCvException
-      ( do hullSize <- fromIntegral <$> peek hullSizePtr
-           hullPointsPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek hullPointsPtrPtr
-           hullPointsList :: [Ptr (C (Point 2 depth))] <- peekArray hullSize hullPointsPtr
-           hullPointsVec <- V.fromList <$> mapM (fromPtr . pure) hullPointsList
-           convexHull_deletePtrArray hullPointsPtrPtr
-           pure hullPointsVec
-      ) $
-      convexHull_internal
-        (fromIntegral $ V.length points)
-        pointsPtr
-        (fromBool clockwise)
-        hullPointsPtrPtr
-        hullSizePtr
+convexHull points clockwise
+    | V.null points = pure V.empty
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr points' $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
+        alloca $ \(hullPointsPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
+        alloca $ \(hullSizePtr :: Ptr Int32) ->
+        handleCvException
+          ( do hullSize <- fromIntegral <$> peek hullSizePtr
+               hullPointsPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek hullPointsPtrPtr
+               hullPointsList :: [Ptr (C (Point 2 depth))] <- peekArray hullSize hullPointsPtr
+               hullPointsVec <- V.fromList <$> mapM (fromPtr . pure) hullPointsList
+               convexHull_deletePtrArray hullPointsPtrPtr
+               pure hullPointsVec
+          ) $
+          convexHull_internal
+            (fromIntegral $ V.length points)
+            pointsPtr
+            (fromBool clockwise)
+            hullPointsPtrPtr
+            hullSizePtr
+  where
+    points' :: V.Vector (Point 2 depth)
+    points' = V.map toPoint points
 
 -- | Internal class used to overload 'convexHull' depth.
 class ( FromPtr      (Point   2 depth)
@@ -421,26 +429,32 @@ convexHullIndices
        -- pointing upwards.
     -> m (VS.Vector Int32)
        -- ^ Indices of those points in the input set that are part of the convex hull.
-convexHullIndices points clockwise = unsafeWrapException $
-    withArrayPtr (V.map toPoint points) $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
-    alloca $ \(hullIndicesPtrPtr :: Ptr (Ptr Int32)) ->
-    alloca $ \(hullSizePtr :: Ptr Int32) ->
-    handleCvException
-      ( do hullSize <- fromIntegral <$> peek hullSizePtr
-           -- The hullIndicesPtr points to memory allocated on the C++ heap. We
-           -- are responsible for eventually freeing this memory.
-           hullIndicesPtr :: Ptr Int32 <- peek hullIndicesPtrPtr
-           let freeHullIndices =
-                   [CU.block| void { delete [] $(int32_t * hullIndicesPtr); }|]
-           hullIndicesForeignPtr <- newForeignPtr hullIndicesPtr freeHullIndices
-           pure $ VS.unsafeFromForeignPtr0 hullIndicesForeignPtr hullSize
-      ) $
-      convexHullIndices_internal
-        (fromIntegral $ V.length points)
-        pointsPtr
-        (fromBool clockwise)
-        hullIndicesPtrPtr
-        hullSizePtr
+convexHullIndices points clockwise
+    | V.null points = pure VS.empty
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr points' $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
+        alloca $ \(hullIndicesPtrPtr :: Ptr (Ptr Int32)) ->
+        alloca $ \(hullSizePtr :: Ptr Int32) ->
+        handleCvException
+          ( do hullSize <- fromIntegral <$> peek hullSizePtr
+               -- The hullIndicesPtr points to memory allocated on the C++
+               -- heap. We are responsible for eventually freeing this memory.
+               hullIndicesPtr :: Ptr Int32 <- peek hullIndicesPtrPtr
+               let freeHullIndices =
+                     [CU.block| void { delete [] $(int32_t * hullIndicesPtr); }|]
+               hullIndicesForeignPtr <-
+                 newForeignPtr hullIndicesPtr freeHullIndices
+               pure $ VS.unsafeFromForeignPtr0 hullIndicesForeignPtr hullSize
+          ) $
+          convexHullIndices_internal
+            (fromIntegral $ V.length points)
+            pointsPtr
+            (fromBool clockwise)
+            hullIndicesPtrPtr
+            hullSizePtr
+  where
+    points' :: V.Vector (Point 2 depth)
+    points' = V.map toPoint points
 
 -- | Internal class used to overload 'convexHullIndices' depth.
 class ( FromPtr      (Point   2 depth)

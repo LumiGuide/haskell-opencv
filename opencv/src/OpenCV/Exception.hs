@@ -14,6 +14,7 @@ module OpenCV.Exception
     , exceptError
     , exceptErrorIO
     , exceptErrorM
+    , maybeThrowError
     ) where
 
 import "this" OpenCV.Internal.Exception

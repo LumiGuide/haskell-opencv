@@ -39,7 +39,7 @@ import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "linear" Linear.V4 ( V4(..) )
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Core.Types ( Mut )
 import "this" OpenCV.Core.Types.Point
 import "this" OpenCV.Core.Types.Vec ( fromVec, Vec4i )
@@ -140,19 +140,21 @@ arcLength
     => V.Vector (point2 Int32)
     -> Bool -- ^ is closed
     -> m Double
-arcLength curve isClosed = unsafeWrapException $
-    withArrayPtr (V.map toPoint curve) $ \curvePtr ->
-    alloca $ \c'resultPtr ->
-    handleCvException (realToFrac <$> peek c'resultPtr) $
+arcLength curve isClosed
+    | V.null curve = pure 0
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr (V.map toPoint curve) $ \curvePtr ->
+        alloca $ \c'resultPtr ->
+        handleCvException (realToFrac <$> peek c'resultPtr) $
         [cvExcept|
-            cv::_InputArray curve =
-              cv::_InputArray ( $(Point2i * curvePtr)
-                              , $(int32_t c'numCurvePoints)
-                              );
-            *$(double * c'resultPtr) =
-               cv::arcLength( curve
-                            , $(bool c'isClosed)
+          cv::_InputArray curve =
+            cv::_InputArray ( $(Point2i * curvePtr)
+                            , $(int32_t c'numCurvePoints)
                             );
+          *$(double * c'resultPtr) =
+             cv::arcLength( curve
+                          , $(bool c'isClosed)
+                          );
         |]
     where
       c'isClosed = fromBool isClosed
@@ -175,17 +177,19 @@ contourArea
     -> ContourAreaOriented
        -- ^ Signed or unsigned area
     -> m Double
-contourArea contour areaOriented = unsafeWrapException $
-    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
-    alloca $ \c'area ->
-    handleCvException (realToFrac <$> peek c'area) $
-      [cvExcept|
-        cv::_InputArray contour =
-          cv::_InputArray( $(Point2f * contourPtr)
-                         , $(int32_t c'numPoints)
-                         );
-        *$(double * c'area) = cv::contourArea(contour, $(bool c'oriented));
-      |]
+contourArea contour areaOriented
+    | V.null contour = pure 0
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr (V.map toPoint contour) $ \contourPtr ->
+        alloca $ \c'area ->
+        handleCvException (realToFrac <$> peek c'area) $
+          [cvExcept|
+            cv::_InputArray contour =
+              cv::_InputArray( $(Point2f * contourPtr)
+                             , $(int32_t c'numPoints)
+                             );
+            *$(double * c'area) = cv::contourArea(contour, $(bool c'oriented));
+          |]
   where
     oriented =
       case areaOriented of
@@ -239,6 +243,7 @@ handDefectsImg = do
 
 <<doc/generated/examples/handDefectsImg.png handDefectsImg>>
 -}
+-- TODO (RvD): what happens with out-of-bounds hull indices?
 convexityDefects
     :: (IsPoint2 point2 Int32, MonadError CvException m)
     => V.Vector (point2 Int32) -- ^ Input contour
@@ -247,49 +252,52 @@ convexityDefects
        -- that form a convex hull.
     -> m (V.Vector Vec4i)
        -- ^ The output vector of convexity defects.
-convexityDefects contour hull = unsafeWrapException $
-    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
-    alloca $ \(defectsPtrPtr :: Ptr (Ptr (Ptr (C Vec4i)))) ->
-    alloca $ \(defectsSizePtr :: Ptr Int32) ->
-    handleCvException
-      ( do defectsSize <- fromIntegral <$> peek defectsSizePtr
-           defectsPtr :: Ptr (Ptr (C Vec4i)) <- peek defectsPtrPtr
-           defectsList :: [Ptr (C Vec4i)] <- peekArray defectsSize defectsPtr
-           defectsVec <- V.fromList <$> mapM (fromPtr . pure) defectsList
-           [CU.block| void { delete [] *$(Vec4i * * * defectsPtrPtr); } |]
-           pure defectsVec
-      ) $
-      [cvExcept|
-        cv::_InputArray contour =
-          cv::_InputArray( $(Point2i * contourPtr)
-                         , $(int32_t contourSize)
-                         );
-        cv::_InputArray hull =
-          cv::_InputArray( $vec-ptr:(int32_t * hull)
-                         , $vec-len:hull
-                         );
-        std::vector<cv::Vec4i> defects;
+convexityDefects contour hull
+    | V.null contour = pure V.empty
+    | VS.null hull   = pure V.empty
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr (V.map toPoint contour) $ \contourPtr ->
+        alloca $ \(defectsPtrPtr :: Ptr (Ptr (Ptr (C Vec4i)))) ->
+        alloca $ \(defectsSizePtr :: Ptr Int32) ->
+        handleCvException
+          ( do defectsSize <- fromIntegral <$> peek defectsSizePtr
+               defectsPtr :: Ptr (Ptr (C Vec4i)) <- peek defectsPtrPtr
+               defectsList :: [Ptr (C Vec4i)] <- peekArray defectsSize defectsPtr
+               defectsVec <- V.fromList <$> mapM (fromPtr . pure) defectsList
+               [CU.block| void { delete [] *$(Vec4i * * * defectsPtrPtr); } |]
+               pure defectsVec
+          ) $
+          [cvExcept|
+            cv::_InputArray contour =
+              cv::_InputArray( $(Point2i * contourPtr)
+                             , $(int32_t contourSize)
+                             );
+            cv::_InputArray hull =
+              cv::_InputArray( $vec-ptr:(int32_t * hull)
+                             , $vec-len:hull
+                             );
+            std::vector<cv::Vec4i> defects;
 
-        convexityDefects(contour, hull, defects);
+            convexityDefects(contour, hull, defects);
 
-        *$(int32_t * defectsSizePtr) = defects.size();
+            *$(int32_t * defectsSizePtr) = defects.size();
 
-        cv::Vec4i * * * defectsPtrPtr = $(Vec4i * * * defectsPtrPtr);
-        cv::Vec4i * * defectsPtr = new cv::Vec4i * [defects.size()];
-        *defectsPtrPtr = defectsPtr;
+            cv::Vec4i * * * defectsPtrPtr = $(Vec4i * * * defectsPtrPtr);
+            cv::Vec4i * * defectsPtr = new cv::Vec4i * [defects.size()];
+            *defectsPtrPtr = defectsPtr;
 
-        for (std::vector<cv::Vec4i>::size_type i = 0; i < defects.size(); i++)
-        {
-            cv::Vec4i & defectRef = defects[i];
-            cv::Vec4i * newDefect =
-              new cv::Vec4i( defectRef[0]
-                           , defectRef[1]
-                           , defectRef[2]
-                           , defectRef[3]
-                           );
-            defectsPtr[i] = newDefect;
-        }
-      |]
+            for (std::vector<cv::Vec4i>::size_type i = 0; i < defects.size(); i++)
+            {
+                cv::Vec4i & defectRef = defects[i];
+                cv::Vec4i * newDefect =
+                  new cv::Vec4i( defectRef[0]
+                               , defectRef[1]
+                               , defectRef[2]
+                               , defectRef[3]
+                               );
+                defectsPtr[i] = newDefect;
+            }
+          |]
   where
     contourSize :: Int32
     contourSize = fromIntegral $ V.length contour
@@ -460,32 +468,38 @@ isContourConvex
     :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat)
     -> m Bool
-isContourConvex contour = unsafeWrapException $
-    alloca $ \c'resultPtr ->
-    handleCvException (toBool <$> peek c'resultPtr) $
-    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
-      [cvExcept|
-        *$(bool * c'resultPtr) =
-          cv::isContourConvex
-          (cv::_InputArray($(Point2f * contourPtr), $(int32_t c'numPoints)));
-      |]
+isContourConvex contour
+    | V.null contour =
+        throwError $ CvException "isContourConvex: empty contour"
+    | otherwise = unsafeWrapException $
+        alloca $ \c'resultPtr ->
+        handleCvException (toBool <$> peek c'resultPtr) $
+        unsafeWithArrayPtr (V.map toPoint contour) $ \contourPtr ->
+          [cvExcept|
+            *$(bool * c'resultPtr) =
+              cv::isContourConvex
+              (cv::_InputArray($(Point2f * contourPtr), $(int32_t c'numPoints)));
+          |]
   where
     c'numPoints = fromIntegral $ V.length contour
 
-minAreaRect :: (IsPoint2 point2 Int32)
-            => V.Vector (point2 Int32)
-            -> RotatedRect
-minAreaRect points =
-    unsafePerformIO $ fromPtr $
-    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
-      [CU.exp|
-        RotatedRect * {
-          new RotatedRect(
-            cv::minAreaRect(
-                cv::_InputArray( $(Point2i * pointsPtr)
-                               , $(int32_t c'numPoints))))
-        }
-      |]
+minAreaRect
+    :: (IsPoint2 point2 Int32, MonadError CvException m)
+    => V.Vector (point2 Int32)
+    -> m RotatedRect
+minAreaRect points
+    | V.null points = throwError $ CvException "minAreaRect: empty points"
+    | otherwise =
+        pure $ unsafePerformIO $ fromPtr $
+        unsafeWithArrayPtr (V.map toPoint points) $ \pointsPtr ->
+          [CU.exp|
+            RotatedRect * {
+              new RotatedRect(
+                cv::minAreaRect(
+                    cv::_InputArray( $(Point2i * pointsPtr)
+                                   , $(int32_t c'numPoints))))
+            }
+          |]
   where
     c'numPoints = fromIntegral $ V.length points
 
@@ -511,22 +525,27 @@ pointPolygonTest
        -- to the nearest contour edge. Otherwise, the function only checks if
        -- the point is inside a contour or not.
     -> m Double
-pointPolygonTest contour pt measureDist = unsafeWrapException $
-    withArrayPtr (V.map toPoint contour) $ \contourPtr ->
-    withPtr (toPoint pt) $ \ptPtr ->
-    alloca $ \c'resultPtr ->
-    handleCvException (realToFrac <$> peek c'resultPtr) $
-      [cvExcept|
-        cv::_InputArray contour =
-          cv::_InputArray( $(Point2f * contourPtr)
-                         , $(int32_t c'numPoints)
-                         );
-        *$(double * c'resultPtr) =
-          cv::pointPolygonTest( contour
-                              , *$(Point2f * ptPtr)
-                              , $(bool c'measureDist)
-                              );
-      |]
+pointPolygonTest contour pt measureDist
+      -- In theory we could return a result when measureDist == False,
+      -- but an empty contour is most likely a programming error and
+      -- not a feature.
+    | V.null contour = throwError $ CvException "pointPolygonTest: empty contour"
+    | otherwise = unsafeWrapException $
+        unsafeWithArrayPtr (V.map toPoint contour) $ \contourPtr ->
+        withPtr (toPoint pt) $ \ptPtr ->
+        alloca $ \c'resultPtr ->
+        handleCvException (realToFrac <$> peek c'resultPtr) $
+          [cvExcept|
+            cv::_InputArray contour =
+              cv::_InputArray( $(Point2f * contourPtr)
+                             , $(int32_t c'numPoints)
+                             );
+            *$(double * c'resultPtr) =
+              cv::pointPolygonTest( contour
+                                  , *$(Point2f * ptPtr)
+                                  , $(bool c'measureDist)
+                                  );
+          |]
   where
     c'numPoints = fromIntegral $ V.length contour
     c'measureDist = fromBool measureDist

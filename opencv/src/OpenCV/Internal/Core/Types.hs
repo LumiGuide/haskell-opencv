@@ -28,9 +28,10 @@ module OpenCV.Internal.Core.Types
       -- * Polygons
     , withPolygons
     , withArrayPtr
+    , unsafeWithArrayPtr
     ) where
 
-import "base" Control.Exception ( bracket_ )
+import "base" Control.Exception ( bracket_, throwIO )
 import "base" Data.Bits ( (.|.) )
 import "base" Data.Functor ( ($>) )
 import "base" Data.Int ( Int32 )
@@ -55,6 +56,7 @@ import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.PlacementNew
 import "this" OpenCV.Internal.C.PlacementNew.TH
 import "this" OpenCV.Internal.C.Types
+import "this" OpenCV.Internal.Exception ( CvException(..) )
 import qualified "vector" Data.Vector as V
 
 --------------------------------------------------------------------------------
@@ -208,23 +210,51 @@ newWholeRange = fromPtr $
 -- Polygons
 --------------------------------------------------------------------------------
 
+-- | Performs a computation on an array of polygons.
+--
+-- Polygons with 0 points are omitted.
+-- If there are 0 polygons the computation is not performed.
 withPolygons
     :: forall a point2
      . (IsPoint2 point2 Int32)
     => V.Vector (V.Vector (point2 Int32))
     -> (Ptr (Ptr (C Point2i)) -> IO a)
+       -- ^ Computation to perform on an array of polygons.
+       -- The outer pointer points to an array of pointers which each
+       -- point to an array of pointers to points.
+    -> IO (Maybe a)
+       -- ^ With 0 non-empty polygons the action can not be applied
+       -- and the result will be Nothing.
+withPolygons polygons act
+    | V.null polygons' = pure Nothing
+    | otherwise = Just <$> withNonEmptyPolygons polygons' act
+  where
+    polygons' = V.filter (not . V.null) polygons
+
+withNonEmptyPolygons
+    :: forall a point2
+     . (IsPoint2 point2 Int32)
+    => V.Vector (V.Vector (point2 Int32))
+    -> (Ptr (Ptr (C Point2i)) -> IO a)
     -> IO a
-withPolygons polygons act =
-    allocaArray (V.length polygons) $ \polygonsPtr -> do
-      let go :: Ptr (Ptr (C Point2i)) -> Int -> IO a
-          go !acc !ix
+withNonEmptyPolygons polygons act =
+    allocaArray (V.length polygons) withPolygonsPtr
+  where
+    withPolygonsPtr polygonsPtr = go 0 polygonsPtr
+      where
+        go :: Int -> Ptr (Ptr (C Point2i)) -> IO a
+        go !ix !curPolyPtr
             | ix < V.length polygons =
-                let pts = V.map toPoint $ V.unsafeIndex polygons ix
-                in withArrayPtr pts $ \ptsPtr -> do
-                     poke acc ptsPtr
-                     go (acc `plusPtr` sizeOf (undefined :: Ptr (Ptr (C Point2i)))) (ix + 1)
+                unsafeWithArrayPtr pts $ \ptsPtr -> do
+                  poke curPolyPtr ptsPtr
+                  go (ix + 1) nextPolyPtr
             | otherwise = act polygonsPtr
-      go polygonsPtr 0
+          where
+            pts = V.map toPoint $ V.unsafeIndex polygons ix
+            nextPolyPtr = curPolyPtr `plusPtr` polyPtrSize
+
+    polyPtrSize :: Int
+    polyPtrSize = sizeOf (undefined :: Ptr (Ptr (C Point2i)))
 
 -- | Perform an action with a temporary pointer to an array of values
 --
@@ -241,13 +271,18 @@ withArrayPtr
      . (WithPtr a, CSizeOf (C a), PlacementNew (C a))
     => V.Vector a
     -> (Ptr (C a) -> IO b)
-    -> IO b
-withArrayPtr arr act =
-    allocaBytes arraySize $ \arrPtr ->
-      bracket_
-        (V.foldM'_ copyNext arrPtr arr)
-        (deconstructArray arrPtr )
-        (act arrPtr)
+       -- ^ Computation to perform on array.
+    -> IO (Maybe b)
+       -- ^ With empty input vector the action can not be applied and
+       -- the result will be Nothing.
+withArrayPtr arr act
+    | V.null arr = pure Nothing
+    | otherwise =
+        allocaBytes arraySize $ \arrPtr ->
+          bracket_
+            (V.foldM'_ copyNext arrPtr arr)
+            (deconstructArray arrPtr )
+            (Just <$> act arrPtr)
   where
     elemSize = cSizeOf (Proxy :: Proxy (C a))
     arraySize = elemSize * V.length arr
@@ -270,6 +305,16 @@ withArrayPtr arr act =
 
         end :: Ptr (C a)
         end = begin `plusPtr` arraySize
+
+-- | Variant of 'withArrayPtr' which throws an exception when applied
+-- to an empty vector.
+unsafeWithArrayPtr
+    :: (WithPtr a, CSizeOf (C a), PlacementNew (C a))
+    => V.Vector a
+    -> (Ptr (C a) -> IO b)
+    -> IO b
+unsafeWithArrayPtr arr act =
+    withArrayPtr arr act >>= maybe (throwIO MarshalEmptyVectorException) pure
 
 --------------------------------------------------------------------------------
 

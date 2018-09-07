@@ -52,7 +52,8 @@ module OpenCV.Core.ArrayOps
     , findNonZero
     ) where
 
-import "base" Control.Exception ( mask_ )
+import "base" Control.Exception ( mask_, throw )
+import "base" Data.Maybe ( fromMaybe )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
 import "base" Foreign.C.Types ( CDouble )
@@ -617,19 +618,22 @@ bitwiseXor src1 src2 = unsafeWrapException $ do
 -}
 matMerge
     :: V.Vector (Mat shape ('S 1) depth) -- ^
-    -> Mat shape 'D depth
-matMerge srcVec = unsafePerformIO $ do
-    dst <- newEmptyMat
-    withArrayPtr srcVec $ \srcVecPtr ->
-      withPtr dst $ \dstPtr ->
-        [C.block| void {
-          cv::merge
-          ( $(Mat * srcVecPtr)
-          , $(size_t c'srcVecLength)
-          , *$(Mat * dstPtr)
-          );
-        }|]
-    pure $ unsafeCoerceMat dst
+    -> Maybe (Mat shape 'D depth)
+       -- ^ Merged matrix. Merging 0 matrices results in Nothing.
+matMerge srcVec
+    | V.null srcVec = Nothing
+    | otherwise = Just $ unsafePerformIO $ do
+        dst <- newEmptyMat
+        unsafeWithArrayPtr srcVec $ \srcVecPtr ->
+          withPtr dst $ \dstPtr ->
+            [C.block| void {
+              cv::merge
+              ( $(Mat * srcVecPtr)
+              , $(size_t c'srcVecLength)
+              , *$(Mat * dstPtr)
+              );
+            }|]
+        pure $ unsafeCoerceMat dst
   where
     c'srcVecLength = fromIntegral $ V.length srcVec
 
@@ -653,9 +657,10 @@ matSplitImg = exceptError $ do
                      (Proxy :: Proxy 1)
                      (Proxy :: Proxy depth)
                      black
-    let blueImg  = matMerge $ V.fromList [channelImgs V.! 0, zeroImg, zeroImg]
-        greenImg = matMerge $ V.fromList [zeroImg, channelImgs V.! 1, zeroImg]
-        redImg   = matMerge $ V.fromList [zeroImg, zeroImg, channelImgs V.! 2]
+    let merge = maybeThrowError (CvException "merged empty") . matMerge . V.fromList
+    blueImg  <- merge [channelImgs V.! 0, zeroImg, zeroImg]
+    greenImg <- merge [zeroImg, channelImgs V.! 1, zeroImg]
+    redImg   <- merge [zeroImg, zeroImg, channelImgs V.! 2]
 
     withMatM (Proxy :: Proxy [height, width3])
              (Proxy :: Proxy channels)
@@ -705,7 +710,15 @@ matChannelMapM
    => (Mat shape ('S 1) depth -> m (Mat shape ('S 1) depth))
    -> Mat shape channelsOut depth
    -> m (Mat shape channelsOut depth)
-matChannelMapM f img = unsafeCoerceMat . matMerge <$> V.mapM f (matSplit img)
+matChannelMapM f img
+    | V.null channelMats = pure img
+    | otherwise = unsafeCoerceMat . fromMaybe (throw err) . matMerge
+                  <$> V.mapM f channelMats
+  where
+    channelMats = matSplit img
+    -- This exception is a programming error.
+    -- We guard against V.null channelMats.
+    err = CvException "matChannelMapM: merged 0 mats"
 
 {- | Finds the global minimum and maximum in an array
 
@@ -1019,7 +1032,7 @@ hconcat
 hconcat mats = unsafeWrapException $ do
     dst <- unsafeCoerceMat <$> newEmptyMat
     handleCvException (pure dst) $
-      withArrayPtr mats $ \matsPtr ->
+      unsafeWithArrayPtr mats $ \matsPtr ->
       withPtr dst $ \dstPtr ->
         [cvExcept|
           cv::hconcat
@@ -1057,7 +1070,7 @@ vconcat
 vconcat mats = unsafeWrapException $ do
     dst <- unsafeCoerceMat <$> newEmptyMat
     handleCvException (pure dst) $
-      withArrayPtr mats $ \matsPtr ->
+      unsafeWithArrayPtr mats $ \matsPtr ->
       withPtr dst $ \dstPtr ->
         [cvExcept|
           cv::vconcat
@@ -1084,21 +1097,25 @@ perspectiveTransform
     => V.Vector (point2 CDouble)
     -> Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
     -> V.Vector Point2d
-perspectiveTransform srcPoints transformationMat = unsafePerformIO $
-    withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
-    withPtr transformationMat $ \tmPtr ->
-    allocaArray numPts $ \(dstPtr :: Ptr (V2 CDouble)) -> do
-        let dstPtr' = castPtr dstPtr
-        [C.block| void {
-            cv::_InputArray srcPts  = cv::_InputArray( $(Point2d * srcPtr),  $(int32_t c'numPts));
-            cv::_OutputArray dstPts = cv::_OutputArray($(Point2d * dstPtr'), $(int32_t c'numPts));
+perspectiveTransform srcPoints transformationMat
+    | V.null srcPoints = V.empty
+    | otherwise = unsafePerformIO $
+        unsafeWithArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
+        withPtr transformationMat $ \tmPtr ->
+        allocaArray numPts $ \(dstPtr :: Ptr (V2 CDouble)) -> do
+          let dstPtr' = castPtr dstPtr
+          [C.block| void {
+            cv::_InputArray srcPts =
+              cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numPts));
+            cv::_OutputArray dstPts =
+              cv::_OutputArray($(Point2d * dstPtr'), $(int32_t c'numPts));
             cv::perspectiveTransform
                 ( srcPts
                 , dstPts
                 , *$(Mat * tmPtr)
                 );
-            }|]
-        peekArray numPts dstPtr >>= return . V.fromList . map toPoint
+          }|]
+          peekArray numPts dstPtr >>= return . V.fromList . map toPoint
   where
     numPts   = fromIntegral $ V.length srcPoints
     c'numPts = fromIntegral $ V.length srcPoints

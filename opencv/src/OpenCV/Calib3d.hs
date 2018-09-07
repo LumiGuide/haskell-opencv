@@ -240,20 +240,22 @@ estimateAffine2D
        -- ^ Maximum number of iterations of refining algorithm
        -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
        -- matrix will be output of robust method.
-    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
-                        , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
-                        )
+    -> m ( Maybe( Mat ('S '[ 'S 3, 'S 2 ]) ('S 1) ('S Double)
+                , Mat ('S '[ 'D, 'D ]) ('S 1) ('S Word8)
                 )
-estimateAffine2D fromPts toPts method maxIters confidence refineIters = do
-    (h, inliers) <- c'estimateAffine2D
-    -- If the c++ function can't find an affine transform it will return an
-    -- empty matrix. We check for this case by trying to coerce the result to
-    -- the desired type.
-    wrapException . runExceptT $
-      catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
-             (\case CoerceMatError _msgs -> pure Nothing
-                    otherError -> throwE otherError
-             )
+         )
+estimateAffine2D fromPts toPts method maxIters confidence refineIters
+    | V.null fromPts || V.null toPts = pure Nothing
+    | otherwise = do
+        (h, inliers) <- c'estimateAffine2D
+        -- If the c++ function can't find an affine transform it will return an
+        -- empty matrix. We check for this case by trying to coerce the result to
+        -- the desired type.
+        wrapException . runExceptT $
+          catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+                 (\case CoerceMatError _msgs -> pure Nothing
+                        otherError -> throwE otherError
+                 )
   where
     c'estimateAffine2D = unsafeWrapException $ do
         h       <- newEmptyMat
@@ -261,8 +263,8 @@ estimateAffine2D fromPts toPts method maxIters confidence refineIters = do
         handleCvException (pure (h, inliers)) $
           withPtr h $ \hPtr ->
           withPtr inliers $ \inliersPtr ->
-          withArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
-          withArrayPtr (V.map toPoint toPts  ) $ \toPtsPtr   ->
+          unsafeWithArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
+          unsafeWithArrayPtr (V.map toPoint toPts) $ \toPtsPtr ->
             [cvExcept|
               cv::_InputArray fromPts =
                 cv::_InputArray( $(Point2f * fromPtsPtr)
@@ -332,20 +334,22 @@ estimateAffinePartial2D
        -- ^ Maximum number of iterations of refining algorithm
        -- (Levenberg-Marquardt). Passing 0 will disable refining, so the output
        -- matrix will be output of robust method.
-    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 2]) ('S 1) ('S Double)
-                        , Mat ('S '[ 'D,   'D  ]) ('S 1) ('S Word8 )
-                        )
-                )
-estimateAffinePartial2D fromPts toPts method maxIters confidence refineIters = do
-    (h, inliers) <- c'estimateAffine2D
-    -- If the c++ function can't find an affine transform it will return an
-    -- empty matrix. We check for this case by trying to coerce the result to
-    -- the desired type.
-    wrapException . runExceptT $
-      catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
-             (\case CoerceMatError _msgs -> pure Nothing
-                    otherError -> throwE otherError
-             )
+    -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 2 ]) ('S 1) ('S Double)
+                 , Mat ('S '[ 'D, 'D ]) ('S 1) ('S Word8)
+                 )
+         )
+estimateAffinePartial2D fromPts toPts method maxIters confidence refineIters
+    | V.null fromPts || V.null toPts = pure Nothing
+    | otherwise = do
+        (h, inliers) <- c'estimateAffine2D
+        -- If the c++ function can't find an affine transform it will return an
+        -- empty matrix. We check for this case by trying to coerce the result to
+        -- the desired type.
+        wrapException . runExceptT $
+          catchE (Just . (, unsafeCoerceMat inliers) <$> coerceMat h)
+                 (\case CoerceMatError _msgs -> pure Nothing
+                        otherError -> throwE otherError
+                 )
   where
     c'estimateAffine2D = unsafeWrapException $ do
         h       <- newEmptyMat
@@ -353,8 +357,8 @@ estimateAffinePartial2D fromPts toPts method maxIters confidence refineIters = d
         handleCvException (pure (h, inliers)) $
           withPtr h $ \hPtr ->
           withPtr inliers $ \inliersPtr ->
-          withArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
-          withArrayPtr (V.map toPoint toPts  ) $ \toPtsPtr   ->
+          unsafeWithArrayPtr (V.map toPoint fromPts) $ \fromPtsPtr ->
+          unsafeWithArrayPtr (V.map toPoint toPts  ) $ \toPtsPtr   ->
             [cvExcept|
               cv::_InputArray fromPts =
                 cv::_InputArray( $(Point2f * fromPtsPtr)
@@ -429,19 +433,21 @@ findFundamentalMat
     -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FundamentalMatMethod
     -> m ( Maybe ( Mat ('S '[ 'D, 'S 3 ]) ('S 1) ('S Double)
-                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
-                        )
-                )
-findFundamentalMat pts1 pts2 method = do
-    (fm, pointMask) <- c'findFundamentalMat
-    -- If the c++ function can't find a fundamental matrix it will return an
-    -- empty matrix. We check for this case by trying to coerce the result to
-    -- the desired type.
-    catchError
-      (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
-      (\case CoerceMatError _msgs -> pure Nothing
-             otherError -> throwError otherError
-      )
+                 , Mat ('S '[ 'D, 'D ]) ('S 1) ('S Word8)
+                 )
+         )
+findFundamentalMat pts1 pts2 method
+    | V.null pts1 || V.null pts2 = pure Nothing
+    | otherwise = do
+        (fm, pointMask) <- c'findFundamentalMat
+        -- If the c++ function can't find a fundamental matrix it will return an
+        -- empty matrix. We check for this case by trying to coerce the result to
+        -- the desired type.
+        catchError
+          (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+          (\case CoerceMatError _msgs -> pure Nothing
+                 otherError -> throwError otherError
+          )
   where
     c'findFundamentalMat = unsafeWrapException $ do
         fm        <- newEmptyMat
@@ -449,8 +455,8 @@ findFundamentalMat pts1 pts2 method = do
         handleCvException (pure (fm, pointMask)) $
           withPtr fm $ \fmPtr ->
           withPtr pointMask $ \pointMaskPtr ->
-          withArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
-          withArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
+          unsafeWithArrayPtr (V.map toPoint pts1) $ \pts1Ptr ->
+          unsafeWithArrayPtr (V.map toPoint pts2) $ \pts2Ptr ->
             [cvExcept|
               cv::_InputArray pts1 = cv::_InputArray($(Point2d * pts1Ptr), $(int32_t c'numPts1));
               cv::_InputArray pts2 = cv::_InputArray($(Point2d * pts2Ptr), $(int32_t c'numPts2));
@@ -485,13 +491,13 @@ instance Default FindHomographyParams where
           , fhpConfidence            = 0.995
           }
 
-{- | Finds a perspective transformation between two planes. 
+{- | Finds a perspective transformation between two planes.
 
 The function finds and returns the perspective transformation \(H\) between
 the source and the destination planes:
 
 \[
-    s_i  
+    s_i
     \begin{bmatrix}
         x'_i \\
         y'_i \\
@@ -601,19 +607,21 @@ findHomography
     -> V.Vector (point2 CDouble) -- ^ Points from the second image.
     -> FindHomographyParams
     -> m ( Maybe ( Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S Double)
-                        , Mat ('S '[ 'D, 'D   ]) ('S 1) ('S Word8 )
-                        )
-                )
-findHomography srcPoints dstPoints fhp = do
-    (fm, pointMask) <- c'findHomography
-    -- If the c++ function can't find a fundamental matrix it will
-    -- return an empty matrix. We check for this case by trying to
-    -- coerce the result to the desired type.
-    catchError
-      (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
-      (\case CoerceMatError _msgs -> pure Nothing
-             otherError           -> throwError otherError
-      )
+                 , Mat ('S '[ 'D, 'D ]) ('S 1) ('S Word8)
+                 )
+         )
+findHomography srcPoints dstPoints fhp
+    | V.null srcPoints || V.null dstPoints = pure Nothing
+    | otherwise = do
+        (fm, pointMask) <- c'findHomography
+        -- If the c++ function can't find a fundamental matrix it will
+        -- return an empty matrix. We check for this case by trying to
+        -- coerce the result to the desired type.
+        catchError
+          (Just . (, unsafeCoerceMat pointMask) <$> coerceMat fm)
+          (\case CoerceMatError _msgs -> pure Nothing
+                 otherError           -> throwError otherError
+          )
   where
     c'findHomography = unsafeWrapException $ do
         fm        <- newEmptyMat
@@ -621,22 +629,24 @@ findHomography srcPoints dstPoints fhp = do
         handleCvException (pure (fm, pointMask)) $
           withPtr fm $ \fmPtr ->
           withPtr pointMask $ \pointMaskPtr ->
-          withArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
-          withArrayPtr (V.map toPoint dstPoints) $ \dstPtr ->
-            [cvExcept|
-              cv::_InputArray srcPts = cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));
-              cv::_InputArray dstPts = cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));
-              *$(Mat * fmPtr) =
-                cv::findHomography
-                    ( srcPts
-                    , dstPts
-                    , $(int32_t c'method)
-                    , $(double c'ransacReprojThreshold)
-                    , *$(Mat * pointMaskPtr)
-                    , $(int32_t c'maxIters)
-                    , $(double c'confidence)
-                    );
-            |]
+          unsafeWithArrayPtr (V.map toPoint srcPoints) $ \srcPtr ->
+          unsafeWithArrayPtr (V.map toPoint dstPoints) $ \dstPtr ->
+          [cvExcept|
+            cv::_InputArray srcPts =
+              cv::_InputArray($(Point2d * srcPtr), $(int32_t c'numSrcPts));
+            cv::_InputArray dstPts =
+              cv::_InputArray($(Point2d * dstPtr), $(int32_t c'numDstPts));
+            *$(Mat * fmPtr) =
+              cv::findHomography
+                  ( srcPts
+                  , dstPts
+                  , $(int32_t c'method)
+                  , $(double c'ransacReprojThreshold)
+                  , *$(Mat * pointMaskPtr)
+                  , $(int32_t c'maxIters)
+                  , $(double c'confidence)
+                  );
+          |]
     c'numSrcPts = fromIntegral $ V.length srcPoints
     c'numDstPts = fromIntegral $ V.length dstPoints
     c'method = marshalFindHomographyMethod $ fhpMethod fhp
@@ -654,27 +664,30 @@ computeCorrespondEpilines
     -> WhichImage -- ^ Image which contains the points.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Fundamental matrix.
     -> m (Mat ('S ['D, 'S 1]) ('S 3) ('S Double))
-computeCorrespondEpilines points whichImage fm = unsafeWrapException $ do
-    epilines <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat epilines) $
-      withArrayPtr (V.map toPoint points) $ \pointsPtr ->
-      withPtr fm       $ \fmPtr       ->
-      withPtr epilines $ \epilinesPtr -> do
-        -- Destroy type information about the pointsPtr. We wan't to generate
-        -- C++ code that works for any type of point. Specifically Point2f and
-        -- Point2d.
-        [cvExcept|
-          cv::_InputArray points =
-            cv::_InputArray( $(Point2d * pointsPtr)
-                           , $(int32_t c'numPoints)
-                           );
-          cv::computeCorrespondEpilines
-          ( points
-          , $(int32_t c'whichImage)
-          , *$(Mat * fmPtr)
-          , *$(Mat * epilinesPtr)
-          );
-        |]
+computeCorrespondEpilines points whichImage fm
+    | V.null points =
+        throwError $ CvException "computeCorrespondEpilines: empty points"
+    | otherwise = unsafeWrapException $ do
+        epilines <- newEmptyMat
+        handleCvException (pure $ unsafeCoerceMat epilines) $
+          unsafeWithArrayPtr (V.map toPoint points) $ \pointsPtr ->
+          withPtr fm       $ \fmPtr       ->
+          withPtr epilines $ \epilinesPtr -> do
+            -- Destroy type information about the pointsPtr. We wan't to generate
+            -- C++ code that works for any type of point. Specifically Point2f and
+            -- Point2d.
+            [cvExcept|
+              cv::_InputArray points =
+                cv::_InputArray( $(Point2d * pointsPtr)
+                               , $(int32_t c'numPoints)
+                               );
+              cv::computeCorrespondEpilines
+              ( points
+              , $(int32_t c'whichImage)
+              , *$(Mat * fmPtr)
+              , *$(Mat * epilinesPtr)
+              );
+            |]
   where
     c'numPoints = fromIntegral $ V.length points
     c'whichImage = marshalWhichImage whichImage
@@ -848,44 +861,47 @@ solvePnP
        , Mat (ShapeT '[3, 1]) ('S 1) ('S Double) -- translation vector
        , Mat (ShapeT '[3, 3]) ('S 1) ('S Double) -- output camera matrix
        )
-solvePnP objectImageMatches cameraMatrix mbDistCoeffs method = unsafeWrapException $ do
-    rvec <- newEmptyMat
-    tvec <- newEmptyMat
-    let cameraMatrixOut = cloneMat cameraMatrix
-    handleCvException (pure ( unsafeCoerceMat rvec
-                            , unsafeCoerceMat tvec
-                            , cameraMatrixOut
-                            )) $
-      withArrayPtr objectPoints $ \objectPoinstPtr ->
-      withArrayPtr imagePoints $ \imagePointsPtr ->
-      withPtr cameraMatrixOut $ \cameraMatrixOutPtr ->
-      withPtr (toMat <$> mbDistCoeffs) $ \distCoeffsPtr ->
-      withPtr rvec $ \rvecPtr ->
-      withPtr tvec $ \tvecPtr ->
-        [cvExcept|
-          cv::_InputArray objectPoints =
-            cv::_InputArray( $(Point3d * objectPoinstPtr)
-                           , $(int32_t c'numPoints)
-                           );
-          cv::_InputArray imagePoints =
-            cv::_InputArray( $(Point2d * imagePointsPtr)
-                           , $(int32_t c'numPoints)
-                           );
-          cv::Mat * distCoeffsPtr = $(Mat * distCoeffsPtr);
-          bool retval =
-            cv::solvePnP
-            ( objectPoints
-            , imagePoints
-            , *$(Mat * cameraMatrixOutPtr)
-            , distCoeffsPtr
-              ? cv::_InputArray(*distCoeffsPtr)
-              : cv::_InputArray(cv::noArray())
-            , *$(Mat * rvecPtr)
-            , *$(Mat * tvecPtr)
-            , $(int32_t useExtrinsicGuess)
-            , $(int32_t methodFlag)
-            );
-        |]
+solvePnP objectImageMatches cameraMatrix mbDistCoeffs method
+    | V.null objectImageMatches =
+        throwError $ CvException "solvePnP: empty objectImageMatches"
+    | otherwise = unsafeWrapException $ do
+        rvec <- newEmptyMat
+        tvec <- newEmptyMat
+        let cameraMatrixOut = cloneMat cameraMatrix
+        handleCvException (pure ( unsafeCoerceMat rvec
+                                , unsafeCoerceMat tvec
+                                , cameraMatrixOut
+                                )) $
+          unsafeWithArrayPtr objectPoints $ \objectPoinstPtr ->
+          unsafeWithArrayPtr imagePoints $ \imagePointsPtr ->
+          withPtr cameraMatrixOut $ \cameraMatrixOutPtr ->
+          withPtr (toMat <$> mbDistCoeffs) $ \distCoeffsPtr ->
+          withPtr rvec $ \rvecPtr ->
+          withPtr tvec $ \tvecPtr ->
+            [cvExcept|
+              cv::_InputArray objectPoints =
+                cv::_InputArray( $(Point3d * objectPoinstPtr)
+                               , $(int32_t c'numPoints)
+                               );
+              cv::_InputArray imagePoints =
+                cv::_InputArray( $(Point2d * imagePointsPtr)
+                               , $(int32_t c'numPoints)
+                               );
+              cv::Mat * distCoeffsPtr = $(Mat * distCoeffsPtr);
+              bool retval =
+                cv::solvePnP
+                ( objectPoints
+                , imagePoints
+                , *$(Mat * cameraMatrixOutPtr)
+                , distCoeffsPtr
+                  ? cv::_InputArray(*distCoeffsPtr)
+                  : cv::_InputArray(cv::noArray())
+                , *$(Mat * rvecPtr)
+                , *$(Mat * tvecPtr)
+                , $(int32_t useExtrinsicGuess)
+                , $(int32_t methodFlag)
+                );
+            |]
   where
     (methodFlag, useExtrinsicGuess) = marshalSolvePnPMethod method
 

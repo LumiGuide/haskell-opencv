@@ -36,10 +36,11 @@ import qualified "repa" Data.Array.Repa as Repa
 import "repa" Data.Array.Repa.Index ((:.)((:.)))
 import "tasty" Test.Tasty
 import "tasty-hunit" Test.Tasty.HUnit as HU
-import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC (testProperty)
+import qualified "tasty-quickcheck" Test.Tasty.QuickCheck as QC ( testProperty )
 import qualified "QuickCheck" Test.QuickCheck as QC
 import           "QuickCheck" Test.QuickCheck ( (==>) )
-import           "QuickCheck" Test.QuickCheck.Property ( Result(..), failed, succeeded )
+import qualified "QuickCheck" Test.QuickCheck.Property as QCProp
+import "random" System.Random ( Random )
 import "transformers" Control.Monad.Trans.Except
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
@@ -146,7 +147,12 @@ main = defaultMain $ testGroup "opencv"
         ]
       ]
     , testGroup "ImgProc"
-      [ testGroup "GeometricImgTransform"
+      [ testGroup "Drawing"
+        [ QC.testProperty "fillConvexPoly" fillConvexPolyProp
+        , QC.testProperty "fillPoly" fillPolyProp
+        , QC.testProperty "polylines" polylinesProp
+        ]
+      , testGroup "GeometricImgTransform"
         [ HU.testCase "getRotationMatrix2D" testGetRotationMatrix2D
         ]
       , testGroup "Structural Analysis and Shape Descriptors"
@@ -212,9 +218,6 @@ testArrayBinOpArgDiff arrayOp =
                             (Proxy :: Proxy 1)
                             (Proxy :: Proxy Double)
                             black
-
-    black :: Scalar
-    black = toScalar (0 :: V4 Double)
 
 testCalibrationMatrixValues_identity :: HU.Assertion
 testCalibrationMatrixValues_identity = evaluate x $> ()
@@ -362,6 +365,82 @@ matHasInfoFP :: FilePath -> MatInfo -> TestTree
 matHasInfoFP fp expectedInfo = HU.testCase fp $ do
     mat <- loadImg ImreadUnchanged fp
     assertEqual "" expectedInfo (matInfo mat)
+
+mkDrawingProp
+    :: ( Mat ('S '[ 'D, 'D ]) ('S 3) ('S Word8)
+       -> QC.Property
+       )
+    -> QC.Property
+mkDrawingProp withImg =
+    QC.forAll genImgSize $ \(V2 w h) ->
+    QC.forAll QC.arbitrary $ \(imgColor :: V4 Double) -> do
+      let img = exceptError $ mkMat (w ::: h ::: Z) (Proxy @3) (Proxy @Word8) imgColor
+      withImg img
+  where
+    maxDimSize = 100
+
+    genImgSize :: QC.Gen (V2 Int32)
+    genImgSize =
+        V2 <$> maxSizedPosRange maxDimSize
+           <*> maxSizedPosRange maxDimSize
+
+fillConvexPolyProp :: V4 Double -> LineType -> QC.Property
+fillConvexPolyProp drawColor lineType =
+    mkDrawingProp $ \img ->
+    QC.forAll genPoints $ \points -> QC.ioProperty $ do
+      imgM <- unsafeThaw img
+      exceptErrorIO $ fillConvexPoly imgM (V.fromList points) drawColor lineType 0
+  where
+    maxNumPolyPts = 10
+    maxCoordVal   = 20
+
+    genPoints :: QC.Gen [V2 Int32]
+    genPoints = do
+        n <- maxSizedNonNegRange maxNumPolyPts
+        QC.vectorOf n $
+          V2 <$> maxSizedRange maxCoordVal <*> maxSizedRange maxCoordVal
+
+fillPolyProp :: V4 Double -> LineType -> QC.Property
+fillPolyProp drawColor lineType =
+    mkDrawingProp $ \img ->
+    QC.forAll genPolysPoints $ \polysPts -> QC.ioProperty $ do
+      imgM <- unsafeThaw img
+      let vs :: V.Vector (V.Vector (V2 Int32))
+          vs = V.fromList $ map V.fromList polysPts
+      exceptErrorIO $ fillPoly imgM vs drawColor lineType 0
+  where
+    maxNumPolys   = 5
+    maxNumPolyPts = 10
+    maxCoordVal   = 20
+
+    genPolysPoints :: QC.Gen [[V2 Int32]]
+    genPolysPoints = do
+        numPolys <- maxSized maxNumPolys QC.arbitrary
+        numPts <- maxSized maxNumPolyPts QC.arbitrary
+        QC.vectorOf numPolys $ QC.vectorOf numPts $
+          V2 <$> maxSizedRange maxCoordVal <*> maxSizedRange maxCoordVal
+
+polylinesProp :: Bool -> V4 Double -> LineType -> QC.Property
+polylinesProp closed drawColor lineType =
+    mkDrawingProp $ \img ->
+    QC.forAll (maxSizedPosRange maxEdgeThickness) $ \edgeThickness ->
+    QC.forAll genPolysPoints $ \polysPts -> QC.ioProperty $ do
+      imgM <- unsafeThaw img
+      let vs :: V.Vector (V.Vector (V2 Int32))
+          vs = V.fromList $ map V.fromList polysPts
+      exceptErrorIO $ polylines imgM vs closed drawColor edgeThickness lineType 0
+  where
+    maxEdgeThickness = 20
+    maxNumPolys      = 5
+    maxNumPolyPts    = 10
+    maxCoordVal      = 20
+
+    genPolysPoints :: QC.Gen [[V2 Int32]]
+    genPolysPoints = do
+        numPolys <- maxSizedRange maxNumPolys
+        numPts <- maxSizedRange maxNumPolyPts
+        QC.vectorOf numPolys $ QC.vectorOf numPts $
+          V2 <$> maxSizedRange maxCoordVal <*> maxSizedRange maxCoordVal
 
 testGetRotationMatrix2D :: HU.Assertion
 testGetRotationMatrix2D = testMatType rot2D
@@ -531,7 +610,7 @@ testVecMatVec m33In = do
     elemsIn :: [a]
     elemsIn = concatMap toList $ toList m33In
 
-getAffineTransformProp :: V3 (V2 CFloat) -> V3 (V2 CFloat) -> Result
+getAffineTransformProp :: V3 (V2 CFloat) -> V3 (V2 CFloat) -> QCProp.Result
 getAffineTransformProp v v' =
     let transfEither = getAffineTransform v v'
     in case transfEither of
@@ -542,7 +621,7 @@ getAffineTransformProp v v' =
             in case nonEmpty $ typeCheckMat transf of
                 Nothing ->
                     if and $ almostEqualFloats <$> v' <*> newPoints
-                        then succeeded
+                        then QCProp.succeeded
                         else failedWithReason $ "The points are too far apart; newPoints =\n" <> show newPoints <> "\n"
                 Just errs -> failedWithReason . displayException $ CoerceMatError errs
 
@@ -552,8 +631,8 @@ warpAffineV2 m23 pt = view _xy (m23 !* homogeneous pt)
     homogeneous :: (Num a) => V2 a -> V3 a
     homogeneous (V2 x y) = V3 x y 1
 
-failedWithReason :: String -> Result
-failedWithReason s = failed { reason = s }
+failedWithReason :: String -> QCProp.Result
+failedWithReason s = QCProp.failed { QCProp.reason = s }
 
 almostEqualFloats :: V2 CFloat -> V2 CFloat -> Bool
 almostEqualFloats v v' = isSmall $ relError v v'
@@ -582,8 +661,34 @@ eye_m33 :: (Num e) => M33 e
 eye_m23 = V2 (V3 1 0 0) (V3 0 1 0)
 eye_m33 = V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 
+black :: V4 Double
+black = 0
+
 --------------------------------------------------------------------------------
--- QuikcCheck Arbitrary Instances
+-- Generators
+--------------------------------------------------------------------------------
+
+-- Modifies a generator so that the size is never greater than maxSize.
+maxSized :: Int -> QC.Gen a -> QC.Gen a
+maxSized maxSize = QC.scale (min maxSize)
+
+maxSizedRangeHelper :: (Random a, Num a) => (a -> (a, a)) -> Int -> QC.Gen a
+maxSizedRangeHelper mkBounds maxSize =
+    maxSized maxSize $ QC.sized $ \n ->
+        let n' = fromIntegral n
+        in QC.choose $ mkBounds n'
+
+maxSizedRange :: (Random a, Num a) => Int -> QC.Gen a
+maxSizedRange = maxSizedRangeHelper $ \n -> (-n, n)
+
+maxSizedNonNegRange :: (Random a, Ord a, Num a) => Int -> QC.Gen a
+maxSizedNonNegRange = maxSizedRangeHelper $ \n -> (0, n)
+
+maxSizedPosRange :: (Random a, Ord a, Num a) => Int -> QC.Gen a
+maxSizedPosRange = maxSizedRangeHelper $ \n -> (1, max 1 n)
+
+--------------------------------------------------------------------------------
+-- QuickCheck Arbitrary Instances
 --------------------------------------------------------------------------------
 
 #if !MIN_VERSION_QuickCheck(2,10,1)
@@ -611,6 +716,9 @@ instance QC.Arbitrary Rect2i where
 
 instance QC.Arbitrary Point2i where
     arbitrary = toPoint <$> (QC.arbitrary :: QC.Gen (V2 Int32))
+
+instance QC.Arbitrary LineType where
+    arbitrary = QC.elements [LineType_8, LineType_4, LineType_AA]
 
 --------------------------------------------------------------------------------
 
