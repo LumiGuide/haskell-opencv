@@ -60,6 +60,7 @@ module OpenCV.ImgProc.GeometricImgTransform
 
 import "base" Data.Int ( Int32 )
 import "base" Data.Foldable
+import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified Data.Vector as V
@@ -69,7 +70,7 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.Vector ( zero )
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -145,7 +146,7 @@ resizeInterAreaImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#resize OpenCV Sphinx doc>
 -}
 resize
-    :: MonadError CvException m
+    :: (MonadError CvException m)
     => ResizeAbsRel
     -> InterpolationMethod
     -> Mat ('S [height, width]) channels depth
@@ -197,7 +198,7 @@ warpAffineInvImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
 warpAffine
-    :: MonadError CvException m
+    :: (MonadError CvException m)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
     -> InterpolationMethod
@@ -235,7 +236,7 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: MonadError CvException m
+    :: (MonadError CvException m)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
     -> InterpolationMethod
@@ -273,7 +274,7 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#invertaffinetransform OpenCV Sphinx doc>
 invertAffineTransform
-    :: MonadError CvException m
+    :: (MonadError CvException m)
     => Mat (ShapeT [2, 3]) ('S 1) depth -- ^
     -> m (Mat (ShapeT [2, 3]) ('S 1) depth)
 invertAffineTransform matIn = unsafeWrapException $ do
@@ -447,43 +448,54 @@ logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getperspectivetransform OpenCV Sphinx doc>
 -}
 getPerspectiveTransform
-    :: (IsPoint2 point2 CFloat)
+    :: (IsPoint2 point2 CFloat, MonadError CvException m)
     => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
     -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
-    -> Mat (ShapeT [3,3]) ('S 1) ('S Double) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
-getPerspectiveTransform srcPts dstPts = unsafeCoerceMat $ unsafePerformIO $
-    withArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
-        withArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
+    -> m (Mat (ShapeT [3,3]) ('S 1) ('S Double)) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
+getPerspectiveTransform srcPts dstPts
+    | V.null srcPts = emptyVecErr "source"
+    | V.null dstPts = emptyVecErr "destination"
+    | otherwise = pure $
+        unsafeCoerceMat $
+        unsafePerformIO $
+        unsafeWithArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
+        unsafeWithArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
         fromPtr
         [CU.block| Mat * {
-            return new cv::Mat
-            ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
-            );
+          return new cv::Mat
+          ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
+          );
         }|]
+  where
+    emptyVecErr name =
+        throwError $ CvException $ "getPerspectiveTransform: empty " <> name
 
 {- | Calculates an affine transformation matrix for 2D affine transform
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getaffinetransform OpenCV Sphinx doc>
 -}
 getAffineTransform
-    :: forall m point2. (MonadError CvException m, IsPoint2 point2 CFloat)
+    :: forall m point2. (IsPoint2 point2 CFloat, MonadError CvException m)
     => V3 (point2 CFloat) -- ^ Points representing vertices in source image
     -> V3 (point2 CFloat) -- ^ Points representing vertices in destination image
-    -> m (Mat (ShapeT [2, 3]) ('S 1) ('S Double)) -- ^ The output affine transformation, 2x3 floating-point-matrix.
+    -> m (Mat (ShapeT [2, 3]) ('S 1) ('S Double))
+       -- ^ The output affine transformation, 2x3 floating-point-matrix.
 getAffineTransform srcPts dstPts = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
-        withPtr result $ \resultPtr ->
-        withArrayPtr (v3ToVector srcPts) $ \srcPtsPtr ->
-        withArrayPtr (v3ToVector dstPts) $ \dstPtsPtr ->
-        [cvExcept|
-            *$(Mat * resultPtr) =
-                cv::getAffineTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr));
-        |]
+      withPtr result $ \resultPtr ->
+      unsafeWithArrayPtr (v3ToVector srcPts) $ \srcPtsPtr ->
+      unsafeWithArrayPtr (v3ToVector dstPts) $ \dstPtsPtr ->
+      [cvExcept|
+        *$(Mat * resultPtr) =
+          cv::getAffineTransform
+            ( $(Point2f * srcPtsPtr)
+            , $(Point2f * dstPtsPtr)
+            );
+      |]
   where
     v3ToVector :: V3 (point2 CFloat) -> V.Vector Point2f
     v3ToVector = V.map toPoint . V.fromList . toList
-
 
 {- | Calculates an affine matrix of 2D rotation
 
@@ -496,7 +508,8 @@ getRotationMatrix2D
        -- ^ Rotation angle in degrees. Positive values mean counter-clockwise
        -- rotation (the coordinate origin is assumed to be the top-left corner).
     -> Double -- ^ Isotropic scale factor.
-    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ The output affine transformation, 2x3 floating-point matrix.
+    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double)
+       -- ^ The output affine transformation, 2x3 floating-point matrix.
 getRotationMatrix2D center angle scale = unsafeCoerceMat $ unsafePerformIO $
     withPtr (toPoint center) $ \centerPtr ->
       fromPtr
@@ -556,7 +569,7 @@ remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConsta
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#remap OpenCV documentation>
 -}
 remap
-    :: MonadError CvException m
+    :: (MonadError CvException m)
     => Mat ('S [inputHeight, inputWidth]) inputChannels inputDepth
        -- ^ Source image.
     -> Mat ('S [outputHeight, outputWidth]) ('S 2) ('S Float)

@@ -27,6 +27,7 @@ module OpenCV.Internal.Exception
     , exceptError
     , exceptErrorIO
     , exceptErrorM
+    , maybeThrowError
     , runCvExceptST
 
       -- * Unsafe stuff
@@ -74,8 +75,13 @@ data CvException
    | CoerceMatError !(NE.NonEmpty CoerceMatError)
      -- ^ A 'Mat' couldn't be coerced to a different type because that
      -- type does not match the actual shape of the matrix.
+   | MarshalEmptyVectorException
+     -- ^ Attempted to convert an empty vector to (a pointer to) an
+     -- array. An empty vector would use 0 memory and can thus not
+     -- have a representation in memory.
    | CvException !String
-     -- ^ General exception which doesn't fit in any of the other constructors.
+     -- ^ General exception which doesn't fit in any of the other
+     -- constructors.
      deriving Show
 
 data CoerceMatError
@@ -96,8 +102,10 @@ instance Exception CvException where
       BindingException cppException ->
         "Exception thrown by opencv c++ library:\n" ++ show cppException
       CoerceMatError coerceMatErrors ->
-        "A matrix can't be converted to the desired type:\n  - " ++
+        "A matrix couldn't be converted to the desired type:\n  - " ++
           intercalate "\n  - " (map displayCoerceMatError (NE.toList coerceMatErrors))
+      MarshalEmptyVectorException ->
+        "An empty vector could not be converted to an array"
       CvException msg -> msg
 
 displayCoerceMatError :: CoerceMatError -> String
@@ -193,6 +201,14 @@ exceptErrorIO = either throwIO pure <=< runExceptT
 
 exceptErrorM :: (Monad m) => ExceptT CvException m a -> m a
 exceptErrorM = either throw pure <=< runExceptT
+
+-- | Convert 'Nothing's to exceptions.
+maybeThrowError
+    :: (MonadError e m)
+    => e -- ^ Exception to throw in case of 'Nothing'.
+    -> Maybe a
+    -> m a
+maybeThrowError e = maybe (throwError e) pure
 
 runCvExceptST :: MonadError CvException m => (forall s. ExceptT CvException (ST s) a) -> m a
 runCvExceptST act = either throwError return $ runST $ runExceptT act

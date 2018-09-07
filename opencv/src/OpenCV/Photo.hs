@@ -19,13 +19,13 @@ import "base" Data.Int ( Int32 )
 import "base" Data.Word ( Word8 )
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types ( withPtr )
 import "this" OpenCV.Internal.Exception
 import "this" OpenCV.Internal.Photo.Constants
 import "this" OpenCV.Internal.Core.Types.Mat
-import "this" OpenCV.Internal.Core.Types ( withArrayPtr )
+import "this" OpenCV.Internal.Core.Types ( unsafeWithArrayPtr )
 import "this" OpenCV.TypeLevel
 
 import qualified "vector" Data.Vector as V
@@ -217,7 +217,7 @@ fastNlMeansDenoisingColoredMultiImg = exceptError $ do
 -}
 
 fastNlMeansDenoisingColoredMulti
-   :: ( MonadError CvException m )
+   :: (MonadError CvException m)
    => Double -- ^ Parameter regulating filter strength for luminance component.
              -- Bigger h value perfectly removes noise but also removes image
              -- details, smaller h value preserves details but also preserves
@@ -236,26 +236,28 @@ fastNlMeansDenoisingColoredMulti
              -- ^ Vector of odd number of input 8-bit 3-channel images.
    -> m (Mat ('S [h, w]) ('S 3) ('S Word8))
              -- ^ Output image same size and type as input.
-
-fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize srcVec =
-  unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withArrayPtr srcVec $ \srcVecPtr      ->
-      withPtr dst         $ \dstPtr         ->
-      [cvExcept|
-        std::vector<Mat> buffer( $(Mat * srcVecPtr)
-                    , $(Mat * srcVecPtr) + $(int32_t c'temporalWindowSize) );
-        cv::fastNlMeansDenoisingColoredMulti( buffer
-                                            , *$(Mat * dstPtr)
-                                            , $(int32_t c'imgToDenoiseIndex)
-                                            , $(int32_t c'temporalWindowSize)
-                                            , $(double c'h)
-                                            , $(double c'hColor)
-                                            , $(int32_t templateWindowSize)
-                                            , $(int32_t searchWindowSize)
-                                            );
-      |]
+fastNlMeansDenoisingColoredMulti h hColor templateWindowSize searchWindowSize srcVec
+    | V.null srcVec =
+        throwError $ CvException "fastNlMeansDenoisingColoredMulti: empty input vector"
+    | otherwise = unsafeWrapException $ do
+        dst <- newEmptyMat
+        handleCvException (pure $ unsafeCoerceMat dst) $
+          unsafeWithArrayPtr srcVec $ \srcVecPtr ->
+          withPtr dst $ \dstPtr ->
+          [cvExcept|
+            std::vector<Mat> buffer( $(Mat * srcVecPtr)
+                        , $(Mat * srcVecPtr) + $(int32_t c'temporalWindowSize) );
+            cv::fastNlMeansDenoisingColoredMulti
+              ( buffer
+              , *$(Mat * dstPtr)
+              , $(int32_t c'imgToDenoiseIndex)
+              , $(int32_t c'temporalWindowSize)
+              , $(double c'h)
+              , $(double c'hColor)
+              , $(int32_t templateWindowSize)
+              , $(int32_t searchWindowSize)
+              );
+          |]
   where
     c'h = realToFrac h
     c'hColor = realToFrac hColor
@@ -302,21 +304,22 @@ denoise_TVL1
              -- ^ Vector of odd number of input 8-bit 3-channel images.
    -> m (Mat ('S [h, w]) ('S 1) ('S Word8))
              -- ^ Output image same size and type as input.
-
-denoise_TVL1 lambda niters srcVec = unsafeWrapException $ do
-    dst <- newEmptyMat
-    handleCvException (pure $ unsafeCoerceMat dst) $
-      withArrayPtr srcVec $ \srcVecPtr      ->
-      withPtr dst         $ \dstPtr         ->
-      [cvExcept|
-        std::vector<Mat> buffer( $(Mat * srcVecPtr)
-                           , $(Mat * srcVecPtr) + $(int32_t c'srcVecLength) );
-        cv::denoise_TVL1( buffer
-                        , *$(Mat * dstPtr)
-                        , $(double c'lambda)
-                        , $(int32_t niters)
-                        );
-      |]
+denoise_TVL1 lambda niters srcVec
+    | V.null srcVec = throwError $ CvException "denoise_TVL1: empty input vector"
+    | otherwise = unsafeWrapException $ do
+        dst <- newEmptyMat
+        handleCvException (pure $ unsafeCoerceMat dst) $
+          unsafeWithArrayPtr srcVec $ \srcVecPtr ->
+          withPtr dst $ \dstPtr ->
+          [cvExcept|
+            std::vector<Mat> buffer( $(Mat * srcVecPtr)
+                               , $(Mat * srcVecPtr) + $(int32_t c'srcVecLength) );
+            cv::denoise_TVL1( buffer
+                            , *$(Mat * dstPtr)
+                            , $(double c'lambda)
+                            , $(int32_t niters)
+                            );
+          |]
   where
     c'lambda = realToFrac lambda
     c'srcVecLength = fromIntegral $ V.length srcVec

@@ -47,22 +47,24 @@ estimateRigidTransform
     -> V.Vector (dstPoint2 Int32) -- ^ Destination
     -> Bool -- ^ Full affine
     -> m (Maybe (Mat (ShapeT [2, 3]) ('S 1) ('S Double)))
-estimateRigidTransform src dst fullAffine = do
-    result <- c'estimateRigidTransform
-    -- If the c++ function can't estimate a rigid transform it will
-    -- return an empty matrix. We check for this case by trying to
-    -- coerce the result to the desired type.
-    catchError
-      (Just <$> coerceMat result)
-      (\case CoerceMatError _msgs -> pure Nothing
-             otherError -> throwError otherError
-      )
+estimateRigidTransform src dst fullAffine
+    | V.null src || V.null dst = pure Nothing
+    | otherwise = do
+        result <- c'estimateRigidTransform
+        -- If the c++ function can't estimate a rigid transform it will
+        -- return an empty matrix. We check for this case by trying to
+        -- coerce the result to the desired type.
+        catchError
+          (Just <$> coerceMat result)
+          (\case CoerceMatError _msgs -> pure Nothing
+                 otherError -> throwError otherError
+          )
   where
     c'estimateRigidTransform = unsafeWrapException $ do
       matOut <- newEmptyMat
       handleCvException (pure matOut) $
-        withArrayPtr (V.map toPoint src) $ \srcPtr ->
-        withArrayPtr (V.map toPoint dst) $ \dstPtr ->
+        unsafeWithArrayPtr (V.map toPoint src) $ \srcPtr ->
+        unsafeWithArrayPtr (V.map toPoint dst) $ \dstPtr ->
         withPtr matOut $ \matOutPtr ->
           [cvExcept|
             Mat * matOutPtr = $(Mat * matOutPtr);

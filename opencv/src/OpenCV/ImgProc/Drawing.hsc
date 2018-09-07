@@ -22,6 +22,7 @@ module OpenCV.ImgProc.Drawing
     ) where
 
 import "base" Data.Int
+import "base" Data.Maybe ( fromMaybe )
 import qualified "vector" Data.Vector as V
 import qualified "vector" Data.Vector.Storable as VS
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -395,20 +396,23 @@ fillConvexPoly
     -> LineType
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
-fillConvexPoly img points color lineType shift =
-    unsafePrimToPrim $
-    withPtr img $ \matPtr ->
-    withArrayPtr (V.map toPoint points) $ \pointsPtr ->
-    withPtr (toScalar color) $ \colorPtr ->
-      [C.exp|void {
-        cv::fillConvexPoly( *$(Mat * matPtr)
-                          , $(Point2i * pointsPtr)
-                          , $(int32_t c'numPoints)
-                          , *$(Scalar * colorPtr)
-                          , $(int32_t c'lineType)
-                          , $(int32_t shift)
-                          )
-      }|]
+fillConvexPoly img points color lineType shift
+    | V.null points = pure ()
+    | otherwise =
+        unsafePrimToPrim $
+        withPtr img $ \matPtr ->
+        unsafeWithArrayPtr (V.map toPoint points) $ \pointsPtr ->
+        withPtr (toScalar color) $ \colorPtr ->
+          [C.exp|void {
+            cv::fillConvexPoly
+              ( *$(Mat * matPtr)
+              , $(Point2i * pointsPtr)
+              , $(int32_t c'numPoints)
+              , *$(Scalar * colorPtr)
+              , $(int32_t c'lineType)
+              , $(int32_t shift)
+              )
+          }|]
   where
     c'numPoints = fromIntegral $ V.length points
     c'lineType  = marshalLineType lineType
@@ -473,6 +477,7 @@ fillPoly
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 fillPoly img polygons color lineType shift =
+    fmap (fromMaybe ()) $
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
     withPolygons polygons $ \polygonsPtr ->
@@ -536,6 +541,7 @@ polylines
     -> Int32 -- ^ Number of fractional bits in the vertex coordinates.
     -> m ()
 polylines img curves isClosed color thickness lineType shift =
+    fmap (fromMaybe ()) $
     unsafePrimToPrim $
     withPtr img $ \matPtr ->
     withPolygons curves $ \curvesPtr ->
@@ -804,37 +810,45 @@ drawContours :: (ToScalar color, PrimMonad m)
              -> ContourDrawMode
              -> Mut (Mat ('S [h, w]) channels depth) (PrimState m) -- ^ Image.
              -> m ()
-drawContours contours color drawMode img = unsafePrimToPrim $
-    withArrayPtr (V.concat (V.toList contours)) $ \contoursPtrPtr ->
-    withArray (V.toList (V.map (fromIntegral . V.length) contours)) $ \(contourLengthsPtr :: Ptr Int32) ->
-    withPtr (toScalar color) $ \colorPtr ->
-    withPtr img $ \dstPtr ->
-      [C.exp|void {
-        int32_t *contourLengths = $(int32_t * contourLengthsPtr);
-        Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
-        std::vector< std::vector<cv::Point> > contours;
-        int32_t numContours = $(int32_t numContours);
+drawContours contours color drawMode img
+    | V.null combinedContours = pure ()
+    | otherwise = unsafePrimToPrim $
+        unsafeWithArrayPtr combinedContours $ \contoursPtrPtr ->
+        -- contourLengths can't be an empty list if combinedContours
+        -- is non empty. Proof left as an exercise to the reader.
+        withArray contourLengths $ \(contourLengthsPtr :: Ptr Int32) ->
+        withPtr (toScalar color) $ \colorPtr ->
+        withPtr img $ \dstPtr ->
+          [C.exp|void {
+            int32_t * contourLengths = $(int32_t * contourLengthsPtr);
+            Point2i * contoursPtr = $(Point2i * contoursPtrPtr);
+            std::vector< std::vector<cv::Point> > contours;
+            int32_t numContours = $(int32_t numContours);
 
-        int k = 0;
-        for(int i = 0; i < numContours; i++) {
-          std::vector<cv::Point> contour;
-          for(int j = 0; j < contourLengths[i]; j++) {
-            contour.push_back( contoursPtr[k] );
-            k++;
-          }
-          contours.push_back(contour);
-        }
+            int k = 0;
+            for(int i = 0; i < numContours; i++)
+            {
+              std::vector<cv::Point> contour;
+              for(int j = 0; j < contourLengths[i]; j++)
+              {
+                contour.push_back(contoursPtr[k]);
+                k++;
+              }
+              contours.push_back(contour);
+            }
 
-        cv::drawContours(
-          *$(Mat * dstPtr),
-          contours,
-          -1,
-          *$(Scalar * colorPtr),
-          $(int32_t c'thickness),
-          $(int32_t c'lineType)
-        );
-      }|]
+            cv::drawContours
+              ( *$(Mat * dstPtr)
+              , contours
+              , -1
+              , *$(Scalar * colorPtr)
+              , $(int32_t c'thickness)
+              , $(int32_t c'lineType)
+              );
+          }|]
   where
+    combinedContours = V.concat $ V.toList contours
+    contourLengths = V.toList (V.map (fromIntegral . V.length) contours)
     numContours = fromIntegral (V.length contours)
     (c'lineType, c'thickness) = marshalContourDrawMode drawMode
 
