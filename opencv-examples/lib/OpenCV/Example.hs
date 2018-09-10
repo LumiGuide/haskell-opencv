@@ -6,7 +6,7 @@
 module OpenCV.Example
    ( createCapture
    , createCaptureArg
-   , withEmbededFile
+   , withEmbeddedFile
    ) where
 
 import "base" System.Environment
@@ -48,8 +48,8 @@ embedCallHelp ef templ f =
 
 -- | Embedder for strictly used files, it allows to embed a file, and still allow
 -- some method to use filename
-withEmbededFile :: FilePath -> Q Exp
-withEmbededFile filePath = do
+withEmbeddedFile :: FilePath -> Q Exp
+withEmbeddedFile filePath = do
     templ <- [| $(lift $ takeFileName filePath) |]
     ef <- embedFile filePath
     var <- newName "f"

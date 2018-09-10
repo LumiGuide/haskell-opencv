@@ -41,7 +41,7 @@ ccCommon :: ((FilePath -> IO (Maybe CV.CascadeClassifier)) -> IO (Maybe a)) -> a
 ccCommon f = unsafePerformIO $ fromJust <$> f CV.newCascadeClassifier
 
 ccFrontal :: CV.CascadeClassifier
-ccFrontal = ccCommon $(withEmbededFile "data/haarcascade_frontalface_default.xml")
+ccFrontal = ccCommon $(withEmbeddedFile "data/haarcascade_frontalface_default.xml")
 
 main :: IO ()
 main = do

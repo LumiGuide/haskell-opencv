@@ -31,8 +31,8 @@ white  = CV.toScalar (V4 255 255 255 255 :: V4 Double)
 main :: IO ()
 main = do
     cap <- createCaptureArg
-    Just ccFrontal <- $(withEmbededFile "data/haarcascade_frontalface_default.xml") CV.newCascadeClassifier
-    Just ccEyes    <- $(withEmbededFile "data/haarcascade_eye.xml") CV.newCascadeClassifier
+    Just ccFrontal <- $(withEmbeddedFile "data/haarcascade_frontalface_default.xml") CV.newCascadeClassifier
+    Just ccEyes    <- $(withEmbeddedFile "data/haarcascade_eye.xml") CV.newCascadeClassifier
     w <- CV.videoCaptureGetI cap VideoCapPropFrameWidth
     h <- CV.videoCaptureGetI cap VideoCapPropFrameHeight
     CV.withWindow "video" $ loop cap (ccFrontal, ccEyes, w, h)
