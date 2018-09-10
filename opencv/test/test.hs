@@ -142,6 +142,16 @@ main = defaultMain $ testGroup "opencv"
               , HU.testCase "eye_m33 Double" $ testVecMatVec (eye_m33 :: M33 Double)
               , HU.testCase "1..9 Int16" $ testVecMatVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
               ]
+            , testGroup "unsafe mat -> vec -> mat"
+              [ HU.testCase "eye_m33 Word8" $ testUnsafeMatVecMat (eye_m33 :: M33 Word8)
+              , HU.testCase "eye_m33 Double" $ testUnsafeMatVecMat (eye_m33 :: M33 Double)
+              , HU.testCase "1..9 Int16" $ testUnsafeMatVecMat (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+              ]
+            , testGroup "unsafe vec -> mat -> vec"
+              [ HU.testCase "eye_m33 Word8" $ testUnsafeVecMatVec (eye_m33 :: M33 Word8)
+              , HU.testCase "eye_m33 Double" $ testUnsafeVecMatVec (eye_m33 :: M33 Double)
+              , HU.testCase "1..9 Int16" $ testUnsafeVecMatVec (V3 (V3 1 2 3) (V3 4 5 6) (V3 7 8 9) :: M33 Int16)
+              ]
             ]
           ]
         ]
@@ -592,9 +602,33 @@ testUnsafeWithMatAsVec m33 = do
 
 testMatVecMat
     :: forall a
+     . (Eq a, Show a, ToDepth (Proxy a), Storable a, ToMat (M33 a))
+    => M33 a -> HU.Assertion
+testMatVecMat m33In = assertEqual "" m33In m33Out
+  where
+    m33Out :: M33 a
+    m33Out = fromMat $ exceptError $ vecToMat (Proxy @[3, 3]) (Proxy @1) $ matToVec $ toMat m33In
+
+testVecMatVec
+    :: forall a
+     . (Eq a, Show a, NFData a, ToDepth (Proxy a), Storable a)
+    => M33 a -> HU.Assertion
+testVecMatVec m33In = assertEqual "" elemsIn elemsOut
+  where
+    elemsOut :: [a]
+    elemsOut = VS.toList $ matToVec $ exceptError $ vecToMat (Proxy @[3, 3]) (Proxy @1) vecIn
+
+    vecIn :: VS.Vector a
+    vecIn = VS.fromList elemsIn
+
+    elemsIn :: [a]
+    elemsIn = concatMap toList $ toList m33In
+
+testUnsafeMatVecMat
+    :: forall a
      . (Eq a, Show a, NFData a, ToDepth (Proxy a), Storable a, ToMat (M33 a))
     => M33 a -> HU.Assertion
-testMatVecMat m33In = do
+testUnsafeMatVecMat m33In = do
     m33Out <-
       unsafeWithMatAsVec matIn $ \(vec :: VS.Vector a) ->
         exceptErrorIO $
@@ -605,11 +639,11 @@ testMatVecMat m33In = do
     matIn :: Mat ('S '[ 'S 3, 'S 3 ]) ('S 1) ('S a)
     matIn = toMat m33In
 
-testVecMatVec
+testUnsafeVecMatVec
     :: forall a
      . (Eq a, Show a, NFData a, ToDepth (Proxy a), Storable a)
     => M33 a -> HU.Assertion
-testVecMatVec m33In = do
+testUnsafeVecMatVec m33In = do
     elemsOut <- exceptErrorIO $
       unsafeWithVecAsMat (Proxy @[3, 3]) (Proxy @1) vecIn $ \mat ->
         liftIO $ unsafeWithMatAsVec mat $ \vecOut ->

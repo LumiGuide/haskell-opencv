@@ -32,6 +32,8 @@ module OpenCV.Internal.Core.Types.Mat
     , newEmptyMat
     , newMat
     , withMatData
+    , matToVec
+    , vecToMat
     , unsafeWithMatAsVec
     , unsafeWithVecAsMat
     , matElemAddress
@@ -436,7 +438,39 @@ withMatData mat f = withPtr mat $ \matPtr ->
       step    <- peekArray (fromIntegral dims) stepPtr
       f step dataPtr
 
+-- | Convert a Mat to a Storable Vector.
+matToVec
+    :: (Storable depth)
+    => Mat shape channels ('S depth)
+    -> VS.Vector depth
+matToVec mat =
+    unsafePerformIO $
+    unsafeWithMatAsVec mat $ \tmpVec ->
+      VS.thaw tmpVec >>= VS.unsafeFreeze
+
+-- | Convert a Storable Vector to a Mat.
+--
+-- The @shape@ and @channels@ of the Mat must exactly match the
+-- length of the vector.
+vecToMat
+    :: ( Storable depth
+       , ToShape shape
+       , ToChannels channels
+       , ToDepth (Proxy depth)
+       , MonadError CvException m
+       )
+    => shape
+    -> channels
+    -> VS.Vector depth
+    -> m (Mat (ShapeT shape) (ChannelsT channels) ('S depth))
+vecToMat shape channels vec =
+    unsafeCvExcept $
+    unsafeWithVecAsMat shape channels vec $ \tmpMat ->
+      liftIO $ cloneMatIO tmpMat
+
 -- | Access a Mat's data via a temporary Storable Vector.
+--
+-- Data is only copied when the Mat is not continuous.
 --
 -- The storable vector and its data may no longer be used after the
 -- supplied computation terminates.
@@ -463,6 +497,8 @@ unsafeWithMatAsVec mat f =
 --
 -- The @shape@ and @channels@ of the Mat must exactly match the
 -- length of the vector.
+--
+-- No data is copied.
 --
 -- The Mat and its data may no longer be used after the supplied
 -- computation terminates.

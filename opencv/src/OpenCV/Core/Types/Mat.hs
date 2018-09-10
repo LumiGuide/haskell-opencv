@@ -21,6 +21,8 @@ module OpenCV.Core.Types.Mat
     , emptyMat
     , mkMat
     , eyeMat
+    , matToVec
+    , vecToMat
     , unsafeWithMatAsVec
     , unsafeWithVecAsMat
     , cloneMat
