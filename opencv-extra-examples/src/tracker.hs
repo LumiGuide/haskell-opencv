@@ -27,13 +27,13 @@ import Control.Monad.Trans.Class
 import System.IO.Unsafe
 
 class LoopEnum a where
-  next :: a -> a
+    next :: a -> a
 
 instance (Eq a, Bounded a, Enum a) => LoopEnum a where
-  next x | x == maxBound = minBound
-         | otherwise = succ x
+    next x | x == maxBound = minBound
+           | otherwise = succ x
 
-blue ,white:: CV.Scalar
+blue, white :: CV.Scalar
 blue   = CV.toScalar (V4 255   0   0 255 :: V4 Double)
 white  = CV.toScalar (V4 255 255 255 255 :: V4 Double)
 
@@ -68,7 +68,7 @@ main = do
               img' = CV.exceptError $ CV.coerceMat img
               imgGray = CV.exceptError $ CV.cvtColor CV.bgr CV.gray img'
 
-              faces = ccDetectMultiscale ccFrontal imgGray
+          faces <- CV.exceptErrorIO $ ccDetectMultiscale ccFrontal imgGray
           mbTrac <- updateTracker tr $ CV.unsafeCoerceMat img
           let box = CV.exceptError $
                 CV.withMatM (h ::: w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white $ \imgM -> do

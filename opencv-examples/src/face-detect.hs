@@ -1,5 +1,6 @@
 {-# language DataKinds #-}
 {-# language FlexibleInstances #-}
+{-# language ScopedTypeVariables #-}
 {-# language TemplateHaskell #-}
 {-# language TupleSections #-}
 {-# language ViewPatterns #-}
@@ -49,14 +50,19 @@ main = do
       case mbImg of
         Just img -> do
           -- Assert that the retrieved frame is 2-dimensional.
-          let img' :: CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8)
-              img' = CV.exceptError $ CV.coerceMat img
-              imgGray = CV.exceptError $ CV.cvtColor CV.bgr CV.gray img'
-
-              faces = ccDetectMultiscale ccFrontal imgGray
-              eyedFaces = V.concat . V.toList . CV.exceptError
-                $ mapM (\f -> V.map (addCorner f) . ccDetectMultiscale ccEyes
-                <$> CV.matSubRect imgGray f) faces
+          img' :: CV.Mat ('S ['D, 'D]) ('S 3) ('S Word8)
+               <- CV.exceptErrorIO $ CV.coerceMat img
+          imgGray <- CV.exceptErrorIO $ CV.cvtColor CV.bgr CV.gray img'
+          faces <- CV.exceptErrorIO $ ccDetectMultiscale ccFrontal imgGray
+          eyedFaces <-
+              fmap (V.concat . V.toList) $ CV.exceptErrorIO $
+                mapM
+                  (\faceRect -> do
+                     faceImg <- CV.matSubRect imgGray faceRect
+                     eyeRects <- ccDetectMultiscale ccEyes faceImg
+                     pure $ V.map (addCorner faceRect) eyeRects
+                  )
+                  faces
 
           let box = CV.exceptError $
                 CV.withMatM (h ::: w ::: Z) (Proxy :: Proxy 3) (Proxy :: Proxy Word8) white $ \imgM -> do
