@@ -531,11 +531,23 @@ testCascadeClassifierDetectMultiScaleArnold = do
       exceptError . coerceMat <$> loadImg ImreadUnchanged "arnold-schwarzenegger.jpg"
     let arnoldGray :: Mat ('S ['D, 'D]) ('S 1) ('S Word8) = exceptError (cvtColor bgr gray arnold)
     -- OpenCV detects the left eye twice for this pic.
-    let arnoldEyes =
-          cascadeClassifierDetectMultiScale ccEyes Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    arnoldEyes <- exceptErrorIO $
+      cascadeClassifierDetectMultiScale
+        ccEyes
+        Nothing
+        Nothing
+        (Nothing :: Maybe (V2 Int32))
+        (Nothing :: Maybe (V2 Int32))
+        arnoldGray
     assertBool "unexpected number of eyes detected" (V.length arnoldEyes == 3)
-    let arnoldFront =
-          cascadeClassifierDetectMultiScale ccFrontal Nothing Nothing (Nothing :: Maybe (V2 Int32)) (Nothing :: Maybe (V2 Int32)) arnoldGray
+    arnoldFront <- exceptErrorIO $
+      cascadeClassifierDetectMultiScale
+        ccFrontal
+        Nothing
+        Nothing
+        (Nothing :: Maybe (V2 Int32))
+        (Nothing :: Maybe (V2 Int32))
+        arnoldGray
     assertBool "unexpected number of faces detected" (V.length arnoldFront == 1)
 
 type Lambda = Mat (ShapeT [256, 256]) ('S 1) ('S Word8)
