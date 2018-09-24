@@ -360,17 +360,18 @@ decolorImg = exceptError $ do
 
 decolor
    :: MonadError CvException m
-   => Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
-   -> m (Mat ('S [h, w]) ('S 1) ('S Word8), Mat ('S [h, w]) ('S 3) ('S Word8)) -- ^ Output images.
-
+   =>     Mat ('S [h, w]) ('S 3) ('S Word8) -- ^ Input image.
+   -> m ( Mat ('S [h, w]) ('S 1) ('S Word8)
+        , Mat ('S [h, w]) ('S 3) ('S Word8)
+        ) -- ^ Output images.
 decolor src = unsafeWrapException $ do
     gray <- newEmptyMat
     boost <- newEmptyMat
 
     handleCvException (pure (unsafeCoerceMat gray, unsafeCoerceMat boost)) $
-      withPtr src         $ \srcPtr         ->
-      withPtr gray        $ \grayPtr        ->
-      withPtr boost       $ \boostPtr       ->
+      withPtr src   $ \srcPtr   ->
+      withPtr gray  $ \grayPtr  ->
+      withPtr boost $ \boostPtr ->
       [cvExcept|
         cv::decolor( *$(Mat * srcPtr)
                    , *$(Mat * grayPtr)
