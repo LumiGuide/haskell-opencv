@@ -1,4 +1,4 @@
-{ nixpkgs  ? import ../.
+{ nixpkgs  ? import ../. {}
 , compiler ? "default"
 }:
 
