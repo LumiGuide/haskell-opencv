@@ -1,7 +1,7 @@
 final : previous : with final.haskell.lib;
 let
   haskellOverrides = self: super: {
-      opencv = doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = disableLibraryProfiling (doBenchmark (overrideCabal (super.callPackage ./opencv/opencv.nix {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -25,6 +25,7 @@ let
             cp -r $data    $out/data
             cp $LICENSE    $out/LICENSE
           '';
+        libraryPkgconfigDepends = [ final.opencv4 ];
         shellHook = ''
           export hardeningDisable=bindnow
         '';
@@ -36,7 +37,7 @@ let
         # So lets remove this from cabal2nix or ask @peti to do it.
         configureFlags = [];
         buildTools = (drv.buildTools or []) ++ [self.cabal-install self.stack];
-      }));
+      })));
 
       opencv-examples =
         overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {

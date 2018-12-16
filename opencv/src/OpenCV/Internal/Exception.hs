@@ -142,7 +142,6 @@ displayDepth depth = show depth ++ " (" ++ haskellDepth ++ ")"
         Depth_32S -> "Int32"
         Depth_32F -> "Float"
         Depth_64F -> "Double"
-        Depth_USRTYPE1 -> "not supported in Haskell"
 
 newtype CvCppException = CvCppException { unCvCppException :: ForeignPtr (C CvCppException) }
 

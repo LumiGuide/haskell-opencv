@@ -101,22 +101,22 @@ data MatchTemplateNormalisation
    | MatchTemplateNormed    -- ^ Use normalization.
    deriving (Show, Eq)
 
-#num CV_TM_SQDIFF
-#num CV_TM_SQDIFF_NORMED
-#num CV_TM_CCORR
-#num CV_TM_CCORR_NORMED
-#num CV_TM_CCOEFF
-#num CV_TM_CCOEFF_NORMED
+#num TM_SQDIFF
+#num TM_SQDIFF_NORMED
+#num TM_CCORR
+#num TM_CCORR_NORMED
+#num TM_CCOEFF
+#num TM_CCOEFF_NORMED
 
 marshalMatchTemplateMethod :: MatchTemplateMethod -> Bool -> Int32
 marshalMatchTemplateMethod m n =
     case (m, n) of
-      (MatchTemplateSqDiff, False) -> c'CV_TM_SQDIFF
-      (MatchTemplateSqDiff, True ) -> c'CV_TM_SQDIFF_NORMED
-      (MatchTemplateCCorr , False) -> c'CV_TM_CCORR
-      (MatchTemplateCCorr , True ) -> c'CV_TM_CCORR_NORMED
-      (MatchTemplateCCoeff, False) -> c'CV_TM_CCOEFF
-      (MatchTemplateCCoeff, True ) -> c'CV_TM_CCOEFF_NORMED
+      (MatchTemplateSqDiff, False) -> c'TM_SQDIFF
+      (MatchTemplateSqDiff, True ) -> c'TM_SQDIFF_NORMED
+      (MatchTemplateCCorr , False) -> c'TM_CCORR
+      (MatchTemplateCCorr , True ) -> c'TM_CCORR_NORMED
+      (MatchTemplateCCoeff, False) -> c'TM_CCOEFF
+      (MatchTemplateCCoeff, True ) -> c'TM_CCOEFF_NORMED
 
 {- | Compares a template against overlapped image regions.
 

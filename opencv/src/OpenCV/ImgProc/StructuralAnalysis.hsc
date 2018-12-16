@@ -57,6 +57,7 @@ import qualified "vector" Data.Vector.Storable as VS
 
 #include <bindings.dsl.h>
 #include "opencv2/imgproc.hpp"
+#include "namespace.hpp"
 
 C.context openCvCtx
 
@@ -106,28 +107,28 @@ data ContourApproximationMethod
    | ContourApproximationTC89L1
    | ContourApproximationTC89KCOS
 
-#num CV_RETR_EXTERNAL
-#num CV_RETR_LIST
-#num CV_RETR_CCOMP
-#num CV_RETR_TREE
-#num CV_CHAIN_APPROX_NONE
-#num CV_CHAIN_APPROX_SIMPLE
-#num CV_CHAIN_APPROX_TC89_L1
-#num CV_CHAIN_APPROX_TC89_KCOS
+#num RETR_EXTERNAL
+#num RETR_LIST
+#num RETR_CCOMP
+#num RETR_TREE
+#num CHAIN_APPROX_NONE
+#num CHAIN_APPROX_SIMPLE
+#num CHAIN_APPROX_TC89_L1
+#num CHAIN_APPROX_TC89_KCOS
 
 marshalContourRetrievalMode :: ContourRetrievalMode -> Int32
 marshalContourRetrievalMode = \case
-    ContourRetrievalExternal -> c'CV_RETR_EXTERNAL
-    ContourRetrievalList     -> c'CV_RETR_LIST
-    ContourRetrievalCComp    -> c'CV_RETR_CCOMP
-    ContourRetrievalTree     -> c'CV_RETR_TREE
+    ContourRetrievalExternal -> c'RETR_EXTERNAL
+    ContourRetrievalList     -> c'RETR_LIST
+    ContourRetrievalCComp    -> c'RETR_CCOMP
+    ContourRetrievalTree     -> c'RETR_TREE
 
 marshalContourApproximationMethod :: ContourApproximationMethod -> Int32
 marshalContourApproximationMethod = \case
-    ContourApproximationNone     -> c'CV_CHAIN_APPROX_NONE
-    ContourApproximationSimple   -> c'CV_CHAIN_APPROX_SIMPLE
-    ContourApproximationTC89L1   -> c'CV_CHAIN_APPROX_TC89_L1
-    ContourApproximationTC89KCOS -> c'CV_CHAIN_APPROX_TC89_KCOS
+    ContourApproximationNone     -> c'CHAIN_APPROX_NONE
+    ContourApproximationSimple   -> c'CHAIN_APPROX_SIMPLE
+    ContourApproximationTC89L1   -> c'CHAIN_APPROX_TC89_L1
+    ContourApproximationTC89KCOS -> c'CHAIN_APPROX_TC89_KCOS
 
 data Contour
    = Contour

@@ -24,7 +24,6 @@ import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr )
 import "base" Foreign.Storable ( Storable(..), peekElemOff, pokeElemOff )
 import "base" System.IO.Unsafe ( unsafePerformIO )
-import qualified "bytestring" Data.ByteString as B
 import "linear" Linear.Vector ( zero )
 import "linear" Linear.V4 ( V4(..) )
 import "this" OpenCV.Core.Types
@@ -52,7 +51,6 @@ data HElems
    | HElems_32S      !(VU.Vector Int32)
    | HElems_32F      !(VU.Vector Float)
    | HElems_64F      !(VU.Vector Double)
-   | HElems_USRTYPE1 !(V.Vector B.ByteString)
      deriving (Show, Eq)
 
 hElemsDepth :: HElems -> Depth
@@ -64,7 +62,6 @@ hElemsDepth = \case
     HElems_32S      _v -> Depth_32S
     HElems_32F      _v -> Depth_32F
     HElems_64F      _v -> Depth_64F
-    HElems_USRTYPE1 _v -> Depth_USRTYPE1
 
 hElemsLength :: HElems -> Int
 hElemsLength = \case
@@ -75,7 +72,6 @@ hElemsLength = \case
     HElems_32S      v -> VG.length v
     HElems_32F      v -> VG.length v
     HElems_64F      v -> VG.length v
-    HElems_USRTYPE1 v -> VG.length v
 
 class ToHElems a where
     toHElems :: VU.Vector a -> HElems
@@ -113,7 +109,6 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
           Depth_32S -> HElems_32S <$> copyToVec
           Depth_32F -> HElems_32F <$> copyToVec
           Depth_64F -> HElems_64F <$> copyToVec
-          Depth_USRTYPE1 -> HElems_USRTYPE1 <$> error "todo"
       where
         copyToVec :: (Storable a, VU.Unbox a) => IO (VU.Vector a)
         copyToVec = do
@@ -149,7 +144,6 @@ hMatToMatIO (HMat shape channels elems) = do
         HElems_32S      v -> copyFromVec v
         HElems_32F      v -> copyFromVec v
         HElems_64F      v -> copyFromVec v
-        HElems_USRTYPE1 _v -> error "todo"
       where
         copyFromVec :: (Storable a, VU.Unbox a) => VU.Vector a -> IO ()
         copyFromVec v =

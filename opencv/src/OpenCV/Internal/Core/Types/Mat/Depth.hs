@@ -28,7 +28,6 @@ data Depth =
    | Depth_32S
    | Depth_32F
    | Depth_64F
-   | Depth_USRTYPE1
      deriving (Bounded, Enum, Eq, Show)
 
 --------------------------------------------------------------------------------
@@ -44,8 +43,6 @@ instance ToDepth (proxy Int16 ) where toDepth _proxy = Depth_16S
 instance ToDepth (proxy Int32 ) where toDepth _proxy = Depth_32S
 instance ToDepth (proxy Float ) where toDepth _proxy = Depth_32F
 instance ToDepth (proxy Double) where toDepth _proxy = Depth_64F
--- TODO (BvD): instance ToDepth ? where toDepth = const Depth_USRTYPE1
--- RvD: perhaps ByteString? Or a fixed size (statically) vector of bytes
 
 -- | Strip away 'S'.
 instance (ToDepth (Proxy depth)) => ToDepth (proxy ('S depth)) where

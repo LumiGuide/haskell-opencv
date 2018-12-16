@@ -12,10 +12,8 @@ import "aeson" Data.Aeson.TH
 import "base" Data.Int ( Int32 )
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy ( Proxy(..) )
-import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
-import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 import "text" Data.Text ( Text )
 import qualified "text" Data.Text as T ( unpack )
 import "this" OpenCV.Core.Types
@@ -86,7 +84,6 @@ instance ToJSON HElems where
         HElems_32S      v -> f "32S" v
         HElems_32F      v -> f "32F" v
         HElems_64F      v -> f "64F" v
-        HElems_USRTYPE1 v -> f "USR" $ fmap (TE.decodeUtf8 . B64.encode) v
       where
         f :: (ToJSON a) => Text -> a -> Value
         f typ v = object [ "type"  .= typ
@@ -106,7 +103,6 @@ instance FromJSON HElems where
                     "32S" -> HElems_32S      <$> elems
                     "32F" -> HElems_32F      <$> elems
                     "64F" -> HElems_64F      <$> elems
-                    "USR" -> HElems_USRTYPE1 <$> (mapM (either fail pure . B64.decode . TE.encodeUtf8) =<< elems)
                     _ -> fail $ "Unknown Helems type " <> T.unpack typ
 
 --------------------------------------------------------------------------------
