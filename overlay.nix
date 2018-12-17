@@ -1,7 +1,7 @@
 final : previous : with final.haskell.lib;
 let
   haskellOverrides = self: super: {
-      opencv = doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = disableLibraryProfiling (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -36,8 +36,8 @@ let
         # This is not needed anymore and will actually break the build.
         # So lets remove this from cabal2nix or ask @peti to do it.
         configureFlags = [];
-        buildTools = (drv.buildTools or []) ++ [self.cabal-install self.stack];
-      }));
+        #buildTools = (drv.buildTools or []) ++ [self.cabal-install self.stack];
+      })));
 
       opencv-examples =
         overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
