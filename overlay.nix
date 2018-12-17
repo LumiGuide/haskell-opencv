@@ -1,7 +1,7 @@
 final : previous : with final.haskell.lib;
 let
   haskellOverrides = self: super: {
-      opencv = disableLibraryProfiling (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = disableLibraryProfiling (doBenchmark (overrideCabal (super.callPackage ./opencv/opencv.nix {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
