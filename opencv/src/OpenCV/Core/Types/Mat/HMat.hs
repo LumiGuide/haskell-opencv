@@ -11,6 +11,7 @@ module OpenCV.Core.Types.Mat.HMat
 
     , matToHMat
     , hMatToMat
+    , withHMatAsMat
     ) where
 
 import "this" OpenCV.Internal.Core.Types.Mat.HMat
