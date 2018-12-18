@@ -5,6 +5,9 @@ packages:
 - opencv-extra/
 - opencv-extra-examples/
 flags: {}
+extra-deps:
+# TODO Remove when this is available in the snapshot
+- inline-c-0.7.0.1
 allow-newer: true
 
 extra-lib-dirs:

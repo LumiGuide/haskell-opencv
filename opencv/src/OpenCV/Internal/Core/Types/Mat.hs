@@ -83,7 +83,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ValidChannels'
     ) where
 
-import "base" Control.Exception ( throwIO )
+import "base" Control.Exception ( throwIO, mask_ )
 import "base" Control.Monad ( when )
 import "base" Control.Monad.IO.Class
 import "base" Control.Monad.ST ( ST )
@@ -97,7 +97,7 @@ import "base" Data.Proxy
 import "base" Data.Word
 import "base" Foreign.C.Types
 import "base" Foreign.ForeignPtr
-    ( ForeignPtr, withForeignPtr, touchForeignPtr, newForeignPtr_ )
+    ( ForeignPtr, withForeignPtr, touchForeignPtr, newForeignPtr, newForeignPtr_ )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Marshal.Array ( allocaArray, peekArray )
 import "base" Foreign.Marshal.Utils ( toBool )
@@ -113,8 +113,6 @@ import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear ( V4 )
 import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState, unsafePrimToPrim )
-import "this" OpenCV.Internal ( objFromPtr )
-import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.C.PlacementNew.TH
@@ -190,10 +188,11 @@ type instance Mutable (Mat shape channels depth) = Mut (Mat shape channels depth
 instance WithPtr (Mat shape channels depth) where
     withPtr = withForeignPtr . unMat
 
-mkFinalizer DeletePtr "deleteMat" "cv::Mat" ''C'Mat
-
 instance FromPtr (Mat shape channels depth) where
-    fromPtr = objFromPtr Mat deleteMat
+    fromPtr iop = mask_ $ do
+      matPtr <- iop :: IO (Ptr C'Mat)
+      let deleteMat = [C.funPtr| void deleteMat(Mat * m) { delete m; }|]
+      Mat <$> newForeignPtr deleteMat matPtr
 
 instance FreezeThaw (Mat shape channels depth) where
     freeze = cloneMatM . unMut
