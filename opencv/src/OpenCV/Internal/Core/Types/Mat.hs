@@ -203,7 +203,7 @@ instance FreezeThaw (Mat shape channels depth) where
     unsafeThaw = pure . Mut
 
 instance NFData (Mat shape channels depth) where
-    rnf _ = ()
+    rnf (Mat !_fptr) = ()
 
 {- | Tests whether a 'Mat' is deserving of its type level attributes
 
