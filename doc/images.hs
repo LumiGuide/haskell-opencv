@@ -203,14 +203,7 @@ loadAnimation delay fp = do
 -- We use some padding around the small image in which we draw the
 -- lines. This is because antialiasing doesn't seem to work near the
 -- edges of an image.
-lineTypeImg
-    :: forall (h :: Nat) (w :: Nat) (p :: Nat)
-     . ( h ~ 5
-       , w ~ (h * 3)
-       , p ~ 20
-       )
-    => LineType
-    -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
+lineTypeImg :: LineType -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
 lineTypeImg lineType = exceptError $ do
     img <- withMatM (h + 2 * p ::: w + 2 * p ::: Z)
                     (Proxy :: Proxy 4)
@@ -221,9 +214,9 @@ lineTypeImg lineType = exceptError $ do
            =<< matSubRect img (toRect $ HRect (pure p) (V2 w h))
   where
     w, h, p :: Int32
-    w = fromInteger $ natVal (Proxy :: Proxy w)
-    h = fromInteger $ natVal (Proxy :: Proxy h)
-    p = fromInteger $ natVal (Proxy :: Proxy p)
+    w = h * 3
+    h = 5
+    p = 20
     zoom = 8
 
 fontImg :: Font -> Mat ('S ['D, 'D]) ('S 4) ('S Word8)
