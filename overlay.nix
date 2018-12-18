@@ -25,7 +25,6 @@ let
             cp -r $data    $out/data
             cp $LICENSE    $out/LICENSE
           '';
-        libraryPkgconfigDepends = [ final.opencv3 ];
         shellHook = ''
           export hardeningDisable=bindnow
         '';
@@ -80,7 +79,6 @@ let
               cp -r $data    $out/data
               cp $LICENSE    $out/LICENSE
             '';
-          libraryPkgconfigDepends = [ final.opencv3 ];
           shellHook = ''
             export hardeningDisable=bindnow
           '';
