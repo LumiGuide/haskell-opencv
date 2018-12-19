@@ -13,8 +13,10 @@ module OpenCV.Internal.Core.Types.Mat.HMat
 
     , matToHMat
     , hMatToMat
+    , withHMatAsMat
     ) where
 
+import "base" Control.Exception ( bracket )
 import "base" Data.Foldable
 import "base" Data.Int
 import "base" Data.Word
@@ -124,7 +126,10 @@ matToHMat mat = unsafePerformIO $ withMatData mat $ \step dataPtr -> do
             VU.unsafeFreeze v
 
 hMatToMat :: HMat -> Mat 'D 'D 'D
-hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
+hMatToMat hMat = unsafePerformIO $ hMatToMatIO hMat
+
+hMatToMatIO :: HMat -> IO (Mat 'D 'D 'D)
+hMatToMatIO (HMat shape channels elems) = do
     mat <- exceptErrorIO $ newMat sizes channels depth scalar
     withMatData mat copyElems
     pure mat
@@ -152,6 +157,20 @@ hMatToMat (HMat shape channels elems) = unsafePerformIO $ do
               let elemPtr = matElemAddress dataPtr (fromIntegral <$> step) pos
               for_ [0 .. channels - 1] $ \channelIx ->
                 pokeElemOff elemPtr (fromIntegral channelIx) $ VU.unsafeIndex v (fromIntegral $ posIx + channelIx)
+
+-- | Like `hMatToMat`, but provides scoped access to the matrix
+-- and it's guaranteed to be freed when this function returns.
+--
+-- Use this instead of `hMatToMat` where you can (where the matrix
+-- needs only lexically scocped life time).
+--
+-- Thus you must not return the matrix outside of the scope.
+withHMatAsMat :: HMat -> (Mat 'D 'D 'D -> IO a) -> IO a
+withHMatAsMat hMat action = do
+  bracket
+    (hMatToMatIO hMat)
+    (\mat -> unsafeFinalizeMat mat)
+    action
 
 product0 :: (Num a) => [a] -> a
 product0 [] = 0

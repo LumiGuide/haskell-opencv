@@ -65,7 +65,7 @@ library
 
     if impl(ghc < 8.2)
       build-depends:
-          inline-c     >= 0.5.5.5
+          inline-c     >= 0.7.0.0
         , inline-c-cpp >= 0.1
 
       c-sources:
@@ -104,7 +104,7 @@ library
           src/OpenCV/Video/MotionAnalysis.cpp
     else
       build-depends:
-          inline-c     >= 0.6
+          inline-c     >= 0.7.0.0
         , inline-c-cpp >= 0.2.1
 
     cxx-options:       -std=c++11

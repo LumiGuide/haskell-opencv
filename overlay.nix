@@ -102,6 +102,17 @@ let
               cp $LICENSE    $out/LICENSE
             '';
         });
+
+      # TODO Remove when https://github.com/fpco/inline-c/pull/78 is available
+      inline-c =
+        overrideCabal super.inline-c (drv : {
+          src = final.fetchgit {
+            url = "https://github.com/fpco/inline-c.git";
+            rev = "b5f93c71161891a901f48aea8db80417b057bc67";
+            sha256 = "0lbrvscbhpbgcsfjfq4mm162s0yxdmwx9h024n8i1riliqpfxw56";
+          };
+          preCompileBuildDriver = "cd inline-c";
+        });
   };
 in  {
   haskell = previous.haskell // {

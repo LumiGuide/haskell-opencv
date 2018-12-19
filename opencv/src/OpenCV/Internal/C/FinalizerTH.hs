@@ -21,11 +21,11 @@ data FinalizerType
    = DeletePtr
    | ReleaseDeletePtr
 
-{- | Generates a function that deletes a C++ object via delete.
+{- | Generates a function that deletes a C++ object via @delete@.
 
 Example:
 
-> mkFinalizer "deleteFoo" "CFoo" ''Foo
+> mkFinalizer DeletePtr "deleteFoo" "CFoo" ''Foo
 
 Generated code (stylized):
 
@@ -38,6 +38,16 @@ Generated code (stylized):
 > }
 
 > foreign import ccall "&deleteFoo" deleteFoo :: FunPtr (Ptr Foo -> IO ())
+
+And
+
+> mkFinalizer ReleaseDeletePtr "deleteFoo" "CFoo" ''Foo
+
+generates an additional
+
+> obj->release();
+
+before the @delete@.
 -}
 mkFinalizer :: FinalizerType -> String -> String -> Name -> DecsQ
 mkFinalizer finalizerType name cType haskellCType = do
