@@ -1,5 +1,8 @@
 opencv/src/**/*.cpp
 opencv-extra/src/**/*.cpp
 dist
+dist-newstyle
+.ghc.environment*
+cabal.project.local
 .stack-work
 result
