@@ -127,7 +127,7 @@ mkSurf = unsafePerformIO . newSurf
 
 {- | Detect keypoints and compute descriptors
 
-Example:
+Example (not built automatically because it contains non-free code which is disabled by default in OpenCV):
 
 @
 surfDetectAndComputeImg
@@ -150,8 +150,6 @@ surfDetectAndComputeImg = exceptError $ do
   where
     surf = mkSurf defaultSurfParams
 @
-
-<<doc/generated/examples/surfDetectAndComputeImg.png surfDetectAndComputeImg>>
 -}
 surfDetectAndCompute
     :: (MonadError CvException m)
@@ -289,7 +287,7 @@ mkSift = unsafePerformIO . newSift
 
 {- | Detect keypoints and compute descriptors
 
-Example:
+Example (not built automatically because it contains non-free code which is disabled by default in OpenCV):
 
 @
 siftDetectAndComputeImg
@@ -312,8 +310,6 @@ siftDetectAndComputeImg = exceptError $ do
   where
     sift = mkSift defaultSiftParams
 @
-
-<<doc/generated/examples/siftDetectAndComputeImg.png siftDetectAndComputeImg>>
 -}
 siftDetectAndCompute
     :: (MonadError CvException m)

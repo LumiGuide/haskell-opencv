@@ -82,7 +82,8 @@ let
           shellHook = ''
             export hardeningDisable=bindnow
           '';
-          configureFlags = [];
+          # TODO (BvD): This should be added by cabal2nix. Fix this upstream.
+          libraryPkgconfigDepends = [ final.opencv3 ];
         });
 
       opencv-extra-examples =
