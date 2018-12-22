@@ -64,7 +64,8 @@ library
         video_motion_analysis.hpp
 
     cxx-options:       -std=c++11
-    extra-libraries:   stdc++
+    extra-libraries:     stdc++
+    ghc-options:       -lstdc++
     pkgconfig-depends: opencv >= 3.0.0
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
