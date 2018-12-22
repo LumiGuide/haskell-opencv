@@ -1,20 +1,17 @@
-resolver: nightly-2018-06-08
+resolver: nightly-2018-12-21
 packages:
 - opencv/
 - opencv-examples/
 - opencv-extra/
 - opencv-extra-examples/
 flags: {}
-extra-deps:
-# TODO Remove when this is available in the snapshot
-- inline-c-0.7.0.1
 allow-newer: true
 
 extra-lib-dirs:
 - /usr/local/lib
 
 nix:
-  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/4ccaa7de8eb34a0bb140f109a0e88095480118eb.tar.gz" ]
+  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/e0a64fbb7ce1893b39ebeff1f4018ae4f49a7192.tar.gz" ]
   packages: [ zlib pkgconfig opencv3 ]
 
 # Uncomment if you wish to use Docker integration
