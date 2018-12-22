@@ -98,6 +98,11 @@ let
         });
 
       inline-c = super.inline-c_0_7_0_1;
+
+      # See https://github.com/fpco/inline-c/issues/75
+      inline-c-cpp = if final.stdenv.isDarwin
+                     then dontCheck super.inline-c-cpp
+                     else           super.inline-c-cpp;
   };
 in  {
   haskell = previous.haskell // {
