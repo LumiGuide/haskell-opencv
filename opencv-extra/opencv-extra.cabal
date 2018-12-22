@@ -58,23 +58,6 @@ library
         xfeatures/surf.hpp
         ximgproc-namespace.hpp
 
-    if impl(ghc < 8.2)
-      build-depends:
-          inline-c     >= 0.5.5.5
-        , inline-c-cpp >= 0.1
-
-      c-sources:
-          src/OpenCV/Extra/ArUco.cpp
-          src/OpenCV/Extra/Bgsegm.cpp
-          src/OpenCV/Extra/Tracking.cpp
-          src/OpenCV/Extra/XPhoto.cpp
-          src/OpenCV/Extra/XPhoto/WhiteBalancer.cpp
-          src/OpenCV/Extra/XFeatures2d.cpp
-    else
-      build-depends:
-          inline-c     >= 0.6
-        , inline-c-cpp >= 0.2.1
-
     cxx-options:       -std=c++11
     extra-libraries:   stdc++
     pkgconfig-depends: opencv >= 3.0.0
@@ -89,6 +72,8 @@ library
       , bindings-DSL      >= 1.0.23
       , bytestring        >= 0.10.6
       , containers        >= 0.5.6.2
+      , inline-c          >= 0.7.0.0
+      , inline-c-cpp      >= 0.2.1
       , linear            >= 1.20.4
       , mtl
       , opencv            >= 0.0.0.0
