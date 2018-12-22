@@ -1,7 +1,15 @@
-final : previous : with final.haskell.lib;
+final : previous : with final.lib; with final.haskell.lib;
 let
-  haskellOverrides = self: super: {
-      opencv = doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+  haskellOverrides = self: super:
+    let
+      addBuildToolsInShell = drv : overrideCabal drv (drv : optionalAttrs inNixShell {
+        buildTools = (drv.buildTools or []) ++ (with self; [
+          cabal-install
+          stack
+        ]);
+      });
+    in {
+      opencv = addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -28,11 +36,10 @@ let
         shellHook = ''
           export hardeningDisable=bindnow
         '';
-        buildTools = (drv.buildTools or []) ++ [self.cabal-install self.stack];
-      }));
+      })));
 
       opencv-examples =
-        overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
+        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
           src = final.runCommand "opencv-examples-src"
             { files = final.lib.sourceByRegex ./opencv-examples [
                 "^src$"
@@ -49,10 +56,10 @@ let
               cp -r $data    $out/data
               cp $LICENSE    $out/LICENSE
             '';
-        });
+        }));
 
       opencv-extra =
-        overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
+        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
           src = final.runCommand "opencv-extra-src"
             { files = final.lib.sourceByRegex ./opencv-extra [
                 "^include$"
@@ -77,10 +84,10 @@ let
           '';
           # TODO (BvD): This should be added by cabal2nix. Fix this upstream.
           libraryPkgconfigDepends = [ final.opencv3 ];
-        });
+        }));
 
       opencv-extra-examples =
-        overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
+        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
           src = final.runCommand "opencv-extra-examples-src"
             { files = final.lib.sourceByRegex ./opencv-extra-examples [
                 "^src$"
@@ -95,7 +102,7 @@ let
               cp -r $data    $out/data
               cp $LICENSE    $out/LICENSE
             '';
-        });
+        }));
 
       inline-c = super.inline-c_0_7_0_1;
 
