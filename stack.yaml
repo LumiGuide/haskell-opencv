@@ -11,7 +11,7 @@ extra-lib-dirs:
 - /usr/local/lib
 
 nix:
-  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/e0a64fbb7ce1893b39ebeff1f4018ae4f49a7192.tar.gz" ]
+  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/ee42dab3302b90da705fae86b3c13af214343c6d.tar.gz" ]
   packages: [ zlib pkgconfig opencv3 ]
 
 # Uncomment if you wish to use Docker integration
