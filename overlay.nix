@@ -28,13 +28,6 @@ let
         shellHook = ''
           export hardeningDisable=bindnow
         '';
-        # TODO: cabal2nix automatically adds:
-        #
-        #   configureFlags = ["--with-gcc=${stdenv.cc}/bin/c++" "--with-ld=${stdenv.cc}/bin/c++"];
-        #
-        # This is not needed anymore and will actually break the build.
-        # So lets remove this from cabal2nix or ask @peti to do it.
-        configureFlags = [];
         buildTools = (drv.buildTools or []) ++ [self.cabal-install self.stack];
       }));
 
@@ -104,16 +97,7 @@ let
             '';
         });
 
-      # TODO Remove when https://github.com/fpco/inline-c/pull/78 is available
-      inline-c =
-        overrideCabal super.inline-c (drv : {
-          src = final.fetchgit {
-            url = "https://github.com/fpco/inline-c.git";
-            rev = "b5f93c71161891a901f48aea8db80417b057bc67";
-            sha256 = "0lbrvscbhpbgcsfjfq4mm162s0yxdmwx9h024n8i1riliqpfxw56";
-          };
-          preCompileBuildDriver = "cd inline-c";
-        });
+      inline-c = super.inline-c_0_7_0_1;
   };
 in  {
   haskell = previous.haskell // {
