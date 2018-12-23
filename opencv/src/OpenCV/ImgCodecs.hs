@@ -79,8 +79,6 @@ imdecodeM imreadMode hbuf = unsafeThaw $ imdecode imreadMode hbuf
 
 -- | Encodes an image into a memory buffer.
 --
--- __WARNING:__ This function is not thread safe!
---
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgcodecs/doc/reading_and_writing_images.html#imencode OpenCV Sphinx doc>
 imencode
     :: MonadError CvException m
