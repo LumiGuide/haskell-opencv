@@ -57,6 +57,9 @@ import qualified "vector" Data.Vector.Storable as VS
 
 #include <bindings.dsl.h>
 #include "opencv2/imgproc.hpp"
+#ifdef OPENCV4
+#include "namespace.hpp"
+#endif
 
 C.context openCvCtx
 
@@ -106,6 +109,16 @@ data ContourApproximationMethod
    | ContourApproximationTC89L1
    | ContourApproximationTC89KCOS
 
+#ifdef OPENCV4
+#num RETR_EXTERNAL
+#num RETR_LIST
+#num RETR_CCOMP
+#num RETR_TREE
+#num CHAIN_APPROX_NONE
+#num CHAIN_APPROX_SIMPLE
+#num CHAIN_APPROX_TC89_L1
+#num CHAIN_APPROX_TC89_KCOS
+#else
 #num CV_RETR_EXTERNAL
 #num CV_RETR_LIST
 #num CV_RETR_CCOMP
@@ -114,20 +127,37 @@ data ContourApproximationMethod
 #num CV_CHAIN_APPROX_SIMPLE
 #num CV_CHAIN_APPROX_TC89_L1
 #num CV_CHAIN_APPROX_TC89_KCOS
+c'RETR_EXTERNAL          :: Num a => a
+c'RETR_LIST              :: Num a => a
+c'RETR_CCOMP             :: Num a => a
+c'RETR_TREE              :: Num a => a
+c'CHAIN_APPROX_NONE      :: Num a => a
+c'CHAIN_APPROX_SIMPLE    :: Num a => a
+c'CHAIN_APPROX_TC89_L1   :: Num a => a
+c'CHAIN_APPROX_TC89_KCOS :: Num a => a
+c'RETR_EXTERNAL          = c'CV_RETR_EXTERNAL
+c'RETR_LIST              = c'CV_RETR_LIST
+c'RETR_CCOMP             = c'CV_RETR_CCOMP
+c'RETR_TREE              = c'CV_RETR_TREE
+c'CHAIN_APPROX_NONE      = c'CV_CHAIN_APPROX_NONE
+c'CHAIN_APPROX_SIMPLE    = c'CV_CHAIN_APPROX_SIMPLE
+c'CHAIN_APPROX_TC89_L1   = c'CV_CHAIN_APPROX_TC89_L1
+c'CHAIN_APPROX_TC89_KCOS = c'CV_CHAIN_APPROX_TC89_KCOS
+#endif
 
 marshalContourRetrievalMode :: ContourRetrievalMode -> Int32
 marshalContourRetrievalMode = \case
-    ContourRetrievalExternal -> c'CV_RETR_EXTERNAL
-    ContourRetrievalList     -> c'CV_RETR_LIST
-    ContourRetrievalCComp    -> c'CV_RETR_CCOMP
-    ContourRetrievalTree     -> c'CV_RETR_TREE
+    ContourRetrievalExternal -> c'RETR_EXTERNAL
+    ContourRetrievalList     -> c'RETR_LIST
+    ContourRetrievalCComp    -> c'RETR_CCOMP
+    ContourRetrievalTree     -> c'RETR_TREE
 
 marshalContourApproximationMethod :: ContourApproximationMethod -> Int32
 marshalContourApproximationMethod = \case
-    ContourApproximationNone     -> c'CV_CHAIN_APPROX_NONE
-    ContourApproximationSimple   -> c'CV_CHAIN_APPROX_SIMPLE
-    ContourApproximationTC89L1   -> c'CV_CHAIN_APPROX_TC89_L1
-    ContourApproximationTC89KCOS -> c'CV_CHAIN_APPROX_TC89_KCOS
+    ContourApproximationNone     -> c'CHAIN_APPROX_NONE
+    ContourApproximationSimple   -> c'CHAIN_APPROX_SIMPLE
+    ContourApproximationTC89L1   -> c'CHAIN_APPROX_TC89_L1
+    ContourApproximationTC89KCOS -> c'CHAIN_APPROX_TC89_KCOS
 
 data Contour
    = Contour

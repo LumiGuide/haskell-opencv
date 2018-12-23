@@ -7,10 +7,10 @@
 Haskell OpenCV-3.x binding
 ==========================
 
-<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png" alt="Haskell OpenCV-3.x logo" />
+<img src="https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png" alt="Haskell OpenCV logo" />
 
 
-This is a Haskell library providing a binding to OpenCV-3.x. It binds directly
+This is a Haskell library providing a binding to OpenCV >= 3. It binds directly
 with the C++ API using the
 [inline-c](https://github.com/fpco/inline-c/blob/master/README.md) Haskell
 library.
@@ -45,7 +45,7 @@ break between minor releases, so be careful.
 Development using nix
 ---------------------
 
-To get into an environment that contains all the needed dependencies we use Nix. 
+To get into an environment that contains all the needed dependencies we use Nix.
 The following commands work both on Linux and OS X:
 
     curl https://nixos.org/nix/install | sh   # Only execute this if you haven't installed Nix yet.

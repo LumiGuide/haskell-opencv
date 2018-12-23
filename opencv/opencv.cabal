@@ -12,7 +12,7 @@ category:      AI, Graphics
 synopsis:      Haskell binding to OpenCV-3.x
 description:   <<https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png>>
                .
-               This is a Haskell library providing a binding to OpenCV-3.x.
+               This is a Haskell library providing a binding to OpenCV >= 3.
                It binds directly with the C++ API using the @inline-c@ Haskell library.
                .
                The library is far from complete but the framework is there to easily
@@ -43,6 +43,11 @@ source-repository head
   location: git://github.com/LumiGuide/haskell-opencv.git
   subdir:   opencv
 
+flag opencv4
+    description: Use OpenCV >= 4.0.0
+    default: False
+    manual: True
+
 flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
@@ -63,20 +68,26 @@ library
         termcriteria.hpp
         video_motion_analysis.hpp
 
-    cxx-options:       -std=c++11
-    extra-libraries:     stdc++
-    ghc-options:       -lstdc++
-    pkgconfig-depends: opencv >= 3.0.0
+    cxx-options:      -std=c++11
+    extra-libraries:   stdc++
+    ghc-options:     -lstdc++
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
+
+    if flag(opencv4)
+        cpp-options:      -DOPENCV4
+        ghc-options: -optc-DOPENCV4
+        pkgconfig-depends: opencv4 >= 4.0.0
+    else
+        pkgconfig-depends: opencv >= 3.0.0
+        build-depends: base64-bytestring >= 1.0.0.1
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
 
     build-depends:
         aeson             >= 0.9.0.1
-      , base              >= 4.9     && < 5
-      , base64-bytestring >= 1.0.0.1
+      , base              >= 4.9 && < 5
       , bindings-DSL      >= 1.0.23
       , bytestring        >= 0.10.6
       , containers        >= 0.5.6.2

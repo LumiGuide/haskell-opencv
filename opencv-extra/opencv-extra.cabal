@@ -9,7 +9,7 @@ author:        Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmai
 maintainer:    Roel van Dijk <roel@lambdacube.nl>, Bas van Dijk <v.dijk.bas@gmail.com>
 build-type:    Custom
 category:      AI, Graphics
-synopsis:      Haskell binding to OpenCV-3.x extra modules
+synopsis:      Haskell binding to OpenCV >= 3 extra modules
 description:   <<https://raw.githubusercontent.com/LumiGuide/haskell-opencv/master/data/haskell-opencv-logo-200x82.png>>
                .
                This is a Haskell library providing a binding to the OpenCV-3.x contrib modules.
@@ -38,6 +38,11 @@ source-repository head
   location: git://github.com/LumiGuide/haskell-opencv.git
   subdir:   opencv-extra
 
+flag opencv4
+    description: Use OpenCV >= 4.0.0
+    default: False
+    manual: True
+
 flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
@@ -60,9 +65,13 @@ library
 
     cxx-options:       -std=c++11
     extra-libraries:   stdc++
-    pkgconfig-depends: opencv >= 3.0.0
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
+
+    if flag(opencv4)
+        pkgconfig-depends: opencv4 >= 4.0.0
+    else
+        pkgconfig-depends: opencv >= 3.0.0
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION

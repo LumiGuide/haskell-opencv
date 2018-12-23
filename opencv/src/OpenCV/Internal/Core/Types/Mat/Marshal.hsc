@@ -32,7 +32,9 @@ import "this" OpenCV.Internal.Core.Types.Mat.Depth
 #num CV_32S
 #num CV_32F
 #num CV_64F
+#ifndef OPENCV4
 #num CV_USRTYPE1
+#endif
 
 marshalDepth :: Depth -> Int32
 marshalDepth = \case
@@ -43,7 +45,9 @@ marshalDepth = \case
     Depth_32S      -> c'CV_32S
     Depth_32F      -> c'CV_32F
     Depth_64F      -> c'CV_64F
+#ifndef OPENCV4
     Depth_USRTYPE1 -> c'CV_USRTYPE1
+#endif
 
 unmarshalDepth :: Int32 -> Depth
 unmarshalDepth n
@@ -54,7 +58,9 @@ unmarshalDepth n
     | n == c'CV_32S      = Depth_32S
     | n == c'CV_32F      = Depth_32F
     | n == c'CV_64F      = Depth_64F
+#ifndef OPENCV4
     | n == c'CV_USRTYPE1 = Depth_USRTYPE1
+#endif
     | otherwise          = error $ "unknown depth " <> show n
 
 #num CV_CN_SHIFT

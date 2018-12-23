@@ -1,5 +1,7 @@
-final : previous : with final.lib; with final.haskell.lib;
+enableOpencv4 : final : previous : with final.lib; with final.haskell.lib;
 let
+  handleOpencv4 = drv : if enableOpencv4 then enableCabalFlag drv "opencv4" else drv;
+
   haskellOverrides = self: super:
     let
       addBuildToolsInShell = drv : overrideCabal drv (drv : optionalAttrs inNixShell {
@@ -9,7 +11,7 @@ let
         ]);
       });
     in {
-      opencv = addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = handleOpencv4 (addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -36,7 +38,9 @@ let
         shellHook = ''
           export hardeningDisable=bindnow
         '';
-      })));
+      } // optionalAttrs enableOpencv4 {
+        libraryPkgconfigDepends = [ final.opencv4 ];
+      }))));
 
       opencv-examples =
         addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
@@ -59,7 +63,7 @@ let
         }));
 
       opencv-extra =
-        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
+        handleOpencv4 (addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
           src = final.runCommand "opencv-extra-src"
             { files = final.lib.sourceByRegex ./opencv-extra [
                 "^include$"
@@ -83,8 +87,11 @@ let
             export hardeningDisable=bindnow
           '';
           # TODO (BvD): This should be added by cabal2nix. Fix this upstream.
-          libraryPkgconfigDepends = [ final.opencv3 ];
-        }));
+          libraryPkgconfigDepends =
+            if enableOpencv4
+            then [ final.opencv4 ]
+            else [ final.opencv3 ];
+        })));
 
       opencv-extra-examples =
         addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {

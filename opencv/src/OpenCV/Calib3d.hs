@@ -62,10 +62,10 @@ data FundamentalMatMethod
 
 marshalFundamentalMatMethod :: FundamentalMatMethod -> (Int32, CDouble, CDouble)
 marshalFundamentalMatMethod = \case
-    FM_7Point       -> (c'CV_FM_7POINT, 0, 0)
-    FM_8Point       -> (c'CV_FM_8POINT, 0, 0)
-    FM_Ransac p1 p2 -> (c'CV_FM_RANSAC, maybe 3 toCDouble p1, maybe 0.99 toCDouble p2)
-    FM_Lmeds     p2 -> (c'CV_FM_LMEDS, 0, maybe 0.99 toCDouble p2)
+    FM_7Point       -> (c'FM_7POINT, 0, 0)
+    FM_8Point       -> (c'FM_8POINT, 0, 0)
+    FM_Ransac p1 p2 -> (c'FM_RANSAC, maybe 3 toCDouble p1, maybe 0.99 toCDouble p2)
+    FM_Lmeds     p2 -> (c'FM_LMEDS, 0, maybe 0.99 toCDouble p2)
 
 data WhichImage = Image1 | Image2 deriving (Show, Eq)
 
