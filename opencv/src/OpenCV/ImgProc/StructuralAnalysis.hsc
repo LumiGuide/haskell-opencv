@@ -288,11 +288,11 @@ convexityDefects contour hull
     | otherwise = unsafeWrapException $
         unsafeWithArrayPtr (V.map toPoint contour) $ \contourPtr ->
         alloca $ \(defectsPtrPtr :: Ptr (Ptr (Ptr (C Vec4i)))) ->
-        alloca $ \(defectsSizePtr :: Ptr Int32) ->
+        alloca $ \(defectsSizePtr :: Ptr C.CSize) ->
         handleCvException
-          ( do defectsSize <- fromIntegral <$> peek defectsSizePtr
+          ( do defectsSize <- peek defectsSizePtr
                defectsPtr :: Ptr (Ptr (C Vec4i)) <- peek defectsPtrPtr
-               defectsList :: [Ptr (C Vec4i)] <- peekArray defectsSize defectsPtr
+               defectsList :: [Ptr (C Vec4i)] <- peekArray (fromIntegral defectsSize) defectsPtr
                defectsVec <- V.fromList <$> mapM (fromPtr . pure) defectsList
                [CU.block| void { delete [] *$(Vec4i * * * defectsPtrPtr); } |]
                pure defectsVec
@@ -310,7 +310,7 @@ convexityDefects contour hull
 
             convexityDefects(contour, hull, defects);
 
-            *$(int32_t * defectsSizePtr) = defects.size();
+            *$(size_t * defectsSizePtr) = defects.size();
 
             cv::Vec4i * * * defectsPtrPtr = $(Vec4i * * * defectsPtrPtr);
             cv::Vec4i * * defectsPtr = new cv::Vec4i * [defects.size()];
@@ -383,10 +383,10 @@ findContours
     -> m (V.Vector Contour)
 findContours mode method src = unsafePrimToPrim $
     withPtr src $ \srcPtr ->
-    alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr Int32)) ->
+    alloca $ \(contourLengthsPtrPtr :: Ptr (Ptr C.CSize)) ->
     alloca $ \(contoursPtrPtr :: Ptr (Ptr (Ptr (Ptr C'Point2i)))) ->
     alloca $ \(hierarchyPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
-    alloca $ \(numContoursPtr :: Ptr Int32) -> mask_ $ do
+    alloca $ \(numContoursPtr :: Ptr C.CSize) -> mask_ $ do
       [C.block| void {
         std::vector< std::vector<cv::Point> > contours;
         std::vector<cv::Vec4i> hierarchy;
@@ -398,7 +398,7 @@ findContours mode method src = unsafePrimToPrim $
           , $(int32_t c'method)
           );
 
-        *$(int32_t * numContoursPtr) = contours.size();
+        *$(size_t * numContoursPtr) = contours.size();
 
         cv::Point * * * * contoursPtrPtr = $(Point2i * * * * contoursPtrPtr);
         cv::Point * * * contoursPtr = new cv::Point * * [contours.size()];
@@ -408,8 +408,8 @@ findContours mode method src = unsafePrimToPrim $
         cv::Vec4i * * hierarchyPtr = new cv::Vec4i * [contours.size()];
         *hierarchyPtrPtr = hierarchyPtr;
 
-        int32_t * * contourLengthsPtrPtr = $(int32_t * * contourLengthsPtrPtr);
-        int32_t * contourLengthsPtr = new int32_t [contours.size()];
+        size_t * * contourLengthsPtrPtr = $(size_t * * contourLengthsPtrPtr);
+        size_t * contourLengthsPtr = new size_t [contours.size()];
         *contourLengthsPtrPtr = contourLengthsPtr;
 
         for (std::vector< std::vector<cv::Point> >::size_type i = 0; i < contours.size(); i++)
@@ -437,7 +437,7 @@ findContours mode method src = unsafePrimToPrim $
         }
       }|]
 
-      numContours <- fromIntegral <$> peek numContoursPtr
+      numContours :: Int <- fromIntegral <$> peek numContoursPtr
 
       contourLengthsPtr <- peek contourLengthsPtrPtr
       contourLengths <- peekArray numContours contourLengthsPtr
@@ -445,7 +445,7 @@ findContours mode method src = unsafePrimToPrim $
       contoursPtr <- peek contoursPtrPtr
       unmarshalledContours <- peekArray numContours contoursPtr
 
-      allContours <- for (zip unmarshalledContours contourLengths) $ \(contourPointsPtr,n) ->
+      allContours <- for (zip unmarshalledContours contourLengths) $ \(contourPointsPtr, n) ->
         fmap V.fromList
              (peekArray (fromIntegral n) contourPointsPtr >>= mapM (fromPtr . pure))
 
@@ -475,12 +475,12 @@ findContours mode method src = unsafePrimToPrim $
       [CU.block| void {
         delete [] *$(Point2i * * * * contoursPtrPtr);
         delete [] *$(Vec4i * * * hierarchyPtrPtr);
-        delete [] *$(int32_t * * contourLengthsPtrPtr);
+        delete [] *$(size_t * * contourLengthsPtrPtr);
       } |]
 
-      return $ V.fromList $ concat
-             $ mapMaybe (\(contours,isRoot) -> guard isRoot $> contours)
-             $ V.toList treeHierarchy
+      pure $ V.fromList $ concat
+           $ mapMaybe (\(contours,isRoot) -> guard isRoot $> contours)
+           $ V.toList treeHierarchy
   where
     c'mode = marshalContourRetrievalMode mode
     c'method = marshalContourApproximationMethod method

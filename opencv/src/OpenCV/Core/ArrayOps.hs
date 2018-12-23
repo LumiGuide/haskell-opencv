@@ -1115,7 +1115,7 @@ perspectiveTransform srcPoints transformationMat
                 , *$(Mat * tmPtr)
                 );
           }|]
-          peekArray numPts dstPtr >>= return . V.fromList . map toPoint
+          peekArray numPts dstPtr >>= pure . V.fromList . map toPoint
   where
     numPts   = fromIntegral $ V.length srcPoints
     c'numPts = fromIntegral $ V.length srcPoints
@@ -1126,21 +1126,23 @@ findNonZero
     -> V.Vector Point2i
 findNonZero mat = unsafePerformIO $
   withPtr mat $ \srcPtr ->
-  alloca $ \(numPointsPtr :: Ptr Int32) ->
+  alloca $ \(numPointsPtr :: Ptr C.CSize) ->
   alloca $ \(pointsPtrPtr :: Ptr (Ptr (Ptr C'Point2i))) -> mask_ $ do
     [C.block| void {
       std::vector<cv::Point> points;
       cv::findNonZero( *$(Mat * srcPtr), points );
 
-      *$(int32_t * numPointsPtr) = points.size();
+      *$(size_t * numPointsPtr) = points.size();
       cv::Point * * pointsPtr = new cv::Point * [points.size()];
       *$(Point2i * * * pointsPtrPtr) = pointsPtr;
       for (std::vector<cv::Point>::size_type i = 0; i != points.size(); i++) {
         pointsPtr[i] = new cv::Point(points[i]);
       }
     } |]
-    numPoints <- fromIntegral <$> peek numPointsPtr
+    numPoints <- peek numPointsPtr
     pointsPtr <- peek pointsPtrPtr
-    points :: [Point2i] <- peekArray numPoints pointsPtr >>= mapM (fromPtr . return)
+    points :: [Point2i]
+           <- traverse (fromPtr . pure) =<<
+                peekArray (fromIntegral numPoints) pointsPtr
     [C.block| void { delete [] *$(Point2i * * * pointsPtrPtr); }|]
-    return (V.fromList points)
+    pure $ V.fromList points

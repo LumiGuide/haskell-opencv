@@ -99,7 +99,7 @@ approxPolyDP curve epsilon isClosed
         unsafeWrapException $
         unsafeWithArrayPtr (V.map toPoint curve) $ \curvePtr ->
         alloca $ \(approxPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
-        alloca $ \(approxSizePtr :: Ptr Int32) ->
+        alloca $ \(approxSizePtr :: Ptr C.CSize) ->
         handleCvException
           ( do approxSize <- fromIntegral <$> peek approxSizePtr
                approxPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek approxPtrPtr
@@ -124,7 +124,7 @@ class ( FromPtr      (Point   2 depth)
     approxPolyDP_internal
         :: Int32 -- ^ Number of input curve points.
         -> Ptr (C (Point 2 depth)) -- ^ Input curve points array.
-        -> Ptr Int32 -- ^ Size of approximated curve.
+        -> Ptr C.CSize -- ^ Size of approximated curve.
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to approximated curve points.
         -> CDouble -- ^ epsilon
@@ -151,7 +151,7 @@ instance ApproxPolyDP Int32 where
           , $(bool isClosed)
           );
 
-        *$(int32_t * approxSizePtr) = approx.size();
+        *$(size_t * approxSizePtr) = approx.size();
 
         cv::Point2i * * * approxPtrPtr = $(Point2i * * * approxPtrPtr);
         cv::Point2i * * approxPtr = new cv::Point2i * [approx.size()];
@@ -183,7 +183,7 @@ instance ApproxPolyDP CFloat where
           , $(bool isClosed)
           );
 
-        *$(int32_t * approxSizePtr) = approx.size();
+        *$(size_t * approxSizePtr) = approx.size();
 
         cv::Point2f * * * approxPtrPtr = $(Point2f * * * approxPtrPtr);
         cv::Point2f * * approxPtr = new cv::Point2f * [approx.size()];
@@ -310,7 +310,7 @@ convexHull points clockwise
     | otherwise = unsafeWrapException $
         unsafeWithArrayPtr points' $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
         alloca $ \(hullPointsPtrPtr :: Ptr (Ptr (Ptr (C (Point 2 depth))))) ->
-        alloca $ \(hullSizePtr :: Ptr Int32) ->
+        alloca $ \(hullSizePtr :: Ptr C.CSize) ->
         handleCvException
           ( do hullSize <- fromIntegral <$> peek hullSizePtr
                hullPointsPtr :: Ptr (Ptr (C (Point 2 depth))) <- peek hullPointsPtrPtr
@@ -340,7 +340,7 @@ class ( FromPtr      (Point   2 depth)
         -> CInt -- ^ Orientation flag.
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to hull points.
-        -> Ptr Int32 -- ^ Size of convex hull.
+        -> Ptr C.CSize -- ^ Size of convex hull.
         -> IO (Ptr (C CvCppException))
 
     convexHull_deletePtrArray
@@ -363,7 +363,7 @@ instance ConvexHull Int32 where
             , true
             );
 
-          *$(int32_t * hullSizePtr) = hull.size();
+          *$(size_t * hullSizePtr) = hull.size();
 
           cv::Point2i * * * hullPointsPtrPtr = $(Point2i * * * hullPointsPtrPtr);
           cv::Point2i * * hullPointsPtr = new cv::Point2i * [hull.size()];
@@ -390,7 +390,7 @@ instance ConvexHull CFloat where
           std::vector<cv::Point2f> hull;
           cv::convexHull(points, hull, $(bool clockwise), true);
 
-          *$(int32_t * hullSizePtr) = hull.size();
+          *$(size_t * hullSizePtr) = hull.size();
 
           cv::Point2f * * * hullPointsPtrPtr = $(Point2f * * * hullPointsPtrPtr);
           cv::Point2f * * hullPointsPtr = new cv::Point2f * [hull.size()];
@@ -434,7 +434,7 @@ convexHullIndices points clockwise
     | otherwise = unsafeWrapException $
         unsafeWithArrayPtr points' $ \(pointsPtr :: Ptr (C (Point 2 depth))) ->
         alloca $ \(hullIndicesPtrPtr :: Ptr (Ptr Int32)) ->
-        alloca $ \(hullSizePtr :: Ptr Int32) ->
+        alloca $ \(hullSizePtr :: Ptr C.CSize) ->
         handleCvException
           ( do hullSize <- fromIntegral <$> peek hullSizePtr
                -- The hullIndicesPtr points to memory allocated on the C++
@@ -466,7 +466,7 @@ class ( FromPtr      (Point   2 depth)
         -> Ptr (C (Point 2 depth)) -- ^ Input points array.
         -> CInt -- ^ Orientation flag.
         -> Ptr (Ptr Int32) -- ^ Array of convex hull indices.
-        -> Ptr Int32 -- ^ Size of convex hull indices.
+        -> Ptr C.CSize -- ^ Size of convex hull indices.
         -> IO (Ptr (C CvCppException))
 
 instance ConvexHullIndices Int32 where
@@ -480,7 +480,7 @@ instance ConvexHullIndices Int32 where
 
           cv::convexHull(points, hullIndices, $(bool clockwise), false);
 
-          *$(int32_t * hullSizePtr) = hullIndices.size();
+          *$(size_t * hullSizePtr) = hullIndices.size();
           int32_t * hullIndicesArr = new int32_t [hullIndices.size()];
           std::copy(hullIndices.begin(), hullIndices.end(), hullIndicesArr);
           *$(int32_t * * hullIndicesPtrPtr) = hullIndicesArr;
@@ -497,7 +497,7 @@ instance ConvexHullIndices CFloat where
 
           cv::convexHull(points, hullIndices, $(bool clockwise), false);
 
-          *$(int32_t * hullSizePtr) = hullIndices.size();
+          *$(size_t * hullSizePtr) = hullIndices.size();
           int32_t * hullIndicesArr = new int32_t [hullIndices.size()];
           std::copy(hullIndices.begin(), hullIndices.end(), hullIndicesArr);
           *$(int32_t * * hullIndicesPtrPtr) = hullIndicesArr;

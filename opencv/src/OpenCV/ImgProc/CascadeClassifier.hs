@@ -120,7 +120,7 @@ cascadeClassifierDetectMultiScale cc scaleFactor minNeighbours minSize maxSize s
     withPtr src $ \srcPtr ->
     withPtr c'minSize $ \minSizePtr ->
     withPtr c'maxSize $ \maxSizePtr ->
-    alloca $ \(numRectsPtr :: Ptr Int32) ->
+    alloca $ \(numRectsPtr :: Ptr C.CSize) ->
     alloca $ \(rectsPtrPtr :: Ptr (Ptr (Ptr (C'Rect Int32)))) ->
     handleCvException
       ( do numRects <- fromIntegral <$> peek numRectsPtr
@@ -149,7 +149,7 @@ cascadeClassifierDetectMultiScale cc scaleFactor minNeighbours minSize maxSize s
           , *$(Size2i * minSizePtr)
           , *$(Size2i * maxSizePtr)
           );
-        *$(int32_t * numRectsPtr) = rects.size();
+        *$(size_t * numRectsPtr) = rects.size();
         cv::Rect * * rectsPtr = new cv::Rect * [rects.size()];
         *$(Rect2i * * * rectsPtrPtr) = rectsPtr;
         for (std::vector<cv::Rect>::size_type i = 0; i != rects.size(); i++)
@@ -181,7 +181,7 @@ cascadeClassifierDetectMultiScaleNC cc scaleFactor minNeighbours minSize maxSize
     withPtr src $ \srcPtr ->
     withPtr c'minSize $ \minSizePtr ->
     withPtr c'maxSize $ \maxSizePtr ->
-    alloca $ \(numRectsPtr :: Ptr Int32) ->
+    alloca $ \(numRectsPtr :: Ptr C.CSize) ->
     alloca $ \(rectsPtrPtr :: Ptr (Ptr (Ptr (C'Rect Int32)))) ->
     alloca $ \(rejectLevelsPtrPtr :: Ptr (Ptr Int32)) ->
     alloca $ \(levelWeightsPtrPtr :: Ptr (Ptr C.CDouble)) ->
@@ -219,7 +219,7 @@ cascadeClassifierDetectMultiScaleNC cc scaleFactor minNeighbours minSize maxSize
           , *$(Size2i * maxSizePtr)
           , true
           );
-        *$(int32_t * numRectsPtr) = rects.size();
+        *$(size_t * numRectsPtr) = rects.size();
 
         cv::Rect * * rectsPtr = new cv::Rect * [rects.size()];
         *$(Rect2i * * * rectsPtrPtr) = rectsPtr;

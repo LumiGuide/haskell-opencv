@@ -15,7 +15,6 @@ module OpenCV.ImgCodecs
     ) where
 
 import "base" Control.Exception ( mask_ )
-import "base" Data.Int ( Int32 )
 import "base" Foreign.C.String ( withCString )
 import "base" Foreign.C.Types
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -93,7 +92,7 @@ imencode format mat = unsafeWrapException $
     withCString ext $ \extPtr ->
     alloca $ \(bufPtrPtr :: Ptr (Ptr CUChar)) ->
     alloca $ \(vecPtrPtr :: Ptr (Ptr ())) ->
-    alloca $ \(c'bufSizePtr :: Ptr Int32) -> mask_ $ do
+    alloca $ \(bufSizePtr :: Ptr C.CSize) -> mask_ $ do
       ptrException <- [cvExcept|
         const int * const paramsPtr = $vec-ptr:(int * params);
         std::vector<uchar> * vec = new std::vector<uchar>();
@@ -104,7 +103,7 @@ imencode format mat = unsafeWrapException $
                     , *vec
                     , params
                     );
-        *$(int32_t * c'bufSizePtr) = vec->size();
+        *$(size_t * bufSizePtr) = vec->size();
         *$(unsigned char * * bufPtrPtr) = &((*vec)[0]);
       |]
       vecPtr <- peek vecPtrPtr
@@ -113,7 +112,7 @@ imencode format mat = unsafeWrapException $
         freeVec vecPtr
         Left . BindingException <$> fromPtr (pure ptrException)
       else do
-        bufSize <- peek c'bufSizePtr
+        bufSize <- peek bufSizePtr
         bufPtr  <- peek bufPtrPtr
         bs <- BU.unsafePackCStringFinalizer
                 (castPtr bufPtr)
@@ -135,4 +134,4 @@ imencodeM
     -> Mut (Mat shape channels depth) (PrimState m)
     -> m ByteString
 imencodeM format matM =
-     unsafeFreeze matM >>= imencode format 
+     unsafeFreeze matM >>= imencode format

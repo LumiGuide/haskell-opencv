@@ -199,13 +199,13 @@ goodFeaturesToTrack
 goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize detector = unsafeWrapException $
     withPtr src  $ \srcPtr ->
     withPtr mbMask $ \mskPtr ->
-    alloca $ \(cornersLengthsPtr :: Ptr Int32) ->
+    alloca $ \(cornersLengthsPtr :: Ptr C.CSize) ->
     alloca $ \(cornersPtrPtr :: Ptr (Ptr (Ptr C'Point2f))) ->
     handleCvException
-      ( do numCorners <- fromIntegral <$> peek cornersLengthsPtr
+      ( do numCorners <- peek cornersLengthsPtr
            cornersPtr <- peek cornersPtrPtr
            (corners :: [V2 Float]) <-
-               peekArray numCorners cornersPtr >>=
+               peekArray (fromIntegral numCorners) cornersPtr >>=
                mapM (fmap (fmap fromCFloat . fromPoint) . fromPtr . pure)
            -- We assume that only cv::goodFeaturesToTrack will throw a
            -- cv::Exception. The cornersPtrPtr is constructed after
@@ -234,7 +234,7 @@ goodFeaturesToTrack src maxCorners qualityLevel minDistance mbMask blockSize det
         cv::Point2f * * cornersPtr = new cv::Point2f * [corners.size()];
         *cornersPtrPtr = cornersPtr;
 
-        *$(int32_t * cornersLengthsPtr) = corners.size();
+        *$(size_t * cornersLengthsPtr) = corners.size();
 
         for (std::vector<cv::Point2f>::size_type i = 0; i != corners.size(); i++) {
           cornersPtr[i] = new cv::Point2f( corners[i] );
@@ -316,13 +316,13 @@ houghCircles
     -> m (V.Vector Circle)
 houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapException $
     withPtr src $ \srcPtr ->
-    alloca $ \(circleLengthsPtr :: Ptr Int32) ->
+    alloca $ \(circleLengthsPtr :: Ptr C.CSize) ->
     alloca $ \(circlesPtrPtr :: Ptr (Ptr (Ptr C'Vec3f))) ->
     handleCvException
-      ( do numCircles <- fromIntegral <$> peek circleLengthsPtr
+      ( do numCircles <- peek circleLengthsPtr
            circlesPtr <- peek circlesPtrPtr
            (circles :: [V3 Float]) <-
-               peekArray numCircles circlesPtr >>=
+               peekArray (fromIntegral numCircles) circlesPtr >>=
                mapM (fmap (fmap fromCFloat . fromVec) . fromPtr . pure)
            -- We assume that only cv::HoughCircles will throw a
            -- cv::Exception. The circlesPtrPtr is constructed after the
@@ -352,7 +352,7 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapExcept
         cv::Vec3f * * circlesPtr = new cv::Vec3f * [circles.size()];
         *circlesPtrPtr = circlesPtr;
 
-        *$(int32_t * circleLengthsPtr) = circles.size();
+        *$(size_t * circleLengthsPtr) = circles.size();
 
         for (std::vector<cv::Vec3f>::size_type i = 0; i != circles.size(); i++) {
           circlesPtr[i] = new cv::Vec3f( circles[i] );
@@ -435,15 +435,17 @@ houghLinesP
 houghLinesP rho theta threshold minLineLength maxLineGap src = wrapException $ unsafePrimToPrim $
     withPtr src $ \srcPtr ->
     -- Pointer to number of lines.
-    alloca $ \(numLinesPtr :: Ptr Int32) ->
+    alloca $ \(numLinesPtr :: Ptr C.CSize) ->
     -- Pointer to array of Vec4i pointers. The array is allocated in
     -- C++. Each element of the array points to a Vec4i that is also
     -- allocated in C++.
     alloca $ \(linesPtrPtr :: Ptr (Ptr (Ptr C'Vec4i))) ->
       handleCvException
-        ( do numLines <- fromIntegral <$> peek numLinesPtr
+        ( do numLines <- peek numLinesPtr
              linesPtr <- peek linesPtrPtr
-             lineSegments  <- mapM (fmap fromVec . fromPtr . pure) =<< peekArray numLines linesPtr
+             lineSegments
+                 <- mapM (fmap fromVec . fromPtr . pure)
+                    =<< peekArray (fromIntegral numLines) linesPtr
 
              -- Free the array of Vec4i pointers. This does not free the
              -- Vec4i's pointed to by the elements of the array. That is the
@@ -466,7 +468,7 @@ houghLinesP rho theta threshold minLineLength maxLineGap src = wrapException $ u
             , $(double  c'maxLineGap)
             );
 
-          *$(int32_t * numLinesPtr) = lines.size();
+          *$(size_t * numLinesPtr) = lines.size();
 
           cv::Vec4i * * * linesPtrPtr = $(Vec4i * * * linesPtrPtr);
           cv::Vec4i * * linesPtr = new cv::Vec4i * [lines.size()];

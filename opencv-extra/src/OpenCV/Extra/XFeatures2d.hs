@@ -163,7 +163,7 @@ surfDetectAndCompute surf img mbMask = unsafeWrapException $ do
       withPtr img $ \imgPtr ->
       withPtr mbMask $ \maskPtr ->
       withPtr descriptors $ \descPtr ->
-      alloca $ \(numPtsPtr :: Ptr Int32) ->
+      alloca $ \(numPtsPtr :: Ptr C.CSize) ->
       alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'KeyPoint))) -> mask_ $ do
         ptrException <- [cvExcept|
           cv::xfeatures2d::SURF * surf = *$(Ptr_SURF * surfPtr);
@@ -179,7 +179,7 @@ surfDetectAndCompute surf img mbMask = unsafeWrapException $ do
             , false
             );
 
-          *$(int32_t * numPtsPtr) = keypoints.size();
+          *$(size_t * numPtsPtr) = keypoints.size();
 
           cv::KeyPoint * * * arrayPtrPtr = $(KeyPoint * * * arrayPtrPtr);
           cv::KeyPoint * * arrayPtr = new cv::KeyPoint * [keypoints.size()];
@@ -323,7 +323,7 @@ siftDetectAndCompute sift img mbMask = unsafeWrapException $ do
       withPtr img $ \imgPtr ->
       withPtr mbMask $ \maskPtr ->
       withPtr descriptors $ \descPtr ->
-      alloca $ \(numPtsPtr :: Ptr Int32) ->
+      alloca $ \(numPtsPtr :: Ptr C.CSize) ->
       alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'KeyPoint))) -> mask_ $ do
         ptrException <- [cvExcept|
           cv::xfeatures2d::SIFT * sift = *$(Ptr_SIFT * siftPtr);
@@ -339,7 +339,7 @@ siftDetectAndCompute sift img mbMask = unsafeWrapException $ do
             , false
             );
 
-          *$(int32_t * numPtsPtr) = keypoints.size();
+          *$(size_t * numPtsPtr) = keypoints.size();
 
           cv::KeyPoint * * * arrayPtrPtr = $(KeyPoint * * * arrayPtrPtr);
           cv::KeyPoint * * arrayPtr = new cv::KeyPoint * [keypoints.size()];
