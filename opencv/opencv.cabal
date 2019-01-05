@@ -68,9 +68,15 @@ library
         termcriteria.hpp
         video_motion_analysis.hpp
 
-    cxx-options:      -std=c++11
-    extra-libraries:   stdc++
-    ghc-options:     -lstdc++
+    cxx-options: -std=c++11
+
+    if os(darwin)
+      extra-libraries: c++
+      -- See: https://ghc.haskell.org/trac/ghc/ticket/11829
+      ld-options: -Wl,-keep_dwarf_unwind
+    else
+      extra-libraries: stdc++
+      ghc-options:   -lstdc++
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
 
