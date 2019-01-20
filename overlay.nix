@@ -2,6 +2,14 @@ enableOpencv4 : final : previous : with final.lib; with final.haskell.lib;
 let
   handleOpencv4 = drv : if enableOpencv4 then enableCabalFlag drv "opencv4" else drv;
 
+  useOpencvHighgui = drv : overrideCabal drv (_drv: {
+    libraryPkgconfigDepends = [
+      (if enableOpencv4
+       then final.opencv4_highgui
+       else final.opencv3_highgui)
+    ];
+  });
+
   haskellOverrides = self: super:
     let
       addBuildToolsInShell = drv : overrideCabal drv (drv : optionalAttrs inNixShell {
@@ -42,8 +50,10 @@ let
         libraryPkgconfigDepends = [ final.opencv4 ];
       }))));
 
+      opencv_highgui = useOpencvHighgui self.opencv;
+
       opencv-examples =
-        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
+        (addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-examples" ./opencv-examples {}) (_drv : {
           src = final.runCommand "opencv-examples-src"
             { files = final.lib.sourceByRegex ./opencv-examples [
                 "^src$"
@@ -60,7 +70,7 @@ let
               cp -r $data    $out/data
               cp $LICENSE    $out/LICENSE
             '';
-        }));
+        }))).override { opencv = self.opencv_highgui; };
 
       opencv-extra =
         handleOpencv4 (addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
@@ -87,14 +97,19 @@ let
             export hardeningDisable=bindnow
           '';
           # TODO (BvD): This should be added by cabal2nix. Fix this upstream.
-          libraryPkgconfigDepends =
-            if enableOpencv4
-            then [ final.opencv4 ]
-            else [ final.opencv3 ];
+          libraryPkgconfigDepends = [
+            (if enableOpencv4
+             then final.opencv4
+             else final.opencv3)
+          ];
         })));
 
+      opencv-extra_highgui = (useOpencvHighgui self.opencv-extra).override {
+        opencv = self.opencv_highgui;
+      };
+
       opencv-extra-examples =
-        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
+        (addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra-examples" ./opencv-extra-examples {}) (_drv : {
           src = final.runCommand "opencv-extra-examples-src"
             { files = final.lib.sourceByRegex ./opencv-extra-examples [
                 "^src$"
@@ -109,12 +124,23 @@ let
               cp -r $data    $out/data
               cp $LICENSE    $out/LICENSE
             '';
-        }));
+        }))).override {
+          opencv = self.opencv_highgui;
+          opencv-extra = self.opencv-extra_highgui;
+        };
   };
+
 in  {
   haskell = previous.haskell // {
     packageOverrides = self: super:
       previous.haskell.packageOverrides self super //
       haskellOverrides self super;
+  };
+
+  opencv3_highgui = previous.opencv3.override {
+    enableGtk3 = !final.stdenv.isDarwin;
+  };
+  opencv4_highgui = previous.opencv4.override {
+    enableGtk3 = !final.stdenv.isDarwin;
   };
 }
