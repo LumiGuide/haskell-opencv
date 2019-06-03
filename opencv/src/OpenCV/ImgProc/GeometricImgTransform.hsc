@@ -60,7 +60,6 @@ module OpenCV.ImgProc.GeometricImgTransform
 
 import "base" Data.Int ( Int32 )
 import "base" Data.Foldable
-import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified Data.Vector as V
@@ -69,8 +68,9 @@ import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
+import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
-import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -451,27 +451,24 @@ logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getperspectivetransform OpenCV Sphinx doc>
 -}
 getPerspectiveTransform
-    :: (IsPoint2 point2 CFloat, MonadError CvException m)
-    => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
-    -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
+    :: forall m point2. (IsPoint2 point2 CFloat, MonadError CvException m)
+    => V4 (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
+    -> V4 (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
     -> m (Mat (ShapeT [3,3]) ('S 1) ('S Double)) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
-getPerspectiveTransform srcPts dstPts
-    | V.null srcPts = emptyVecErr "source"
-    | V.null dstPts = emptyVecErr "destination"
-    | otherwise = pure $
-        unsafeCoerceMat $
-        unsafePerformIO $
-        unsafeWithArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
-        unsafeWithArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
-        fromPtr
-        [CU.block| Mat * {
-          return new cv::Mat
-          ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
-          );
-        }|]
+getPerspectiveTransform srcPts dstPts = pure $
+  unsafeCoerceMat $
+  unsafePerformIO $
+  unsafeWithArrayPtr (v4ToVector srcPts) $ \srcPtsPtr ->
+  unsafeWithArrayPtr (v4ToVector dstPts) $ \dstPtsPtr ->
+  fromPtr
+  [CU.block| Mat * {
+      return new cv::Mat
+        ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
+        );
+  }|]
   where
-    emptyVecErr name =
-        throwError $ CvException $ "getPerspectiveTransform: empty " <> name
+    v4ToVector :: V4 (point2 CFloat) -> V.Vector Point2f
+    v4ToVector = V.map toPoint . V.fromList . toList
 
 {- | Calculates an affine transformation matrix for 2D affine transform
 
