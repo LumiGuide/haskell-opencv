@@ -201,15 +201,16 @@ warpAffineInvImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
 warpAffine
-    :: (MonadError CvException m)
+    :: (MonadError CvException m, IsSize a Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
+    -> a Int32 -- ^ Destination size
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
-warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
+    -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
+warpAffine src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -217,13 +218,14 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
         withPtr dst $ \dstPtr ->
         withPtr transform   $ \transformPtr ->
         withPtr    borderValue $ \borderValuePtr ->
+        withPtr dsize $ \dsizePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpAffine
               ( *src
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
-              , src->size()
+              , *$(Size2i * dsizePtr)
               , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
               , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
@@ -234,20 +236,22 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshalBorderMode borderMode
+    dsize = toSize dshape
 
 -- | Applies a perspective transformation to an image
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: (MonadError CvException m)
+    :: (MonadError CvException m, IsSize a Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
+    -> a Int32 -- ^ Destination size
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
-warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
+    -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
+warpPerspective src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -255,13 +259,14 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
         withPtr dst $ \dstPtr ->
         withPtr transform   $ \transformPtr   ->
         withPtr borderValue $ \borderValuePtr ->
+        withPtr dsize $ \dsizePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpPerspective
               ( *src
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
-              , src->size()
+              , *$(Size2i * dsizePtr)
               , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
               , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
@@ -272,6 +277,7 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
     c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshalBorderMode borderMode
+    dsize = toSize dshape
 
 -- | Inverts an affine transformation
 --
