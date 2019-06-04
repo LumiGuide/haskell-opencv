@@ -201,10 +201,10 @@ warpAffineInvImg = exceptError $
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
 warpAffine
-    :: (MonadError CvException m, IsSize a Int32)
+    :: (MonadError CvException m, IsSize destSize Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
-    -> a Int32 -- ^ Destination size
+    -> destSize Int32 -- ^ Destination size
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
@@ -242,10 +242,10 @@ warpAffine src transform dshape interpolationMethod inverse fillOutliers borderM
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
 warpPerspective
-    :: (MonadError CvException m, IsSize a Int32)
+    :: (MonadError CvException m, IsSize destSize Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
-    -> a Int32 -- ^ Destination size
+    -> destSize Int32 -- ^ Destination size
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
@@ -458,8 +458,8 @@ logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
 -}
 getPerspectiveTransform
     :: forall m point2. (IsPoint2 point2 CFloat, MonadError CvException m)
-    => V4 (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
-    -> V4 (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
+    => V4 (point2 CFloat) -- ^ Points representing 4 vertices in source image
+    -> V4 (point2 CFloat) -- ^ Points representing 4 vertices in destination image
     -> m (Mat (ShapeT [3,3]) ('S 1) ('S Double)) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
 getPerspectiveTransform srcPts dstPts = pure $
   unsafeCoerceMat $
