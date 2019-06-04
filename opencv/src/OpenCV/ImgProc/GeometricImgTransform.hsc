@@ -47,7 +47,9 @@ module OpenCV.ImgProc.GeometricImgTransform
     ( ResizeAbsRel(..)
     , resize
     , warpAffine
+    , warpAffineDynamic
     , warpPerspective
+    , warpPerspectiveDynamic
     , invertAffineTransform
     , linearPolar
     , logPolar
@@ -60,17 +62,19 @@ module OpenCV.ImgProc.GeometricImgTransform
 
 import "base" Data.Int ( Int32 )
 import "base" Data.Foldable
-import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import "base" Data.Proxy
+import "base" GHC.TypeLits
 import qualified Data.Vector as V
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
+import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
-import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
+import "mtl" Control.Monad.Error.Class ( MonadError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -200,16 +204,17 @@ warpAffineInvImg = exceptError $
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
-warpAffine
-    :: (MonadError CvException m)
+warpAffineDynamic
+    :: (MonadError CvException m, IsSize destSize Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
+    -> destSize Int32 -- ^ Destination size
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
-warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
+    -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
+warpAffineDynamic src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -217,13 +222,14 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
         withPtr dst $ \dstPtr ->
         withPtr transform   $ \transformPtr ->
         withPtr    borderValue $ \borderValuePtr ->
+        withPtr dsize $ \dsizePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpAffine
               ( *src
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
-              , src->size()
+              , *$(Size2i * dsizePtr)
               , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
               , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
@@ -234,20 +240,41 @@ warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
     c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshalBorderMode borderMode
+    dsize = toSize dshape
 
--- | Applies a perspective transformation to an image
---
--- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
-warpPerspective
-    :: (MonadError CvException m)
+-- | Applies an affine transformation to an image, with the dimensions statically known
+warpAffine
+    :: forall (dstHeight :: Nat) (dstWidth :: Nat) m height width channels depth
+    . (MonadError CvException m, KnownNat dstHeight, KnownNat dstWidth)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
-    -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
+    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
     -> InterpolationMethod
     -> Bool -- ^ Perform the inverse transformation.
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
-    -> m (Mat ('S [height, width]) channels depth) -- ^ Transformed source image.
-warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
+    -> m (Mat ('S ['S dstHeight, 'S dstWidth]) channels depth) -- ^ Transformed source image.
+warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafeCoerceMat <$>
+      warpAffineDynamic src transform dstSize interpolationMethod inverse fillOutliers borderMode
+    where
+    w = fromInteger $ natVal (Proxy :: Proxy dstWidth)
+    h = fromInteger $ natVal (Proxy :: Proxy dstHeight)
+    dstSize = toSize $ (V2 w h)
+
+-- | Applies a perspective transformation to an image
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
+warpPerspectiveDynamic
+    :: (MonadError CvException m, IsSize destSize Int32)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
+    -> destSize Int32 -- ^ Destination size
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
+warpPerspectiveDynamic src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -255,13 +282,14 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
         withPtr dst $ \dstPtr ->
         withPtr transform   $ \transformPtr   ->
         withPtr borderValue $ \borderValuePtr ->
+        withPtr dsize $ \dsizePtr ->
           [cvExcept|
             Mat * src = $(Mat * srcPtr);
             cv::warpPerspective
               ( *src
               , *$(Mat * dstPtr)
               , *$(Mat * transformPtr)
-              , src->size()
+              , *$(Size2i * dsizePtr)
               , $(int32_t c'interpolationMethod) | $(int32_t c'inverse) | $(int32_t c'fillOutliers)
               , $(int32_t c'borderMode)
               , *$(Scalar * borderValuePtr)
@@ -272,6 +300,28 @@ warpPerspective src transform interpolationMethod inverse fillOutliers borderMod
     c'inverse      = if inverse      then c'WARP_INVERSE_MAP   else 0
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshalBorderMode borderMode
+    dsize = toSize dshape
+
+-- | Applies a perspective transformation to an image, with the output dimension statically known
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
+warpPerspective
+    :: forall (dstHeight :: Nat) (dstWidth :: Nat) m height width channels depth
+    . (MonadError CvException m, KnownNat dstHeight, KnownNat dstWidth)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> m (Mat ('S ['S dstHeight, 'S dstWidth]) channels depth) -- ^ Transformed source image.
+warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafeCoerceMat <$>
+      warpPerspectiveDynamic src transform dstSize interpolationMethod inverse fillOutliers borderMode
+    where
+    w = fromInteger $ natVal (Proxy :: Proxy dstWidth)
+    h = fromInteger $ natVal (Proxy :: Proxy dstHeight)
+    dstSize = toSize $ (V2 w h)
 
 -- | Inverts an affine transformation
 --
@@ -451,27 +501,24 @@ logPolar src center magnitudeScale interpolationMethod inverse fillOutliers =
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#getperspectivetransform OpenCV Sphinx doc>
 -}
 getPerspectiveTransform
-    :: (IsPoint2 point2 CFloat, MonadError CvException m)
-    => V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in source image
-    -> V.Vector (point2 CFloat) -- ^ Array of 4 floating-point Points representing 4 vertices in destination image
+    :: forall m point2. (IsPoint2 point2 CFloat, MonadError CvException m)
+    => V4 (point2 CFloat) -- ^ Points representing 4 vertices in source image
+    -> V4 (point2 CFloat) -- ^ Points representing 4 vertices in destination image
     -> m (Mat (ShapeT [3,3]) ('S 1) ('S Double)) -- ^ The output perspective transformation, 3x3 floating-point-matrix.
-getPerspectiveTransform srcPts dstPts
-    | V.null srcPts = emptyVecErr "source"
-    | V.null dstPts = emptyVecErr "destination"
-    | otherwise = pure $
-        unsafeCoerceMat $
-        unsafePerformIO $
-        unsafeWithArrayPtr (V.map toPoint srcPts) $ \srcPtsPtr ->
-        unsafeWithArrayPtr (V.map toPoint dstPts) $ \dstPtsPtr ->
-        fromPtr
-        [CU.block| Mat * {
-          return new cv::Mat
-          ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
-          );
-        }|]
+getPerspectiveTransform srcPts dstPts = pure $
+  unsafeCoerceMat $
+  unsafePerformIO $
+  unsafeWithArrayPtr (v4ToVector srcPts) $ \srcPtsPtr ->
+  unsafeWithArrayPtr (v4ToVector dstPts) $ \dstPtsPtr ->
+  fromPtr
+  [CU.block| Mat * {
+      return new cv::Mat
+        ( cv::getPerspectiveTransform($(Point2f * srcPtsPtr), $(Point2f * dstPtsPtr))
+        );
+  }|]
   where
-    emptyVecErr name =
-        throwError $ CvException $ "getPerspectiveTransform: empty " <> name
+    v4ToVector :: V4 (point2 CFloat) -> V.Vector Point2f
+    v4ToVector = V.map toPoint . V.fromList . toList
 
 {- | Calculates an affine transformation matrix for 2D affine transform
 
