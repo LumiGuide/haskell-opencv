@@ -47,7 +47,9 @@ module OpenCV.ImgProc.GeometricImgTransform
     ( ResizeAbsRel(..)
     , resize
     , warpAffine
+    , warpAffineDynamic
     , warpPerspective
+    , warpPerspectiveDynamic
     , invertAffineTransform
     , linearPolar
     , logPolar
@@ -62,6 +64,8 @@ import "base" Data.Int ( Int32 )
 import "base" Data.Foldable
 import "base" Foreign.C.Types ( CFloat, CDouble )
 import "base" System.IO.Unsafe ( unsafePerformIO )
+import "base" Data.Proxy
+import "base" GHC.TypeLits
 import qualified Data.Vector as V
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
@@ -200,7 +204,7 @@ warpAffineInvImg = exceptError $
 
 <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpaffine OpenCV Sphinx doc>
 -}
-warpAffine
+warpAffineDynamic
     :: (MonadError CvException m, IsSize destSize Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
@@ -210,7 +214,7 @@ warpAffine
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
     -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
-warpAffine src transform dshape interpolationMethod inverse fillOutliers borderMode =
+warpAffineDynamic src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -238,10 +242,29 @@ warpAffine src transform dshape interpolationMethod inverse fillOutliers borderM
     (c'borderMode, borderValue) = marshalBorderMode borderMode
     dsize = toSize dshape
 
+-- | Applies an affine transformation to an image, with the dimensions statically known
+warpAffine
+    :: forall (dstHeight :: Nat) (dstWidth :: Nat) m height width channels depth
+    . (MonadError CvException m, KnownNat dstHeight, KnownNat dstWidth)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [2, 3]) ('S 1) ('S Double) -- ^ Affine transformation matrix.
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> m (Mat ('S ['S dstHeight, 'S dstWidth]) channels depth) -- ^ Transformed source image.
+warpAffine src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafeCoerceMat <$>
+      warpAffineDynamic src transform dstSize interpolationMethod inverse fillOutliers borderMode
+    where
+    w = fromInteger $ natVal (Proxy :: Proxy dstWidth)
+    h = fromInteger $ natVal (Proxy :: Proxy dstHeight)
+    dstSize = toSize $ (V2 w h)
+
 -- | Applies a perspective transformation to an image
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
-warpPerspective
+warpPerspectiveDynamic
     :: (MonadError CvException m, IsSize destSize Int32)
     => Mat ('S [height, width]) channels depth -- ^ Source image.
     -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
@@ -251,7 +274,7 @@ warpPerspective
     -> Bool -- ^ Fill outliers.
     -> BorderMode -- ^ Pixel extrapolation method.
     -> m (Mat ('S ['D, 'D]) channels depth) -- ^ Transformed source image.
-warpPerspective src transform dshape interpolationMethod inverse fillOutliers borderMode =
+warpPerspectiveDynamic src transform dshape interpolationMethod inverse fillOutliers borderMode =
     unsafeWrapException $ do
       dst <- newEmptyMat
       handleCvException (pure $ unsafeCoerceMat dst) $
@@ -278,6 +301,27 @@ warpPerspective src transform dshape interpolationMethod inverse fillOutliers bo
     c'fillOutliers = if fillOutliers then c'WARP_FILL_OUTLIERS else 0
     (c'borderMode, borderValue) = marshalBorderMode borderMode
     dsize = toSize dshape
+
+-- | Applies a perspective transformation to an image, with the output dimension statically known
+--
+-- <http://docs.opencv.org/3.0-last-rst/modules/imgproc/doc/geometric_transformations.html#warpperspective OpenCV Sphinx doc>
+warpPerspective
+    :: forall (dstHeight :: Nat) (dstWidth :: Nat) m height width channels depth
+    . (MonadError CvException m, KnownNat dstHeight, KnownNat dstWidth)
+    => Mat ('S [height, width]) channels depth -- ^ Source image.
+    -> Mat (ShapeT [3, 3]) ('S 1) ('S Double) -- ^ Perspective transformation matrix.
+    -> InterpolationMethod
+    -> Bool -- ^ Perform the inverse transformation.
+    -> Bool -- ^ Fill outliers.
+    -> BorderMode -- ^ Pixel extrapolation method.
+    -> m (Mat ('S ['S dstHeight, 'S dstWidth]) channels depth) -- ^ Transformed source image.
+warpPerspective src transform interpolationMethod inverse fillOutliers borderMode =
+    unsafeCoerceMat <$>
+      warpPerspectiveDynamic src transform dstSize interpolationMethod inverse fillOutliers borderMode
+    where
+    w = fromInteger $ natVal (Proxy :: Proxy dstWidth)
+    h = fromInteger $ natVal (Proxy :: Proxy dstHeight)
+    dstSize = toSize $ (V2 w h)
 
 -- | Inverts an affine transformation
 --

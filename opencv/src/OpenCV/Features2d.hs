@@ -695,6 +695,7 @@ bfMatcherImg = do
 
     width = fromInteger $ natVal (Proxy :: Proxy width)
 
+    rotatedFrog :: Frog
     rotatedFrog = exceptError $
                   warpAffine frog rotMat InterArea False False (BorderConstant black)
     rotMat = getRotationMatrix2D (V2 250 195 :: V2 CFloat) 45 0.8
@@ -814,6 +815,7 @@ fbMatcherImg = do
 
     width = fromInteger $ natVal (Proxy :: Proxy width)
 
+    rotatedFrog :: Frog
     rotatedFrog = exceptError $
                   warpAffine frog rotMat InterArea False False (BorderConstant black)
     rotMat = getRotationMatrix2D (V2 250 195 :: V2 CFloat) 45 0.8
