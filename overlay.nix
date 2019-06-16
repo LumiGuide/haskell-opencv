@@ -19,7 +19,7 @@ let
         ]);
       });
     in {
-      opencv = handleOpencv4 (addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = (handleOpencv4 (addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -48,7 +48,20 @@ let
         '';
       } // optionalAttrs enableOpencv4 {
         libraryPkgconfigDepends = [ final.opencv4 ];
-      }))));
+      }))))).overrideAttrs (_oldAttrs: {
+        # The following is to fix the following test-suite error:
+        # ImgCodecs
+        #   imencode . imdecode
+        #     OutputJpeg2000:   FAIL
+        #       Exception: BindingException OpenCV(3.4.6)
+        #       /build/source/modules/imgcodecs/src/grfmt_jpeg2000.cpp:103:
+        #       error: (-213:The function/feature is not implemented) imgcodecs:
+        #       Jasper (JPEG-2000) codec is disabled.
+        #       You can enable it via 'OPENCV_IO_ENABLE_JASPER' option.
+        #       Refer for details and cautions here:
+        #       https://github.com/opencv/opencv/issues/14058 in function 'initJasper'
+        OPENCV_IO_ENABLE_JASPER = true;
+      });
 
       opencv_highgui = useOpencvHighgui self.opencv;
 
