@@ -19,6 +19,7 @@ import "base" Data.Monoid ( (<>) )
 import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
+import "base" System.Environment ( setEnv )
 import qualified "bytestring" Data.ByteString as B
 import "deepseq" Control.DeepSeq ( NFData, force )
 import "lens" Control.Lens.Combinators ( view )
@@ -182,7 +183,10 @@ main = defaultMain $ testGroup "opencv"
 -- !?!?!, HU.testCase "OutputExr"      $ encodeDecode ImreadUnchanged OutputExr
         , HU.testCase "OutputHdr"      $ encodeDecode ImreadUnchanged (OutputHdr True)
 -- !?!?!, HU.testCase "OutputJpeg"     $ encodeDecode ImreadUnchanged (OutputJpeg defaultJpegParams)
-        , HU.testCase "OutputJpeg2000" $ encodeDecode ImreadUnchanged OutputJpeg2000
+        , HU.testCase "OutputJpeg2000" $ do
+                                         -- See https://github.com/opencv/opencv/issues/14058
+                                         setEnv "OPENCV_IO_ENABLE_JASPER" "1"
+                                         encodeDecode ImreadUnchanged OutputJpeg2000
         , HU.testCase "OutputPng"      $ encodeDecode ImreadUnchanged (OutputPng defaultPngParams)
         , HU.testCase "OutputPnm"      $ encodeDecode ImreadUnchanged (OutputPnm True)
         , HU.testCase "OutputPbm"      $ encodeDecode ImreadGrayscale (OutputPbm True)
