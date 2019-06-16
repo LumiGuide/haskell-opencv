@@ -4,9 +4,12 @@ packages:
 - opencv-examples/
 - opencv-extra/
 - opencv-extra-examples/
-flags: {}
+flags:
+  opencv:
+    opencv4: true
+  opencv-extra:
+    opencv4: true
 allow-newer: true
-
 extra-lib-dirs:
 - /usr/local/lib
 
