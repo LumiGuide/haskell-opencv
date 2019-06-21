@@ -60,11 +60,15 @@ imdecode
     :: ImreadMode
     -> ByteString
     -> Mat ('S ['D, 'D]) 'D 'D
-imdecode imreadMode hbuf = unsafeCoerceMat $ unsafePerformIO $ fromPtr
-    [C.block|Mat * {
-      cv::_InputArray cbuf = cv::_InputArray($bs-ptr:hbuf, $bs-len:hbuf);
-      return new cv::Mat(cv::imdecode(cbuf, $(int32_t c'imreadMode)));
-    }|]
+imdecode imreadMode hbuf = unsafeCoerceMat $ unsafePerformIO $ do
+    alloca $ \(matPtrPtr :: Ptr (Ptr C'Mat)) -> do
+      ptrException <- [cvExcept|
+        cv::_InputArray cbuf = cv::_InputArray($bs-ptr:hbuf, $bs-len:hbuf);
+        *$(Mat * * matPtrPtr) = new cv::Mat(cv::imdecode(cbuf, $(int32_t c'imreadMode)));
+      |]
+      if ptrException /= nullPtr
+      then pure emptyMat
+      else fromPtr (peek matPtrPtr)
   where
     c'imreadMode = marshalImreadMode imreadMode
 
