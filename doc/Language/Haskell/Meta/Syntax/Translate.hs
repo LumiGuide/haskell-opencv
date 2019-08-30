@@ -305,23 +305,6 @@ instance ToName TyVarBndr where
   toName (PlainTV n) = n
   toName (KindedTV n _) = n
 
-instance ToType (Hs.Kind l) where
-  toType (Hs.KindStar _) = StarT
-  toType (Hs.KindFn _ k1 k2) = toType k1 .->. toType k2
-  toType (Hs.KindParen _ kp) = toType kp
-  toType (Hs.KindVar _ n)
-      | isCon (nameBase th_n) = ConT th_n
-      | otherwise             = VarT th_n
-    where
-      th_n = toName n
-
-      isCon :: String -> Bool
-      isCon (c:_) = isUpper c || c == ':'
-      isCon _ = nonsense "toType" "empty kind variable name" n
-  toType (Hs.KindApp _ k1 k2) = toType k1 `AppT` toType k2
-  toType (Hs.KindTuple _ ks) = foldr (\k pt -> pt `AppT` toType k) (TupleT $ length ks) ks
-  toType (Hs.KindList _ k) = ListT `AppT` toType k
-
 toKind :: Hs.Kind l -> Kind
 toKind = toType
 
@@ -330,6 +313,7 @@ toTyVar (Hs.KindedVar _ n k) = KindedTV (toName n) (toKind k)
 toTyVar (Hs.UnkindedVar _ n) = PlainTV (toName n)
 
 instance ToType (Hs.Type l) where
+  toType (Hs.TyStar _) = StarT
   toType (Hs.TyForall _ tvbM cxt t) = ForallT (maybe [] (fmap toTyVar) tvbM) (toCxt cxt) (toType t)
   toType (Hs.TyFun _ a b) = toType a .->. toType b
   toType (Hs.TyList _ t) = ListT `AppT` toType t

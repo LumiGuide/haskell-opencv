@@ -1,4 +1,4 @@
-resolver: nightly-2018-12-21
+resolver: lts-14.3
 packages:
 - opencv/
 - opencv-examples/
@@ -11,7 +11,7 @@ extra-lib-dirs:
 - /usr/local/lib
 
 nix:
-  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/ee42dab3302b90da705fae86b3c13af214343c6d.tar.gz" ]
+  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/8d1510abfb592339e13ce8f6db6f29c1f8b72924.tar.gz" ]
   packages: [ zlib pkgconfig opencv3 ]
 
 # Uncomment if you wish to use Docker integration
