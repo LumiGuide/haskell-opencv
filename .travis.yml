@@ -31,7 +31,7 @@ addons:
 # The different configurations we want to test. You could also do things like
 # change flags or use --stack-yaml to point to a different file.
 env:
-- ARGS="--jobs 2 --resolver nightly-2018-12-21" CACHE_NAME=NIGHTLY_2018_12_21_CV_3_4_5
+- ARGS="--jobs 2 --resolver lts-14.4" CACHE_NAME=LTS_14_4_CV_3_4_5
 
 before_install:
 - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y

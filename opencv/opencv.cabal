@@ -223,7 +223,7 @@ test-suite doc-images-opencv
       , data-default      >= 0.7.1.1
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
-      , haskell-src-exts  >= 1.18.2
+      , haskell-src-exts  >= 1.21.0
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , opencv
