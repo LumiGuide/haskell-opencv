@@ -8,9 +8,11 @@
 
 module Main where
 
+import qualified "async" Control.Concurrent.Async as Async
 import "base" Control.Exception ( Exception, try, displayException, evaluate )
 import "base" Control.Monad.IO.Class ( liftIO )
-import "base" Data.Functor ( ($>) )
+import "base" Data.Foldable ( traverse_ )
+import "base" Data.Functor ( ($>), void )
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Word
@@ -19,7 +21,7 @@ import "base" Data.Monoid ( (<>) )
 import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
-import "base" System.Environment ( setEnv )
+-- import "base" System.Environment ( setEnv )
 import qualified "bytestring" Data.ByteString as B
 import "deepseq" Control.DeepSeq ( NFData, force )
 import "lens" Control.Lens.Combinators ( view )
@@ -207,6 +209,7 @@ main = defaultMain $ testGroup "opencv"
       [
       ]
     , QC.testProperty "getAffineTransform" getAffineTransformProp
+    , HU.testCase "TLS memory leak" $ testTLSMemLeak 50000
     ]
 
 testArrayBinOpArgDiff
@@ -694,6 +697,25 @@ relError x y
 
 isSmall :: CFloat -> Bool
 isSmall = (>) 2e-2 . abs
+
+-- | Tests whether spawning a large number of threads that execute OpenCV code leak memory.
+--
+-- Note: doesn't actually test whether there is a leak. Simply not
+-- running out of memory is considered success.
+testTLSMemLeak :: Int -> HU.Assertion
+testTLSMemLeak numThreads = do
+    -- Run some OpenCV code on a lot of threads. Doesn't necessarily
+    -- have to run concurrently. Just on different threads.
+    threads <- traverse (Async.asyncBound . doSomeOpenCV) [1..numThreads]
+    -- Wait for all threads to complete.
+    traverse_ Async.wait threads
+  where
+    doSomeOpenCV :: Int -> IO ()
+    doSomeOpenCV n = void $ exceptErrorIO $
+        newMat ([1, 1] :: [Int32])
+               (1 :: Int32)
+               Depth_8U
+               (pure $ fromIntegral n :: V4 Double)
 
 --------------------------------------------------------------------------------
 
