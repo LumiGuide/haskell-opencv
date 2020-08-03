@@ -7,41 +7,41 @@ shell:
 
 .PHONY: build
 build:
-	cabal configure --enable-tests && \
-	cabal build
+	cabal v1-configure --enable-tests && \
+	cabal v1-build
 
 .PHONY: clean
 clean:
-	cabal clean && \
+	cabal v1-clean && \
 	find doc/generated -name "*.png" -o -name "*.gif" -type f -delete
 
 .PHONY: test
 test:
-	cabal configure --enable-tests && \
-	cabal build && \
+	cabal v1-configure --enable-tests && \
+	cabal v1-build && \
 	./dist/build/doc-images-opencv/doc-images-opencv && \
 	./dist/build/test-opencv/test-opencv
 
 .PHONY: coverage
 coverage:
-	cabal configure --enable-tests --enable-coverage && \
-	cabal test && \
+	cabal v1-configure --enable-tests --enable-coverage && \
+	cabal v1-test && \
 	chromium dist/hpc/vanilla/html/opencv-0.0.0/hpc_index.html
 
 .PHONY: doc
 doc: doc/color_conversions.png
-	cabal configure --enable-tests && \
-	cabal build --ghc-option=-O0 && \
+	cabal v1-configure --enable-tests && \
+	cabal v1-build --ghc-option=-O0 && \
 	./dist/build/doc-images-opencv/doc-images-opencv && \
-	cabal haddock --hyperlink-source
+	cabal v1-haddock --hyperlink-source
 
 .PHONY: update-git-haddock
 update-git-haddock: doc/color_conversions.png
 	git checkout master && \
-	cabal configure --enable-tests --enable-coverage && \
-	cabal build && \
-	cabal test && \
-	cabal haddock --hyperlink-source && \
+	cabal v1-configure --enable-tests --enable-coverage && \
+	cabal v1-build && \
+	cabal v1-test && \
+	cabal v1-haddock --hyperlink-source && \
 	git checkout gh-pages && \
 	git pull && \
 	git rm -r ../doc && rm -rf ../doc && mv ./dist/doc/html/opencv ../doc && \
