@@ -114,7 +114,7 @@ approxPolyDP curve epsilon isClosed
             approxSizePtr
             approxPtrPtr
             (toCDouble epsilon)
-            (fromBool isClosed)
+            (fromIntegral (fromBool isClosed))
 
 -- | Internal class used to overload the 'approxPolyDP' depth.
 class ( FromPtr      (Point   2 depth)
@@ -128,7 +128,7 @@ class ( FromPtr      (Point   2 depth)
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to approximated curve points.
         -> CDouble -- ^ epsilon
-        -> CInt -- ^ is closed
+        -> CBool -- ^ is closed
         -> IO (Ptr (C CvCppException))
 
     approxPolyDP_deletePtrArray
@@ -322,7 +322,7 @@ convexHull points clockwise
           convexHull_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromBool clockwise)
+            (fromIntegral (fromBool clockwise))
             hullPointsPtrPtr
             hullSizePtr
   where
@@ -337,7 +337,7 @@ class ( FromPtr      (Point   2 depth)
     convexHull_internal
         :: Int32 -- ^ Number of input points.
         -> Ptr (C (Point 2 depth)) -- ^ Input points array.
-        -> CInt -- ^ Orientation flag.
+        -> CBool -- ^ Orientation flag.
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to hull points.
         -> Ptr C.CSize -- ^ Size of convex hull.
@@ -449,7 +449,7 @@ convexHullIndices points clockwise
           convexHullIndices_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromBool clockwise)
+            (fromIntegral (fromBool clockwise))
             hullIndicesPtrPtr
             hullSizePtr
   where
@@ -464,7 +464,7 @@ class ( FromPtr      (Point   2 depth)
     convexHullIndices_internal
         :: Int32 -- ^ Number of input points.
         -> Ptr (C (Point 2 depth)) -- ^ Input points array.
-        -> CInt -- ^ Orientation flag.
+        -> CBool -- ^ Orientation flag.
         -> Ptr (Ptr Int32) -- ^ Array of convex hull indices.
         -> Ptr C.CSize -- ^ Size of convex hull indices.
         -> IO (Ptr (C CvCppException))
@@ -478,7 +478,7 @@ instance ConvexHullIndices Int32 where
                            );
           std::vector<int32_t> hullIndices;
 
-          cv::convexHull(points, hullIndices, $(bool clockwise), false);
+          cv::convexHull(points, hullIndices, $(bool  clockwise), false);
 
           *$(size_t * hullSizePtr) = hullIndices.size();
           int32_t * hullIndicesArr = new int32_t [hullIndices.size()];
