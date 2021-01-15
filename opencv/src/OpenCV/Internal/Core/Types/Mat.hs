@@ -598,10 +598,20 @@ unsafeWithVecAsMat shape channels vec f = do
     channels' = toChannels channels
     depth'    = toDepth (Proxy :: Proxy depth)
 
+-- | Multi-dimensional matrix position computation:
+-- Turns the given pairs of `step`s and `pos`s into a pointer into the
+-- given matrix (whose start pointer is given).
+--
+-- PRE:
+--
+-- > not (null (zip step pos))
 matElemAddress :: Ptr Word8 -> [Int] -> [Int] -> Ptr a
-matElemAddress dataPtr step pos = dataPtr `plusPtr` offset
-    where
-      offset = sum $ zipWith (*) step pos
+matElemAddress dataPtr step pos
+    | null (zip step pos) =
+        error $ "matElemAddress: Cannot compute offset due to empty (step, pos) = " ++ show (step, pos)
+    | otherwise = dataPtr `plusPtr` offset
+        where
+          offset = sum $ zipWith (*) step pos
 
 mkMat
     :: ( ToShape    shape
@@ -776,6 +786,10 @@ matInfo mat = unsafePerformIO $
 -- | All possible positions (indexes) for a given shape (list of
 -- sizes per dimension).
 --
+-- Guarantees to never return list elements that are @[]@, so that
+-- the returned indices are always well-formed indices for the given shape,
+-- even for the empty matrix.
+--
 -- @
 -- dimPositions [3, 4]
 -- [ [0, 0], [0, 1], [0, 2], [0, 3]
@@ -783,8 +797,14 @@ matInfo mat = unsafePerformIO $
 -- , [2, 0], [2, 1], [2, 2], [2, 3]
 -- ]
 -- @
+--
+-- @
+-- dimPositions []
+-- []
+-- @
 dimPositions :: (Num a, Enum a) => [a] -> [[a]]
-dimPositions = traverse (enumFromTo 0 . pred)
+dimPositions [] = [] -- the `traverse` would return `[[]]` for this case
+dimPositions shape = traverse (enumFromTo 0 . pred) shape
 
 --------------------------------------------------------------------------------
 
