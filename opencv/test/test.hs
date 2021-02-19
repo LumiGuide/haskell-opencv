@@ -119,6 +119,7 @@ main = defaultMain $ testGroup "opencv"
             , testGroup "mat -> hmat -> mat -> hmat"
               [ HU.testCase "eye 33 - 1 channel"  $ hMatEncodeDecode eye33_8u_1c
               , HU.testCase "eye 22 - 3 channels" $ hMatEncodeDecode eye22_8u_3c
+              , HU.testCase "empty"  $ hMatEncodeDecode emptyMat
               , hMatEncodeDecodeFP "Lenna.png"
               , hMatEncodeDecodeFP "kikker.jpg"
               ]
