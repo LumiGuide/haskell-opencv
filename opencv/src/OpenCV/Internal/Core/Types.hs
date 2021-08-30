@@ -78,6 +78,10 @@ C.using "namespace cv"
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#scalar OpenCV Sphinx doc>
 newtype Scalar = Scalar {unScalar :: ForeignPtr (C Scalar)}
 
+mkPlacementNewInstance ''Scalar
+
+type instance C Scalar = C'Scalar
+
 -- | Rotated (i.e. not up-right) rectangles on a plane
 --
 -- Each rectangle is specified by the center point (mass center), length of each
@@ -86,10 +90,14 @@ newtype Scalar = Scalar {unScalar :: ForeignPtr (C Scalar)}
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#rotatedrect OpenCV Sphinx doc>
 newtype RotatedRect = RotatedRect {unRotatedRect :: ForeignPtr (C RotatedRect)}
 
+type instance C RotatedRect = C'RotatedRect
+
 -- | Termination criteria for iterative algorithms
 --
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#termcriteria OpenCV Sphinx doc>
 newtype TermCriteria = TermCriteria {unTermCriteria :: ForeignPtr (C TermCriteria)}
+
+type instance C TermCriteria = C'TermCriteria
 
 -- | A continuous subsequence (slice) of a sequence
 --
@@ -102,6 +110,93 @@ newtype TermCriteria = TermCriteria {unTermCriteria :: ForeignPtr (C TermCriteri
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#range OpenCV Sphinx doc>
 newtype Range = Range {unRange :: ForeignPtr (C Range)}
 
+type instance C Range = C'Range
+
+
+--------------------------------------------------------------------------------
+-- Constructing new values
+--------------------------------------------------------------------------------
+
+mkFinalizer DeletePtr "deleteScalar" "cv::Scalar" ''C'Scalar
+
+instance FromPtr Scalar where
+    fromPtr = objFromPtr Scalar deleteScalar
+
+newScalar :: V4 CDouble -> IO Scalar
+newScalar (V4 x y z w) = fromPtr $
+    [CU.exp|Scalar * { new cv::Scalar( $(double x)
+                                     , $(double y)
+                                     , $(double z)
+                                     , $(double w)
+                                     )
+                     }|]
+
+mkFinalizer DeletePtr "deleteRotatedRect" "cv::RotatedRect" ''C'RotatedRect
+
+instance FromPtr RotatedRect where
+    fromPtr = objFromPtr RotatedRect deleteRotatedRect
+
+newRotatedRect
+    :: ( IsPoint2 point2 CFloat
+       , IsSize   size   CFloat
+       )
+    => point2 CFloat -- ^ Rectangle mass center
+    -> size   CFloat -- ^ Width and height of the rectangle
+    -> CFloat
+       -- ^ The rotation angle (in degrees). When the angle is 0, 90,
+       -- 180, 270 etc., the rectangle becomes an up-right rectangle.
+    -> IO RotatedRect
+newRotatedRect center size angle = fromPtr $
+    withPtr (toPoint center) $ \centerPtr ->
+    withPtr (toSize  size)   $ \sizePtr   ->
+      [CU.exp| RotatedRect * {
+          new cv::RotatedRect( *$(Point2f * centerPtr)
+                             , *$(Size2f * sizePtr)
+                             , $(float angle)
+                             )
+      }|]
+
+mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
+
+instance FromPtr TermCriteria where
+    fromPtr = objFromPtr TermCriteria deleteTermCriteria
+
+newTermCriteria
+    :: Maybe Int    -- ^ Optionally the maximum number of iterations/elements.
+    -> Maybe Double -- ^ Optionally the desired accuracy.
+    -> IO TermCriteria
+newTermCriteria mbMaxCount mbEpsilon = fromPtr $
+    [CU.exp|TermCriteria * {
+      new cv::TermCriteria( $(int32_t c'type    )
+                          , $(int32_t c'maxCount)
+                          , $(double  c'epsilon )
+                          )
+    }|]
+  where
+    c'type =   maybe 0 (const c'TERMCRITERIA_COUNT) mbMaxCount
+           .|. maybe 0 (const c'TERMCRITERIA_EPS  ) mbEpsilon
+    c'maxCount = maybe 0 fromIntegral mbMaxCount
+    c'epsilon  = maybe 0 realToFrac   mbEpsilon
+
+mkFinalizer DeletePtr "deleteRange" "cv::Range" ''C'Range
+
+instance FromPtr Range where
+    fromPtr = objFromPtr Range deleteRange
+
+newRange
+    :: Int32 -- ^ Inclusive start
+    -> Int32 -- ^ Exlusive end
+    -> IO Range
+newRange start end = fromPtr $
+    [CU.exp|Range * { new cv::Range( $(int32_t start), $(int32_t end)) }|]
+
+-- | Special 'Range' value which means "the whole sequence" or "the whole range"
+newWholeRange :: IO Range
+newWholeRange = fromPtr $
+    [CU.block|Range * {
+      cv::Range a = cv::Range::all();
+      return new cv::Range(a.start, a.end);
+    }|]
 
 --------------------------------------------------------------------------------
 -- Conversions
@@ -139,71 +234,6 @@ instance FromScalar (V4 CDouble) where
            <*> peek wPtr
 
 instance FromScalar (V4 Double) where fromScalar = fmap (realToFrac :: CDouble -> Double) . fromScalar
-
---------------------------------------------------------------------------------
--- Constructing new values
---------------------------------------------------------------------------------
-
-newScalar :: V4 CDouble -> IO Scalar
-newScalar (V4 x y z w) = fromPtr $
-    [CU.exp|Scalar * { new cv::Scalar( $(double x)
-                                     , $(double y)
-                                     , $(double z)
-                                     , $(double w)
-                                     )
-                     }|]
-
-newRotatedRect
-    :: ( IsPoint2 point2 CFloat
-       , IsSize   size   CFloat
-       )
-    => point2 CFloat -- ^ Rectangle mass center
-    -> size   CFloat -- ^ Width and height of the rectangle
-    -> CFloat
-       -- ^ The rotation angle (in degrees). When the angle is 0, 90,
-       -- 180, 270 etc., the rectangle becomes an up-right rectangle.
-    -> IO RotatedRect
-newRotatedRect center size angle = fromPtr $
-    withPtr (toPoint center) $ \centerPtr ->
-    withPtr (toSize  size)   $ \sizePtr   ->
-      [CU.exp| RotatedRect * {
-          new cv::RotatedRect( *$(Point2f * centerPtr)
-                             , *$(Size2f * sizePtr)
-                             , $(float angle)
-                             )
-      }|]
-
-newTermCriteria
-    :: Maybe Int    -- ^ Optionally the maximum number of iterations/elements.
-    -> Maybe Double -- ^ Optionally the desired accuracy.
-    -> IO TermCriteria
-newTermCriteria mbMaxCount mbEpsilon = fromPtr $
-    [CU.exp|TermCriteria * {
-      new cv::TermCriteria( $(int32_t c'type    )
-                          , $(int32_t c'maxCount)
-                          , $(double  c'epsilon )
-                          )
-    }|]
-  where
-    c'type =   maybe 0 (const c'TERMCRITERIA_COUNT) mbMaxCount
-           .|. maybe 0 (const c'TERMCRITERIA_EPS  ) mbEpsilon
-    c'maxCount = maybe 0 fromIntegral mbMaxCount
-    c'epsilon  = maybe 0 realToFrac   mbEpsilon
-
-newRange
-    :: Int32 -- ^ Inclusive start
-    -> Int32 -- ^ Exlusive end
-    -> IO Range
-newRange start end = fromPtr $
-    [CU.exp|Range * { new cv::Range( $(int32_t start), $(int32_t end)) }|]
-
--- | Special 'Range' value which means "the whole sequence" or "the whole range"
-newWholeRange :: IO Range
-newWholeRange = fromPtr $
-    [CU.block|Range * {
-      cv::Range a = cv::Range::all();
-      return new cv::Range(a.start, a.end);
-    }|]
 
 
 --------------------------------------------------------------------------------
@@ -316,39 +346,7 @@ unsafeWithArrayPtr
 unsafeWithArrayPtr arr act =
     withArrayPtr arr act >>= maybe (throwIO MarshalEmptyVectorException) pure
 
---------------------------------------------------------------------------------
-
-type instance C Scalar       = C'Scalar
-type instance C RotatedRect  = C'RotatedRect
-type instance C TermCriteria = C'TermCriteria
-type instance C Range        = C'Range
-
---------------------------------------------------------------------------------
-
 instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
 instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
 instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
 instance WithPtr Range        where withPtr = withForeignPtr . unRange
-
---------------------------------------------------------------------------------
-
-mkPlacementNewInstance ''Scalar
-
---------------------------------------------------------------------------------
-
-mkFinalizer DeletePtr "deleteScalar"       "cv::Scalar"       ''C'Scalar
-mkFinalizer DeletePtr "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
-mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
-mkFinalizer DeletePtr "deleteRange"        "cv::Range"        ''C'Range
-
-instance FromPtr Scalar where
-    fromPtr = objFromPtr Scalar deleteScalar
-
-instance FromPtr RotatedRect where
-    fromPtr = objFromPtr RotatedRect deleteRotatedRect
-
-instance FromPtr TermCriteria where
-    fromPtr = objFromPtr TermCriteria deleteTermCriteria
-
-instance FromPtr Range where
-    fromPtr = objFromPtr Range deleteRange
