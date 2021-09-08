@@ -128,7 +128,7 @@ class ( FromPtr      (Point   2 depth)
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to approximated curve points.
         -> CDouble -- ^ epsilon
-        -> CInt -- ^ is closed
+        -> CBool -- ^ is closed
         -> IO (Ptr (C CvCppException))
 
     approxPolyDP_deletePtrArray
@@ -337,7 +337,7 @@ class ( FromPtr      (Point   2 depth)
     convexHull_internal
         :: Int32 -- ^ Number of input points.
         -> Ptr (C (Point 2 depth)) -- ^ Input points array.
-        -> CInt -- ^ Orientation flag.
+        -> CBool -- ^ Orientation flag.
         -> Ptr (Ptr (Ptr (C (Point 2 depth))))
            -- ^ Array of pointers to hull points.
         -> Ptr Int32 -- ^ Size of convex hull.
@@ -464,7 +464,7 @@ class ( FromPtr      (Point   2 depth)
     convexHullIndices_internal
         :: Int32 -- ^ Number of input points.
         -> Ptr (C (Point 2 depth)) -- ^ Input points array.
-        -> CInt -- ^ Orientation flag.
+        -> CBool -- ^ Orientation flag.
         -> Ptr (Ptr Int32) -- ^ Array of convex hull indices.
         -> Ptr Int32 -- ^ Size of convex hull indices.
         -> IO (Ptr (C CvCppException))
