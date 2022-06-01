@@ -102,6 +102,28 @@ newtype TermCriteria = TermCriteria {unTermCriteria :: ForeignPtr (C TermCriteri
 -- <http://docs.opencv.org/3.0-last-rst/modules/core/doc/basic_structures.html#range OpenCV Sphinx doc>
 newtype Range = Range {unRange :: ForeignPtr (C Range)}
 
+--------------------------------------------------------------------------------
+
+mkPlacementNewInstance ''Scalar
+
+--------------------------------------------------------------------------------
+
+mkFinalizer DeletePtr "deleteScalar"       "cv::Scalar"       ''C'Scalar
+mkFinalizer DeletePtr "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
+mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
+mkFinalizer DeletePtr "deleteRange"        "cv::Range"        ''C'Range
+
+instance FromPtr Scalar where
+    fromPtr = objFromPtr Scalar deleteScalar
+
+instance FromPtr RotatedRect where
+    fromPtr = objFromPtr RotatedRect deleteRotatedRect
+
+instance FromPtr TermCriteria where
+    fromPtr = objFromPtr TermCriteria deleteTermCriteria
+
+instance FromPtr Range where
+    fromPtr = objFromPtr Range deleteRange
 
 --------------------------------------------------------------------------------
 -- Conversions
@@ -329,26 +351,3 @@ instance WithPtr Scalar       where withPtr = withForeignPtr . unScalar
 instance WithPtr RotatedRect  where withPtr = withForeignPtr . unRotatedRect
 instance WithPtr TermCriteria where withPtr = withForeignPtr . unTermCriteria
 instance WithPtr Range        where withPtr = withForeignPtr . unRange
-
---------------------------------------------------------------------------------
-
-mkPlacementNewInstance ''Scalar
-
---------------------------------------------------------------------------------
-
-mkFinalizer DeletePtr "deleteScalar"       "cv::Scalar"       ''C'Scalar
-mkFinalizer DeletePtr "deleteRotatedRect"  "cv::RotatedRect"  ''C'RotatedRect
-mkFinalizer DeletePtr "deleteTermCriteria" "cv::TermCriteria" ''C'TermCriteria
-mkFinalizer DeletePtr "deleteRange"        "cv::Range"        ''C'Range
-
-instance FromPtr Scalar where
-    fromPtr = objFromPtr Scalar deleteScalar
-
-instance FromPtr RotatedRect where
-    fromPtr = objFromPtr RotatedRect deleteRotatedRect
-
-instance FromPtr TermCriteria where
-    fromPtr = objFromPtr TermCriteria deleteTermCriteria
-
-instance FromPtr Range where
-    fromPtr = objFromPtr Range deleteRange

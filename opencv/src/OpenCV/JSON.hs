@@ -28,6 +28,10 @@ import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
 
 --------------------------------------------------------------------------------
 
+deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
+
+--------------------------------------------------------------------------------
+
 newtype J a = J {unJ :: a}
 
 instance (ToJSON a) => ToJSON (J (V2 a)) where
@@ -115,7 +119,3 @@ instance FromJSON HElems where
                     "USR" -> HElems_USRTYPE1 <$> (mapM (either fail pure . B64.decode . TE.encodeUtf8) =<< elems)
 #endif
                     _ -> fail $ "Unknown Helems type " <> T.unpack typ
-
---------------------------------------------------------------------------------
-
-deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
