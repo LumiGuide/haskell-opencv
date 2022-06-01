@@ -63,6 +63,8 @@ IsoJSON(Point3d, J (V3 Double), J . fmap realToFrac . fromPoint, toPoint . fmap 
 IsoJSON(Size2i , J (V2 Int32 ), J .                   fromSize , toSize                    . unJ)
 IsoJSON(Size2f , J (V2 Float ), J . fmap realToFrac . fromSize , toSize  . fmap realToFrac . unJ)
 
+deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
+
 instance ToJSON (Mat shape channels depth) where
     toJSON = toJSON . matToHMat
 
@@ -118,4 +120,3 @@ instance FromJSON HElems where
 
 --------------------------------------------------------------------------------
 
-deriveJSON defaultOptions {fieldLabelModifier = drop 2} ''HMat
