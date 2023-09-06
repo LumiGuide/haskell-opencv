@@ -187,7 +187,7 @@ arcLength curve isClosed
                           );
         |]
     where
-      c'isClosed = fromBool isClosed
+      c'isClosed = fromBool isClosed :: CBool
       c'numCurvePoints = fromIntegral $ V.length curve
 
 {- | Calculates a contour area.
@@ -226,7 +226,7 @@ contourArea contour areaOriented
         ContourAreaOriented -> True
         ContourAreaAbsoluteValue -> False
     c'numPoints = fromIntegral $ V.length contour
-    c'oriented = fromBool oriented
+    c'oriented = fromBool oriented :: CBool
 
 {- | Finds the convexity defects of a contour.
 
@@ -578,4 +578,4 @@ pointPolygonTest contour pt measureDist
           |]
   where
     c'numPoints = fromIntegral $ V.length contour
-    c'measureDist = fromBool measureDist
+    c'measureDist = fromBool measureDist :: CBool

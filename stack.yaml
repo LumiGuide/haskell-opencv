@@ -4,7 +4,12 @@ packages:
 - opencv-examples/
 - opencv-extra/
 - opencv-extra-examples/
-flags: {}
+
+# To test unfree modules such as SIFT and SURF:
+# flags:
+#   opencv-extra:
+#     enable-nonfree: true
+
 allow-newer: true
 
 extra-lib-dirs:

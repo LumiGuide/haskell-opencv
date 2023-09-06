@@ -40,6 +40,11 @@ source-repository head
 
 flag opencv4
     description: Use OpenCV >= 4.0.0
+    default: True
+    manual: True
+
+flag enable-nonfree
+    description: Builds modules that only work if the system OpenCV was built with the OPENCV_ENABLE_NONFREE option (most OpenCV installations lack this by default).
     default: False
     manual: True
 
@@ -102,7 +107,6 @@ library
         OpenCV.Extra
         OpenCV.Extra.ArUco
         OpenCV.Extra.Bgsegm
-        OpenCV.Extra.XFeatures2d
         OpenCV.Extra.Tracking
         OpenCV.Extra.XImgProc
         OpenCV.Extra.XPhoto
@@ -111,6 +115,12 @@ library
         OpenCV.Extra.Internal.C.Inline
         OpenCV.Extra.Internal.C.Types
         OpenCV.Extra.Internal.XImgProc.Constants
+
+    if flag(enable-nonfree)
+        exposed-modules:
+            OpenCV.Extra.XFeatures2d
+        ghc-options:
+            -DHASKELL_OPENCV_ENABLE_NONFREE
 
     default-extensions:
         BangPatterns

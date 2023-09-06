@@ -63,6 +63,7 @@ C.context openCvExtraCtx
 
 C.include "opencv2/aruco.hpp"
 C.include "opencv2/aruco/charuco.hpp"
+C.include "opencv2/calib3d.hpp"
 C.include "opencv2/core.hpp"
 C.include "iostream"
 C.include "aruco.hpp"
@@ -254,7 +255,7 @@ drawEstimatedPose cameraMatrix distCoeffs (rvec, tvec) image = unsafePrimToPrim 
       withPtr rvec $ \rvecPtr ->
       withPtr tvec $ \tvecPtr ->
       [C.block| void {
-        drawAxis
+        drawFrameAxes
           ( *$(Mat * imagePtr)
           , *$(Matx33d * c'cameraMatrix)
           , *$(Matx51d * c'distCoeffs)

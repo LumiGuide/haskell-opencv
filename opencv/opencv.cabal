@@ -45,7 +45,7 @@ source-repository head
 
 flag opencv4
     description: Use OpenCV >= 4.0.0
-    default: False
+    default: True
     manual: True
 
 flag internal-documentation

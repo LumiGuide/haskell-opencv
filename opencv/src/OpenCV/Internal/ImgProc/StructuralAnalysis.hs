@@ -114,7 +114,7 @@ approxPolyDP curve epsilon isClosed
             approxSizePtr
             approxPtrPtr
             (toCDouble epsilon)
-            (fromIntegral (fromBool isClosed))
+            (fromBool isClosed)
 
 -- | Internal class used to overload the 'approxPolyDP' depth.
 class ( FromPtr      (Point   2 depth)
@@ -322,7 +322,7 @@ convexHull points clockwise
           convexHull_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromIntegral (fromBool clockwise))
+            (fromBool clockwise)
             hullPointsPtrPtr
             hullSizePtr
   where
@@ -449,7 +449,7 @@ convexHullIndices points clockwise
           convexHullIndices_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromIntegral (fromBool clockwise))
+            (fromBool clockwise)
             hullIndicesPtrPtr
             hullSizePtr
   where
