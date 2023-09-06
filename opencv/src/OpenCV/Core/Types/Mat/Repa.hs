@@ -17,6 +17,7 @@ module OpenCV.Core.Types.Mat.Repa
     , toRepa
     ) where
 
+import "base" Data.Kind ( Type )
 import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Word
@@ -57,7 +58,7 @@ C.using "namespace cv"
 -- | Representation tag for Repa @'Repa.Array's@ for OpenCV @'Mat's@.
 data M (shape :: [DS Nat]) (channels :: Nat)
 
-type family DIM (n :: Nat) :: * where
+type family DIM (n :: Nat) :: Type where
     DIM 0 = Repa.Z
     DIM n = DIM (n-1) :. Int
 
@@ -67,9 +68,9 @@ type family DIM (n :: Nat) :: * where
 toRepa
     :: forall (shape    :: [DS Nat])
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
               (dims     :: Nat)
-              (sh       :: *)
+              (sh       :: Type)
      . ( Storable depth
        , KnownNat channels
        , KnownNat dims

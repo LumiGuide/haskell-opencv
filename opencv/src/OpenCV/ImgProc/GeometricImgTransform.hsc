@@ -374,7 +374,7 @@ linearPolarImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
     => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 linearPolarImg = exceptError $
@@ -452,7 +452,7 @@ logPolarImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
     => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 logPolarImg = exceptError $
@@ -587,7 +587,7 @@ remapImg
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConstant black)
@@ -671,7 +671,7 @@ undistortImg
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 undistortImg = undistort birds_512x341 intrinsics coefficients

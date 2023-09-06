@@ -72,6 +72,7 @@ module OpenCV.Core.Types.Mat
     , ValidChannels'
     ) where
 
+import "base" Data.Kind ( Type )
 import "base" Control.Monad.ST ( runST )
 import "base" Data.Int ( Int32 )
 import "base" Data.Foldable ( for_ )
@@ -347,7 +348,7 @@ matCopyToM dstM (V2 x y) src mbSrcMask =
 
 -- |Transforms a given list of matrices of equal shape, channels, and depth,
 -- by folding the given function over all matrix elements at each position.
-foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
+foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: Type) a
          . ( Storable depth
            , Storable a
            , All IsStatic shape

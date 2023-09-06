@@ -35,7 +35,7 @@ import qualified "bytestring" Data.ByteString as B
 import qualified "bytestring" Data.ByteString.Lazy as BL
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Syntax
-import "this" Language.Haskell.Meta.Syntax.Translate ( toDecs )
+import "haskell-src-meta" Language.Haskell.Meta.Syntax.Translate ( toDecs )
 
 #if !MIN_VERSION_base(4,11,0)
 import "base" Data.Monoid
@@ -269,7 +269,7 @@ mkRenderExampleImages renderTargets = [d|
   where
     doRender :: Exp
     doRender =
-        DoE $ do
+        DoE Nothing $ do
           rt <- renderTargets
           let sym = VarE $ rtSymbolName rt
               fp  = LitE $ StringL $ "examples/" <> rtDestination rt

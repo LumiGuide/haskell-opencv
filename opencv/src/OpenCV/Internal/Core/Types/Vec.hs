@@ -11,6 +11,7 @@ module OpenCV.Internal.Core.Types.Vec
     , IsVec(..)
     ) where
 
+import "base" Data.Kind ( Type )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" GHC.TypeLits
 import "linear" Linear ( V2, V3, V4 )
@@ -18,7 +19,7 @@ import "this" OpenCV.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
-newtype Vec (dim :: Nat) (depth :: *)
+newtype Vec (dim :: Nat) (depth :: Type)
       = Vec {unVec :: ForeignPtr (C'Vec dim depth)}
 
 type instance C (Vec dim depth) = C'Vec dim depth
@@ -26,7 +27,7 @@ type instance C (Vec dim depth) = C'Vec dim depth
 instance WithPtr (Vec dim depth) where
     withPtr = withForeignPtr . unVec
 
-type family VecDim (v :: * -> *) :: Nat
+type family VecDim (v :: Type -> Type) :: Nat
 
 type instance VecDim (Vec dim) = dim
 
@@ -34,7 +35,7 @@ type instance VecDim V2 = 2
 type instance VecDim V3 = 3
 type instance VecDim V4 = 4
 
-class IsVec (v :: * -> *) (depth :: *)  where
+class IsVec (v :: Type -> Type) (depth :: Type)  where
     toVec   :: v depth -> Vec (VecDim v) depth
     fromVec :: Vec (VecDim v) depth -> v depth
 

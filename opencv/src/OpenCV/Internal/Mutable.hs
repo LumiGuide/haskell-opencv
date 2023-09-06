@@ -10,12 +10,13 @@ module OpenCV.Internal.Mutable
   , FreezeThaw(..)
   ) where
 
+import "base" Data.Kind ( Type )
 import "primitive" Control.Monad.Primitive ( PrimMonad, PrimState )
 
 -- | Wrapper for mutable values
 newtype Mut a s = Mut { unMut :: a }
 
-type family Mutable (a :: *) :: * -> *
+type family Mutable (a :: Type) :: Type -> Type
 
 class FreezeThaw a where
     freeze :: (PrimMonad m) => Mutable a (PrimState m) -> m a

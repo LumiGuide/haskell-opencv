@@ -202,7 +202,6 @@ test-suite doc-images-opencv
     main-is: images.hs
     other-modules:
         ExampleExtractor
-        Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
     ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     build-depends:
@@ -213,6 +212,7 @@ test-suite doc-images-opencv
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
       , haskell-src-exts  >= 1.21.0
+      , haskell-src-meta  >= 0.8.3
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , opencv

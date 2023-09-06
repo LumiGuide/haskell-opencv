@@ -222,7 +222,7 @@ orbDetectAndComputeImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 orbDetectAndComputeImg = exceptError $ do
@@ -650,7 +650,7 @@ bfMatcherImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
        , width2 ~ (*) width 2
        )
@@ -770,7 +770,7 @@ fbMatcherImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
        , width2 ~ (*) width 2
        )

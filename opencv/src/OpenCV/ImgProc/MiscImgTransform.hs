@@ -34,6 +34,7 @@ module OpenCV.ImgProc.MiscImgTransform
 
 import "base" Data.Bits
 import "base" Data.Int
+import "base" Data.Kind ( Type )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
 import "base" Foreign.Marshal.Alloc ( alloca )
@@ -116,7 +117,7 @@ cvtColorImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ (width + width)
        )
@@ -156,8 +157,8 @@ cvtColor :: forall (fromColor   :: ColorCode)
                    (shape       :: DS [DS Nat])
                    (srcChannels :: DS Nat)
                    (dstChannels :: DS Nat)
-                   (srcDepth    :: DS *)
-                   (dstDepth    :: DS *)
+                   (srcDepth    :: DS Type)
+                   (dstDepth    :: DS Type)
                    m
           . ( ColorConversion fromColor toColor
             , ColorCodeMatchesChannels fromColor srcChannels
@@ -198,7 +199,7 @@ floodFillImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_768x512
        , width2 ~ (width + width)
        )

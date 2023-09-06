@@ -151,7 +151,7 @@ goodFeaturesToTrackTraces
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 goodFeaturesToTrackTraces = exceptError $ do
@@ -272,7 +272,7 @@ houghCircleTraces
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Circles_1000x625)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 houghCircleTraces = exceptError $ do
@@ -390,7 +390,7 @@ houghLinesPTraces
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Building_868x600)
   => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 houghLinesPTraces = exceptError $ do

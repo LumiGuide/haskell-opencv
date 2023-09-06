@@ -15,6 +15,7 @@ module OpenCV.Internal.Core.Types.Mat.ToFrom
   , FromMat(..)
   ) where
 
+import           "base" Data.Kind ( Type )
 import           "base" Data.Proxy ( Proxy(..) )
 import           "base" Foreign.Storable ( Storable )
 import           "base" GHC.TypeLits
@@ -48,9 +49,9 @@ C.using "namespace cv"
 
 --------------------------------------------------------------------------------
 
-type family MatShape    (a :: *) :: DS [DS Nat]
-type family MatChannels (a :: *) :: DS Nat
-type family MatDepth    (a :: *) :: DS *
+type family MatShape    (a :: Type) :: DS [DS Nat]
+type family MatChannels (a :: Type) :: DS Nat
+type family MatDepth    (a :: Type) :: DS Type
 
 type instance MatShape    (Mat shape channels depth) = shape
 type instance MatChannels (Mat shape channels depth) = channels
