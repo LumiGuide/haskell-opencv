@@ -21,11 +21,6 @@ import "this" OpenCV.Core.Types.Mat.HMat
 import "this" OpenCV.TypeLevel
 import "transformers" Control.Monad.Trans.Except
 
-#ifndef OPENCV4
-import qualified "base64-bytestring" Data.ByteString.Base64 as B64 ( encode, decode )
-import qualified "text" Data.Text.Encoding as TE ( encodeUtf8, decodeUtf8 )
-#endif
-
 --------------------------------------------------------------------------------
 
 newtype J a = J {unJ :: a}
@@ -91,9 +86,6 @@ instance ToJSON HElems where
         HElems_32S      v -> f "32S" v
         HElems_32F      v -> f "32F" v
         HElems_64F      v -> f "64F" v
-#ifndef OPENCV4
-        HElems_USRTYPE1 v -> f "USR" $ fmap (TE.decodeUtf8 . B64.encode) v
-#endif
       where
         f :: (ToJSON a) => Text -> a -> Value
         f typ v = object [ "type"  .= typ
@@ -113,9 +105,6 @@ instance FromJSON HElems where
                     "32S" -> HElems_32S      <$> elems
                     "32F" -> HElems_32F      <$> elems
                     "64F" -> HElems_64F      <$> elems
-#ifndef OPENCV4
-                    "USR" -> HElems_USRTYPE1 <$> (mapM (either fail pure . B64.decode . TE.encodeUtf8) =<< elems)
-#endif
                     _ -> fail $ "Unknown Helems type " <> T.unpack typ
 
 --------------------------------------------------------------------------------

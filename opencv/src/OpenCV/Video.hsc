@@ -35,9 +35,7 @@ C.using "namespace cv"
 
 --------------------------------------------------------------------------------
 
-#ifdef OPENCV4
 {-# DEPRECATED estimateRigidTransform "Use estimateAffine2D or estimateAffinePartial2D instead" #-}
-#endif
 
 -- | Computes an optimal affine transformation between two 2D point sets
 --

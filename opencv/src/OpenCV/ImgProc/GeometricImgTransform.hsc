@@ -91,9 +91,7 @@ C.context openCvCtx
 
 C.include "opencv2/core.hpp"
 C.include "opencv2/imgproc.hpp"
-#ifdef OPENCV4
 C.include "opencv2/calib3d.hpp"
-#endif
 C.using "namespace cv"
 
 #include <bindings.dsl.h>

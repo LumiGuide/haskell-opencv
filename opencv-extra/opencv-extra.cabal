@@ -38,11 +38,6 @@ source-repository head
   location: git://github.com/LumiGuide/haskell-opencv.git
   subdir:   opencv-extra
 
-flag opencv4
-    description: Use OpenCV >= 4.0.0
-    default: True
-    manual: True
-
 flag enable-nonfree
     description: Builds modules that only work if the system OpenCV was built with the OPENCV_ENABLE_NONFREE option (most OpenCV installations lack this by default).
     default: False
@@ -80,10 +75,7 @@ library
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
 
-    if flag(opencv4)
-        pkgconfig-depends: opencv4 >= 4.0.0
-    else
-        pkgconfig-depends: opencv >= 3.0.0
+    pkgconfig-depends: opencv4 >= 4.0.0
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION

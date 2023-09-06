@@ -28,9 +28,6 @@ data Depth =
    | Depth_32S
    | Depth_32F
    | Depth_64F
-#ifndef OPENCV4
-   | Depth_USRTYPE1
-#endif
      deriving (Bounded, Enum, Eq, Show)
 
 --------------------------------------------------------------------------------

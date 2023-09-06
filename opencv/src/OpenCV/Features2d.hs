@@ -197,11 +197,7 @@ newOrb OrbParams{..} = fromPtr
         , $(int32_t orb_edgeThreshold)
         , $(int32_t orb_firstLevel)
         , $(int32_t c'WTA_K)
-#ifdef OPENCV4
         , cv::ORB::ScoreType($(int32_t c'scoreType))
-#else
-        , $(int32_t c'scoreType)
-#endif
         , $(int32_t orb_patchSize)
         , $(int32_t orb_fastThreshold)
         );

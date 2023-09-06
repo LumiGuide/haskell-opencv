@@ -335,11 +335,7 @@ houghCircles dp minDist param1 param2 minRadius maxRadius src = unsafeWrapExcept
         cv::HoughCircles(
           *$(Mat * srcPtr),
           circles,
-#ifdef OPENCV4
           HOUGH_GRADIENT,
-#else
-          CV_HOUGH_GRADIENT,
-#endif
           $(double c'dp),
           $(double c'minDist),
           $(double c'param1),
