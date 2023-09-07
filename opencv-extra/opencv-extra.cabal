@@ -49,7 +49,11 @@ flag internal-documentation
     manual: True
 
 custom-setup
-    setup-depends: base, Cabal >= 1.23
+    setup-depends:
+        base,
+        Cabal >= 1.23,
+        lens,
+        process
 
 library
     hs-source-dirs: src
