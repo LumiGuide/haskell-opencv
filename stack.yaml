@@ -1,4 +1,5 @@
-resolver: lts-20.26
+resolver: lts-20.26 # ghc-9.2.8
+# resolver: lts-20.11 # ghc-9.2.5
 packages:
 - opencv/
 - opencv-examples/
@@ -12,12 +13,14 @@ packages:
 
 allow-newer: true
 
-extra-lib-dirs:
-- /usr/local/lib
-
 nix:
-  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/8d1510abfb592339e13ce8f6db6f29c1f8b72924.tar.gz" ]
-  packages: [ zlib pkgconfig opencv3 ]
+  path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/da5adce0ffaff10f6d0fee72a02a5ed9d01b52fc.tar.gz" ] # nixos-22.11 with opencv4-4.7, and providing ghc-9.2.8
+  # path: [ "nixpkgs=https://github.com/NixOS/nixpkgs/archive/ea4c80b39be4c09702b0cb3b42eab59e2ba4f24b.tar.gz" ] # nixos-22.11 with opencv4-4.6, and providing ghc-9.2.5
+  packages:
+  - zlib
+  - gmp
+  - pkg-config
+  - opencv4
 
 # Uncomment if you wish to use Docker integration
 # See README.md for further information.
