@@ -64,7 +64,7 @@ approxHandContourImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 approxHandContourImg = do
@@ -114,7 +114,7 @@ approxPolyDP curve epsilon isClosed
             approxSizePtr
             approxPtrPtr
             (toCDouble epsilon)
-            (fromIntegral (fromBool isClosed))
+            (fromBool isClosed)
 
 -- | Internal class used to overload the 'approxPolyDP' depth.
 class ( FromPtr      (Point   2 depth)
@@ -271,7 +271,7 @@ handConvexHullImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 handConvexHullImg = do
@@ -322,7 +322,7 @@ convexHull points clockwise
           convexHull_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromIntegral (fromBool clockwise))
+            (fromBool clockwise)
             hullPointsPtrPtr
             hullSizePtr
   where
@@ -449,7 +449,7 @@ convexHullIndices points clockwise
           convexHullIndices_internal
             (fromIntegral $ V.length points)
             pointsPtr
-            (fromIntegral (fromBool clockwise))
+            (fromBool clockwise)
             hullIndicesPtrPtr
             hullSizePtr
   where

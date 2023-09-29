@@ -11,6 +11,7 @@
 
 module OpenCV.Internal.ImgProc.MiscImgTransform.ColorCodes where
 
+import "base" Data.Kind ( Type )
 import "base" Data.Int ( Int32 )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word
@@ -535,7 +536,7 @@ class ColorCodeMatchesChannels (code :: ColorCode) (channels :: DS Nat)
 instance ColorCodeMatchesChannels code 'D
 instance (ColorCodeChannels code ~ channels) => ColorCodeMatchesChannels code ('S channels)
 
-type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDepth :: DS *) :: DS * where
+type family ColorCodeDepth (srcCode :: ColorCode) (dstCode :: ColorCode) (srcDepth :: DS Type) :: DS Type where
   ColorCodeDepth 'BGR     'BGRA       ('S depth)  = 'S depth
   ColorCodeDepth 'RGB     'BGRA       ('S depth)  = 'S depth
   ColorCodeDepth 'BGRA    'BGR        ('S depth)  = 'S depth

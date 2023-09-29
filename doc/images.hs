@@ -5,9 +5,12 @@
 
 module Main where
 
+-- These imports are the ones used when parsing haddock examples.
+
 import "base" Data.Functor ( void )
 import "base" Data.Foldable ( for_ )
 import "base" Data.Int
+import "base" Data.Kind ( Type )
 import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Traversable

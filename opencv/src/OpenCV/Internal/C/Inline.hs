@@ -33,7 +33,7 @@ openCvCtx = C.cppCtx <> C.bsCtx <> C.vecCtx <> ctx
 
 openCvTypesTable :: C.TypesTable
 openCvTypesTable = M.fromList
-  [ ( C.TypeName "bool"        , [t| C.CInt        |] )
+  [ ( C.TypeName "bool"        , [t| C.CBool       |] )
 
   , ( C.TypeName "Exception"   , [t| C'CvCppException |] )
 

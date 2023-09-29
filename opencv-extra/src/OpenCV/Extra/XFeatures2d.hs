@@ -47,6 +47,8 @@ import qualified "vector" Data.Vector as V
 C.context openCvExtraCtx
 
 C.include "opencv2/core.hpp"
+-- Note that `opencv2/xfeatures2d.hpp` does not exist in many OpenCV installations
+-- because it requires the `OPENCV_ENABLE_NONFREE` option (SIFT and SURF are patented).
 C.include "opencv2/xfeatures2d.hpp"
 C.include "xfeatures/surf.hpp"
 C.include "xfeatures/sift.hpp"
@@ -216,8 +218,8 @@ surfDetectAndCompute surf img mbMask = unsafeWrapException $ do
 -- SIFT - Scale-Invariant Feature Transform
 --------------------------------------------------------------------------------
 
--- Internally, an Sift is a pointer to a @cv::Ptr<cv::xfeatures2d::SIFT>@, which in turn points
--- to an actual @cv::xfeatures2d::SIFT@ object.
+-- Internally, an Sift is a pointer to a @cv::Ptr<cv::SIFT>@, which in turn points
+-- to an actual @cv::SIFT@ object.
 newtype Sift = Sift {unSift :: ForeignPtr C'Ptr_SIFT}
 
 type instance C Sift = C'Ptr_SIFT
@@ -227,7 +229,7 @@ instance WithPtr Sift where
 
 mkFinalizer ReleaseDeletePtr
             "deleteSift"
-            "cv::Ptr<cv::xfeatures2d::SIFT>"
+            "cv::Ptr<cv::SIFT>"
             ''C'Ptr_SIFT
 
 instance FromPtr Sift where fromPtr = objFromPtr Sift deleteSift
@@ -264,15 +266,15 @@ defaultSiftParams =
 newSift :: SiftParams -> IO Sift
 newSift SiftParams{..} = fromPtr
     [CU.block|Ptr_SIFT * {
-      cv::Ptr<cv::xfeatures2d::SIFT> siftPtr =
-        cv::xfeatures2d::SIFT::create
+      cv::Ptr<cv::SIFT> siftPtr =
+        cv::SIFT::create
         ( $(int32_t sift_nFeatures)
         , $(int32_t sift_nOctaveLayers)
         , $(double  c'contrastThreshold)
         , $(double  c'edgeThreshold)
         , $(double  c'sigma)
         );
-      return new cv::Ptr<cv::xfeatures2d::SIFT>(siftPtr);
+      return new cv::Ptr<cv::SIFT>(siftPtr);
     }|]
   where
     c'contrastThreshold = realToFrac sift_contrastThreshold
@@ -326,7 +328,7 @@ siftDetectAndCompute sift img mbMask = unsafeWrapException $ do
       alloca $ \(numPtsPtr :: Ptr C.CSize) ->
       alloca $ \(arrayPtrPtr :: Ptr (Ptr (Ptr C'KeyPoint))) -> mask_ $ do
         ptrException <- [cvExcept|
-          cv::xfeatures2d::SIFT * sift = *$(Ptr_SIFT * siftPtr);
+          cv::SIFT * sift = *$(Ptr_SIFT * siftPtr);
           cv::Mat * maskPtr = $(Mat * maskPtr);
 
           std::vector<cv::KeyPoint> keypoints = std::vector<cv::KeyPoint>();

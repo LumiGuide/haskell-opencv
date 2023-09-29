@@ -556,7 +556,7 @@ findHomographyImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        )
     => Mat (ShapeT ['S height, 'D]) ('S channels) ('S depth)

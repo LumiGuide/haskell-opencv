@@ -38,8 +38,8 @@ source-repository head
   location: git://github.com/LumiGuide/haskell-opencv.git
   subdir:   opencv-extra
 
-flag opencv4
-    description: Use OpenCV >= 4.0.0
+flag enable-nonfree
+    description: Builds modules that only work if the system OpenCV was built with the OPENCV_ENABLE_NONFREE option (most OpenCV installations lack this by default).
     default: False
     manual: True
 
@@ -49,7 +49,11 @@ flag internal-documentation
     manual: True
 
 custom-setup
-    setup-depends: base, Cabal >= 1.23
+    setup-depends:
+        base,
+        Cabal >= 1.23,
+        lens,
+        process
 
 library
     hs-source-dirs: src
@@ -75,10 +79,7 @@ library
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
 
-    if flag(opencv4)
-        pkgconfig-depends: opencv4 >= 4.0.0
-    else
-        pkgconfig-depends: opencv >= 3.0.0
+    pkgconfig-depends: opencv4 >= 4.0.0
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
@@ -102,7 +103,6 @@ library
         OpenCV.Extra
         OpenCV.Extra.ArUco
         OpenCV.Extra.Bgsegm
-        OpenCV.Extra.XFeatures2d
         OpenCV.Extra.Tracking
         OpenCV.Extra.XImgProc
         OpenCV.Extra.XPhoto
@@ -111,6 +111,12 @@ library
         OpenCV.Extra.Internal.C.Inline
         OpenCV.Extra.Internal.C.Types
         OpenCV.Extra.Internal.XImgProc.Constants
+
+    if flag(enable-nonfree)
+        exposed-modules:
+            OpenCV.Extra.XFeatures2d
+        ghc-options:
+            -DHASKELL_OPENCV_ENABLE_NONFREE
 
     default-extensions:
         BangPatterns
@@ -134,7 +140,6 @@ test-suite doc-images-opencv-extra
     main-is: images.hs
     other-modules:
         ExampleExtractor
-        Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
     ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     cpp-options: -DHAVE_OPENCV_EXTRA
@@ -146,6 +151,7 @@ test-suite doc-images-opencv-extra
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
       , haskell-src-exts  >= 1.18.2
+      , haskell-src-meta  >= 0.8.3
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , opencv

@@ -75,7 +75,7 @@ cascadeClassifierArnold
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Arnold_small)
   => IO (Mat (ShapeT [height, width]) ('S channels) ('S depth))
 cascadeClassifierArnold = do

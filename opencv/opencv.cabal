@@ -43,11 +43,6 @@ source-repository head
   location: git://github.com/LumiGuide/haskell-opencv.git
   subdir:   opencv
 
-flag opencv4
-    description: Use OpenCV >= 4.0.0
-    default: False
-    manual: True
-
 flag internal-documentation
     description: Enables documentation generation for internal modules.
     default: False
@@ -80,13 +75,7 @@ library
 
     ghc-options: -Wall -fwarn-incomplete-patterns -funbox-strict-fields
 
-    if flag(opencv4)
-        cpp-options:      -DOPENCV4
-        ghc-options: -optc-DOPENCV4
-        pkgconfig-depends: opencv4 >= 4.0.0
-    else
-        pkgconfig-depends: opencv >= 3.0.0
-        build-depends: base64-bytestring >= 1.0.0.1
+    pkgconfig-depends: opencv4 >= 4.0.0
 
     if flag(internal-documentation)
         cpp-options: -DENABLE_INTERNAL_DOCUMENTATION
@@ -213,7 +202,6 @@ test-suite doc-images-opencv
     main-is: images.hs
     other-modules:
         ExampleExtractor
-        Language.Haskell.Meta.Syntax.Translate
     default-language: Haskell2010
     ghc-options: -Wall -fwarn-incomplete-patterns -threaded -funbox-strict-fields -rtsopts
     build-depends:
@@ -224,6 +212,7 @@ test-suite doc-images-opencv
       , directory         >= 1.2.2
       , Glob              >= 0.7.5
       , haskell-src-exts  >= 1.21.0
+      , haskell-src-meta  >= 0.8.3
       , JuicyPixels       >= 3.2.8.1
       , linear            >= 1.20.4
       , opencv

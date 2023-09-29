@@ -49,8 +49,8 @@ main = do
 
     w <- CV.videoCaptureGetI cap VideoCapPropFrameWidth
     h <- CV.videoCaptureGetI cap VideoCapPropFrameHeight
-    let trType = BOOSTING
-    tr <- newTracker trType -- BOOSTING MIL KFC MEDIANFLOW TLD
+    let trType = KCF
+    tr <- newTracker trType
     CV.withWindow "video1" $ \w1 ->
         loop cap (w, h, tr, trType) w1
   where
@@ -77,7 +77,7 @@ main = do
                    for_ mbTrac $ \trac ->
                      lift $ CV.rectangle
                               imgM
-                              (CV.fmapRect round trac)
+                              trac
                               white
                               2
                               CV.LineType_8

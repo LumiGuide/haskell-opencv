@@ -6,6 +6,7 @@
 
 module OpenCV.Internal.C.Types where
 
+import "base" Data.Kind ( Type )
 import "base" Foreign.C.Types
 import "base" Foreign.Ptr ( Ptr, nullPtr )
 import "base" Data.Int ( Int32 )
@@ -15,11 +16,11 @@ import "this" OpenCV.Internal.Mutable
 
 --------------------------------------------------------------------------------
 
-data C'Matx  (dimR :: Nat) (dimC :: Nat) (depth :: *)
-data C'Vec   (dim :: Nat) (depth :: *)
-data C'Point (dim :: Nat) (depth :: *)
-data C'Size  (depth :: *)
-data C'Rect  (depth :: *)
+data C'Matx  (dimR :: Nat) (dimC :: Nat) (depth :: Type)
+data C'Vec   (dim :: Nat) (depth :: Type)
+data C'Point (dim :: Nat) (depth :: Type)
+data C'Size  (depth :: Type)
+data C'Rect  (depth :: Type)
 
 type C'Matx12f = C'Matx 1 2 CFloat
 type C'Matx12d = C'Matx 1 2 CDouble
@@ -179,7 +180,7 @@ instance CSizeOf C'Mat     where cSizeOf _proxy = c'sizeof_Mat
 -- | Equivalent type in C
 --
 -- Actually a proxy type in Haskell that stands for the equivalent type in C.
-type family C (a :: *) :: *
+type family C (a :: Type) :: Type
 
 type instance C (Maybe a) = C a
 

@@ -85,6 +85,7 @@ module OpenCV.Internal.Core.Types.Mat
     , ValidChannels'
     ) where
 
+import "base" Data.Kind ( Type )
 import "base" Control.Exception ( throwIO, mask_, bracket )
 import "base" Control.Monad ( when )
 import "base" Control.Monad.IO.Class
@@ -181,7 +182,7 @@ A 1920x1080 3 channel image where each element is a single byte.
 -}
 newtype Mat (shape    :: DS [DS Nat])
             (channels :: DS Nat)
-            (depth    :: DS *)
+            (depth    :: DS Type)
       = Mat {unMat :: ForeignPtr (C (Mat shape channels depth))}
 
 type instance C (Mat shape channels depth) = C'Mat

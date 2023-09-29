@@ -1,12 +1,8 @@
-enableOpencv4 : final : previous : with final.lib; with final.haskell.lib;
+final : previous : with final.lib; with final.haskell.lib;
 let
-  handleOpencv4 = drv : if enableOpencv4 then enableCabalFlag drv "opencv4" else drv;
-
   useOpencvHighgui = drv : overrideCabal drv (_drv: {
     libraryPkgconfigDepends = [
-      (if enableOpencv4
-       then final.opencv4_highgui
-       else final.opencv3_highgui)
+      final.opencv4_highgui
     ];
   });
 
@@ -19,7 +15,7 @@ let
         ]);
       });
     in {
-      opencv = handleOpencv4 (addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
+      opencv = addBuildToolsInShell (doBenchmark (overrideCabal (super.callCabal2nix "opencv" ./opencv {}) (drv : {
         src = final.runCommand "opencv-src"
           { files = final.lib.sourceByRegex ./opencv [
               "^src$"
@@ -46,9 +42,8 @@ let
         shellHook = ''
           export hardeningDisable=bindnow
         '';
-      } // optionalAttrs enableOpencv4 {
         libraryPkgconfigDepends = [ final.opencv4 ];
-      }))));
+      })));
 
       opencv_highgui = useOpencvHighgui self.opencv;
 
@@ -73,7 +68,7 @@ let
         }))).override { opencv = self.opencv_highgui; };
 
       opencv-extra =
-        handleOpencv4 (addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
+        addBuildToolsInShell (overrideCabal (super.callCabal2nix "opencv-extra" ./opencv-extra {}) (_drv : {
           src = final.runCommand "opencv-extra-src"
             { files = final.lib.sourceByRegex ./opencv-extra [
                 "^include$"
@@ -98,11 +93,9 @@ let
           '';
           # TODO (BvD): This should be added by cabal2nix. Fix this upstream.
           libraryPkgconfigDepends = [
-            (if enableOpencv4
-             then final.opencv4
-             else final.opencv3)
+            final.opencv4
           ];
-        })));
+        }));
 
       opencv-extra_highgui = (useOpencvHighgui self.opencv-extra).override {
         opencv = self.opencv_highgui;
@@ -137,9 +130,6 @@ in  {
       haskellOverrides self super;
   };
 
-  opencv3_highgui = previous.opencv3.override {
-    enableGtk3 = !final.stdenv.isDarwin;
-  };
   opencv4_highgui = previous.opencv4.override {
     enableGtk3 = !final.stdenv.isDarwin;
   };

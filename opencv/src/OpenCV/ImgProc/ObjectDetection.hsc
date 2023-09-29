@@ -101,33 +101,12 @@ data MatchTemplateNormalisation
    | MatchTemplateNormed    -- ^ Use normalization.
    deriving (Show, Eq)
 
-#ifdef OPENCV4
 #num TM_SQDIFF
 #num TM_SQDIFF_NORMED
 #num TM_CCORR
 #num TM_CCORR_NORMED
 #num TM_CCOEFF
 #num TM_CCOEFF_NORMED
-#else
-#num CV_TM_SQDIFF
-#num CV_TM_SQDIFF_NORMED
-#num CV_TM_CCORR
-#num CV_TM_CCORR_NORMED
-#num CV_TM_CCOEFF
-#num CV_TM_CCOEFF_NORMED
-c'TM_SQDIFF        :: Num a => a
-c'TM_SQDIFF_NORMED :: Num a => a
-c'TM_CCORR         :: Num a => a
-c'TM_CCORR_NORMED  :: Num a => a
-c'TM_CCOEFF        :: Num a => a
-c'TM_CCOEFF_NORMED :: Num a => a
-c'TM_SQDIFF        = c'CV_TM_SQDIFF
-c'TM_SQDIFF_NORMED = c'CV_TM_SQDIFF_NORMED
-c'TM_CCORR         = c'CV_TM_CCORR
-c'TM_CCORR_NORMED  = c'CV_TM_CCORR_NORMED
-c'TM_CCOEFF        = c'CV_TM_CCOEFF
-c'TM_CCOEFF_NORMED = c'CV_TM_CCOEFF_NORMED
-#endif
 
 marshalMatchTemplateMethod :: MatchTemplateMethod -> Bool -> Int32
 marshalMatchTemplateMethod m n =

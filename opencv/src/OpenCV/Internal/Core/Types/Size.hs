@@ -12,13 +12,14 @@ module OpenCV.Internal.Core.Types.Size
   , IsSize(..)
   ) where
 
+import "base" Data.Kind ( Type )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "linear" Linear ( V2 )
 import "this" OpenCV.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
-newtype Size (depth :: *)
+newtype Size (depth :: Type)
       = Size {unSize :: ForeignPtr (C'Size depth)}
 
 type instance C (Size depth) = C'Size depth
@@ -26,7 +27,7 @@ type instance C (Size depth) = C'Size depth
 instance WithPtr (Size depth) where
     withPtr = withForeignPtr . unSize
 
-class IsSize (p :: * -> *) (depth :: *)  where
+class IsSize (p :: Type -> Type) (depth :: Type)  where
     toSize   :: p depth -> Size depth
     fromSize :: Size depth -> p depth
 

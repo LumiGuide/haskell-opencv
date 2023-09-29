@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds, QuasiQuotes, RecordWildCards, TemplateHaskell #-}
+{-# LANGUAGE CPP #-}
 
 module OpenCV.Extra.ArUco
   ( -- * ArUco markers
@@ -63,9 +64,15 @@ C.context openCvExtraCtx
 
 C.include "opencv2/aruco.hpp"
 C.include "opencv2/aruco/charuco.hpp"
+C.include "opencv2/calib3d.hpp"
 C.include "opencv2/core.hpp"
 C.include "iostream"
 C.include "aruco.hpp"
+
+-- Note [opencv-4.7-aruco-api-change]:
+-- OpenCV broke its Aruco API between 4.6 and 4.7.
+-- We currently support both versions using CPP `#if`s because
+-- both older and newer versions are still popuplar.
 
 C.using "namespace cv"
 C.using "namespace cv::aruco"
@@ -254,7 +261,7 @@ drawEstimatedPose cameraMatrix distCoeffs (rvec, tvec) image = unsafePrimToPrim 
       withPtr rvec $ \rvecPtr ->
       withPtr tvec $ \tvecPtr ->
       [C.block| void {
-        drawAxis
+        drawFrameAxes
           ( *$(Mat * imagePtr)
           , *$(Matx33d * c'cameraMatrix)
           , *$(Matx51d * c'distCoeffs)
@@ -454,18 +461,42 @@ createCharucoBoard squaresX squaresY squareLength markerLength dictionary =
     unsafePerformIO $
     withPtr dictionary $ \c'dictionary ->
     fromPtr $
+-- See note [opencv-4.7-aruco-api-change].
+--
+-- OpenCV < 4.7 uses `CharucoBoard::create()`, newer versions
+-- use the `CharucoBoard()` constructor.
+--
+-- Unfortunately `inline-c` does not support C++ `#if`s, otherwise
+-- this could be done a bit simpler via e.g.
+--     #if (CV_VERSION_MAJOR <= 4 && CV_VERSION_MINOR < 7)
+-- instead of the logic that generates the below macro from
+-- our `Setup.hs` hook.
+#if SETUP_HS_OPENCV4_VERSION_IS_AT_LEAST(4,7,0)
     [C.block| Ptr_CharucoBoard * {
       return
-        new Ptr<CharucoBoard>
-            ( CharucoBoard::create
-                ( $(int c'squaresX)
-                , $(int c'squaresY)
-                , $(double c'squareLength)
-                , $(double c'markerLength)
-                , *$(Ptr_Dictionary * c'dictionary)
-                )
-            );
+        new Ptr<CharucoBoard>(
+          new CharucoBoard
+            ( Size( $(int c'squaresX) , $(int c'squaresY) )
+            , $(float c'squareLength)
+            , $(float c'markerLength)
+            , **$(Ptr_Dictionary * c'dictionary)
+            )
+        );
     }|]
+#else
+    [C.block| Ptr_CharucoBoard * {
+      return
+        new Ptr<CharucoBoard>(
+          CharucoBoard::create
+            ( $(int c'squaresX)
+            , $(int c'squaresY)
+            , $(float c'squareLength)
+            , $(float c'markerLength)
+            , *$(Ptr_Dictionary * c'dictionary)
+            )
+        );
+    }|]
+#endif
   where
     c'squaresX = fromIntegral squaresX
     c'squaresY = fromIntegral squaresY
@@ -538,9 +569,20 @@ getPredefinedDictionary :: PredefinedDictionaryName -> Dictionary
 getPredefinedDictionary name =
     unsafePerformIO $
     fromPtr $
+-- See note [opencv-4.7-aruco-api-change].
+--
+-- In OpenCV < 4.7, `getPredefinedDictionary()` returns a `Ptr<Dictionary>`,
+-- in newer versions it returns a `Dictionary`.
+#if SETUP_HS_OPENCV4_VERSION_IS_AT_LEAST(4,7,0)
+    [C.block| Ptr_Dictionary * {
+      const Dictionary dict = getPredefinedDictionary($(int32_t c'name));
+      return new Ptr<Dictionary>(makePtr<Dictionary>(dict));
+    }|]
+#else
     [C.block| Ptr_Dictionary * {
       return new Ptr<Dictionary>(getPredefinedDictionary($(int32_t c'name)));
     }|]
+#endif
   where
     c'name :: Int32
     c'name = marshalPredefinedDictionaryName name
@@ -577,11 +619,23 @@ drawCharucoBoard charucoBoard width height = unsafePerformIO $ do
     dst <- newEmptyMat
     withPtr charucoBoard $ \c'board ->
       withPtr dst $ \dstPtr ->
+-- See note [opencv-4.7-aruco-api-change].
+--
+-- In OpenCV < 4.7, `draw()` draws the board,
+-- in newer versions it's `generateImage()`.
+#if SETUP_HS_OPENCV4_VERSION_IS_AT_LEAST(4,7,0)
+        [C.block| void {
+          Mat & board = * $(Mat * dstPtr);
+          Ptr<CharucoBoard> & charucoBoard = *$(Ptr_CharucoBoard * c'board);
+          charucoBoard->generateImage(cv::Size($(int32_t w), $(int32_t h)), board);
+        }|]
+#else
         [C.block| void {
           Mat & board = * $(Mat * dstPtr);
           Ptr<CharucoBoard> & charucoBoard = *$(Ptr_CharucoBoard * c'board);
           charucoBoard->draw(cv::Size($(int32_t w), $(int32_t h)), board);
         }|]
+#endif
     pure (unsafeCoerceMat dst)
   where
     w = toInt32 width
