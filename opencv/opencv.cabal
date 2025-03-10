@@ -68,7 +68,7 @@ library
         termcriteria.hpp
         video_motion_analysis.hpp
 
-    cxx-options: -std=c++11
+    cxx-options: -std=c++11 -fpermissive 
 
     if os(darwin)
       extra-libraries: c++

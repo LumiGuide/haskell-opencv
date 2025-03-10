@@ -1,6 +1,7 @@
 {-# language TemplateHaskell #-}
 {-# language QuasiQuotes #-}
 {-# language RecordWildCards #-}
+{-# language CPP #-}
 
 module OpenCV.Features2d
     ( -- * ORB
