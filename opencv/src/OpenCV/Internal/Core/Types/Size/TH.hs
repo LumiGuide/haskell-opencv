@@ -11,7 +11,6 @@ module OpenCV.Internal.Core.Types.Size.TH
   ) where
 
 import "base" Data.List ( intercalate )
-import "base" Data.Monoid ( (<>) )
 import "base" Foreign.Marshal.Alloc ( alloca )
 import "base" Foreign.Storable ( peek )
 import "base" System.IO.Unsafe ( unsafePerformIO )

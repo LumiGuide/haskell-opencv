@@ -12,7 +12,6 @@ module OpenCV.Internal.C.FinalizerTH
     ) where
 
 import "base" Foreign.Ptr ( Ptr, FunPtr )
-import "base" Data.Monoid ( (<>) )
 import "base" Data.List ( intercalate )
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH

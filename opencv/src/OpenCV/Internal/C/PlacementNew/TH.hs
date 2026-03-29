@@ -8,7 +8,6 @@
 
 module OpenCV.Internal.C.PlacementNew.TH ( mkPlacementNewInstance ) where
 
-import "base" Data.Monoid ( (<>) )
 import qualified "inline-c-cpp" Language.C.Inline.Cpp as C
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )

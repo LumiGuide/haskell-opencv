@@ -13,7 +13,6 @@ module OpenCV.Internal.Core.Types.Mat.Marshal
 
 import "base" Data.Bits
 import "base" Data.Int
-import "base" Data.Monoid ( (<>) )
 import "this" OpenCV.Internal.Core.Types.Mat.Depth
 
 --------------------------------------------------------------------------------

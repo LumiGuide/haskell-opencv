@@ -11,7 +11,6 @@ module OpenCV.Internal.Core.Types.Matx.TH
   ) where
 
 import "base" Data.List ( intercalate )
-import "base" Data.Monoid ( (<>) )
 import qualified "inline-c" Language.C.Inline.Unsafe as CU
 import "template-haskell" Language.Haskell.TH
 import "template-haskell" Language.Haskell.TH.Quote ( quoteExp )

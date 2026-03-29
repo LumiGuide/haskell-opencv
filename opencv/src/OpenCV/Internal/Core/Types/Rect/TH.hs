@@ -10,7 +10,6 @@ module OpenCV.Internal.Core.Types.Rect.TH
   ( mkRectType
   ) where
 
-import "base" Data.Monoid ( (<>) )
 import "base" Foreign.Marshal.Utils ( toBool )
 import "base" System.IO.Unsafe ( unsafePerformIO )
 import qualified "inline-c" Language.C.Inline.Unsafe as CU

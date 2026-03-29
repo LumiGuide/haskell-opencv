@@ -40,7 +40,6 @@ module OpenCV.Features2d
 
 import "base" Control.Exception ( mask_ )
 import "base" Data.Int
-import "base" Data.Monoid ( (<>) )
 import "base" Data.Word
 import "base" Data.Maybe
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr, castForeignPtr )
@@ -63,7 +62,7 @@ import "this" OpenCV.Internal.C.FinalizerTH
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Internal.Core.ArrayOps
-import "this" OpenCV.Internal.Core.Types ( withArrayPtr, unsafeWithArrayPtr, Scalar )
+import "this" OpenCV.Internal.Core.Types ( withArrayPtr, unsafeWithArrayPtr )
 import "this" OpenCV.Internal.Core.Types.Mat
 import "this" OpenCV.Internal.Exception ( cvExcept, unsafeWrapException, handleCvException )
 import "this" OpenCV.TypeLevel
@@ -226,7 +225,7 @@ orbDetectAndComputeImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . (Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog)
     => Mat (ShapeT [height, width]) ('S channels) ('S depth)
 orbDetectAndComputeImg = exceptError $ do
@@ -654,7 +653,7 @@ bfMatcherImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
        , width2 ~ (*) width 2
        )
@@ -774,7 +773,7 @@ fbMatcherImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Frog
        , width2 ~ (*) width 2
        )

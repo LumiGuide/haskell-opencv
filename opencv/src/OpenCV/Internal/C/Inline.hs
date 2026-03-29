@@ -10,7 +10,6 @@
 module OpenCV.Internal.C.Inline ( openCvCtx ) where
 
 import "base" Foreign.Ptr ( FunPtr )
-import "base" Data.Monoid ( (<>) )
 import qualified "containers" Data.Map as M
 import qualified "inline-c" Language.C.Inline as C
 import qualified "inline-c" Language.C.Types  as C

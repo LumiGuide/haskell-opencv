@@ -149,7 +149,7 @@ bilateralFilterImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -285,7 +285,7 @@ medianBlurImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -339,7 +339,7 @@ boxBlurImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -395,7 +395,7 @@ gaussianBlurImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341 )
     => Mat (ShapeT ['S height, 'D]) ('S channels) ('S depth)
 gaussianBlurImg = exceptError $
@@ -470,7 +470,7 @@ erodeImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Lambda
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -545,7 +545,7 @@ filter2DImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -635,7 +635,7 @@ dilateImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Lambda
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )
@@ -720,7 +720,7 @@ morphologyExImg
               (width2   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ DamageMask
        , width2 ~ ((*) width 2) -- TODO (RvD): HSE parse error with infix type operator
        )

@@ -237,7 +237,7 @@ handDefectsImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 handDefectsImg = do
@@ -341,7 +341,7 @@ handContourImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 handContourImg = do

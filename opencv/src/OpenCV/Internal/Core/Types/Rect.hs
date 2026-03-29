@@ -18,19 +18,16 @@ module OpenCV.Internal.Core.Types.Rect
   ) where
 
 import "aeson" Data.Aeson
+import "base" Data.Kind (Type)
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "linear" Linear.V2 ( V2(..) )
 import "this" OpenCV.Internal.C.Types
 import "this" OpenCV.Core.Types.Point ( Point )
 import "this" OpenCV.Core.Types.Size ( Size )
-#if MIN_VERSION_base(4,9,0)
-import "base" Data.Foldable ( Foldable )
-import "base" Data.Traversable ( Traversable )
-#endif
 
 --------------------------------------------------------------------------------
 
-newtype Rect (depth :: *)
+newtype Rect (depth :: Type)
       = Rect {unRect :: ForeignPtr (C'Rect depth)}
 
 type instance C (Rect depth) = C'Rect depth
@@ -44,8 +41,8 @@ data HRect a
      , hRectSize    :: !(V2 a)
      } deriving (Foldable, Functor, Traversable, Show)
 
-type family RectPoint (r :: * -> *) :: * -> *
-type family RectSize  (r :: * -> *) :: * -> *
+type family RectPoint (r :: Type -> Type) :: Type -> Type
+type family RectSize  (r :: Type -> Type) :: Type -> Type
 
 type instance RectPoint Rect = Point 2
 type instance RectSize  Rect = Size
@@ -53,7 +50,7 @@ type instance RectSize  Rect = Size
 type instance RectPoint HRect = V2
 type instance RectSize  HRect = V2
 
-class IsRect (r :: * -> *) (depth :: *) where
+class IsRect (r :: Type -> Type) (depth :: Type) where
     toRect   :: r depth -> Rect depth
     fromRect :: Rect depth -> r depth
 

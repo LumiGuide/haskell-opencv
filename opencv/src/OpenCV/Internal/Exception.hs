@@ -40,7 +40,6 @@ import "base" Control.Exception ( Exception(displayException), mask_, throw, thr
 import "base" Control.Monad ( (<=<) )
 import "base" Data.List ( intercalate )
 import qualified "base" Data.List.NonEmpty as NE
-import "base" Data.Monoid ( (<>) )
 import "base" Foreign.C.String ( peekCString )
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
 import "base" Foreign.Ptr ( Ptr, nullPtr )

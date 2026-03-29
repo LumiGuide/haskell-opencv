@@ -1,6 +1,7 @@
 {-# language CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 #ifndef ENABLE_INTERNAL_DOCUMENTATION
 {-# OPTIONS_HADDOCK hide #-}
@@ -64,7 +65,7 @@ approxHandContourImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 approxHandContourImg = do
@@ -271,7 +272,7 @@ handConvexHullImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Hand)
     => IO (Mat ('S ['S height, 'S width]) ('S channels) ('S depth))
 handConvexHullImg = do

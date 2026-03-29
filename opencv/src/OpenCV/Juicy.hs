@@ -52,43 +52,43 @@ pokeS :: Storable a => Ptr a1 -> Int -> [a] -> IO ()
 pokeS p n xs = sequence_ (zipWith poke (plusPtrS p n) xs)
 
 instance Storable PixelRGB8 where
-    peek p =  peekS p 3 >>= \[b,r,g] -> return (PixelRGB8 r g b)
+    peek p =  peekS p 3 >>= \case [b,r,g] -> return (PixelRGB8 r g b); _ -> error "peek PixelRGB8: unexpected length"
     poke p (PixelRGB8 r g b) = pokeS p 3 [b,g,r]
     sizeOf _ = 3
     alignment _ = 0
 
 instance Storable PixelRGB16 where
-    peek p =  peekS p 3 >>= \[b,r,g] -> return (PixelRGB16 r g b)
+    peek p =  peekS p 3 >>= \case [b,r,g] -> return (PixelRGB16 r g b); _ -> error "peek PixelRGB16: unexpected length"
     poke p (PixelRGB16 r g b) = pokeS p 3 [b,g,r]
     sizeOf _ = 3
     alignment _ = 0
 
 instance Storable PixelRGBF where
-    peek p =  peekS p 3 >>= \[b,r,g] -> return (PixelRGBF r g b)
+    peek p =  peekS p 3 >>= \case [b,r,g] -> return (PixelRGBF r g b); _ -> error "peek PixelRGBF: unexpected length"
     poke p (PixelRGBF r g b) = pokeS p 3 [b,g,r]
     sizeOf _ = 3
     alignment _ = 0
 
 instance Storable PixelRGBA8 where
-    peek p =  peekS p 4 >>= \[b,r,g,a] -> return (PixelRGBA8 r g b a)
+    peek p =  peekS p 4 >>= \case [b,r,g,a] -> return (PixelRGBA8 r g b a); _ -> error "peek PixelRGBA8: unexpected length"
     poke p (PixelRGBA8 r g b a) = pokeS p 4 [b,g,r,a]
     sizeOf _ = 4
     alignment _ = 0
 
 instance Storable PixelRGBA16 where
-    peek p =  peekS p 4 >>= \[b,r,g,a] -> return (PixelRGBA16 r g b a)
+    peek p =  peekS p 4 >>= \case [b,r,g,a] -> return (PixelRGBA16 r g b a); _ -> error "peek PixelRGBA16: unexpected length"
     poke p (PixelRGBA16 r g b a) = pokeS p 4 [b,g,r,a]
     sizeOf _ = 4
     alignment _ = 0
 
 instance Storable PixelYA8 where
-    peek p =  peekS p 2 >>= \[b,g] -> return (PixelYA8 b g)
+    peek p =  peekS p 2 >>= \case [b,g] -> return (PixelYA8 b g); _ -> error "peek PixelYA8: unexpected length"
     poke p (PixelYA8 b g) = pokeS p 2 [b,g]
     sizeOf _ = 2
     alignment _ = 0
 
 instance Storable PixelYA16 where
-    peek p =  peekS p 2 >>= \[b,g] -> return (PixelYA16 b g)
+    peek p =  peekS p 2 >>= \case [b,g] -> return (PixelYA16 b g); _ -> error "peek PixelYA16: unexpected length"
     poke p (PixelYA16 b g) = pokeS p 2 [b,g]
     sizeOf _ = 2
     alignment _ = 0
@@ -205,7 +205,9 @@ toImage m  = unsafePerformIO $ do
     mat <- unsafeThaw m
     withImage width height $ \x y -> unsafeRead mat [y, x] 0
   where
-    MatInfo [fromIntegral -> height, fromIntegral -> width] _ _  = matInfo m
+    (height, width) = case matInfo m of
+        MatInfo [fromIntegral -> h, fromIntegral -> w] _ _ -> (h, w)
+        info -> error $ "toImage: unexpected MatInfo: " <> show info
 
 -- | An OpenCV 2D-filter preserving the matrix type
 type Filter m h w c d = Mat2D h w c d -> m (Mat2D h w c d)

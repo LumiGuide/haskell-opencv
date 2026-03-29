@@ -74,7 +74,7 @@ import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )
 import "linear" Linear.V4 ( V4(..) )
 import "linear" Linear.Vector ( zero )
-import "mtl" Control.Monad.Error.Class ( MonadError )
+import "mtl" Control.Monad.Error.Class ( MonadError, throwError )
 import "this" OpenCV.Core.Types
 import "this" OpenCV.ImgProc.Types
 import "this" OpenCV.Internal.C.Inline ( openCvCtx )
@@ -376,7 +376,7 @@ linearPolarImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
     => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 linearPolarImg = exceptError $
@@ -454,7 +454,7 @@ logPolarImg
     :: forall (width    :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *  )
+              (depth    :: Type  )
      . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Compass)
     => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 logPolarImg = exceptError $
@@ -530,7 +530,9 @@ getAffineTransform
     -> V3 (point2 CFloat) -- ^ Points representing vertices in destination image
     -> m (Mat (ShapeT [2, 3]) ('S 1) ('S Double))
        -- ^ The output affine transformation, 2x3 floating-point-matrix.
-getAffineTransform srcPts dstPts = unsafeWrapException $ do
+getAffineTransform srcPts dstPts
+    | isCollinear srcPts = throwError $ CvException "getAffineTransform: source points are collinear"
+    | otherwise = unsafeWrapException $ do
     result <- newEmptyMat
     handleCvException (pure $ unsafeCoerceMat result) $
       withPtr result $ \resultPtr ->
@@ -546,6 +548,13 @@ getAffineTransform srcPts dstPts = unsafeWrapException $ do
   where
     v3ToVector :: V3 (point2 CFloat) -> V.Vector Point2f
     v3ToVector = V.map toPoint . V.fromList . toList
+
+    isCollinear :: V3 (point2 CFloat) -> Bool
+    isCollinear (V3 p1 p2 p3) =
+        let V2 x1 y1 = fromPoint (toPoint p1 :: Point2f)
+            V2 x2 y2 = fromPoint (toPoint p2 :: Point2f)
+            V2 x3 y3 = fromPoint (toPoint p3 :: Point2f)
+        in abs ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)) < 1e-4
 
 {- | Calculates an affine matrix of 2D rotation
 
@@ -589,7 +598,7 @@ remapImg
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 remapImg = exceptError $ remap birds_512x341 transform InterLinear (BorderConstant black)
@@ -673,7 +682,7 @@ undistortImg
   :: forall (width    :: Nat)
             (height   :: Nat)
             (channels :: Nat)
-            (depth    :: *  )
+            (depth    :: Type  )
    . (Mat ('S ['S height, 'S width]) ('S channels) ('S depth) ~ Kodak_512x341)
   => Mat ('S ['S height, 'S width]) ('S channels) ('S depth)
 undistortImg = undistort birds_512x341 intrinsics coefficients

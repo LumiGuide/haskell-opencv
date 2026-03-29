@@ -82,7 +82,7 @@ library
 
     if flag(opencv4)
         cpp-options:      -DOPENCV4
-        ghc-options: -optc-DOPENCV4
+        ghc-options: -optc-DOPENCV4 -optcxx-DOPENCV4
         pkgconfig-depends: opencv4 >= 4.0.0
     else
         pkgconfig-depends: opencv >= 3.0.0

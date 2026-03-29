@@ -1,10 +1,15 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module OpenCV.Video
     ( -- * Motion Analysis and Object Tracking
+#ifndef OPENCV4
       estimateRigidTransform
+#endif
     ) where
+
+#ifndef OPENCV4
 
 import "base" Data.Int ( Int32 )
 import "base" Foreign.Marshal.Utils ( fromBool )
@@ -34,10 +39,6 @@ C.using "namespace cv"
 #include "opencv2/video.hpp"
 
 --------------------------------------------------------------------------------
-
-#ifdef OPENCV4
-{-# DEPRECATED estimateRigidTransform "Use estimateAffine2D or estimateAffinePartial2D instead" #-}
-#endif
 
 -- | Computes an optimal affine transformation between two 2D point sets
 --
@@ -83,3 +84,5 @@ estimateRigidTransform src dst fullAffine
     c'srcLen     = fromIntegral $ V.length src
     c'dstLen     = fromIntegral $ V.length dst
     c'fullAffine = fromBool fullAffine
+
+#endif

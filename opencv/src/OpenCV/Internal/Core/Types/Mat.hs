@@ -91,10 +91,9 @@ import "base" Control.Monad.IO.Class
 import "base" Control.Monad.ST ( ST )
 import "base" Data.Foldable ( traverse_ )
 import "base" Data.Int
-import "base" Data.Kind ( Constraint )
+import "base" Data.Kind ( Constraint, Type )
 import qualified "base" Data.List.NonEmpty as NE
 import "base" Data.Maybe
-import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy
 import "base" Data.Traversable ( for )
 import "base" Data.Word
@@ -181,7 +180,7 @@ A 1920x1080 3 channel image where each element is a single byte.
 -}
 newtype Mat (shape    :: DS [DS Nat])
             (channels :: DS Nat)
-            (depth    :: DS *)
+            (depth    :: DS Type)
       = Mat {unMat :: ForeignPtr (C (Mat shape channels depth))}
 
 type instance C (Mat shape channels depth) = C'Mat

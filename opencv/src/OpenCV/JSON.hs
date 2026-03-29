@@ -10,7 +10,6 @@ import "aeson" Data.Aeson
 import "aeson" Data.Aeson.Types ( Parser )
 import "aeson" Data.Aeson.TH
 import "base" Data.Int ( Int32 )
-import "base" Data.Monoid ( (<>) )
 import "base" Data.Proxy ( Proxy(..) )
 import "linear" Linear.V2 ( V2(..) )
 import "linear" Linear.V3 ( V3(..) )

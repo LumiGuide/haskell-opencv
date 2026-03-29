@@ -17,7 +17,6 @@ import "base" Data.Int
 import "base" Data.Proxy
 import "base" Data.Word
 import "base" Data.List.NonEmpty ( nonEmpty )
-import "base" Data.Monoid ( (<>) )
 import "base" Data.Foldable ( for_, toList )
 import "base" Foreign.C.Types ( CFloat(..), CDouble(..) )
 import "base" Foreign.Storable ( Storable )
@@ -77,7 +76,10 @@ main = defaultMain $ testGroup "opencv"
         , testIso "isoScalarV4"  (toScalar :: V4 CDouble -> Scalar ) fromScalar
         ]
       , testGroup "Rect"
-        [ QC.testProperty "basic-properties" rectBasicProperties
+        [ QC.testProperty "basic-properties" $
+            QC.forAll genSmallV2 $ \tl ->
+            QC.forAll genSmallV2 $ \size ->
+            rectBasicProperties tl size
         , QC.testProperty "rectContains" rectContainsProperty
         ]
       , testGroup "RotatedRect"
@@ -209,7 +211,11 @@ main = defaultMain $ testGroup "opencv"
     , testGroup "Video"
       [
       ]
-    , QC.testProperty "getAffineTransform" getAffineTransformProp
+    , QC.testProperty "getAffineTransform" $
+        QC.forAll genNonCollinearTriangle $ \v ->
+        QC.forAll QC.arbitrary $ \v' ->
+        getAffineTransformProp v v'
+    , HU.testCase "getAffineTransform collinear" testGetAffineTransformCollinear
     , HU.testCase "TLS memory leak" $ testTLSMemLeak 50000
     ]
 
@@ -503,7 +509,9 @@ testOrbDetectAndCompute = do
         kptsRec  = V.map keyPointAsRec kpts
         kpts2    = V.map mkKeyPoint    kptsRec
         kptsRec2 = V.map keyPointAsRec kpts2
-        numDescs = head $ miShape $ matInfo descs
+        numDescs = case miShape $ matInfo descs of
+            (n:_) -> n
+            []    -> error "unexpected empty shape"
     assertEqual "kpt conversion failure"
                 kptsRec
                 kptsRec2
@@ -679,6 +687,15 @@ getAffineTransformProp v v' =
                         else failedWithReason $ "The points are too far apart; newPoints =\n" <> show newPoints <> "\n"
                 Just errs -> failedWithReason . displayException $ CoerceMatError errs
 
+testGetAffineTransformCollinear :: HU.Assertion
+testGetAffineTransformCollinear =
+    case getAffineTransform collinearSrc anyDst of
+      Left _err -> pure ()
+      Right _mat -> assertFailure "expected error for collinear source points"
+  where
+    collinearSrc = V3 (V2 0 0) (V2 1 1) (V2 2 2) :: V3 (V2 CFloat)
+    anyDst       = V3 (V2 0 0) (V2 1 0) (V2 0 1) :: V3 (V2 CFloat)
+
 warpAffineV2 :: (Num a) => M23 a -> V2 a -> V2 a
 warpAffineV2 m23 pt = view _xy (m23 !* homogeneous pt)
   where
@@ -759,6 +776,26 @@ maxSizedNonNegRange = maxSizedRangeHelper $ \n -> (0, n)
 
 maxSizedPosRange :: (Random a, Ord a, Num a) => Int -> QC.Gen a
 maxSizedPosRange = maxSizedRangeHelper $ \n -> (1, max 1 n)
+
+-- | Generate V2 Int32 with values small enough to avoid overflow in area()
+genSmallV2 :: QC.Gen (V2 Int32)
+genSmallV2 = V2 <$> QC.choose (-46000, 46000) <*> QC.choose (-46000, 46000)
+
+-- | Generate 3 non-collinear points (triangle with nonzero area)
+genNonCollinearTriangle :: QC.Gen (V3 (V2 CFloat))
+genNonCollinearTriangle = do
+    p1 <- genPt
+    p2 <- genPt
+    p3 <- genPt
+    let V2 x1 y1 = p1
+        V2 x2 y2 = p2
+        V2 x3 y3 = p3
+        area = abs ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1))
+    if area > 1e-4
+      then pure (V3 p1 p2 p3)
+      else genNonCollinearTriangle
+  where
+    genPt = V2 <$> QC.choose (-100, 100) <*> QC.choose (-100, 100)
 
 --------------------------------------------------------------------------------
 -- QuickCheck Arbitrary Instances

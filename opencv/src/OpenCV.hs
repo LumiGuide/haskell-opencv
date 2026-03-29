@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -fno-warn-dodgy-exports #-}
 
 module OpenCV
@@ -25,7 +26,9 @@ module OpenCV
   , module OpenCV.ImgProc.StructuralAnalysis
   , module OpenCV.ImgProc.Types
   , module OpenCV.Photo
+#ifndef OPENCV4
   , module OpenCV.Video
+#endif
   , module OpenCV.Video.MotionAnalysis
   , module OpenCV.VideoIO.VideoCapture
 
@@ -58,7 +61,9 @@ import OpenCV.ImgProc.StructuralAnalysis
 import OpenCV.ImgProc.Types
 import OpenCV.ImgProc.CascadeClassifier
 import OpenCV.Photo
+#ifndef OPENCV4
 import OpenCV.Video
+#endif
 import OpenCV.Video.MotionAnalysis
 import OpenCV.VideoIO.VideoCapture
 

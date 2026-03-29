@@ -647,7 +647,7 @@ matSplitImg
               (width3   :: Nat)
               (height   :: Nat)
               (channels :: Nat)
-              (depth    :: *)
+              (depth    :: Type)
      . ( Mat (ShapeT [height, width]) ('S channels) ('S depth) ~ Kodak_512x341
        , width3 ~ ((*) width 3)
        )

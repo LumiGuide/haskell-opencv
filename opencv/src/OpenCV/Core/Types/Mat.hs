@@ -73,10 +73,10 @@ module OpenCV.Core.Types.Mat
     ) where
 
 import "base" Control.Monad.ST ( runST )
+import "base" Data.Kind (Type)
 import "base" Data.Int ( Int32 )
 import "base" Data.Foldable ( for_ )
 import "base" Data.Traversable ( for )
-import "base" Data.List ( foldl' )
 import "base" Data.Proxy ( Proxy(..) )
 import "base" Data.Word ( Word8 )
 import "base" Foreign.Marshal.Array ( peekArray )
@@ -347,7 +347,7 @@ matCopyToM dstM (V2 x y) src mbSrcMask =
 
 -- |Transforms a given list of matrices of equal shape, channels, and depth,
 -- by folding the given function over all matrix elements at each position.
-foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
+foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: Type) a
          . ( Storable depth
            , Storable a
            , All IsStatic shape
@@ -357,12 +357,12 @@ foldMat :: forall (shape :: [DS Nat]) (channels :: Nat) (depth :: *) a
         -> [Mat ('S shape) ('S channels) ('S depth)]
         -> Maybe (DV.Vector a)
 foldMat _ _ []   = Nothing
-foldMat f z mats = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions shape)
+foldMat f z mats@(firstMat:_) = Just . DV.fromList . unsafePerformIO $ mapM go (dimPositions shape)
   where
     go :: [Int32] -> IO a
     go pos = pixelsAt pos >>= return . foldl' f z
 
-    MatInfo !shape _ !channels = matInfo (head mats)
+    MatInfo !shape _ !channels = matInfo firstMat
 
     stepsAndPtrs :: IO [([Int32], Ptr depth)]
     stepsAndPtrs = for mats $ \mat ->

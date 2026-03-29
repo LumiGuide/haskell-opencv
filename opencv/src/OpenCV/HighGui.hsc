@@ -59,7 +59,6 @@ import "base" Control.Concurrent.MVar
 import "base" Control.Exception ( mask_, bracket )
 import "base" Data.Bits ( (.&.) )
 import "base" Data.Int ( Int32 )
-import "base" Data.Monoid ( (<>) )
 import "base" Data.Unique ( newUnique, hashUnique )
 import "base" Foreign.C.String ( CString, newCString, withCString )
 import "base" Foreign.Ptr ( Ptr, FunPtr, freeHaskellFunPtr )

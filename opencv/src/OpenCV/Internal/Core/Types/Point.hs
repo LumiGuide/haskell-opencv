@@ -15,13 +15,14 @@ module OpenCV.Internal.Core.Types.Point
   ) where
 
 import "base" Foreign.ForeignPtr ( ForeignPtr, withForeignPtr )
+import "base" Data.Kind (Type)
 import "base" GHC.TypeLits
 import "linear" Linear ( V2, V3 )
 import "this" OpenCV.Internal.C.Types
 
 --------------------------------------------------------------------------------
 
-newtype Point (dim :: Nat) (depth :: *)
+newtype Point (dim :: Nat) (depth :: Type)
       = Point {unPoint :: ForeignPtr (C'Point dim depth)}
 
 type instance C (Point dim depth) = C'Point dim depth
@@ -29,14 +30,14 @@ type instance C (Point dim depth) = C'Point dim depth
 instance WithPtr (Point dim depth) where
     withPtr = withForeignPtr . unPoint
 
-type family PointDim (v :: * -> *) :: Nat
+type family PointDim (v :: Type -> Type) :: Nat
 
 type instance PointDim (Point dim) = dim
 
 type instance PointDim V2 = 2
 type instance PointDim V3 = 3
 
-class IsPoint (p :: * -> *) (depth :: *)  where
+class IsPoint (p :: Type -> Type) (depth :: Type)  where
     toPoint   :: p depth -> Point (PointDim p) depth
     fromPoint :: Point (PointDim p) depth -> p depth
 
